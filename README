@@ -1,1 +1,26 @@
-This is a very basic Actor library. It can easily be extended for specific needs.
+df4j is a basic dataflow library. It can easily be extended for specific needs.
+
+Typical use scenario is as follows:
+
+1. create context executor. Every working thread of the executor must have thread local variable referencing the executor itself
+(see com.github.rfqu.df4j.core.Task.currentExecutorKey). Examples of such executors are com.github.rfqu.df4j.core.SimpleExecutorService
+and executors from package java.util.concurrent created using com.github.rfqu.df4j.core.ThreadFactoryTL (see examples).
+
+2. create starting task (of type Task or Runnable) and send it to the executor using executor.execute(startingTask).
+Starting task sends messages to Actors. Actors can be created at any time, but can receive messages only from dataflow
+objects (tasks, actors, completion handlers etc.) running within the context executor.  
+
+3. Dataflow objects cannot do blocking operations like Object.wait() of Future.get() because it may cause deadlock
+as a result of thread starvation.
+
+4. Dataflow objects send results to "outer world" (threads not belonging to the executor) with usual synchronized objects
+like non-blocking queues which does not imply blocking operations.
+
+See examples directory for various custom-made dataflow objects and their usage.
+
+If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new, 
+or send email at alexei.kaigorodov($)gmail.com
+
+Version history:
+
+v0.1 09/22/2011 initial release
