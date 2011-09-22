@@ -9,7 +9,7 @@ import com.github.rfqu.dffw.core.Link;
 
 public class IORequest extends Link {
     protected AsynchronousFileChannel afc;
-    protected ByteBuffer dst;
+    protected ByteBuffer buf;
     protected long position;
     protected Port<IORequest> callback;
     protected Integer result=null;
@@ -19,38 +19,38 @@ public class IORequest extends Link {
         this.afc = afc;
     }
     
-    public IORequest(AsynchronousFileChannel afc, ByteBuffer dst) {
+    public IORequest(AsynchronousFileChannel afc, ByteBuffer buf) {
         this.afc = afc;
-        this.dst = dst;
+        this.buf = buf;
     }
     
-    public void read(ByteBuffer dst, long position, Port<IORequest> callback) { 
-        this.dst=dst;
+    public void read(ByteBuffer buf, long position, Port<IORequest> callback) { 
+        this.buf=buf;
         read(position, callback);
     }
 
     public void read(long position, Port<IORequest> callback) { 
         this.position=position;
         this.callback=callback;
-        afc.read(dst, position, this, completionHandler);
+        afc.read(buf, position, this, completionHandler);
     }
 
-    public void write(ByteBuffer dst, long position, Port<IORequest> callback) { 
-        this.dst = dst;
+    public void write(ByteBuffer buf, long position, Port<IORequest> callback) { 
+        this.buf = buf;
         write(position, callback);
     }
 
     public void write(long position, Port<IORequest> callback) { 
         this.position=position;
         this.callback=callback;
-        afc.write(dst, position, this, completionHandler);
+        afc.write(buf, position, this, completionHandler);
     }
 
     public void clear() {
         result=null;
         exc=null;
-        if (dst!=null) {
-            dst.flip();
+        if (buf!=null) {
+            buf.clear();
         }
     }
     
@@ -74,8 +74,8 @@ public class IORequest extends Link {
         return afc;
     }
 
-    public ByteBuffer getDst() {
-        return dst;
+    public ByteBuffer getBuffer() {
+        return buf;
     }
 
     public long getPosition() {
