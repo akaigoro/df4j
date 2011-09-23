@@ -7,45 +7,13 @@ import java.nio.channels.CompletionHandler;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
 
-public class IORequest extends Link {
-    protected AsynchronousFileChannel afc;
+public class IORequest<V, R extends IORequest<V, ?>> extends Link implements CompletionHandler<V, R> {
+    protected Port<R> callback;
     protected ByteBuffer buf;
     protected long position;
-    protected Port<IORequest> callback;
-    protected Integer result=null;
+    protected V result=null;
     protected Throwable exc=null;
     
-    public IORequest(AsynchronousFileChannel afc) {
-        this.afc = afc;
-    }
-    
-    public IORequest(AsynchronousFileChannel afc, ByteBuffer buf) {
-        this.afc = afc;
-        this.buf = buf;
-    }
-    
-    public void read(ByteBuffer buf, long position, Port<IORequest> callback) { 
-        this.buf=buf;
-        read(position, callback);
-    }
-
-    public void read(long position, Port<IORequest> callback) { 
-        this.position=position;
-        this.callback=callback;
-        afc.read(buf, position, this, completionHandler);
-    }
-
-    public void write(ByteBuffer buf, long position, Port<IORequest> callback) { 
-        this.buf = buf;
-        write(position, callback);
-    }
-
-    public void write(long position, Port<IORequest> callback) { 
-        this.position=position;
-        this.callback=callback;
-        afc.write(buf, position, this, completionHandler);
-    }
-
     public void clear() {
         result=null;
         exc=null;
@@ -53,40 +21,28 @@ public class IORequest extends Link {
             buf.clear();
         }
     }
-    
-    protected static CompletionHandler<Integer, IORequest> completionHandler=new CompletionHandler<Integer, IORequest>() {
 
-        @Override
-        public void completed(Integer result, IORequest request) {
-            request.result=result;
-            request.callback.send(request);
-        }
-
-        @Override
-        public void failed(Throwable exc, IORequest request) {
-            request.exc=exc;
-            request.callback.send(request);
-        }
-    
-    };
-
-    public AsynchronousFileChannel getAfc() {
-        return afc;
+    @Override
+    public void completed(V result, R request) {
+        this.result=result;
+        callback.send(request);
     }
 
+    @Override
+    public void failed(Throwable exc, R request) {
+        this.exc=exc;
+        callback.send(request);
+    }
+    
     public ByteBuffer getBuffer() {
         return buf;
     }
 
-    public long getPosition() {
-        return position;
-    }
-
-    public Port<IORequest> getCallback() {
+    public Port<R> getCallback() {
         return callback;
     }
 
-    public Integer getResult() {
+    public V getResult() {
         return result;
     }
 

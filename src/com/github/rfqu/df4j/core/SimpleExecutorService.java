@@ -59,7 +59,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
             } else if (command instanceof Task) {
                 send((Task) command);
             } else {
-                send(new WrapperTask(command));
+                send(new TaskWrapper(command));
             }
         }
 
@@ -92,8 +92,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
          */
         @Override
         public void run() {
-            Actor.setCurrentExecutor(SimpleExecutorService.this);
-            long taskCount=0;
+            Task.setCurrentExecutor(SimpleExecutorService.this);
             for (;;) {
                 Task task;
                 synchronized (this) {
@@ -118,7 +117,6 @@ public class SimpleExecutorService extends AbstractExecutorService {
                 } catch (Exception e) {
                     failure(task, e);
                 }
-                taskCount++;
             }
         }
 

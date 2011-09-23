@@ -5,7 +5,7 @@ import java.nio.channels.AsynchronousFileChannel;
 
 import com.github.rfqu.df4j.core.Port;
 
-public class FileIORequest extends IORequest<FileIORequest> {
+public class FileIORequest extends IORequest<Integer, FileIORequest> {
     protected AsynchronousFileChannel channel;
     protected long position;
     

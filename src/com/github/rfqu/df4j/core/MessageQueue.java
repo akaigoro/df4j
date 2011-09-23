@@ -10,6 +10,8 @@
 
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 /** Simple one-way message queue
  * @param <M> the type of the enqueued messages
  */

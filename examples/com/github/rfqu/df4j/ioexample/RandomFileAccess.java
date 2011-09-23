@@ -219,7 +219,7 @@ public class RandomFileAccess {
     public void testW_dffw(ExecutorService executor, boolean direct) throws Exception {
         out.println("Using " + executor.getClass().getCanonicalName()+" direct="+direct);
         Task.setCurrentExecutor(executor);
-        AsynchronousFileChannel af = AsyncFile.open(Paths.get(testfilename), WRITE);
+        AsynchronousFileChannel af = AsyncFileChannel.open(Paths.get(testfilename), WRITE);
         af.truncate(blockSize*numBlocks);
         for (int nb = 1; nb <= maxBufNo; nb=nb*2) {
             long startTime = System.currentTimeMillis();
