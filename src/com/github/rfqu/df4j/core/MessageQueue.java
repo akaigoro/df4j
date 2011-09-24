@@ -10,8 +10,6 @@
 
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 /** Simple one-way message queue
  * @param <M> the type of the enqueued messages
  */
@@ -54,7 +52,7 @@ public class MessageQueue<M extends Link> {
      * @return the next message, or null if the queue is empty
      */
     @SuppressWarnings("unchecked")
-	public M poll() {
+    public M poll() {
         M res=first;
         if (res==null) {
             return null;

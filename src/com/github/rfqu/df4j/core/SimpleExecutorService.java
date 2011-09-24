@@ -30,6 +30,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
          * default constructor
          */
         public Worker() {
+            t.setDaemon(true);
             t.setName(t.getName()+" DF executor");
         }
 

@@ -256,7 +256,7 @@ public class RandomFileAccess {
             try {
                 for (int k = 0; k < nb; k++) {
                     ByteBuffer buf = direct?ByteBuffer.allocateDirect(blockSize):ByteBuffer.allocate(blockSize);
-                    IORequest req = new IORequest(af, buf);
+                    FileIORequest req = new FileIORequest(af, buf);
                     wa.send(req);
                 }
             } catch (Exception e) {
@@ -264,12 +264,12 @@ public class RandomFileAccess {
             }
         }
 
-        class WriterActor extends Actor<IORequest> {
+        class WriterActor extends Actor<FileIORequest> {
             int started = 0; // number of started io operations
             int finished = 0;// number of finished io operations
 
             @Override
-            protected void act(IORequest req) throws Exception {
+            protected void act(FileIORequest req) throws Exception {
                 if (req.getResult() != null || req.getExc() != null) { // is it empty or used buffer?
                     finished++;
                     if (finished == numBlocks) { // has the whole file been written?
