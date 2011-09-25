@@ -9,6 +9,10 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Connects Actor's world and outer space.
@@ -16,7 +20,7 @@ package com.github.rfqu.df4j.core;
  *
  * @param <T> the type of accepted messages
  */
-public class Promise<T> implements Port<T> {
+public class Promise<T> implements Port<T>, Future<T> {
     private T message;
     
     /**
@@ -36,7 +40,7 @@ public class Promise<T> implements Port<T> {
      * @return received message
      * @throws InterruptedException if the current thread was interrupted while waiting
      */
-    @SuppressWarnings("unchecked")
+    @Override
     public synchronized T get() throws InterruptedException {
         while (message==null) {
             wait();
@@ -48,9 +52,46 @@ public class Promise<T> implements Port<T> {
      * checks if the message has arrived.
      * @return received message, or null if no message arrived
      */
-    @SuppressWarnings("unchecked")
     public synchronized T poll() {
         return (T) message;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return message!=null;
+    }
+
+    @Override
+    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        if (message!=null) {
+            return message;
+        }
+        long duration = unit.toMillis(timeout);
+        long startTime=System.currentTimeMillis();
+        long endTime=startTime+duration;
+        for (;;) {
+            wait(duration);            
+            if (message!=null) {
+                return message;
+            }
+            long currentTime=System.currentTimeMillis();
+            duration=(endTime-currentTime);
+            if (duration<=0) {
+                throw new TimeoutException();
+            }
+        }
     }
 
 }

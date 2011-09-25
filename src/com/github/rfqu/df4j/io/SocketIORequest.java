@@ -3,79 +3,95 @@ package com.github.rfqu.df4j.io;
 import java.nio.ByteBuffer;
 
 import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.Port;
 
-public class SocketIORequest extends Link {
+public abstract class SocketIORequest extends Link {
     protected AsyncSocketChannel channel;
-    protected Port<SocketIORequest> callback;
-    protected ByteBuffer buf;
+    protected ByteBuffer buffer;
     protected boolean readOp;
-    protected Integer result=null;
-    protected Throwable exc=null;
+    protected boolean inTrans=false;
     
-    public SocketIORequest() {
+    public SocketIORequest(int capacity, boolean direct) {
+        if (direct) {
+            buffer=ByteBuffer.allocateDirect(capacity);
+        } else {
+            buffer=ByteBuffer.allocate(capacity);
+        }
     }
     
     public SocketIORequest(ByteBuffer buf) {
-        this.buf = buf;
+        this.buffer = buf;
     }
     
     public void clear() {
-        exc=null;
-        if (buf!=null) {
-            buf.clear();
-        }
+        buffer.clear();
     }
 
-    void readStart(AsyncSocketChannel channel, Port<SocketIORequest> callback) {
+    public void read(AsyncSocketChannel channel) {
+        if (inTrans) {
+            throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
+        }
+        inTrans=true;
         readOp=true;
         this.channel=channel;
-        this.callback=callback;
-        buf.clear();
+        buffer.clear();
+        channel.read(this);
     }
 
 
-    public void writeStart(AsyncSocketChannel channel, Port<SocketIORequest> callback) {
+    public void write(AsyncSocketChannel channel) {
+        if (inTrans) {
+            throw new IllegalStateException("SocketIORequest.write: in "+(readOp?"read":"write")+" already");
+        }
+        inTrans=true;
         readOp=false;
         this.channel=channel;
-        this.callback=callback;
-        buf.flip();
+        buffer.flip();
+        channel.write(this);
     }
 
-    public void requestCompleted(Integer result) {
-        this.result=result;
-        buf.flip();
-        channel.requestCompleted(this);
-        if (callback!=null) {
-            callback.send(this);
+    protected void requestCompleted(Integer result) {
+        if (!inTrans) {
+            throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" completed but not in trans");
+        }
+        inTrans=false;
+        buffer.flip();
+        if (readOp) {
+            readCompleted(result);
+        } else {
+            writeCompleted(result);
         }
     }
 
-    public void requestFailed(Throwable exc) {
-        this.exc=exc;
-        channel.requestFailed(exc, this);
-        if (callback!=null) {
-            callback.send(this);
+    protected void writeCompleted(Integer result) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void readCompleted(Integer result) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void requestFailed(Throwable exc) {
+        if (!inTrans) {
+            throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" failed but not in trans");
+        }
+        inTrans=false;
+        if (readOp) {
+            readFailed(exc);
+        } else {
+            writeFailed(exc);
         }
     }
 
-    public ByteBuffer getBuffer() {
-        return buf;
+    protected void writeFailed(Throwable exc) {
+        // TODO Auto-generated method stub
+        
     }
 
-    public boolean isReadOp() {
-        return readOp;
+    protected void readFailed(Throwable exc) {
+        // TODO Auto-generated method stub
+        
     }
 
-    public Port<SocketIORequest> getCallback() {
-        return callback;
-    }
-
-    public Throwable getExc() {
-        return exc;
-    }
-
-    public AsyncSocketChannel getChannel() {
-        return channel;
-    }
 }

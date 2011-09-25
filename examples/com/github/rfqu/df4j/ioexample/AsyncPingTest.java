@@ -4,183 +4,217 @@ package com.github.rfqu.df4j.ioexample;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.core.ThreadFactoryTL;
 import com.github.rfqu.df4j.io.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.io.AsyncSocketChannel;
 import com.github.rfqu.df4j.io.SocketIORequest;
+import com.github.rfqu.df4j.util.MessageSink;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Requires Java 7.
  */
 public class AsyncPingTest {
-    static PrintStream out=System.out;
-    private static final int NB = 2;
-    int rounds = 1000*10;
+    PrintStream out=System.out;
+    PrintStream err=System.err;
+    private static final Logger log = LoggerFactory.getLogger( AsyncPingTest.class ); 
+    int clients=2000;//300;
+    int rounds = 100; // per client
     int nThreads=Runtime.getRuntime().availableProcessors();
     InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
+    AtomicLong cStartedR=new AtomicLong();
+    AtomicLong cEndedR=new AtomicLong();
+    AtomicLong cStartedW=new AtomicLong();
+    AtomicLong cEndedW=new AtomicLong();
+    AtomicLong sStartedR=new AtomicLong();
+    AtomicLong sEndedR=new AtomicLong();
+    AtomicLong sStartedW=new AtomicLong();
+    AtomicLong sEndedW=new AtomicLong();
 
-    static class Server extends AsyncServerSocketChannel {
-        ServerConnection asc;
+    class ServerConnection extends AsyncSocketChannel {
+        AsynchronousServerSocketChannel assch;
+        ServerIOR request;
         
-        Server(InetSocketAddress addr) throws Exception{
-            getChannel().bind(addr);
-            start();
-        }
-        
-        @Override
-        public void accepted(AsynchronousSocketChannel ch) {
-            asc=new ServerConnection(ch);
-            try {
-                getChannel().close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        
-    }
-    
-    static class ServerConnection extends AsyncSocketChannel {
-        int readcount;
-        int writecount;
-
-        public ServerConnection(AsynchronousSocketChannel ch) {
-            super(ch);
-            for (int k=0; k<NB; k++) {
-                onBuffAdded(new SocketIORequest(ByteBuffer.allocateDirect(4096)));
-            }
-        }
-
-        public void onBuffAdded(SocketIORequest r) {
-            read(r);
-        }
-        
-        @Override
-        public void onReadCompleted(SocketIORequest request) {
-            readcount++;
-            ByteBuffer buffer = request.getBuffer();
-            int rem =buffer.remaining();
-            if (rem==0) {
-                return; // fake empty packet after client has closed connection
-            }
-            long n=buffer.getLong();
-            // out.println("    server readcount="+readcount+" rem="+rem+" n="+n);
-            // switch to write
-            buffer.clear();
-            buffer.putLong(n); // flip auto
-            write(request); 
+        public ServerConnection(AsynchronousServerSocketChannel assch) {
+            this.assch=assch;
+            super.accept(assch);
         }
 
         @Override
-        public void onWriteCompleted(SocketIORequest request) {
-            writecount++;
-            // out.println("    server writecount="+writecount);
-            onBuffAdded(request);
+        protected void connCompleted() {
+            super.connCompleted();
+            new ServerConnection(assch);
+            request=new ServerIOR();
+            request.read(this);
         }
 
-        @Override
-        public void onWriteFailed(Throwable exc, SocketIORequest request) {
-            if (!channel.isOpen()) {
-                out.println("    server channel closed");
-                return;
+        class ServerIOR extends SocketIORequest {
+            int readcount;
+            int writecount;
+
+            public ServerIOR() {
+                super(4096, true);
+                this.channel = ServerConnection.this;
             }
-            // TODO Auto-generated method stub   
-            exc.printStackTrace();
-        }
-        
-        @Override
-        public void onReadFailed(Throwable exc, SocketIORequest request) {
-            if (!channel.isOpen()) {
-                out.println("    server channel closed");
-                return;
+
+            @Override
+            public void readCompleted(Integer result) {
+                sEndedR.incrementAndGet();
+                readcount++;
+                int rem = buffer.remaining();
+                if (rem == 0) {
+                    return; // fake empty packet after client has closed connection
+                }
+                long n = buffer.getLong();
+                log.debug("    server readcount="+readcount+" rem="+rem+" n="+n);
+                // switch to write
+                buffer.clear();
+                buffer.putLong(n); // flip auto
+                write(channel);
+                sStartedW.incrementAndGet();
             }
-            // TODO Auto-generated method stub            
-            exc.printStackTrace();
-        }
 
-    }
-    
-    static class ClientConnection extends AsyncSocketChannel {
-        int readcount;
-        int writecount;
-        long numOp;
-        Promise<Integer> sink = new Promise<Integer>();
-
-        public ClientConnection(InetSocketAddress addr, long numOp) throws IOException {
-            this.numOp=numOp;
-            connect(addr);
-            for (int k=0; k<NB; k++) {
-                onBuffAdded(new SocketIORequest(ByteBuffer.allocateDirect(4096)));
+            @Override
+            public void writeCompleted(Integer result) {
+                sEndedW.incrementAndGet();
+                writecount++;
+                 log.debug("    server writecount="+writecount);
+                read(channel);
+                sStartedR.incrementAndGet();
             }
-        }
 
-        public void onBuffAdded(SocketIORequest request) {
-            if (numOp==0) {
-                sink.send(0);
-                // out.println("client close; readcount="+readcount+" writecount="+writecount);
+            @Override
+            public void writeFailed(Throwable exc) {
+                sEndedW.incrementAndGet();
+                if (!channel.getChannel().isOpen()) {
+                    log.debug("    server channel closed");
+                    return;
+                }
+                // TODO Auto-generated method stub
+                log.debug("    ServerIOR writeFailed:");
+                exc.printStackTrace();
+            }
+
+            @Override
+            public void readFailed(Throwable exc) {
+                sEndedR.incrementAndGet();
+                // TODO gracefully shutdown when clien closed connection
                 try {
                     channel.close();
+                    return;
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
+                    log.debug("    ServerIOR.channel.close failed:");
                     e.printStackTrace();
                 }
-                return;
+                if (!channel.getChannel().isOpen()) {
+                    log.debug("    server channel closed");
+                    return;
+                }
+                log.debug("    ServerIOR readFailed:");
+                exc.printStackTrace();
             }
-            if (numOp<0) {
-                // out.println("!!! client write started numOp ="+numOp+"!!! writecount="+writecount);
-                return;
+
+        }
+    }
+
+    class ClientConnection extends AsyncSocketChannel {
+        ClientIOR req;
+        long numOp;
+        MessageSink sink;
+
+        public ClientConnection(InetSocketAddress addr, long numOp, MessageSink sink) throws IOException {
+            this.numOp = numOp;
+            this.sink = sink;
+            connect(addr);
+            req=new ClientIOR();
+        }
+
+        class ClientIOR extends SocketIORequest {
+            AsyncSocketChannel ch=ClientConnection.this;
+            int readcount;
+            int writecount;
+
+            public ClientIOR() {
+                super(4096, true);
+                onBuffAdded();
             }
-            numOp--;
-            // out.println("client write started numOp ="+numOp+" writecount="+writecount);
-            // switch to write
-            ByteBuffer buffer = request.getBuffer();
-            buffer.clear();
-            buffer.putLong(numOp); // flip auto
-            write(request);
-        }
 
-        @Override
-        public void onWriteCompleted(SocketIORequest request) {
-            writecount++;
-            // out.println("client write ended, read started: numOp ="+numOp+" writecount="+writecount);
-            read(request);
-        }
-
-        @Override
-        public void onReadCompleted(SocketIORequest request) {
-            readcount++;
-            ByteBuffer buffer = request.getBuffer();
-            int rem =buffer.remaining();
-            long n=-1;
-            if (rem>=8) {
-                n=buffer.getLong();
+            public void onBuffAdded() {
+                if (numOp == 0) {
+                    sink.send(null);
+                     log.debug("client close; readcount="+readcount+" writecount="+writecount);
+                    try {
+                        ch.getChannel().close();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    return;
+                }
+                if (numOp < 0) {
+                     log.debug("!!! client write started numOp ="+numOp+"!!! writecount="+writecount);
+                    return;
+                }
+                numOp--;
+                 log.debug("client write started numOp ="+numOp+" writecount="+writecount);
+                // switch to write
+                buffer.clear();
+                buffer.putLong(numOp); // flip auto
+                write(ch);
+                cStartedW.incrementAndGet();
             }
-            // out.println("client read ended numOp ="+numOp+" readcount="+readcount+" rem="+rem+" n="+n);
-            onBuffAdded(request);
-        }
 
-        @Override
-        public void onReadFailed(Throwable exc, SocketIORequest request) {
-            // TODO Auto-generated method stub            
-            exc.printStackTrace();
-        }
+            @Override
+            public void writeCompleted(Integer result) {
+                cEndedW.incrementAndGet();
+                writecount++;
+                 log.debug("client write ended, read started: numOp ="+numOp+" writecount="+writecount);
+                read(ch);
+                cStartedR.incrementAndGet();
+            }
 
-        @Override
-        public void onWriteFailed(Throwable exc, SocketIORequest request) {
-            // TODO Auto-generated method stub
-            exc.printStackTrace();            
+            @Override
+            public void readCompleted(Integer result) {
+                cEndedR.incrementAndGet();
+                readcount++;
+                int rem = buffer.remaining();
+                long n = -1;
+                if (rem >= 8) {
+                    n = buffer.getLong();
+                }
+                log.debug("client read ended numOp ="+numOp+" readcount="+readcount+" rem="+rem+" n="+n);
+                onBuffAdded();
+            }
+
+            @Override
+            public void readFailed(Throwable exc) {
+                cEndedR.incrementAndGet();
+                // TODO Auto-generated method stub
+                log.debug("    ClientIOR readFailed:");
+                exc.printStackTrace();
+            }
+
+            @Override
+            public void writeFailed(Throwable exc) {
+                cEndedW.incrementAndGet();
+                // TODO Auto-generated method stub
+                log.debug("    ClientIOR writeFailed:");
+                exc.printStackTrace();
+            }
+
         }
-        
     }
 
     @Test
@@ -199,15 +233,29 @@ public class AsyncPingTest {
     private void testThroughputInternal(ExecutorService executor) throws Exception, IOException, InterruptedException {
         out.println("Using " + executor.getClass().getCanonicalName());
         Task.setCurrentExecutor(executor);
-        Server s=new Server(local9999);
-        ClientConnection cli=new ClientConnection(local9999, rounds);
+        AsynchronousServerSocketChannel s=AsyncServerSocketChannel.open();
+        s.bind(local9999);
+        new ServerConnection(s);
+        MessageSink sink = new MessageSink(clients);
+        long start0 = System.nanoTime();
+        for (int i = 0; i < clients; i++) {
+            new ClientConnection(local9999, rounds, sink);
+        }
         
         long start = System.nanoTime();
-        cli.sink.get();
-        float time = (System.nanoTime() - start)/1000000000.0f;
-        float rate = rounds / time;
-        ServerConnection asc = s.asc;
-        out.printf("numOp=%d  readcount=%d writecount=%d\n", cli.numOp, asc.readcount, asc.writecount);
-        out.printf("Elapsed=%f sec; throughput = %f packets/sec \n", time, rate); // actually, round-trips
+        float time = (start - start0)/1000000000.0f;
+        float rate = clients / time;
+        out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate); // actually, round-trips
+        sink.await();
+        s.close();
+        time = (System.nanoTime() - start)/1000000000.0f;
+        rate = clients*rounds / time;
+        out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate); // actually, round-trips
+    }
+
+    public static void main(String[] args) throws Exception {
+        AsyncPingTest t=new AsyncPingTest();
+        t.testSocketWriteReadThroughput1();
+//        t.testSocketWriteReadThroughput2();
     }
 }

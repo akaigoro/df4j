@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.example;
 
 import java.io.PrintStream;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.util.MessageSink;
 
 
 /**
@@ -31,7 +31,7 @@ public class NetworkTest {
     final static int NUM_ACTORS = 100; // number of nodes
     final static int NR_REQUESTS = NUM_ACTORS * 10; // 100; // number of tokens
     final static int TIME_TO_LIVE = 1000; // hops
-    final static int nThreads = 1;
+    final static int nThreads = Runtime.getRuntime().availableProcessors();
     final static int times = 10;
     PrintStream out = System.out;
 
@@ -112,10 +112,10 @@ public class NetworkTest {
      */
     static class NodeActor extends Actor<Packet> {
         NodeActor[] nodes;
-        private final Port<Packet> sink;
+        private final Port<Object> sink;
         private Random rand;
 
-        public NodeActor(long seed, NodeActor[] nodes, Port<Packet> sink) {
+        public NodeActor(long seed, NodeActor[] nodes, Port<Object> sink) {
             this.nodes = nodes;
             this.sink = sink;
             this.rand = new Random(seed);
@@ -137,24 +137,6 @@ public class NetworkTest {
                 nextNode.send(token);
             }
         }
-    }
-
-    /**
-     * The ending node. This is Port rather than actor, to be accessed outside
-     * the actor world.
-     */
-    static class MessageSink extends CountDownLatch implements Port<Packet> {
-
-        public MessageSink(int count) {
-            super(count);
-        }
-
-        @Override
-        public Object send(Packet message) {
-            super.countDown();
-            return this;
-        }
-
     }
 
     /**
