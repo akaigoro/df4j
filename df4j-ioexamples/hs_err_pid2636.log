@@ -1,0 +1,185 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00a0d61b, pid=2636, tid=1324
+#
+# JRE version: 7.0-b125
+# Java VM: Java HotSpot(TM) Client VM (20.0-b06 mixed mode, sharing windows-x86 )
+# Problematic frame:
+# J  sun.nio.ch.WindowsAsynchronousSocketChannelImpl.connect0(JZLjava/net/InetAddress;IJ)I
+#
+# If you would like to submit a bug report, please visit:
+#   http://java.sun.com/webapps/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x02f16c00):  JavaThread "Thread-0 DF executor" daemon [_thread_in_native, id=1324, stack(0x031b0000,0x03200000)]
+
+siginfo: ExceptionCode=0xc0000005, writing address 0x00000164
+
+Registers:
+EAX=0xfffffffe, EBX=0x00000000, ECX=0xfae08dda, EDX=0x7c90e514
+ESP=0x031ff844, EBP=0x031ff858, ESI=0x0015840f, EDI=0x00000000
+EIP=0x00a0d61b, EFLAGS=0x00010246
+
+Top of Stack: (sp=0x031ff844)
+0x031ff844:   031ff858 27f5a948 32b4efc8 00000000
+0x031ff854:   00a0d570 031ff8f8 00a0d848 00003b38
+0x031ff864:   00000000 0395d0c0 00000000 0000270e
+0x031ff874:   00000000 031ff8f8 009d5c84 229c63c8
+0x031ff884:   00000000 031ff8f8 00932f45 00003b38
+0x031ff894:   00000000 0395d0c0 00000000 0000270e
+0x031ff8a4:   00000000 00000001 229c62c0 00932f45
+0x031ff8b4:   0395d0c0 00000000 0000270e 27f5a948 
+
+Instructions: (pc=0x00a0d61b)
+0x00a0d5fb:   e8 d0 a3 06 6d 83 c4 08 8d 97 28 01 00 00 89 14
+0x00a0d60b:   24 c7 87 64 01 00 00 04 00 00 00 e8 d0 63 c9 6c
+0x00a0d61b:   c7 87 64 01 00 00 05 00 00 00 8b cf c1 e9 03 81
+0x00a0d62b:   e1 fc 0f 00 00 89 0c 0d 00 00 91 00 81 3d 80 ee 
+
+
+Register to memory mapping:
+
+EAX=0xfffffffe is an unknown value
+EBX=0x00000000 is an unknown value
+ECX=0xfae08dda is an unknown value
+EDX=0x7c90e514 is an unknown value
+ESP=0x031ff844 is pointing into the stack for thread: 0x02f16c00
+EBP=0x031ff858 is pointing into the stack for thread: 0x02f16c00
+ESI=0x0015840f is an unknown value
+EDI=0x00000000 is an unknown value
+
+
+Stack: [0x031b0000,0x03200000],  sp=0x031ff844,  free space=318k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+J  sun.nio.ch.WindowsAsynchronousSocketChannelImpl.connect0(JZLjava/net/InetAddress;IJ)I
+J  sun.nio.ch.WindowsAsynchronousSocketChannelImpl.access$200(JZLjava/net/InetAddress;IJ)I
+J  sun.nio.ch.AsynchronousChannelGroupImpl$1.run()V
+v  ~StubRoutines::call_stub
+V  [jvm.dll+0x11644d]
+V  [jvm.dll+0x1b856e]
+V  [jvm.dll+0x116616]
+V  [jvm.dll+0x116676]
+V  [jvm.dll+0xc81be]
+V  [jvm.dll+0x136b4f]
+V  [jvm.dll+0x1629d9]
+C  [msvcr100.dll+0x5c6de]  endthreadex+0x3a
+C  [msvcr100.dll+0x5c788]  endthreadex+0xe4
+C  [kernel32.dll+0xb729]  GetModuleFileNameA+0x1ba
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+J  sun.nio.ch.WindowsAsynchronousSocketChannelImpl.connect0(JZLjava/net/InetAddress;IJ)I
+J  sun.nio.ch.WindowsAsynchronousSocketChannelImpl.access$200(JZLjava/net/InetAddress;IJ)I
+j  sun.nio.ch.WindowsAsynchronousSocketChannelImpl$ConnectTask.run()V+59
+J  sun.nio.ch.AsynchronousChannelGroupImpl$1.run()V
+J  com.github.rfqu.df4j.core.TaskWrapper.run()V
+J  com.github.rfqu.df4j.core.SimpleExecutorService$Worker.run()V
+j  java.lang.Thread.run()V+11
+v  ~StubRoutines::call_stub
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+  0x02f22800 JavaThread "Thread-1" daemon [_thread_in_native, id=508, stack(0x03200000,0x03250000)]
+=>0x02f16c00 JavaThread "Thread-0 DF executor" daemon [_thread_in_native, id=1324, stack(0x031b0000,0x03200000)]
+  0x02e98800 JavaThread "ReaderThread" [_thread_in_native, id=2212, stack(0x03120000,0x03170000)]
+  0x02bb5000 JavaThread "Low Memory Detector" daemon [_thread_blocked, id=2700, stack(0x02df0000,0x02e40000)]
+  0x02bb0800 JavaThread "C1 CompilerThread0" daemon [_thread_blocked, id=2404, stack(0x02da0000,0x02df0000)]
+  0x02bad400 JavaThread "Attach Listener" daemon [_thread_blocked, id=1768, stack(0x02d50000,0x02da0000)]
+  0x02babc00 JavaThread "Signal Dispatcher" daemon [_thread_blocked, id=2412, stack(0x02d00000,0x02d50000)]
+  0x02ba6800 JavaThread "Finalizer" daemon [_thread_blocked, id=2180, stack(0x02cb0000,0x02d00000)]
+  0x02ba1c00 JavaThread "Reference Handler" daemon [_thread_blocked, id=208, stack(0x02c60000,0x02cb0000)]
+  0x003c7400 JavaThread "main" [_thread_blocked, id=3772, stack(0x008c0000,0x00910000)]
+
+Other Threads:
+  0x02ba0000 VMThread [stack: 0x02c10000,0x02c60000] [id=1812]
+  0x02bbfc00 WatcherThread [stack: 0x02e40000,0x02e90000] [id=1708]
+
+VM state:not at safepoint (normal execution)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+Heap
+ def new generation   total 4928K, used 1596K [0x229b0000, 0x22f00000, 0x27f00000)
+  eden space 4416K,  24% used [0x229b0000, 0x22abf2d0, 0x22e00000)
+  from space 512K, 100% used [0x22e80000, 0x22f00000, 0x22f00000)
+  to   space 512K,   0% used [0x22e00000, 0x22e00000, 0x22e80000)
+ tenured generation   total 10944K, used 1855K [0x27f00000, 0x289b0000, 0x329b0000)
+   the space 10944K,  16% used [0x27f00000, 0x280cfdb8, 0x280cfe00, 0x289b0000)
+ compacting perm gen  total 12288K, used 1741K [0x329b0000, 0x335b0000, 0x369b0000)
+   the space 12288K,  14% used [0x329b0000, 0x32b63728, 0x32b63800, 0x335b0000)
+    ro space 10240K,  55% used [0x369b0000, 0x36f33d38, 0x36f33e00, 0x373b0000)
+    rw space 12288K,  53% used [0x373b0000, 0x37a14f28, 0x37a15000, 0x37fb0000)
+
+Code Cache  [0x00930000, 0x00a10000, 0x02930000)
+ total_blobs=486 nmethods=336 adapters=86 free_code_cache=32643072 largest_free_block=0
+
+Dynamic libraries:
+0x00400000 - 0x0042f000 	C:\Program Files\Java\jre7\bin\javaw.exe
+0x7c900000 - 0x7c9b3000 	C:\WINDOWS\system32\ntdll.dll
+0x7c800000 - 0x7c8f8000 	C:\WINDOWS\system32\kernel32.dll
+0x77dc0000 - 0x77e6c000 	C:\WINDOWS\system32\ADVAPI32.dll
+0x77e70000 - 0x77f03000 	C:\WINDOWS\system32\RPCRT4.dll
+0x77fe0000 - 0x77ff1000 	C:\WINDOWS\system32\Secur32.dll
+0x7e360000 - 0x7e3f1000 	C:\WINDOWS\system32\USER32.dll
+0x77f10000 - 0x77f59000 	C:\WINDOWS\system32\GDI32.dll
+0x5d5b0000 - 0x5d64a000 	C:\WINDOWS\system32\COMCTL32.dll
+0x76360000 - 0x7637d000 	C:\WINDOWS\system32\IMM32.DLL
+0x78aa0000 - 0x78b5e000 	C:\Program Files\Java\jre7\bin\msvcr100.dll
+0x6d950000 - 0x6dc58000 	C:\Program Files\Java\jre7\bin\client\jvm.dll
+0x76b20000 - 0x76b4e000 	C:\WINDOWS\system32\WINMM.dll
+0x5d270000 - 0x5d277000 	C:\WINDOWS\system32\serwvdrv.dll
+0x5b590000 - 0x5b597000 	C:\WINDOWS\system32\umdmxfrm.dll
+0x6d8e0000 - 0x6d8ec000 	C:\Program Files\Java\jre7\bin\verify.dll
+0x6d350000 - 0x6d370000 	C:\Program Files\Java\jre7\bin\java.dll
+0x76be0000 - 0x76beb000 	C:\WINDOWS\system32\PSAPI.DLL
+0x6d930000 - 0x6d943000 	C:\Program Files\Java\jre7\bin\zip.dll
+0x6d680000 - 0x6d696000 	C:\Program Files\Java\jre7\bin\net.dll
+0x71a90000 - 0x71aa7000 	C:\WINDOWS\system32\WS2_32.dll
+0x77c00000 - 0x77c58000 	C:\WINDOWS\system32\msvcrt.dll
+0x71a80000 - 0x71a88000 	C:\WINDOWS\system32\WS2HELP.dll
+0x71a30000 - 0x71a70000 	C:\WINDOWS\system32\mswsock.dll
+0x698b0000 - 0x69908000 	C:\WINDOWS\system32\hnetcfg.dll
+0x71a70000 - 0x71a78000 	C:\WINDOWS\System32\wshtcpip.dll
+0x76f10000 - 0x76f37000 	C:\WINDOWS\system32\DNSAPI.dll
+0x76d50000 - 0x76d69000 	C:\WINDOWS\system32\iphlpapi.dll
+0x76fa0000 - 0x76fa8000 	C:\WINDOWS\System32\winrnr.dll
+0x76f50000 - 0x76f7d000 	C:\WINDOWS\system32\WLDAP32.dll
+0x75000000 - 0x7501e000 	C:\WINDOWS\system32\wshbth.dll
+0x77910000 - 0x77a04000 	C:\WINDOWS\system32\SETUPAPI.dll
+0x64000000 - 0x64025000 	C:\Program Files\Bonjour\mdnsNSP.dll
+0x76fb0000 - 0x76fb6000 	C:\WINDOWS\system32\rasadhlp.dll
+0x6d6a0000 - 0x6d6af000 	C:\Program Files\Java\jre7\bin\nio.dll
+
+VM Arguments:
+jvm_args: -Dfile.encoding=Cp1251 
+java_command: org.eclipse.jdt.internal.junit.runner.RemoteTestRunner -version 3 -port 3592 -testLoaderClass org.eclipse.jdt.internal.junit4.runner.JUnit4TestLoader -loaderpluginname org.eclipse.jdt.junit4.runtime -classNames com.github.rfqu.df4j.ioexample.AsyncPingTest
+Launcher Type: SUN_STANDARD
+
+Environment Variables:
+JAVA_HOME=C:\Program Files\Java\jdk1.7.0
+CLASSPATH=.;C:\Program Files\Java\jre6\lib\ext\QTJava.zip
+PATH=C:/Program Files/Java/jre7/bin/client;C:/Program Files/Java/jre7/bin;C:/Program Files/Java/jre7/lib/i386;C:\Program Files\PC Connectivity Solution\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\Program Files\QuickTime\QTSystem\;C:\Program Files\TortoiseSVN\bin;C:\Program Files\Java\jdk1.7.0\bin;C:\Program Files\TortoiseHg\;C:\Program Files\TortoiseGit\bin;C:\Program Files\Subversion\bin;C:\Program Files\Git\cmd;C:\Program Files\CVSNT\;c:\bin;C:\Program Files\Java\jdk1.7.0\bin;c:\progFiles\apache-maven-3.0.3\bin;D:\eclipse;
+USERNAME=rfq
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=x86 Family 6 Model 15 Stepping 6, GenuineIntel
+
+
+
+---------------  S Y S T E M  ---------------
+
+OS: Windows XP Build 2600 Service Pack 3
+
+CPU:total 2 (2 cores per cpu, 1 threads per core) family 6 model 15 stepping 6, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3
+
+Memory: 4k page, physical 2088300k(211828k free), swap 4030248k(2160128k free)
+
+vm_info: Java HotSpot(TM) Client VM (20.0-b06) for windows-x86 JRE (1.7.0-ea-b125), built on Jan 13 2011 02:34:34 by "java_re" with unknown MS VC++:1600
+
+time: Sun Sep 25 15:57:34 2011
+elapsed time: 1 seconds
+
