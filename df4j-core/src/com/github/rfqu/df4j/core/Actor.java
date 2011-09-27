@@ -38,11 +38,10 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
     public Actor<M> send(M message) {
         synchronized(this) {
             input.enqueue(message);
-            if (running) {
+            if (running || ready) {
                 return this;
-            } else if (ready) {
-                running=true;
             }
+            running=true;
         }
         fire();
         return this;
@@ -54,11 +53,10 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
     public void setReady(boolean ready) {
         synchronized(this) {
             this.ready=ready;
-            if (running) {
+            if (running || ready || input.isEmpty()) {
                 return;
-            } else if (ready && !input.isEmpty()) {
-                running=true;
             }
+            running=true;
         }
         fire();
     }

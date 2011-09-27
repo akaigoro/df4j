@@ -32,7 +32,6 @@ public class AsyncPingTest {
     @Before
     public void init() {
         executor = new SimpleExecutorService();
-        Task.setCurrentExecutor(executor);
         out.println("Using " + executor.getClass().getCanonicalName());
         local9999 = new InetSocketAddress("localhost", 9998);
         log.addAppender(new ConsoleAppender(new SimpleLayout()));
@@ -41,6 +40,7 @@ public class AsyncPingTest {
     
     @Test
     public void testServerSocket() throws Exception {
+        Task.setCurrentExecutor(executor);
         AsyncServerSocketChannel s=new AsyncServerSocketChannel(local9999);
         ServerConnection sc = new ServerConnection(s);
 
@@ -77,7 +77,7 @@ public class AsyncPingTest {
         
         public ServerConnection(AsyncServerSocketChannel s) throws IOException {
             super.connect(s);
-            request.read(this);
+            read(request);
             log.debug("    server read started");
         }
 
@@ -109,14 +109,14 @@ public class AsyncPingTest {
                 // switch to write
                 buffer.clear();
                 buffer.putLong(n); // flip auto
-                write(channel);
+                channel.write(this);
             }
 
             @Override
             protected void writeCompleted(Integer result) {
                 writecount++;
                  log.debug("    server writecount="+writecount);
-                read(channel);
+                 channel.read(this);
             }
 
             @Override
@@ -195,14 +195,14 @@ public class AsyncPingTest {
                 // switch to write
                 buffer.clear();
                 buffer.putLong(numOp); // flip auto
-                write(ch);
+                ch.write(this);
             }
 
             @Override
             protected void writeCompleted(Integer result) {
                 writecount++;
                  log.debug("client write ended, read started: numOp ="+numOp+" writecount="+writecount);
-                read(ch);
+                ch.read(this);
             }
 
             @Override
@@ -236,6 +236,7 @@ public class AsyncPingTest {
 
     public static void main(String[] args) throws Exception {
         AsyncPingTest t=new AsyncPingTest();
+        t.init();
         t.testServerSocket();
     }
 }

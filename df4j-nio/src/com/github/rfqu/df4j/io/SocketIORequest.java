@@ -27,14 +27,6 @@ public abstract class SocketIORequest extends Link {
         buffer.clear();
     }
 
-    public void read(AsyncSocketChannel channel) {
-        startExchange(channel, true);
-    }
-    
-    public void write(AsyncSocketChannel channel) {
-        startExchange(channel, false);
-    }
-
     protected abstract void readCompleted(Integer result);
     
     protected abstract void writeCompleted(Integer result);
@@ -43,7 +35,7 @@ public abstract class SocketIORequest extends Link {
 
     protected abstract void readFailed(Throwable exc);
     
-    private void startExchange(AsyncSocketChannel channel, boolean readOp) {
+    void startExchange(AsyncSocketChannel channel, boolean readOp) {
         if (inTrans) {
             throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
         }
@@ -51,15 +43,6 @@ public abstract class SocketIORequest extends Link {
         this.readOp=readOp;
         this.channel=channel;
         buffer.clear();
-        try {
-            if (readOp) {
-                channel.read(this);
-            } else {
-                channel.write(this);                
-            }
-        } catch (IOException e) {
-            requestFailed(e);
-        }
     }
 
     void requestCompleted(Integer result) {

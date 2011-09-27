@@ -59,29 +59,13 @@ public class AsyncSocketChannel extends AsyncChannel {
         // TODO fail enqueued requests
     }
 
-    protected void read(SocketIORequest request) throws IOException {
-        /*
-        if (channel!=null) {
-            int res = channel.read(request.buffer);
-            if (res!=0) {
-                request.readCompleted(res);
-                return;
-            }
-        }
-        */
+    protected void read(SocketIORequest request) {
+        request.startExchange(this, true);
         readRequests.send(request);
     }
 
-    protected void write(SocketIORequest request) throws IOException {
-        /*
-        if (channel!=null) {
-            int res = channel.write(request.buffer);
-            if (res!=0) {
-                request.writeCompleted(res);
-                return;
-            }
-        }
-        */
+    protected void write(SocketIORequest request) {
+        request.startExchange(this, false);
         writeRequests.send(request);
     }
 
