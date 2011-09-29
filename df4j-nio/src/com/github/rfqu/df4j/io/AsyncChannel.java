@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 
 import com.github.rfqu.df4j.core.Link;
 
@@ -15,6 +16,7 @@ public abstract class AsyncChannel extends Link {
     }
     
     private int interest=0; // current registered interest
+    private boolean registering=false; // current registered interest
     
     protected  void interestOn(int bit) throws ClosedChannelException {
         synchronized (this) {
@@ -22,8 +24,12 @@ public abstract class AsyncChannel extends Link {
                 return; // set already
             }
             interest = interest | bit;
+            if (registering) {
+                return;
+            }
+            registering=true;
         }
-        selector.register(this, interest);        
+        selector.startRegistration(this);        
     }
 
     protected  void interestOff(int bit) throws ClosedChannelException {
@@ -32,10 +38,21 @@ public abstract class AsyncChannel extends Link {
                 return; // not set
             }
             interest = interest & ~bit;
+            if (registering) {
+                return;
+            }
+            registering=true;
         }
-        selector.register(this, interest);        
+        selector.startRegistration(this);        
     }
 
+    void endRegistration(Selector selector) throws ClosedChannelException {
+        synchronized (this) {
+            getChannel().register(selector, interest, this);
+            registering=false;
+        }
+    }
+    
     public void close() throws IOException {
         SelectableChannel channel = getChannel();
         if (channel!=null) {
@@ -45,6 +62,6 @@ public abstract class AsyncChannel extends Link {
 
     public abstract SelectableChannel getChannel();
 
-    public abstract void notify(SelectionKey key);
-    
+    abstract void notify(SelectionKey key);
+
 }

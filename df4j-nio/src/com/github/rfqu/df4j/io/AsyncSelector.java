@@ -7,12 +7,14 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
+import com.github.rfqu.df4j.core.Link;
+import com.github.rfqu.df4j.core.MessageQueue;
 import com.github.rfqu.df4j.core.Task;
 
 public class AsyncSelector extends Thread {
     private ExecutorService executor;
     Selector selector;
-    private Object gate=new Object();
+    private MessageQueue<AsyncChannel> rrs=new MessageQueue<AsyncChannel>();
 
     AsyncSelector() throws IOException {
         this.executor=Task.getCurrentExecutor();
@@ -21,11 +23,11 @@ public class AsyncSelector extends Thread {
         super.start();
     }
 
-    void register(AsyncChannel asch, int interest) throws ClosedChannelException {
-        synchronized (gate) {
-            selector.wakeup();
-            asch.getChannel().register(selector, interest, asch);
+    void startRegistration(AsyncChannel asch) throws ClosedChannelException {
+        synchronized (rrs) {
+            rrs.enqueue(asch);
         }
+        selector.wakeup();
     }
 
     @Override
@@ -35,20 +37,41 @@ public class AsyncSelector extends Thread {
         try {
             while (true) {
                 // wait for events
-                selector.select();
-                synchronized (gate) {}
-                Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
-                while (keys.hasNext()) {
-                    SelectionKey key = keys.next();
-                    keys.remove();
-                    AsyncChannel channel = (AsyncChannel) key.attachment();
-                    channel.notify(key);
+                int nk = selector.select();
+                if (nk>0) {
+                    Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+                    while (keys.hasNext()) {
+                        SelectionKey key = keys.next();
+                        keys.remove();
+                        AsyncChannel channel = (AsyncChannel) key.attachment();
+                        channel.notify(key);
+                    }
+                }
+                for (;;) {
+                    AsyncChannel asch;
+                    synchronized (rrs) {
+                        asch=rrs.poll();
+                    }
+                    if (asch==null) {
+                        break;
+                    }
+                    asch.endRegistration(selector);
                 }
             }
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
             return;
+        }
+    }
+    
+    static class RegRequest extends Link {
+        AsyncChannel asch;
+        int interest;
+        
+        public RegRequest(AsyncChannel asch, int interest) {
+            this.asch = asch;
+            this.interest = interest;
         }
     }
 

@@ -59,12 +59,12 @@ public class AsyncSocketChannel extends AsyncChannel {
         // TODO fail enqueued requests
     }
 
-    protected void read(SocketIORequest request) {
+    public void read(SocketIORequest request) {
         request.startExchange(this, true);
         readRequests.send(request);
     }
 
-    protected void write(SocketIORequest request) {
+    public void write(SocketIORequest request) {
         request.startExchange(this, false);
         writeRequests.send(request);
     }

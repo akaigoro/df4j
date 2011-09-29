@@ -9,6 +9,8 @@ public abstract class SocketIORequest extends Link {
     protected ByteBuffer buffer;
     protected boolean readOp;
     protected boolean inTrans=false;
+    public Integer result;
+    public Throwable exc;
     
     public SocketIORequest(int capacity, boolean direct) {
         if (direct) {
@@ -24,29 +26,18 @@ public abstract class SocketIORequest extends Link {
     
     public void clear() {
         buffer.clear();
+        result=null;
+        exc=null;
     }
 
-    public void read(AsyncSocketChannel channel) {
+    void requestStarted(AsyncSocketChannel channel, boolean readOp) {
         if (inTrans) {
             throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
         }
         inTrans=true;
-        readOp=true;
+        this.readOp=readOp;
         this.channel=channel;
         buffer.clear();
-        channel.read(this);
-    }
-
-
-    public void write(AsyncSocketChannel channel) {
-        if (inTrans) {
-            throw new IllegalStateException("SocketIORequest.write: in "+(readOp?"read":"write")+" already");
-        }
-        inTrans=true;
-        readOp=false;
-        this.channel=channel;
-        buffer.flip();
-        channel.write(this);
     }
 
     protected void requestCompleted(Integer result) {
@@ -54,6 +45,7 @@ public abstract class SocketIORequest extends Link {
             throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" completed but not in trans");
         }
         inTrans=false;
+        channel=null;
         buffer.flip();
         if (readOp) {
             readCompleted(result);
@@ -63,13 +55,11 @@ public abstract class SocketIORequest extends Link {
     }
 
     protected void writeCompleted(Integer result) {
-        // TODO Auto-generated method stub
-        
+        this.result=result;
     }
 
     protected void readCompleted(Integer result) {
-        // TODO Auto-generated method stub
-        
+        this.result=result;
     }
 
     protected void requestFailed(Throwable exc) {
@@ -85,13 +75,11 @@ public abstract class SocketIORequest extends Link {
     }
 
     protected void writeFailed(Throwable exc) {
-        // TODO Auto-generated method stub
-        
+        this.exc=exc;
     }
 
     protected void readFailed(Throwable exc) {
-        // TODO Auto-generated method stub
-        
+        this.exc=exc;
     }
 
 }

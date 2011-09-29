@@ -24,7 +24,7 @@ public class AsyncServerSocketChannel extends AsyncChannel {
     }
 
     @Override
-    public void notify(SelectionKey key) {
+    void notify(SelectionKey key) {
         try {
             for (;;) {
                 synchronized (this) {

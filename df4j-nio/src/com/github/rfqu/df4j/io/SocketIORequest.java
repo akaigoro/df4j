@@ -27,14 +27,6 @@ public abstract class SocketIORequest extends Link {
         buffer.clear();
     }
 
-    protected abstract void readCompleted(Integer result);
-    
-    protected abstract void writeCompleted(Integer result);
-    
-    protected abstract void writeFailed(Throwable exc);
-
-    protected abstract void readFailed(Throwable exc);
-    
     void startExchange(AsyncSocketChannel channel, boolean readOp) {
         if (inTrans) {
             throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
@@ -45,7 +37,7 @@ public abstract class SocketIORequest extends Link {
         buffer.clear();
     }
 
-    void requestCompleted(Integer result) {
+    protected void requestCompleted(Integer result) {
         if (!inTrans) {
             throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" completed but not in trans");
         }
@@ -58,7 +50,17 @@ public abstract class SocketIORequest extends Link {
         }
     }
 
-    void requestFailed(Throwable exc) {
+    protected void writeCompleted(Integer result) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void readCompleted(Integer result) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void requestFailed(Throwable exc) {
         if (!inTrans) {
             throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" failed but not in trans");
         }
@@ -69,4 +71,15 @@ public abstract class SocketIORequest extends Link {
             writeFailed(exc);
         }
     }
+
+    protected void writeFailed(Throwable exc) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void readFailed(Throwable exc) {
+        // TODO Auto-generated method stub
+        
+    }
+
 }

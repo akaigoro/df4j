@@ -4,57 +4,90 @@ package com.github.rfqu.df4j.ioexample;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
 
+import org.junit.Before;
 import org.junit.Test;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
 
 import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
 import com.github.rfqu.df4j.io.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.io.AsyncSocketChannel;
 import com.github.rfqu.df4j.io.SocketIORequest;
 import com.github.rfqu.df4j.util.MessageSink;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Requires Java 7.
  */
 public class AsyncPingTest {
+    private static final Logger log = Logger.getLogger( AsyncPingTest.class ); 
+    SimpleExecutorService executor;
+    InetSocketAddress local9999;
     PrintStream out=System.out;
     PrintStream err=System.err;
-    private static final Logger log = LoggerFactory.getLogger( AsyncPingTest.class ); 
     int clients=2;
     int rounds = 4; // per client
-    int nThreads=Runtime.getRuntime().availableProcessors();
-    InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
-    AtomicLong cStartedR=new AtomicLong();
-    AtomicLong cEndedR=new AtomicLong();
-    AtomicLong cStartedW=new AtomicLong();
-    AtomicLong cEndedW=new AtomicLong();
-    AtomicLong sStartedR=new AtomicLong();
-    AtomicLong sEndedR=new AtomicLong();
-    AtomicLong sStartedW=new AtomicLong();
-    AtomicLong sEndedW=new AtomicLong();
+
+    @Before
+    public void init() {
+        executor = new SimpleExecutorService();
+        out.println("Using " + executor.getClass().getCanonicalName());
+        local9999 = new InetSocketAddress("localhost", 9998);
+        log.addAppender(new ConsoleAppender(new SimpleLayout()));
+        log.setLevel(Level.ALL);
+    }
+    
+    @Test
+    public void testServerSocket() throws Exception {
+        Task.setCurrentExecutor(executor);
+ //       AsyncServerSocketChannel s=new AsyncServerSocketChannel(local9999);
+//        ServerConnection sc = new ServerConnection(s);
+
+        MessageSink sink = new MessageSink(1);
+        ClientConnection cc = new ClientConnection(local9999, 1, sink);
+        sink.await();
+    }
+
+    //@Test
+    public void testSocketWriteReadThroughput() throws Exception {
+        Task.setCurrentExecutor(executor);
+        AsyncServerSocketChannel s=new AsyncServerSocketChannel(local9999);
+        new ServerConnection(s);
+
+        MessageSink sink = new MessageSink(clients);
+        long start0 = System.nanoTime();
+        for (int i = 0; i < clients; i++) {
+            new ClientConnection(local9999, rounds, sink);
+        }
+        
+        long start = System.nanoTime();
+        float time = (start - start0)/1000000000.0f;
+        float rate = clients / time;
+        out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate); // actually, round-trips
+        sink.await();
+        s.close();
+        time = (System.nanoTime() - start)/1000000000.0f;
+        rate = clients*rounds / time;
+        out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate); // actually, round-trips
+    }
 
     class ServerConnection extends AsyncSocketChannel {
         ServerIOR request=new ServerIOR();
         
         public ServerConnection(AsyncServerSocketChannel s) throws IOException {
             super.connect(s);
-            request.read(this);
+            read(request);
+            log.debug("    server read started");
         }
 
         @Override
-        protected void connCompleted(SocketChannel channel) {
-            // TODO Auto-generated method stub
-            super.connCompleted(channel);
+        protected void requestCompleted(SocketIORequest request) {
+            super.requestCompleted(request);
+            
         }
 
         class ServerIOR extends SocketIORequest {
@@ -68,33 +101,28 @@ public class AsyncPingTest {
 
             @Override
             protected void readCompleted(Integer result) {
-                sEndedR.incrementAndGet();
                 readcount++;
                 int rem = buffer.remaining();
-                if (rem == 0) {
-                    return; // fake empty packet after client has closed connection
-                }
                 long n = buffer.getLong();
-                log.debug("    server readcount="+readcount+" rem="+rem+" n="+n);
+                log.debug("    server readcount="+readcount+" rem="+rem+" n="+n+" res="+result);
+                if (result == -1) {
+                    return; // client has closed connection
+                }
                 // switch to write
                 buffer.clear();
                 buffer.putLong(n); // flip auto
-                write(channel);
-                sStartedW.incrementAndGet();
+                channel.write(this);
             }
 
             @Override
             protected void writeCompleted(Integer result) {
-                sEndedW.incrementAndGet();
                 writecount++;
                  log.debug("    server writecount="+writecount);
-                read(channel);
-                sStartedR.incrementAndGet();
+                 channel.read(this);
             }
 
             @Override
             protected void writeFailed(Throwable exc) {
-                sEndedW.incrementAndGet();
                 if (!channel.getChannel().isOpen()) {
                     log.debug("    server channel closed");
                     return;
@@ -106,8 +134,7 @@ public class AsyncPingTest {
 
             @Override
             protected void readFailed(Throwable exc) {
-                sEndedR.incrementAndGet();
-                // TODO gracefully shutdown when clien closed connection
+                // TODO gracefully shutdown when client closed connection
                 try {
                     channel.close();
                     return;
@@ -170,22 +197,18 @@ public class AsyncPingTest {
                 // switch to write
                 buffer.clear();
                 buffer.putLong(numOp); // flip auto
-                write(ch);
-                cStartedW.incrementAndGet();
+                ch.write(this);
             }
 
             @Override
             protected void writeCompleted(Integer result) {
-                cEndedW.incrementAndGet();
                 writecount++;
                  log.debug("client write ended, read started: numOp ="+numOp+" writecount="+writecount);
-                read(ch);
-                cStartedR.incrementAndGet();
+                ch.read(this);
             }
 
             @Override
             protected void readCompleted(Integer result) {
-                cEndedR.incrementAndGet();
                 readcount++;
                 int rem = buffer.remaining();
                 long n = -1;
@@ -198,7 +221,6 @@ public class AsyncPingTest {
 
             @Override
             protected void readFailed(Throwable exc) {
-                cEndedR.incrementAndGet();
                 // TODO Auto-generated method stub
                 log.debug("    ClientIOR readFailed:");
                 exc.printStackTrace();
@@ -206,7 +228,6 @@ public class AsyncPingTest {
 
             @Override
             protected void writeFailed(Throwable exc) {
-                cEndedW.incrementAndGet();
                 // TODO Auto-generated method stub
                 log.debug("    ClientIOR writeFailed:");
                 exc.printStackTrace();
@@ -215,45 +236,9 @@ public class AsyncPingTest {
         }
     }
 
-    @Test
-    public void testSocketWriteReadThroughput1() throws Exception {
-        SimpleExecutorService executor = new SimpleExecutorService();
-        testThroughputInternal(executor);
-    }
-
-    @Test
-    public void testSocketWriteReadThroughput2() throws Exception {
-        ThreadFactoryTL tf = new ThreadFactoryTL();
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
-        testThroughputInternal(executor);
-    }
-
-    private void testThroughputInternal(ExecutorService executor) throws Exception {
-        out.println("Using " + executor.getClass().getCanonicalName());
-        Task.setCurrentExecutor(executor);
-        AsyncServerSocketChannel s=new AsyncServerSocketChannel(local9999);
-        new ServerConnection(s);
-
-        MessageSink sink = new MessageSink(clients);
-        long start0 = System.nanoTime();
-        for (int i = 0; i < clients; i++) {
-            new ClientConnection(local9999, rounds, sink);
-        }
-        
-        long start = System.nanoTime();
-        float time = (start - start0)/1000000000.0f;
-        float rate = clients / time;
-        out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate); // actually, round-trips
-        sink.await();
-        s.close();
-        time = (System.nanoTime() - start)/1000000000.0f;
-        rate = clients*rounds / time;
-        out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate); // actually, round-trips
-    }
-
     public static void main(String[] args) throws Exception {
         AsyncPingTest t=new AsyncPingTest();
-        t.testSocketWriteReadThroughput1();
-//        t.testSocketWriteReadThroughput2();
+        t.init();
+        t.testServerSocket();
     }
 }
