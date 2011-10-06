@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.util;
 
-import com.github.rfqu.df4j.core.DataSource;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Task;
 

@@ -2,15 +2,12 @@ package com.github.rfqu.df4j.io;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.MessageQueue;
-import com.github.rfqu.df4j.core.Task;
 
 public class AsyncServerSocketChannel extends AsyncChannel {
     ServerSocketChannel serverChannel;
@@ -23,25 +20,37 @@ public class AsyncServerSocketChannel extends AsyncChannel {
         interestOn(SelectionKey.OP_ACCEPT);
     }
 
+    /** offer from new AsyncServerSocket
+     * 
+     * @param acceptor
+     * @return
+     * @throws IOException
+     * @throws ClosedChannelException
+     */
+    public synchronized void accept(AsyncSocketChannel acceptor) throws IOException {
+        acceptors.enqueue(acceptor);
+    }
+
     @Override
     void notify(SelectionKey key) {
         try {
             for (;;) {
-                synchronized (this) {
+                synchronized (acceptors) {
                     if (acceptors.isEmpty()) {
-                        interestOff(SelectionKey.OP_ACCEPT);
                         return;
                     }
+                }
+                if (serverChannel==null || !serverChannel.isOpen()) {
+                    return;
                 }
                 SocketChannel channel = serverChannel.accept();
                 if (channel==null) {
                     return;
                 }
                 AsyncSocketChannel acceptor;
-                synchronized (this) {
+                synchronized (acceptors) {
                     acceptor = acceptors.poll();
                 }
-                channel.configureBlocking(false);
                 acceptor.connCompleted(channel);            
             }
         } catch (ClosedChannelException e) {
@@ -53,34 +62,15 @@ public class AsyncServerSocketChannel extends AsyncChannel {
         }
     }
 
-    /** offer from new AsyncServerSocket
-     * 
-     * @param acceptor
-     * @return
-     * @throws IOException
-     * @throws ClosedChannelException
-     */
-    public void accept(AsyncSocketChannel acceptor) throws IOException, ClosedChannelException {
-        SocketChannel res = serverChannel.accept();
-        synchronized (this) {
-            if (res == null) {
-                acceptors.enqueue(acceptor);
-                interestOn(SelectionKey.OP_ACCEPT);
-                serverChannel.register(selector.selector, SelectionKey.OP_ACCEPT, this);
-                return;
-            }
-        }
-        res.configureBlocking(false);
-        acceptor.connCompleted(res);
-    }
-
     @Override
     public ServerSocketChannel getChannel() {
         return serverChannel;
     }
 
     public void close() throws IOException {
+//        interestOff(SelectionKey.OP_ACCEPT);
         serverChannel.close();
+        serverChannel=null;
     }
     
 }

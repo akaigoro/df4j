@@ -12,7 +12,7 @@ public abstract class AsyncChannel extends Link {
     AsyncSelector selector;
 
     protected AsyncChannel() throws IOException {
-        selector =AsyncSelector.getCurrentSelector();
+        selector = AsyncSelector.getCurrentSelector();
     }
     
     private int interest=0; // current registered interest
@@ -46,20 +46,13 @@ public abstract class AsyncChannel extends Link {
         selector.startRegistration(this);        
     }
 
-    void endRegistration(Selector selector) throws ClosedChannelException {
+    void doRegistration(Selector selector) throws ClosedChannelException {
         synchronized (this) {
             getChannel().register(selector, interest, this);
             registering=false;
         }
     }
     
-    public void close() throws IOException {
-        SelectableChannel channel = getChannel();
-        if (channel!=null) {
-            channel.close();
-        }
-    }
-
     public abstract SelectableChannel getChannel();
 
     abstract void notify(SelectionKey key);

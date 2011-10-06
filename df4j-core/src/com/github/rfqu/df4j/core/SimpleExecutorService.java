@@ -22,7 +22,10 @@ public class SimpleExecutorService extends AbstractExecutorService {
      * It is also an Actor accepting Tasks.
      * @param <Task> the type of accepted tasks
      */
-    class Worker extends Actor<Task> implements Executor {
+    class Worker extends Link implements Port<Task>, Runnable, Executor {
+        protected MessageQueue<Task> input=new MessageQueue<Task>();
+        protected boolean ready=true;
+        protected boolean running;
         volatile boolean _stop=false;
         protected Thread t=new Thread(this);
         
@@ -53,7 +56,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
         @Override
         public void execute(Runnable command) {
             if (_stop) {
-                    throw new RejectedExecutionException();
+                throw new RejectedExecutionException();
             }
             if (command==null) {
                 throw new NullPointerException();
@@ -81,7 +84,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
         @Override
         public synchronized Worker send(Task task) {
             input.enqueue(task);
-            if (!running && ready) {
+            if (ready && !running) {
                 running=true;
                 notifyAll();
             }
@@ -114,18 +117,21 @@ public class SimpleExecutorService extends AbstractExecutorService {
                     }
                 }
                 try {
-                    act(task);
+                    task.run();
                 } catch (Exception e) {
                     failure(task, e);
                 }
             }
         }
 
-        @Override
-        protected void act(Task task) throws Exception {
-            task.run();
+        /** handles the failure
+         * 
+         * @param message
+         * @param e
+         */
+        protected void failure(Task message, Exception e) {
+            e.printStackTrace();
         }
-        
     }
     
     @Override

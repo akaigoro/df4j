@@ -22,14 +22,14 @@ import com.github.rfqu.df4j.io.AsyncSocketChannel;
 import com.github.rfqu.df4j.io.SocketIORequest;
 import com.github.rfqu.df4j.util.MessageSink;
 
-public class AsyncPingTest {
-    private static final Logger log = Logger.getLogger( AsyncPingTest.class ); 
+public class LatenceTest {
+    private static final Logger log = Logger.getLogger( LatenceTest.class ); 
     ExecutorService executor;
     InetSocketAddress local9999;
     PrintStream out=System.out;
     PrintStream err=System.err;
-    int clients=100;
-    int rounds = 1000; // per client
+    int clients=10;
+    int rounds = 10000; // per client
     private int nThreads=Runtime.getRuntime().availableProcessors();
 
     @Before
@@ -65,8 +65,9 @@ public class AsyncPingTest {
 
         MessageSink sink = new MessageSink(clients);
         long start0 = System.nanoTime();
+        ClientConnection[] ccs=new ClientConnection[clients];
         for (int i = 0; i < clients; i++) {
-            new ClientConnection(local9999, rounds, sink);
+            ccs[i]=new ClientConnection(local9999, rounds, sink);
         }
         
         long start = System.nanoTime();
@@ -78,12 +79,21 @@ public class AsyncPingTest {
         time = (System.nanoTime() - start)/1000000000.0f;
         rate = clients*rounds / time;
         out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate); // actually, round-trips
+        long sum=0;
+        int count=0;
+        for (int i = 0; i < clients; i++) {
+            count+=ccs[i].count;
+            sum+=ccs[i].sum;
+        }
+        float mean=((float)sum)/count;
+        out.printf("mean time="+mean/1000+" mks");
     }
 
     class CountingReqiest extends SocketIORequest {
         int readcount;
         int writecount;
-
+        long starttime;
+        
         public CountingReqiest() {
             super(4096, true);
         }
@@ -155,6 +165,8 @@ public class AsyncPingTest {
         CountingReqiest req;
         long numOp;
         MessageSink sink;
+        int count=0;
+        long sum=0;
 
         public ClientConnection(InetSocketAddress addr, long numOp, MessageSink sink) throws IOException {
             this.numOp = numOp;
@@ -182,6 +194,7 @@ public class AsyncPingTest {
                  log.debug("!!! client write started numOp ="+numOp+"!!! writecount="+rq.writecount);
                 return;
             }
+            rq.starttime=System.nanoTime();
             numOp--;
              log.debug("client write started numOp ="+numOp+" writecount="+rq.writecount);
             // switch to write
@@ -209,6 +222,10 @@ public class AsyncPingTest {
                 } else {
                     rq.writecount++;
                     log.debug("client write ended, read started: numOp ="+numOp+" writecount="+rq.writecount);
+                    long lat=System.nanoTime()-rq.starttime;
+//                    log.info("lat="+lat);
+                    count++;
+                    sum+=lat;
                     super.read(rq);
                 }
             } else {
@@ -221,7 +238,7 @@ public class AsyncPingTest {
     }
 
     public static void main(String[] args) throws Exception {
-        AsyncPingTest t=new AsyncPingTest();
+        LatenceTest t=new LatenceTest();
         t.init();
         t.testServerSocket();
     }

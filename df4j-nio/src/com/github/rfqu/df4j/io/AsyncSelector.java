@@ -2,12 +2,12 @@ package com.github.rfqu.df4j.io;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
-import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.MessageQueue;
 import com.github.rfqu.df4j.core.Task;
 
@@ -16,11 +16,15 @@ public class AsyncSelector extends Thread {
     Selector selector;
     private MessageQueue<AsyncChannel> rrs=new MessageQueue<AsyncChannel>();
 
-    AsyncSelector() throws IOException {
-        this.executor=Task.getCurrentExecutor();
+    public AsyncSelector(ExecutorService executor) throws IOException {
+        this.executor=executor;
         this.selector = Selector.open();
         super.setDaemon(true);
         super.start();
+    }
+
+    AsyncSelector() throws IOException {
+        this(Task.getCurrentExecutor());
     }
 
     void startRegistration(AsyncChannel asch) throws ClosedChannelException {
@@ -32,7 +36,9 @@ public class AsyncSelector extends Thread {
 
     @Override
     public void run() {
+        setName(getName()+" AsyncSelector");
         Task.setCurrentExecutor(executor);
+        currentSelectorKey.set(this);
         // processing
         try {
             while (true) {
@@ -43,8 +49,14 @@ public class AsyncSelector extends Thread {
                     while (keys.hasNext()) {
                         SelectionKey key = keys.next();
                         keys.remove();
+                        if (!key.isValid()) continue;
                         AsyncChannel channel = (AsyncChannel) key.attachment();
-                        channel.notify(key);
+                        try {
+                            channel.notify(key);
+                        } catch (Exception e) {
+                            // TODO: handle exception
+                            e.printStackTrace();
+                        }
                     }
                 }
                 for (;;) {
@@ -55,9 +67,16 @@ public class AsyncSelector extends Thread {
                     if (asch==null) {
                         break;
                     }
-                    asch.endRegistration(selector);
+                    try {
+                        asch.doRegistration(selector);
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                        e.printStackTrace();
+                    }
                 }
             }
+        } catch (ClosedSelectorException e) {
+            return;
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -65,32 +84,19 @@ public class AsyncSelector extends Thread {
         }
     }
     
-    static class RegRequest extends Link {
-        AsyncChannel asch;
-        int interest;
-        
-        public RegRequest(AsyncChannel asch, int interest) {
-            this.asch = asch;
-            this.interest = interest;
-        }
+
+    public void close() throws IOException {
+        selector.close();
     }
 
     public static AsyncSelector getCurrentSelector() {
         return currentSelectorKey.get();
     }
 
+    public static void setCurrentSelector(AsyncSelector s) {
+        currentSelectorKey.set(s);
+    }
+
     private static final ThreadLocal <AsyncSelector> 
-        currentSelectorKey  = new ThreadLocal <AsyncSelector> ()
-    {
-        @Override
-        protected AsyncSelector initialValue() {
-            try {
-                return new AsyncSelector();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                return null;
-            }
-        }
-    };
+        currentSelectorKey  = new ThreadLocal <AsyncSelector> ();
 }

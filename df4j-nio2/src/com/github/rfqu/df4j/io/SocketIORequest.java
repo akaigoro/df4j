@@ -4,11 +4,10 @@ import java.nio.ByteBuffer;
 
 import com.github.rfqu.df4j.core.Link;
 
-public abstract class SocketIORequest extends Link {
+public class SocketIORequest extends Link {
     protected AsyncSocketChannel channel;
     protected ByteBuffer buffer;
-    protected boolean readOp;
-    protected boolean inTrans=false;
+    private boolean readOp;
     public Integer result;
     public Throwable exc;
     
@@ -23,63 +22,57 @@ public abstract class SocketIORequest extends Link {
     public SocketIORequest(ByteBuffer buf) {
         this.buffer = buf;
     }
+
+    public boolean isReadOp() {
+        return readOp;
+    }
     
+    public AsyncSocketChannel getChannel() {
+        return channel;
+    }
+
+    public ByteBuffer getBuffer() {
+        return buffer;
+    }
+
     public void clear() {
         buffer.clear();
         result=null;
         exc=null;
     }
 
-    void requestStarted(AsyncSocketChannel channel, boolean readOp) {
-        if (inTrans) {
+    void start(AsyncSocketChannel channel, boolean readOp) {
+        if (this.channel!=null) {
             throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
         }
-        inTrans=true;
-        this.readOp=readOp;
         this.channel=channel;
+        this.readOp=readOp;
         buffer.clear();
     }
 
-    protected void requestCompleted(Integer result) {
-        if (!inTrans) {
+    protected void completed(Integer result) {
+        if (channel==null) {
+            // TODO
             throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" completed but not in trans");
         }
-        inTrans=false;
-        channel=null;
+        this.result=result;
+        this.exc=null;
         buffer.flip();
-        if (readOp) {
-            readCompleted(result);
-        } else {
-            writeCompleted(result);
-        }
+        AsyncSocketChannel ch = channel;
+        channel=null;
+        ch.requestCompleted(this);
     }
 
-    protected void writeCompleted(Integer result) {
-        this.result=result;
-    }
-
-    protected void readCompleted(Integer result) {
-        this.result=result;
-    }
-
-    protected void requestFailed(Throwable exc) {
-        if (!inTrans) {
+    protected void failed(Throwable exc) {
+        if (this.channel==null) {
+            // TODO
             throw new IllegalStateException("SocketIORequest "+(readOp?"read":"write")+" failed but not in trans");
         }
-        inTrans=false;
-        if (readOp) {
-            readFailed(exc);
-        } else {
-            writeFailed(exc);
-        }
-    }
-
-    protected void writeFailed(Throwable exc) {
+        this.result=null;
         this.exc=exc;
+        buffer.flip();
+        AsyncSocketChannel ch = channel;
+        channel=null;
+        ch.requestCompleted(this);
     }
-
-    protected void readFailed(Throwable exc) {
-        this.exc=exc;
-    }
-
 }

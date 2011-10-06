@@ -17,6 +17,9 @@ package com.github.rfqu.df4j.core;
 public abstract class Actor<M extends Link> extends Task implements Port<M> {
     protected MessageQueue<M> input=new MessageQueue<M>();
     protected boolean ready=true;
+    /** running task may not be fired (because it is fired already)
+     */
+    private boolean running;
 
     public Actor() {
     }
@@ -38,9 +41,9 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
     public Actor<M> send(M message) {
         synchronized(this) {
             input.enqueue(message);
-            if (running || ready) {
+            if (!ready || running) {
                 return this;
-            }
+            } 
             running=true;
         }
         fire();
@@ -53,9 +56,9 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
     public void setReady(boolean ready) {
         synchronized(this) {
             this.ready=ready;
-            if (running || ready || input.isEmpty()) {
+            if (!ready || input.isEmpty() || running) {
                 return;
-            }
+            } 
             running=true;
         }
         fire();
@@ -76,6 +79,7 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
             M message;
             synchronized (this) {
                 if (!ready) {
+                    running = false;
                     return;
                 }
                 message = input.poll();

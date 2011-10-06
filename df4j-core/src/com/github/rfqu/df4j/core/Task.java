@@ -13,10 +13,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 public abstract class Task extends Link implements Runnable {
-    /** running task may not be fired (because it is fired already)
-     *  subclasses check and set this variable inside critical regions
-     */
-    protected boolean running;
 
     /**
      * activates this task by sending it to the current executor

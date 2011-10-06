@@ -3,6 +3,7 @@ package com.github.rfqu.df4j.io;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
@@ -10,13 +11,11 @@ import com.github.rfqu.df4j.core.Actor;
 
 public class AsyncSocketChannel extends AsyncChannel {    
     protected SocketChannel channel;
-    protected boolean connected=false;
     protected Throwable connectionFailure=null;
     protected RequestQueue readRequests=new RequestQueue(true);
     protected RequestQueue writeRequests=new RequestQueue(false);
 
     protected AsyncSocketChannel() throws IOException {
-        super();
     }
 
     /**
@@ -25,7 +24,6 @@ public class AsyncSocketChannel extends AsyncChannel {
      */
     public void connect(SocketAddress remote) throws IOException {
         SocketChannel channel = SocketChannel.open(remote);
-        channel.configureBlocking(false);
         connCompleted(channel);
     }
 
@@ -40,12 +38,14 @@ public class AsyncSocketChannel extends AsyncChannel {
     }
 
     /**
-     * for server-side socket
+     * for all types of sockets
      * finishes connection
      * @throws IOException
      */
-    protected void connCompleted(SocketChannel channel) {
+    protected void connCompleted(SocketChannel channel) throws IOException {
         this.channel=channel;
+        channel.configureBlocking(false);
+        interestOn(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
         readRequests.setReady(true);
         writeRequests.setReady(true);
     }
@@ -60,17 +60,20 @@ public class AsyncSocketChannel extends AsyncChannel {
     }
 
     public void read(SocketIORequest request) {
-        request.startExchange(this, true);
+        request.start(this, true);
         readRequests.send(request);
     }
 
     public void write(SocketIORequest request) {
-        request.startExchange(this, false);
+        request.start(this, false);
         writeRequests.send(request);
     }
 
     @Override
-    public void notify(SelectionKey key) {
+    synchronized void notify(SelectionKey key) {
+        if (channel==null) {
+            return;
+        }
         if (key.isReadable()) {
             readRequests.setReady(true);
         }
@@ -79,18 +82,26 @@ public class AsyncSocketChannel extends AsyncChannel {
         }
     }
 
+    protected void requestCompleted(SocketIORequest request) {
+    }
+
     @Override
     public SocketChannel getChannel() {
         return channel;
     }
 
+    public synchronized void close() throws IOException {
+        if (channel != null) {
+            channel.close();
+            channel=null;
+        }
+    }
+
     class RequestQueue extends Actor<SocketIORequest> {
         final boolean read;
-        int interestBit;
 
         public RequestQueue(boolean read) {
             this.read = read;
-            interestBit = read? SelectionKey.OP_READ: SelectionKey.OP_WRITE;
         }
 
         @Override
@@ -98,14 +109,15 @@ public class AsyncSocketChannel extends AsyncChannel {
             try {
                 int res=read? channel.read(request.buffer): channel.write(request.buffer);
                 if (res == 0) {
-                    input.push(request);
-                    setReady(false);
-                    interestOn(interestBit);
+                    synchronized (this) {
+                        input.push(request);
+                        ready=false;
+                    }
                 } else {
-                    request.requestCompleted(res);
+                    request.completed(res);
                 }
             } catch (Exception e) {
-                request.requestFailed(e);
+                request.failed(e);
             }
         }
     }
