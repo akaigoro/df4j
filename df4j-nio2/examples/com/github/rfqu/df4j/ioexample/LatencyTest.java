@@ -21,7 +21,7 @@ import com.github.rfqu.df4j.io.SocketIORequest;
 import com.github.rfqu.df4j.util.MessageSink;
 
 public class LatencyTest {
-    static final Logger log = Logger.getLogger( LatencyTest.class ); 
+    static final Logger log = Logger.getLogger(LatencyTest.class ); 
     PrintStream out=System.out;
     PrintStream err=System.err;
     int port = 9998;
@@ -55,7 +55,7 @@ public class LatencyTest {
     }
     
 //    @Test
-    public void testServerSocket() throws Exception {
+    public void testConnection() throws Exception {
         log.setLevel(Level.ALL);
         Task.setCurrentExecutor(executor);
 
@@ -65,25 +65,25 @@ public class LatencyTest {
     }
 
     @Test
-    public void testSocketWriteReadThroughput() throws Exception {
+    public void testThroughput() throws Exception {
         log.setLevel(Level.INFO);
         Task.setCurrentExecutor(executor);
 
         MessageSink sink = new MessageSink(clients);
-        long start0 = System.nanoTime();
+        long start0 = System.currentTimeMillis();
         ClientConnection[] ccs=new ClientConnection[clients];
         for (int i = 0; i < clients; i++) {
             ccs[i]=new ClientConnection(local9999, rounds, sink);
         }
         
-        long start = System.nanoTime();
-        float time = (start - start0)/1000000000.0f;
+        long start = System.currentTimeMillis();
+        float time = (start - start0)/1000.0f;
         float rate = clients / time;
-        out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate); // actually, round-trips
+        out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate);
         sink.await();
-        time = (System.nanoTime() - start)/1000000000.0f;
+        time = (System.currentTimeMillis() - start)/1000.0f;
         rate = clients*rounds / time;
-        out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate); // actually, round-trips
+        out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate);
         long sum=0;
         int count=0;
         for (int i = 0; i < clients; i++) {
@@ -133,14 +133,9 @@ public class LatencyTest {
                 }
                 return;
             }
-            if (numOp < 0) {
-                 log.debug("!!! client write started numOp ="+numOp+"!!! writecount="+rq.writecount);
-                return;
-            }
-            rq.starttime=System.nanoTime();
             numOp--;
+            rq.starttime=System.nanoTime();
              log.debug("client write started numOp ="+numOp+" writecount="+rq.writecount);
-            // switch to write
             ByteBuffer buffer=rq.getBuffer();
             buffer.clear();
             buffer.putLong(numOp); // flip auto
@@ -151,7 +146,7 @@ public class LatencyTest {
         protected void requestCompleted(SocketIORequest request) {
             CountingReqiest rq=(CountingReqiest)request;
             super.requestCompleted(request);
-            if (rq.result!=null) {
+            if (rq.getResult()!=null) {
                 if (request.isReadOp()) {
                     rq.readcount++;
                     ByteBuffer buffer=rq.getBuffer();
@@ -165,16 +160,14 @@ public class LatencyTest {
                 } else {
                     rq.writecount++;
                     log.debug("client write ended, read started: numOp ="+numOp+" writecount="+rq.writecount);
-                    long lat=System.nanoTime()-rq.starttime;
-//                    log.info("lat="+lat);
                     count++;
-                    sum+=lat;
+                    sum+=System.nanoTime()-rq.starttime;
                     super.read(rq);
                 }
             } else {
                 // TODO Auto-generated method stub
                 log.debug("    ClientIOR "+(rq.isReadOp()?"read":"write")+" Failed:");
-                rq.exc.printStackTrace();
+                rq.getExc().printStackTrace();
             }
         }
 
@@ -183,6 +176,6 @@ public class LatencyTest {
     public static void main(String[] args) throws Exception {
         LatencyTest t=new LatencyTest();
         t.init();
-        t.testServerSocket();
+        t.testConnection();
     }
 }

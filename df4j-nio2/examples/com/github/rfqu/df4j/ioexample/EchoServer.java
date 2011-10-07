@@ -2,7 +2,6 @@
 package com.github.rfqu.df4j.ioexample;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -78,6 +77,8 @@ public class EchoServer {
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
+                log.error("  connection failed:"+e.toString());
+                return;
             }
             read(request);
             log.debug("    server read started");
@@ -86,9 +87,9 @@ public class EchoServer {
         @Override
         protected void requestCompleted(SocketIORequest request) {
             super.requestCompleted(request);
-            if (request.result!=null) {
+            if (request.getResult()!=null) {
                 if (request.isReadOp()) {
-                    if (request.result == -1) {
+                    if (request.getResult() == -1) {
                         log.debug("    server closing");
                         try {
                             super.close();
@@ -113,15 +114,13 @@ public class EchoServer {
                     return;
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
-//                    log.debug("    ServerIOR.channel.close failed:");
-                    e.printStackTrace();
+                    log.error("    ServerIOR.channel.close failed:"+e);
                 }
                 if (!channel.isOpen()) {
                     log.debug("    server channel closed");
                     return;
                 }
- //               log.debug("    ServerIOR "+(request.isReadOp()?"read":"write")+" Failed:");
-                request.exc.printStackTrace();
+                log.error("    ServerIOR "+(request.isReadOp()?"read":"write")+" Failed:"+request.getExc().toString());
             }
         }
 

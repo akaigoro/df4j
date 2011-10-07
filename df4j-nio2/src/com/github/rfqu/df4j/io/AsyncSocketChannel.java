@@ -2,17 +2,10 @@ package com.github.rfqu.df4j.io;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.nio.channels.SelectionKey;
-import java.util.concurrent.ExecutorService;
 
-import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.MessageQueue;
-import com.github.rfqu.df4j.core.Task;
 
 public abstract class AsyncSocketChannel extends AsyncChannel {
     protected AsynchronousSocketChannel channel;
@@ -132,7 +125,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         channel.close();
     }
 
-    static CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel> acceptCompletion
+    static final CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel> acceptCompletion
         = new CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel>()
     {
         @Override
@@ -145,7 +138,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         }
     };
 
-    static CompletionHandler<Void, AsyncSocketChannel> connCompletion =new CompletionHandler<Void, AsyncSocketChannel>() {
+    static final CompletionHandler<Void, AsyncSocketChannel> connCompletion =new CompletionHandler<Void, AsyncSocketChannel>() {
         @Override
         public void completed(Void result, AsyncSocketChannel asc) {
             asc.connCompleted(asc.channel);
@@ -156,24 +149,14 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         }
     };
 
-    static CompletionHandler<Integer, SocketIORequest> requestCompletion =new CompletionHandler<Integer, SocketIORequest>() {
+    static final CompletionHandler<Integer, SocketIORequest> requestCompletion =new CompletionHandler<Integer, SocketIORequest>() {
         @Override
         public void completed(Integer result, SocketIORequest request) {
-            try {
-                request.completed(result);
-            } catch (Exception e) { // this is the first method call on stack, nobody to report the exception
-                // TODO 
-                e.printStackTrace();
-            }
+            request.completed(result);
         }
         @Override
         public void failed(Throwable exc, SocketIORequest request) {
-            try {
-                request.failed(exc);
-            } catch (Exception e) { // this is the first method call on stack, nobody to report the exception
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            request.failed(exc);
         }
     };
 
