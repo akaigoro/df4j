@@ -32,11 +32,12 @@ public class AsyncPingTest {
     private static final Logger log = Logger.getLogger( AsyncPingTest.class ); 
     ExecutorService executor;
     AsyncSelector sel;
+    int port = 9998;
     InetSocketAddress local9999;
     PrintStream out=System.out;
     PrintStream err=System.err;
-    final int clients=100;
-    final int rounds = 1000; // per client
+    final int clients=2;//100;
+    final int rounds = 3;//1000; // per client
     final int nThreads=Runtime.getRuntime().availableProcessors();
 
     @Before
@@ -48,9 +49,12 @@ public class AsyncPingTest {
         tf.setExecutor(executor);
         */        
         out.println("Using " + executor.getClass().getCanonicalName());
-        local9999 = new InetSocketAddress("localhost", 9998);
+        local9999 = new InetSocketAddress("localhost", port);
         log.addAppender(new ConsoleAppender(new SimpleLayout()));
         sel=new AsyncSelector(executor);
+        sel.start();
+        EchoServer echo=new EchoServer(port);
+        echo.start();
     }
     
     @After
@@ -58,29 +62,12 @@ public class AsyncPingTest {
         executor.shutdownNow();
         sel.close();
     }
-    
-    @Test
-    public void testServerSocket() throws Exception {
-        log.setLevel(Level.ALL);
-        Task.setCurrentExecutor(executor);
-        AsyncSelector.setCurrentSelector(sel);
-        AsyncServerSocketChannel s=new AsyncServerSocketChannel(local9999);
-        ServerConnection sc = new ServerConnection(s);
-
-        MessageSink sink = new MessageSink(1);
-        ClientConnection cc = new ClientConnection(local9999, 1, sink);
-        sink.await();
-        sc.close();
-        s.close();
-    }
 
     @Test
     public void testSocketWriteReadThroughput() throws Exception {
         log.setLevel(Level.INFO);
         Task.setCurrentExecutor(executor);
         AsyncSelector.setCurrentSelector(sel);
-        AsyncServerSocketChannel s=new AsyncServerSocketChannel(local9999);
-        ServerConnection sc = new ServerConnection(s);
 
         MessageSink sink = new MessageSink(clients);
         long start0 = System.nanoTime();
@@ -93,91 +80,13 @@ public class AsyncPingTest {
         float rate = clients / time;
         out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate); // actually, round-trips
         sink.await();
-        s.close();
-        sc.close();
         time = (System.nanoTime() - start)/1000000000.0f;
         rate = clients*rounds / time;
         out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate); // actually, round-trips
     }
 
-    class CountingRequest extends SocketIORequest {
-        int readcount;
-        int writecount;
-
-        public CountingRequest() {
-            super(4096, true);
-        }
-    }
-
-    class ServerConnection extends AsyncSocketChannel {
-        AsyncServerSocketChannel s;
-        CountingRequest request=new CountingRequest();
-        
-        public ServerConnection(AsyncServerSocketChannel s) throws IOException {
-            this.s=s;
-            super.connect(s);
-        }
-
-        @Override
-        protected void connCompleted(SocketChannel channel) throws IOException {
-            super.connCompleted(channel);
-            try {
-                new ServerConnection(s);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            read(request);
-            log.debug("    server read started");
-        }
-
-        @Override
-        protected void requestCompleted(SocketIORequest request) {
-            super.requestCompleted(request);
-            CountingRequest rq=(CountingRequest)request;
-            if (rq.result!=null) {
-                if (request.isReadOp()) {
-                    if (rq.result == -1) {
-                        log.debug("    server closing");
-                        return; // client has closed connection
-                    }
-                    rq.readcount++;
-                    ByteBuffer buffer=rq.getBuffer();
-                    int rem = buffer.remaining();
-                    long n = buffer.getLong();
-//                    log.debug("    server read ended count="+rq.readcount+" rem="+rem+" n="+n+" res="+rq.result);
-                    // switch to write
-                    buffer.clear();
-                    buffer.putLong(n); // flip auto
-                    super.write(rq);
-                } else {
-                    rq.writecount++;
-//                    log.debug("    server write ended count="+rq.writecount);
-                    super.read(rq);
-                }
-            } else {
-                // TODO gracefully shutdown when client closed connection
-                try {
-                    super.close();
-                    return;
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-//                    log.debug("    ServerIOR.channel.close failed:");
-                    e.printStackTrace();
-                }
-                if (!channel.isOpen()) {
-                    log.debug("    server channel closed");
-                    return;
-                }
- //               log.debug("    ServerIOR "+(rq.isReadOp()?"read":"write")+" Failed:");
-                rq.exc.printStackTrace();
-            }
-        }
-
-    }
-
     class ClientConnection extends AsyncSocketChannel {
-        CountingRequest req;
+        SocketIORequest req;
         long numOp;
         MessageSink sink;
 
@@ -185,16 +94,16 @@ public class AsyncPingTest {
             this.numOp = numOp;
             this.sink = sink;
             connect(addr);
-            req=new CountingRequest();
+            req=new SocketIORequest(4096, false);
             write(req);
         }
 
         @Override
         public void write(SocketIORequest request) {
-            CountingRequest rq=(CountingRequest)request;
+            SocketIORequest rq=(SocketIORequest)request;
             if (numOp == 0) {
                 sink.send(null);
-                 log.debug("client close; readcount="+rq.readcount+" writecount="+rq.writecount);
+                log.debug("client closing ...");
                 try {
                     super.close();
                 } catch (IOException e) {
@@ -204,11 +113,11 @@ public class AsyncPingTest {
                 return;
             }
             if (numOp < 0) {
-                 log.debug("!!! client write started numOp ="+numOp+"!!! writecount="+rq.writecount);
+                 log.debug("!!! client write started numOp ="+numOp);
                 return;
             }
             numOp--;
-             log.debug("client write started numOp ="+numOp+" writecount="+rq.writecount);
+             log.debug("client write started numOp ="+numOp);
             // switch to write
             ByteBuffer buffer=rq.getBuffer();
             buffer.clear();
@@ -218,22 +127,20 @@ public class AsyncPingTest {
 
         @Override
         protected void requestCompleted(SocketIORequest request) {
-            CountingRequest rq=(CountingRequest)request;
+            SocketIORequest rq=(SocketIORequest)request;
             super.requestCompleted(request);
             if (rq.result!=null) {
                 if (request.isReadOp()) {
-                    rq.readcount++;
                     ByteBuffer buffer=rq.getBuffer();
                     int rem = buffer.remaining();
                     long n = -1;
                     if (rem >= 8) {
                         n = buffer.getLong();
                     }
-                    log.debug("client read ended numOp ="+numOp+" readcount="+rq.readcount+" rem="+rem+" n="+n);
+                    log.debug("client read ended numOp ="+numOp);
                     write(rq);
                 } else {
-                    rq.writecount++;
-                    log.debug("client write ended, read started: numOp ="+numOp+" writecount="+rq.writecount);
+                    log.debug("client write ended, read started: numOp ="+numOp);
                     super.read(rq);
                 }
             } else {
@@ -248,6 +155,6 @@ public class AsyncPingTest {
     public static void main(String[] args) throws Exception {
         AsyncPingTest t=new AsyncPingTest();
         t.init();
-        t.testServerSocket();
+        t.testSocketWriteReadThroughput();
     }
 }

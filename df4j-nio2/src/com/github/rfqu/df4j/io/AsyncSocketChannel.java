@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.MessageQueue;
+import com.github.rfqu.df4j.core.Task;
 
 public abstract class AsyncSocketChannel extends AsyncChannel {
     protected AsynchronousSocketChannel channel;
@@ -19,16 +20,6 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
     protected Throwable connectionFailure=null;
     protected RequestQueue readRequests=new RequestQueue();
     protected RequestQueue writeRequests=new RequestQueue();
-
-    /** for server-side socket
-     * 
-     * @param ch
-     */
-    public AsyncSocketChannel(AsynchronousSocketChannel ch) {
-        this.channel=ch;
-        readRequests.poll(); // to unlock only
-        writeRequests.poll();
-    }
 
     public AsyncSocketChannel() {
     }
@@ -46,14 +37,12 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
      * @throws IOException
      */
     public void connect(SocketAddress remote) throws IOException {
-        ExecutorService executor=Actor.getCurrentExecutor();
-        AsynchronousChannelGroup acg=getGroup(executor);
-        AsynchronousSocketChannel ch=AsynchronousSocketChannel.open(acg);
-        this.channel=ch;
+        this.channel=AsynchronousSocketChannel.open(getGroup());
         channel.connect(remote, this, connCompletion);
     }
 
-    protected void connCompleted() {
+    protected void connCompleted(AsynchronousSocketChannel result) {
+        this.channel=result;
         SocketIORequest nextRead=null;
         SocketIORequest nextWrite=null;
         synchronized (this) {
@@ -148,8 +137,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
     {
         @Override
         public void completed(AsynchronousSocketChannel result, AsyncSocketChannel asc) {
-            asc.channel=result;
-            asc.connCompleted();
+            asc.connCompleted(result);
         }
         @Override
         public void failed(Throwable exc, AsyncSocketChannel asc) {
@@ -160,7 +148,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
     static CompletionHandler<Void, AsyncSocketChannel> connCompletion =new CompletionHandler<Void, AsyncSocketChannel>() {
         @Override
         public void completed(Void result, AsyncSocketChannel asc) {
-            asc.connCompleted();
+            asc.connCompleted(asc.channel);
         }
         @Override
         public void failed(Throwable exc, AsyncSocketChannel asc) {

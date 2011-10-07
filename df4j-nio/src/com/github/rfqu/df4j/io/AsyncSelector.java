@@ -17,10 +17,10 @@ public class AsyncSelector extends Thread {
     private MessageQueue<AsyncChannel> rrs=new MessageQueue<AsyncChannel>();
 
     public AsyncSelector(ExecutorService executor) throws IOException {
+        setName(getName()+" AsyncSelector");
+        setDaemon(true);
         this.executor=executor;
         this.selector = Selector.open();
-        super.setDaemon(true);
-        super.start();
     }
 
     AsyncSelector() throws IOException {
@@ -36,7 +36,6 @@ public class AsyncSelector extends Thread {
 
     @Override
     public void run() {
-        setName(getName()+" AsyncSelector");
         Task.setCurrentExecutor(executor);
         currentSelectorKey.set(this);
         // processing
