@@ -41,7 +41,7 @@ public class FileIORequest extends Link {
         this.channel=channel;
         this.filePosition=filePosition;
         this.readOp=readOp;
-        if (!readOp) {
+        if (readOp) {
             buffer.clear();
         }
         result=null;
