@@ -7,25 +7,20 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.util;
-
-import com.github.rfqu.df4j.core.MessageQueue;
-import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.Request;
-
+package com.github.rfqu.df4j.core;
 
 /**
  * 
  * A kind of dataflow variable: single input, multiple asynchronous outputs.
  * 
- * @param <R>
- *                type of result
+ * @param <R> type of result
  */
-public class DataSource<R> implements Port<R> {
+public class DataSourceMulti<R> implements Promise<R>, Port<R> {
     private MessageQueue<Request<R>> requests = new MessageQueue<Request<R>>();
     private volatile R result;
 
-    public DataSource<R> send(R result) {
+    @Override
+    public DataSourceMulti<R> send(R result) {
         this.result = result;
         for (;;) {
             Request<R> request;
@@ -53,9 +48,11 @@ public class DataSource<R> implements Port<R> {
         e.printStackTrace();
     }
 
+    @Override
     public <S extends Port<R>> S request(S sink) {
         if (result != null) {
             sink.send(result);
+            return sink;
         }
         synchronized (this) {
             if (result == null) {
@@ -70,6 +67,7 @@ public class DataSource<R> implements Port<R> {
     public void request(Request<R> request) {
         if (result != null) {
             request.reply(result);
+            return;
         }
         synchronized (this) {
             if (result == null) {

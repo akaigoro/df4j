@@ -12,65 +12,16 @@ package com.github.rfqu.df4j.example;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.RunnablePromise;
-import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.util.BinaryOp;
+import com.github.rfqu.df4j.core.FuturePort;
+import com.github.rfqu.df4j.core.SimpleExecutorService;
+import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.UnaryOp;
 
 public class NodeTest {
-    SimpleExecutorService executor = new SimpleExecutorService();
-
-    /**
-     * compute a^2
-     * 
-     * @throws InterruptedException
-     */
-    @Test
-    public void t01() throws InterruptedException {
-        RunnablePromise<Integer> command = new RunnablePromise<Integer>() {
-            @Override
-            public void run() {
-                new Square().send(2).res.request(this);
-            }
-        };
-        executor.execute(command);
-        int res = command.get();
-        assertEquals(4, res);
-    }
-
-    /**
-     * compute 2*3
-     */
-    @Test
-    public void t02() throws InterruptedException {
-        RunnablePromise<Integer> command = new RunnablePromise<Integer>() {
-            @Override
-            public void run() {
-                new Mult().p1.send(2).p2.send(3).res.request(this);
-            }
-        };
-        executor.execute(command);
-        int res = command.get();
-        assertEquals(6, res);
-    }
-
-    /**
-     * compute sqrt(a^2+b^2)
-     */
-    @Test
-    public void t03() throws InterruptedException {
-        RunnablePromise<Double> command = new RunnablePromise<Double>() {
-            @Override
-            public void run() {
-                Sum sum = new Sum();
-                new Square().send(3).res.request(sum.p1);
-                new Square().send(4).res.request(sum.p2);
-                sum.res.request(new Sqrt()).res.request(this);
-            }
-        };
-        executor.execute(command);
-        double res = command.get();
-        assertEquals(5, res, 0.00001);
+    
+    public NodeTest() {
+        Task.setCurrentExecutor(new SimpleExecutorService());
     }
 
     class Square extends UnaryOp<Integer, Integer> {
@@ -85,15 +36,69 @@ public class NodeTest {
         }
     }
 
-    class Sum extends BinaryOp<Integer> {
+    class Sum extends BinaryOp<Integer, Integer> {
         public Integer operation(Integer v1, Integer v2) {
             return v1 + v2;
         }
     }
 
-    class Mult extends BinaryOp<Integer> {
+    class Mult extends BinaryOp<Integer, Integer> {
         public Integer operation(Integer v1, Integer v2) {
             return v1 * v2;
         }
+    }
+
+    class Div extends BinaryOp<Integer, Integer> {
+        public Integer operation(Integer v1, Integer v2) {
+            if (v2==0) {
+                
+            }
+            return v1 / v2;
+        }
+    }
+
+    /**
+     * compute a^2
+     * 
+     * @throws InterruptedException
+     */
+    @Test
+    public void t01() throws InterruptedException {
+        FuturePort<Integer> future = new FuturePort<Integer>();
+        new Square().send(2).res.request(future);
+        int res = future.get();
+        assertEquals(4, res);
+    }
+
+    /**
+     * compute 2*3
+     */
+    @Test
+    public void t02() throws InterruptedException {
+        FuturePort<Integer> future = new FuturePort<Integer>();
+        new Mult().p1.send(2).p2.send(3).request(future);
+        int res = future.get();
+        assertEquals(6, res);
+    }
+
+    /**
+     * compute sqrt(a^2+b^2)
+     */
+    @Test
+    public void t03() throws InterruptedException {
+        FuturePort<Double> future = new FuturePort<Double>();
+        Sum sum = new Sum();
+        new Square().send(3).request(sum.p1);
+        new Square().send(4).request(sum.p2);
+        sum.request(new Sqrt()).request(future);
+        double res = future.get();
+        assertEquals(5, res, 0.00001);
+    }
+    
+    public static void main(String args[]) throws InterruptedException {
+        NodeTest t=new NodeTest();
+        t.t01();
+        t.t02();
+        t.t03();
     }
 }

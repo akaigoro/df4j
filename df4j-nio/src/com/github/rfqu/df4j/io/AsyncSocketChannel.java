@@ -111,7 +111,7 @@ public class AsyncSocketChannel extends AsyncChannel {
                 if (res == 0) {
                     synchronized (this) {
                         input.push(request);
-                        ready=false;
+                        setReady(false);
                     }
                 } else {
                     request.completed(res);

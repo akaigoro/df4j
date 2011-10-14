@@ -9,7 +9,9 @@
  */
 package com.github.rfqu.df4j.util;
 
+import com.github.rfqu.df4j.core.DataSourceSingle;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Task;
 
 /**
@@ -18,19 +20,19 @@ import com.github.rfqu.df4j.core.Task;
  * computes the operation, and sends result to the DataSource object,
  * which routes the result to the interested parties.
  *
- * @param <T> the type of operands and the result
+ * @param <R> the type of operands and the result
  */
-public abstract class BinaryOp<T> extends Task {
+public abstract class BinaryOp<T, R> extends Task implements Promise<R> {
     public Inp p1 = new Inp();
     public Inp p2 = new Inp();
-    public DataSource<T> res = new DataSource<T>();
+    public DataSourceSingle<R> res = new DataSourceSingle<R>();
 
     public class Inp implements Port<T> {
         protected boolean opndready = false;
         T operand;
 
         @Override
-        public BinaryOp<T> send(T v) {
+        public BinaryOp<T, R> send(T v) {
             synchronized (this) {
                 operand = v;
                 opndready = true;
@@ -44,10 +46,21 @@ public abstract class BinaryOp<T> extends Task {
     }
 
     @Override
-    public void run() {
-        res.send(operation(p1.operand, p2.operand));
+    public <S extends Port<R>> S request(S sink) {
+        res.request(sink);
+        return sink;
     }
 
-    abstract protected T operation(T opnd, T opnd2);
+    @Override
+    public void run() {
+        try {
+            R result = operation(p1.operand, p2.operand);
+            res.send(result);
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
 
+    abstract protected R operation(T opnd, T opnd2);
 }

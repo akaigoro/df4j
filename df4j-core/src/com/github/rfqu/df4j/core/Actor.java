@@ -9,12 +9,22 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
 /**
  * Processes messages in asynchronous way using current executor.
  * Actors themselves are messages and can be send to other Actors and Ports
  * @param <M> the type of accepted messages
  */
 public abstract class Actor<M extends Link> extends Task implements Port<M> {
+    final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    final WriteLock writeLock = rwl.writeLock();
+    final ReadLock readLock = rwl.readLock();
+    final Condition resultReady  = writeLock.newCondition(); 
+
     protected MessageQueue<M> input=new MessageQueue<M>();
     protected boolean ready=true;
     /** running task may not be fired (because it is fired already)

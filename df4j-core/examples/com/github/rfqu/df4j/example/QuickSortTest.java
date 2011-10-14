@@ -138,7 +138,7 @@ public class QuickSortTest {
         // out.println("Using "+Worker.class.getCanonicalName());
         long startTime = System.currentTimeMillis();
 
-        Promise<Integer> sink = new Promise<Integer>();
+        FuturePort<Integer> sink = new FuturePort<Integer>();
         QuickSort sorter = new QuickSort(sink, numbers);
         executor.execute(sorter);
         int tasknum = sink.get();

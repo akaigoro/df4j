@@ -9,7 +9,9 @@
  */
 package com.github.rfqu.df4j.util;
 
+import com.github.rfqu.df4j.core.DataSourceSingle;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Task;
 
 /**
@@ -18,8 +20,8 @@ import com.github.rfqu.df4j.core.Task;
  * @param <T> type of the operand
  * @param <R> type of the result
  */
-public abstract class UnaryOp<T, R> extends Task implements Port<T> {
-    public DataSource<R> res = new DataSource<R>();
+public abstract class UnaryOp<T, R> extends Task implements Port<T>, Promise<R> {
+    public DataSourceSingle<R> res = new DataSourceSingle<R>();
     T opnd;
 
     @Override
@@ -29,6 +31,12 @@ public abstract class UnaryOp<T, R> extends Task implements Port<T> {
         }
         fire();
         return this;
+    }
+
+    @Override
+    public <S extends Port<R>> S request(S sink) {
+        res.request(sink);
+        return sink;
     }
 
     @Override
