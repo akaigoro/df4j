@@ -8,8 +8,8 @@ public class SocketIORequest extends Link {
     protected AsyncSocketChannel channel;
     protected ByteBuffer buffer;
     private boolean readOp;
-    public Integer result;
-    public Throwable exc;
+    Integer result;
+    Throwable exc;
     
     public SocketIORequest(int capacity, boolean direct) {
         if (direct) {
@@ -74,5 +74,13 @@ public class SocketIORequest extends Link {
         AsyncSocketChannel ch = channel;
         channel=null;
         ch.requestCompleted(this);
+    }
+
+    public Integer getResult() {
+        return result;
+    }
+
+    public Throwable getExc() {
+        return exc;
     }
 }

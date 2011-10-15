@@ -5,6 +5,7 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
@@ -28,7 +29,7 @@ public class LatencyTest {
     InetSocketAddress local9999;
     ExecutorService executor;
     EchoServer echoServer;
-    int clients=100;
+    int clients=200;
     int rounds = 1000; // per client
 
     @Before
@@ -70,19 +71,20 @@ public class LatencyTest {
         Task.setCurrentExecutor(executor);
 
         MessageSink sink = new MessageSink(clients);
-        long start0 = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         ClientConnection[] ccs=new ClientConnection[clients];
         for (int i = 0; i < clients; i++) {
             ccs[i]=new ClientConnection(local9999, rounds, sink);
         }
         
-        long start = System.currentTimeMillis();
-        float time = (start - start0)/1000.0f;
-        float rate = clients / time;
-        out.printf("%d clients started in %f sec; rate=%f clients/sec \n", clients, time, rate);
-        sink.await();
-        time = (System.currentTimeMillis() - start)/1000.0f;
-        rate = clients*rounds / time;
+        for (;;) {
+            if (sink.await(1000, TimeUnit.MILLISECONDS)) {
+                break;
+            }
+            
+        }
+        float time = (System.currentTimeMillis() - start)/1000.0f;
+        float rate = clients*rounds / time;
         out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate);
         long sum=0;
         int count=0;
@@ -135,7 +137,7 @@ public class LatencyTest {
             }
             numOp--;
             rq.starttime=System.nanoTime();
-             log.debug("client write started numOp ="+numOp+" writecount="+rq.writecount);
+            log.debug("client write started numOp ="+numOp+" writecount="+rq.writecount);
             ByteBuffer buffer=rq.getBuffer();
             buffer.clear();
             buffer.putLong(numOp); // flip auto

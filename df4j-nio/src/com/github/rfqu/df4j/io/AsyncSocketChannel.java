@@ -15,7 +15,8 @@ public class AsyncSocketChannel extends AsyncChannel {
     protected RequestQueue readRequests=new RequestQueue(true);
     protected RequestQueue writeRequests=new RequestQueue(false);
 
-    protected AsyncSocketChannel() throws IOException {
+    public AsyncSocketChannel(AsyncSelector selector) {
+        super(selector);
     }
 
     /**

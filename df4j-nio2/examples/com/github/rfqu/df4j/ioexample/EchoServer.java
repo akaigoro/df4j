@@ -54,8 +54,13 @@ public class EchoServer {
         });
     }
     
-    public void close() throws IOException {
-        assch.close();
+    public void close() {
+        try {
+            assch.close();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         executor.shutdownNow();
         log.info("Stopped");
     }

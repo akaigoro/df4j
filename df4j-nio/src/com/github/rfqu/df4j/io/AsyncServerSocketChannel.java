@@ -13,22 +13,34 @@ public class AsyncServerSocketChannel extends AsyncChannel {
     ServerSocketChannel serverChannel;
     MessageQueue<AsyncSocketChannel> acceptors=new MessageQueue<AsyncSocketChannel>();
 
-    public AsyncServerSocketChannel(InetSocketAddress listenAddr) throws IOException {
+    public AsyncServerSocketChannel(AsyncSelector selector) {
+        super(selector);
+    }
+
+    public AsyncServerSocketChannel(AsyncSelector selector, InetSocketAddress listenAddr) throws IOException {
+        super(selector);
+        connect(listenAddr);
+    }
+
+    public void connect(InetSocketAddress listenAddr) throws IOException {
         serverChannel = ServerSocketChannel.open();
         serverChannel.socket().bind(listenAddr);
         serverChannel.configureBlocking(false);
         interestOn(SelectionKey.OP_ACCEPT);
     }
 
-    /** offer from new AsyncServerSocket
-     * 
-     * @param acceptor
-     * @return
+    /** 
+     * @param acceptor AsyncSocketChannel wishing to connect
      * @throws IOException
      * @throws ClosedChannelException
      */
     public synchronized void accept(AsyncSocketChannel acceptor) throws IOException {
-        acceptors.enqueue(acceptor);
+        SocketChannel soketCh = serverChannel.accept();
+        if (soketCh!=null) {
+            acceptor.connCompleted(soketCh);
+        } else {
+            acceptors.enqueue(acceptor);
+        }
     }
 
     @Override
@@ -43,15 +55,15 @@ public class AsyncServerSocketChannel extends AsyncChannel {
                 if (serverChannel==null || !serverChannel.isOpen()) {
                     return;
                 }
-                SocketChannel channel = serverChannel.accept();
-                if (channel==null) {
+                SocketChannel soketCh = serverChannel.accept();
+                if (soketCh==null) {
                     return;
                 }
                 AsyncSocketChannel acceptor;
                 synchronized (acceptors) {
                     acceptor = acceptors.poll();
                 }
-                acceptor.connCompleted(channel);            
+                acceptor.connCompleted(soketCh);            
             }
         } catch (ClosedChannelException e) {
             // TODO Auto-generated catch block

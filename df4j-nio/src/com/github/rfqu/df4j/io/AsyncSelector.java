@@ -13,7 +13,7 @@ import com.github.rfqu.df4j.core.Task;
 
 public class AsyncSelector extends Thread {
     private ExecutorService executor;
-    Selector selector;
+    protected Selector selector;
     private MessageQueue<AsyncChannel> rrs=new MessageQueue<AsyncChannel>();
 
     public AsyncSelector(ExecutorService executor) throws IOException {
@@ -27,7 +27,7 @@ public class AsyncSelector extends Thread {
         this(Task.getCurrentExecutor());
     }
 
-    void startRegistration(AsyncChannel asch) throws ClosedChannelException {
+    void notify(AsyncChannel asch) throws ClosedChannelException {
         synchronized (rrs) {
             rrs.enqueue(asch);
         }
@@ -37,7 +37,6 @@ public class AsyncSelector extends Thread {
     @Override
     public void run() {
         Task.setCurrentExecutor(executor);
-        currentSelectorKey.set(this);
         // processing
         try {
             while (true) {
@@ -88,14 +87,4 @@ public class AsyncSelector extends Thread {
         selector.close();
     }
 
-    public static AsyncSelector getCurrentSelector() {
-        return currentSelectorKey.get();
-    }
-
-    public static void setCurrentSelector(AsyncSelector s) {
-        currentSelectorKey.set(s);
-    }
-
-    private static final ThreadLocal <AsyncSelector> 
-        currentSelectorKey  = new ThreadLocal <AsyncSelector> ();
 }
