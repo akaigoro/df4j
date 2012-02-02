@@ -1,30 +1,20 @@
-/*
- * Copyright 2011 by Alexei Kaigorodov
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- */
 package com.github.rfqu.df4j.io;
 
+import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 
 import com.github.rfqu.df4j.core.Link;
 
 public abstract class AsyncChannel extends Link {
-    private int interest=0; // current registered interest
-    private boolean registering=false; // current registered interest
-    private AsyncSelector selector;
+    AsyncSelector selector;
 
-    public AsyncChannel(AsyncSelector selector) {
-        this.selector = selector;
+    protected AsyncChannel() throws IOException {
+        selector =AsyncSelector.getCurrentSelector();
     }
-
+    
+    private int interest=0; // current registered interest
     
     protected  void interestOn(int bit) throws ClosedChannelException {
         synchronized (this) {
@@ -32,12 +22,8 @@ public abstract class AsyncChannel extends Link {
                 return; // set already
             }
             interest = interest | bit;
-            if (registering) {
-                return;
-            }
-            registering=true;
         }
-        selector.notify(this);        
+        selector.register(this, interest);        
     }
 
     protected  void interestOff(int bit) throws ClosedChannelException {
@@ -46,23 +32,19 @@ public abstract class AsyncChannel extends Link {
                 return; // not set
             }
             interest = interest & ~bit;
-            if (registering) {
-                return;
-            }
-            registering=true;
         }
-        selector.notify(this);        
+        selector.register(this, interest);        
     }
 
-    void doRegistration(Selector selector) throws ClosedChannelException {
-        synchronized (this) {
-            getChannel().register(selector, interest, this);
-            registering=false;
+    public void close() throws IOException {
+        SelectableChannel channel = getChannel();
+        if (channel!=null) {
+            channel.close();
         }
     }
-    
+
     public abstract SelectableChannel getChannel();
 
-    abstract void notify(SelectionKey key);
-
+    public abstract void notify(SelectionKey key);
+    
 }

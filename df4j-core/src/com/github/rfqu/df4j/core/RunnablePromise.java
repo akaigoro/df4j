@@ -9,10 +9,11 @@
  */
 package com.github.rfqu.df4j.core;
 
+
 /**
- * The base class of messages and actors (actors are also messages).
- * Allows messages and actors to be enqueued without instantiating a wrapper object
+ *  The name says it all
+ * 
+ * @param <R>
  */
-public class Link {
-    Link next;
+public abstract class RunnablePromise<R> extends Promise<R> implements Runnable {
 }

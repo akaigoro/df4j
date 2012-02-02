@@ -1,12 +1,3 @@
-/*
- * Copyright 2011 by Alexei Kaigorodov
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- */
 package com.github.rfqu.df4j.core;
 
 import java.util.List;
@@ -31,10 +22,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
      * It is also an Actor accepting Tasks.
      * @param <Task> the type of accepted tasks
      */
-    class Worker extends Link implements Port<Task>, Runnable, Executor {
-        protected MessageQueue<Task> input=new MessageQueue<Task>();
-        protected boolean ready=true;
-        protected boolean running;
+    class Worker extends Actor<Task> implements Executor {
         volatile boolean _stop=false;
         protected Thread t=new Thread(this);
         
@@ -65,7 +53,7 @@ public class SimpleExecutorService extends AbstractExecutorService {
         @Override
         public void execute(Runnable command) {
             if (_stop) {
-                throw new RejectedExecutionException();
+                    throw new RejectedExecutionException();
             }
             if (command==null) {
                 throw new NullPointerException();
@@ -91,13 +79,12 @@ public class SimpleExecutorService extends AbstractExecutorService {
          * @return 
          */
         @Override
-        public synchronized Worker send(Task task) {
+        public synchronized void send(Task task) {
             input.enqueue(task);
-            if (ready && !running) {
+            if (!running && ready) {
                 running=true;
                 notifyAll();
             }
-            return this;
         }
 
         /**
@@ -126,21 +113,24 @@ public class SimpleExecutorService extends AbstractExecutorService {
                     }
                 }
                 try {
-                    task.run();
+                    act(task);
                 } catch (Exception e) {
                     failure(task, e);
                 }
             }
         }
 
-        /** handles the failure
-         * 
-         * @param message
-         * @param e
-         */
-        protected void failure(Task message, Exception e) {
-            e.printStackTrace();
+        @Override
+        protected void act(Task task) throws Exception {
+            task.run();
         }
+
+        @Override
+        protected void complete() throws Exception {
+            // TODO Auto-generated method stub
+            
+        }
+        
     }
     
     @Override

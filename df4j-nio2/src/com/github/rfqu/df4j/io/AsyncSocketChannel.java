@@ -1,19 +1,14 @@
-/*
- * Copyright 2011 by Alexei Kaigorodov
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- */
 package com.github.rfqu.df4j.io;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.ExecutorService;
 
+import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.MessageQueue;
 
 public abstract class AsyncSocketChannel extends AsyncChannel {
@@ -23,6 +18,16 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
     protected RequestQueue readRequests=new RequestQueue();
     protected RequestQueue writeRequests=new RequestQueue();
 
+    /** for server-side socket
+     * 
+     * @param ch
+     */
+    public AsyncSocketChannel(AsynchronousSocketChannel ch) {
+        this.channel=ch;
+        readRequests.poll(); // to unlock only
+        writeRequests.poll();
+    }
+
     public AsyncSocketChannel() {
     }
 
@@ -30,8 +35,8 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
      * for server-side socket
      * @throws IOException
      */
-    public void connect(AsyncServerSocketChannel s) {//throws IOException {
-        s.getChannel().accept(this, acceptCompletion);        
+    public void accept(AsynchronousServerSocketChannel assch) {//throws IOException {
+        assch.accept(this, acceptCompletion);        
     }
 
     /**
@@ -39,12 +44,14 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
      * @throws IOException
      */
     public void connect(SocketAddress remote) throws IOException {
-        this.channel=AsynchronousSocketChannel.open(getGroup());
+        ExecutorService executor=Actor.getCurrentExecutor();
+        AsynchronousChannelGroup acg=getGroup(executor);
+        AsynchronousSocketChannel ch=AsynchronousSocketChannel.open(acg);
+        this.channel=ch;
         channel.connect(remote, this, connCompletion);
     }
 
-    protected void connCompleted(AsynchronousSocketChannel result) {
-        this.channel=result;
+    protected void connCompleted() {
         SocketIORequest nextRead=null;
         SocketIORequest nextWrite=null;
         synchronized (this) {
@@ -52,8 +59,8 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
             nextRead=readRequests.poll();
             nextWrite=writeRequests.poll();
         }
-        startRequest(nextRead);
-        startRequest(nextWrite);
+        channelRead(nextRead);
+        channelWrite(nextWrite);
     }
 
     protected synchronized void connFailed(Throwable exc) {
@@ -61,49 +68,40 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         // TODO fail enqueued requests
     }
 
-    public void read(SocketIORequest request) {
-        if (connectionFailure!=null) {
-            throw new ConnectionException(connectionFailure);
-        }
-        request.start(this, true);
+    protected void read(SocketIORequest request) {
         synchronized (this) {
+            if (connectionFailure!=null) {
+                throw new ConnectionException(connectionFailure);
+            }
             request=readRequests.enqueueIfLocked(request);
         }
-        startRequest(request);
+        channelRead(request);
     }
 
-    public void write(SocketIORequest request) {
-        if (connectionFailure!=null) {
-            throw new ConnectionException(connectionFailure);
-        }
-        request.start(this, false);
+    protected void write(SocketIORequest request) {
         synchronized (this) {
+            if (connectionFailure!=null) {
+                throw new ConnectionException(connectionFailure);
+            }
             request=writeRequests.enqueueIfLocked(request);
         }
-        startRequest(request);
-    }
-
-    private void startRequest(SocketIORequest request) {
-        if (request==null) {
-            return;
-        }
-        if (request.isReadOp()) {
-            channel.read(request.buffer, request, requestCompletion);
-        } else {
-            channel.write(request.buffer, request, requestCompletion);
-        }
+        channelWrite(request);
     }
 
     protected void requestCompleted(SocketIORequest request) {
         SocketIORequest next;
         synchronized (this) {
-            if (request.isReadOp()) {
+            if (request.readOp) {
                 next=readRequests.poll();
             } else {
                 next=writeRequests.poll();
             }
         }
-        startRequest(next);
+        if (request.readOp) {
+            channelRead(next);
+        } else {
+            channelWrite(next);
+        }
     }
 
     static class RequestQueue extends MessageQueue<SocketIORequest> {
@@ -126,6 +124,29 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         }
     }
 
+    private void channelRead(SocketIORequest request) {
+        if (request==null) {
+            return;
+        }
+        channel.read(request.buffer, request, requestCompletion);
+    }
+
+    private void channelWrite(SocketIORequest request) {
+        if (request==null) {
+            return;
+        }
+        try {
+            channel.write(request.buffer, request, requestCompletion);
+        } catch (Exception e) {
+            if (!channel.isOpen()) {
+                return;
+            }
+            throw new ConnectionException(e);
+            // TODO Auto-generated catch block
+//            e.printStackTrace();
+        }
+    }
+    
     public AsynchronousSocketChannel getChannel() {
         return channel;
     }
@@ -134,12 +155,13 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         channel.close();
     }
 
-    static final CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel> acceptCompletion
+    static CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel> acceptCompletion
         = new CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel>()
     {
         @Override
         public void completed(AsynchronousSocketChannel result, AsyncSocketChannel asc) {
-            asc.connCompleted(result);
+            asc.channel=result;
+            asc.connCompleted();
         }
         @Override
         public void failed(Throwable exc, AsyncSocketChannel asc) {
@@ -147,10 +169,10 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         }
     };
 
-    static final CompletionHandler<Void, AsyncSocketChannel> connCompletion =new CompletionHandler<Void, AsyncSocketChannel>() {
+    static CompletionHandler<Void, AsyncSocketChannel> connCompletion =new CompletionHandler<Void, AsyncSocketChannel>() {
         @Override
         public void completed(Void result, AsyncSocketChannel asc) {
-            asc.connCompleted(asc.channel);
+            asc.connCompleted();
         }
         @Override
         public void failed(Throwable exc, AsyncSocketChannel asc) {
@@ -158,14 +180,16 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         }
     };
 
-    static final CompletionHandler<Integer, SocketIORequest> requestCompletion =new CompletionHandler<Integer, SocketIORequest>() {
+    static CompletionHandler<Integer, SocketIORequest> requestCompletion =new CompletionHandler<Integer, SocketIORequest>() {
         @Override
         public void completed(Integer result, SocketIORequest request) {
-            request.completed(result);
+            request.channel.requestCompleted(request);
+            request.requestCompleted(result);
         }
         @Override
         public void failed(Throwable exc, SocketIORequest request) {
-            request.failed(exc);
+            request.channel.requestCompleted(request);
+            request.requestFailed(exc);
         }
     };
 

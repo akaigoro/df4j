@@ -9,8 +9,88 @@
  */
 package com.github.rfqu.df4j.core;
 
-public interface Promise<R> {
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-    public <S extends Port<R>> S request(S sink);
+/**
+ * Connects Actor's world and outer space.
+ * Actors are allowed to send messages to it, but not to get from
+ *
+ * @param <T> the type of accepted messages
+ */
+public class Promise<T> implements OutPort<T>, Future<T> {
+    protected volatile T message;
     
+    /**
+     * (non-Javadoc)
+     * @return 
+     * @see com.github.rfqu.df4j.core.OutPort#send(java.lang.Object)
+     */
+    @Override
+    public synchronized void send(T message) {
+        this.message=message;
+        notifyAll();
+    }
+
+    /**
+     * waits until a message arrive
+     * @return received message
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     */
+    @Override
+    public synchronized T get() throws InterruptedException {
+        while (message==null) {
+            wait();
+        }
+        return (T) message;
+    }
+
+    /**
+     * checks if the message has arrived.
+     * @return received message, or null if no message arrived
+     */
+    public synchronized T poll() {
+        return (T) message;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return message!=null;
+    }
+
+    @Override
+    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        if (message!=null) {
+            return message;
+        }
+        long duration = unit.toMillis(timeout);
+        long startTime=System.currentTimeMillis();
+        long endTime=startTime+duration;
+        for (;;) {
+            wait(duration);            
+            if (message!=null) {
+                return message;
+            }
+            long currentTime=System.currentTimeMillis();
+            duration=(endTime-currentTime);
+            if (duration<=0) {
+                throw new TimeoutException();
+            }
+        }
+    }
+
 }

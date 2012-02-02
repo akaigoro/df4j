@@ -7,12 +7,18 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.util;
 
-/**
- * The base class of messages and actors (actors are also messages).
- * Allows messages and actors to be enqueued without instantiating a wrapper object
+import com.github.rfqu.df4j.core.Link;
+
+/** 
+ * A message that carries an integer value
  */
-public class Link {
-    Link next;
+public class IntMessage extends Link {
+    int value;
+
+    public IntMessage(int value) {
+        this.value = value;
+    }
+
 }

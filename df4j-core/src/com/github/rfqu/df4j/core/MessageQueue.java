@@ -14,16 +14,20 @@ package com.github.rfqu.df4j.core;
  * @param <M> the type of the enqueued messages
  */
 public class MessageQueue<M extends Link> {
+    protected boolean closed=false;
     protected M first;
     protected M last;
 
     /**
-     * enqueues the message at the tail
+     * enqueues a message
      * @param message the message to enqueue
      * @throws NullPointerException when message is null
      * @throws IllegalArgumentException when message is already enqueued
      */
     public void enqueue(M message) {
+        if (closed) {
+            throw new IllegalStateException("the queue is closed");
+        }
         if (message==null) {
             throw new NullPointerException("message may not be null");
         }
@@ -42,24 +46,17 @@ public class MessageQueue<M extends Link> {
     }
     
     /**
-     * pushes the message at the head
-     * @param message the message to enqueue
-     * @throws NullPointerException when message is null
-     * @throws IllegalArgumentException when message is already enqueued
+     * @return true if this queue is closed, false otherwise
      */
-    public void push(M message) {
-        if (message==null) {
-            throw new NullPointerException("message may not be null");
-        }
-        if (message.next!=null) {
-            throw new IllegalArgumentException("message is already enqueued in another queue");
-        }
-        if (last==null) {
-            first=last=message;
-        } else {
-            message.next=first;
-            first=message;
-        }
+    public boolean isClosed() {
+        return closed;
+    }
+    
+    /**
+     * closes the queue
+     */
+    public void close() {
+        closed=true;
     }
     
     /**

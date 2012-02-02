@@ -13,16 +13,27 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 public abstract class Task extends Link implements Runnable {
+    /** running task may not be fired (because it is fired already)
+     *  subclasses check and set this variable inside critical regions
+     */
+    protected boolean running;
 
     /**
      * activates this task by sending it to the current executor
      */
-    protected Task fire() {
+    public static void fire(Runnable task) {
         Executor currentExecutor = getCurrentExecutor();
         if (currentExecutor==null) {
             throw new IllegalStateException("current executor is not set)");
         }
-        currentExecutor.execute(this);
+        currentExecutor.execute(task);
+    }
+
+    /**
+     * activates this task by sending it to the current executor
+     */
+    public Task fire() {
+        fire(this);
         return this;
     }
 

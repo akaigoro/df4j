@@ -9,27 +9,14 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
 /**
  * Processes messages in asynchronous way using current executor.
  * Actors themselves are messages and can be send to other Actors and Ports
  * @param <M> the type of accepted messages
  */
-public abstract class Actor<M extends Link> extends Task implements Port<M> {
-    final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-    final WriteLock writeLock = rwl.writeLock();
-    final ReadLock readLock = rwl.readLock();
-    final Condition resultReady  = writeLock.newCondition(); 
-
-    protected MessageQueue<M> input=new MessageQueue<M>();
+public abstract class Actor<M extends Link> extends Task implements OutStreamPort<M> {
+	protected MessageQueue<M> input=new MessageQueue<M>();
     protected boolean ready=true;
-    /** running task may not be fired (because it is fired already)
-     */
-    private boolean running;
 
     public Actor() {
     }
@@ -45,19 +32,23 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
     /**
      * (non-Javadoc)
      * @return 
-     * @see com.github.rfqu.df4j.core.Port#send(java.lang.Object)
+     * @see com.github.rfqu.df4j.core.OutPort#send(java.lang.Object)
      */
     @Override
-    public Actor<M> send(M message) {
+    public void send(M message) {
         synchronized(this) {
             input.enqueue(message);
-            if (!ready || running) {
-                return this;
-            } 
-            running=true;
+            if (running) {
+                return;
+            } else if (ready) {
+                running=true;
+            }
         }
         fire();
-        return this;
+    }
+
+    public void close(){
+        input.close();
     }
 
     /**
@@ -66,20 +57,14 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
     public void setReady(boolean ready) {
         synchronized(this) {
             this.ready=ready;
-            if (!ready || input.isEmpty() || running) {
+            if (running) {
                 return;
-            } 
-            running=true;
+            } else if (ready && !input.isEmpty()) {
+                running=true;
+            }
         }
         fire();
     }
-
-    /**
-     * processes one incoming message
-     * @param message the message to process
-     * @throws Exception
-     */
-    protected abstract void act(M message) throws Exception;
 
     /** loops through the accumulated message queue
      */
@@ -88,18 +73,18 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
         for (;;) {
             M message;
             synchronized (this) {
-                if (!ready) {
-                    running = false;
-                    return;
-                }
                 message = input.poll();
-                if (message == null) {
+                if ((message == null) && !input.isClosed()) {
                     running = false;
                     return;
                 }
             }
             try {
-                act(message);
+                if (message == null) {
+                    complete();
+                } else {
+                    act(message);
+                }
             } catch (Exception e) {
                 failure(message, e);
             }
@@ -115,4 +100,17 @@ public abstract class Actor<M extends Link> extends Task implements Port<M> {
         e.printStackTrace();
     }
     
+    /**
+     * processes one incoming message
+     * @param message the message to process
+     * @throws Exception
+     */
+    protected abstract void act(M message) throws Exception;
+
+    /**
+     * processes one incoming message
+     * @throws Exception
+     */
+    protected abstract void complete() throws Exception;
+
 }
