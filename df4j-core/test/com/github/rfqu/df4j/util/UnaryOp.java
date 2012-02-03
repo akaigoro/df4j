@@ -27,7 +27,7 @@ public abstract class UnaryOp<T> extends Operation<T> implements OutPort<T> {
 
     @Override
     public void run() {
-        sendRes(operation(input.operand));
+        send(operation(input.operand));
     }
 
     abstract protected T operation(T opnd);

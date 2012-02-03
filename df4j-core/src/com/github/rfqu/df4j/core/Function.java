@@ -13,16 +13,14 @@ package com.github.rfqu.df4j.core;
 /**
  * abstract node with several inputs and outputs
  */
-public abstract class Function {
+public abstract class Function<R> {
     int gateCount=0;
     int readyGateCount=0;
+    Connector<R> res;
 
-    private class Gate<T> {
+    public class Input<T> implements OutPort<T> {
         {gateCount++;}
         public T operand;
-    }
-
-    public class Input<T> extends Gate<T> implements OutPort<T> {
         protected boolean opndready = false;
 
         @Override
@@ -38,44 +36,22 @@ public abstract class Function {
                     return;
                 }
             }
-            fire();
-            
-        }
-    }
-    
-    public class Output<T> extends Gate<OutPort<T>> implements InPort<T> {
-        protected int opndCount = 0;
-
-        @Override
-        public void connect(OutPort<T> sink) {
-            synchronized (this) {
-            	switch (opndCount++) {
-            	case 0:
-                    operand = sink;
-                    readyGateCount++;
-                    if (readyGateCount<gateCount) {
-                        return;
-                    }
-                    break;
-            	case 1:
-                	DataSource<T> ds=new DataSource<T>();
-                	ds.connect(operand);
-                	ds.connect(sink);
-                	operand=ds;
-                    return;
-                default:
-                	((DataSource<T>)operand).connect(sink);
-                    return;
-            	}
-            }
-            fire();
-        }
-        
-        public void send(T value) {
-            operand.send(value);
+            fire();       
         }
     }
 
+    public void sendRes(R val) {
+    	res.send(val);
+    }
+
+    public Connector<R> getConnector() {
+		return res;
+	}
+
+	public void connect(OutPort<R> sink) {
+		res.connect(sink);
+	}
+	
     protected abstract void fire();
     
 }

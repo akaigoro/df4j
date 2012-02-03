@@ -14,42 +14,14 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.DataSource;
-import com.github.rfqu.df4j.core.InPort;
+import com.github.rfqu.df4j.core.Connector;
 import com.github.rfqu.df4j.core.OutPort;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.BinaryOp;
+import com.github.rfqu.df4j.util.Operation;
 import com.github.rfqu.df4j.util.UnaryOp;
-
-class Node {
-    public static <T> void connect(InPort<T> from, OutPort<T> to) {
-        from.connect(to);
-    }
-    public static <T> void connect(Node1<T> from, OutPort<T> to) {
-        from.connect(to);
-    }
-}
-
-class Node1<R> extends Node {
-    Promise<R> pr=new Promise<R>();
-	InPort<R> res;
-
-    protected void setRes(InPort<R> res1) {
-        this.res=res1;
-        res1.connect(pr);
-    }
-
-    public void connect(OutPort<R> sink) {
-        this.res.connect(sink);
-    }
-    
-    public R get() throws InterruptedException {
-        return pr.get();
-    }
-
-}
 
 public class NodeTest {
     private static final double delta = 1E-14;
@@ -62,41 +34,21 @@ public class NodeTest {
 
     /**
      * compute a^2
-     * 
-     * @throws InterruptedException
      */
-	class Node01 extends Node1<Double> {
-		Square sq=new Square();	
-		OutPort<Double> inp=sq;
-		
-        {
-            setRes(sq);
-        }
-
-    };
-
     @Test
     public void t01() throws InterruptedException {
-    	Node01 node = new Node01();
-    	node.inp.send(2.0);
-        int res = node.get().intValue();
+		Square sq=new Square();	
+    	sq.send(2.0);
+        int res = sq.get().intValue();
         assertEquals(4, res);
     }
 
     /**
      * compute 2*3
      */
-	class Node02 extends Node1<Double> {
-		Mult mu=new Mult();	
-		OutPort<Double> p1=mu.p1;
-		OutPort<Double> p2=mu.p2;
-        {
-            setRes(mu);
-        }
-    };
     @Test
     public void t02() throws InterruptedException {
-    	Node02 node = new Node02();
+		Mult node=new Mult();	
     	node.p1.send(2.0);
     	node.p2.send(3.0);
         assertEquals(6, node.get().intValue());
@@ -105,20 +57,21 @@ public class NodeTest {
     /**
      * compute sqrt(a^2+b^2)
      */
-	class Node03 extends Node1<Double> {
+	class Node03 extends Sqrt {
 		Square sq1=new Square();	
 		Square sq2=new Square();	
         Sum sum = new Sum();
-        Sqrt sqrt = new Sqrt();
+		Square sq=new Square();	
 		OutPort<Double> p1=sq1;
 		OutPort<Double> p2=sq2;
         {
-            connect(sq1, sum.p1);
-            connect(sq2, sum.p2);
-            connect(sum, sqrt);
-            setRes(sqrt);
+        	sq1.connect(sum.p1);
+        	sq2.connect(sum.p2);
+            sum.connect(sq);
+            sq.connect(this);
         }
 	}
+	
     @Test
     public void t03() throws InterruptedException {
     	Node03 node = new Node03();
@@ -132,7 +85,7 @@ public class NodeTest {
      * compute the discriminant of a quadratic equation
      *     D= sqrt(b^2-4ac) 
      */
-	class Discr extends Node1<Double> {
+	class Discr extends Connector<Double> {
 		Square sq=new Square();	
 		Mult mu1=new Mult();	
 		Mult mu2=new Mult();	
@@ -145,11 +98,11 @@ public class NodeTest {
 
 		{
             mu1.p1.send(4.0);
-            connect(mu1, mu2.p1);
-            connect(sq, diff.p1);
-            connect(mu2, diff.p2);
-            connect(diff, sqrt);
-            setRes(sqrt);
+            mu1.connect(mu2.p1);
+            sq.connect(diff.p1);
+            mu2.connect(diff.p2);
+            diff.connect(sqrt);
+            sqrt.connect(this);
         }
 	}
     /**
@@ -157,7 +110,7 @@ public class NodeTest {
      *     x1= (-b + D)/2a 
      *     x2= (-b - D)/2a 
      */
-	class QuadEq extends Node {
+	class QuadEq {
 		UnaryMinus mb=new UnaryMinus();
 		Discr d =new Discr();
 		Mult mul=new Mult();	
@@ -166,31 +119,24 @@ public class NodeTest {
         Div div1=new Div();
         Div div2=new Div();
         // inputs
-        DataSource<Double> a=new DataSource<Double>();
-		DataSource<Double> b=new DataSource<Double>();
+        Connector<Double> a=new Connector<Double>();
+		Connector<Double> b=new Connector<Double>();
 		OutPort<Double> c=d.c;
 		// outputs
-        Promise<Double> x1 = new Promise<Double>();
-        Promise<Double> x2 = new Promise<Double>();
+        Operation<Double> x1 = div1;
+        Operation<Double> x2 = div2;
         
         {
-            connect(a, d.a);
-            connect(a, mul.p2);
+            a.connect(d.a, mul.p2);
+            b.connect(d.b, mb);
+        	
+            mb.connect(sum.p1, diff.p1);
+            d.connect(sum.p2, diff.p2);
+            sum.connect(div1.p1);
+            mul.connect(div1.p2, div2.p2);
+        	
+            diff.connect(div2.p1);
             mul.p1.send(2.0);
-            connect(b, d.b);
-            connect(b, mb);
-        	
-            connect(mb, sum.p1);
-            connect(d, sum.p2);
-            connect(sum, div1.p1);
-            connect(mul, div1.p2);
-            connect(div1, x1);
-        	
-            connect(mb, diff.p1);
-            connect(d, diff.p2);
-            connect(diff, div2.p1);
-            connect(mul, div2.p2);
-            connect(div2, x2);
         }
 
 	}
