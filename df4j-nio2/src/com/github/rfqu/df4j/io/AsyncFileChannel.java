@@ -9,17 +9,17 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Task;
 
 public class AsyncFileChannel {
 
     public static AsynchronousFileChannel open(Path file, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        ExecutorService executor=Actor.getCurrentExecutor();
+        ExecutorService executor=Task.getCurrentExecutor();
         return AsynchronousFileChannel.open(file, options, executor, attrs);
     }
 
     public static AsynchronousFileChannel open(Path file, OpenOption... options) throws IOException {
-        ExecutorService executor=Actor.getCurrentExecutor();
+        ExecutorService executor=Task.getCurrentExecutor();
         HashSet<OpenOption> options2 = new HashSet<OpenOption>();
         for (OpenOption opt: options) {
             options2.add(opt);

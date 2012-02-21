@@ -7,13 +7,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.example;
+package com.github.rfqu.df4j.examples;
 
 import java.io.PrintStream;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -51,16 +50,12 @@ public class PingPongTest {
         if (nThreads > 1) {
             out.println(" warning: SimpleExecutorService uses only 1 thread");
         }
-        SimpleExecutorService executor = new SimpleExecutorService();
-        runTest(executor);
+        runTest(new SimpleExecutorService());
     }
 
     @Test
     public void testJUC() throws InterruptedException {
-        ThreadFactoryTL tf = new ThreadFactoryTL();
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
-        tf.setExecutor(executor);
-        runTest(executor);
+        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
     }
 
 	private void runTest(ExecutorService executor) throws InterruptedException {

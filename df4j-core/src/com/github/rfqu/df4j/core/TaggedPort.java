@@ -7,13 +7,15 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+
 package com.github.rfqu.df4j.core;
 
-
 /**
- *  The name says it all
- * 
- * @param <R>
+ * output port for messages
+ * @param <M> the type of the message
  */
-public abstract class RunnablePromise<R> extends Promise<R> implements Runnable {
+public interface TaggedPort<T, M> {
+
+    public void send(T tag, M message);
+    
 }

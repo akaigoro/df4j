@@ -8,8 +8,9 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.ExecutorService;
 
-import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.MessageQueue;
+import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.Link;
 
 public abstract class AsyncSocketChannel extends AsyncChannel {
     protected AsynchronousSocketChannel channel;
@@ -44,7 +45,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
      * @throws IOException
      */
     public void connect(SocketAddress remote) throws IOException {
-        ExecutorService executor=Actor.getCurrentExecutor();
+        ExecutorService executor=Task.getCurrentExecutor();
         AsynchronousChannelGroup acg=getGroup(executor);
         AsynchronousSocketChannel ch=AsynchronousSocketChannel.open(acg);
         this.channel=ch;
@@ -109,7 +110,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
 
         public SocketIORequest enqueueIfLocked(SocketIORequest request) {
             if (locked) {
-                super.enqueue(request);
+                super.add(request);
                 return null;
             } else {
                 locked=true;
@@ -118,7 +119,7 @@ public abstract class AsyncSocketChannel extends AsyncChannel {
         } 
 
         public SocketIORequest poll() {
-            SocketIORequest res = super.poll();
+            SocketIORequest res = (SocketIORequest) super.poll();
             locked=(res!=null);
             return res;
         }

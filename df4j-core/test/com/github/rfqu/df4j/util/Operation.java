@@ -10,21 +10,16 @@
 package com.github.rfqu.df4j.util;
 
 import com.github.rfqu.df4j.core.Function;
-import com.github.rfqu.df4j.core.Promise;
+import com.github.rfqu.df4j.core.PortFuture;
 import com.github.rfqu.df4j.core.Task;
 
 /**
  * A Node with a single result
  * @param <R> type of the result
  */
-public abstract class Operation<R> extends Function<R> implements Runnable {
-    Promise<R> pr=new Promise<R>();
+public abstract class Operation<R> extends Function<R> {
+    PortFuture<R> pr=new PortFuture<R>();
     {getConnector().connect(pr);}
-
-	@Override
-	protected void fire() {
-		Task.fire(this);
-	}
 
 	public R get() throws InterruptedException {
         return pr.get();

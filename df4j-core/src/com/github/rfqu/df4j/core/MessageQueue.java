@@ -13,75 +13,39 @@ package com.github.rfqu.df4j.core;
 /** Simple one-way message queue
  * @param <M> the type of the enqueued messages
  */
-public class MessageQueue<M extends Link> {
-    protected boolean closed=false;
-    protected M first;
-    protected M last;
-
-    /**
-     * enqueues a message
-     * @param message the message to enqueue
-     * @throws NullPointerException when message is null
-     * @throws IllegalArgumentException when message is already enqueued
-     */
-    public void enqueue(M message) {
-        if (closed) {
-            throw new IllegalStateException("the queue is closed");
-        }
-        if (message==null) {
-            throw new NullPointerException("message may not be null");
-        }
-        if (message.next!=null) {
-            throw new IllegalArgumentException("message is already enqueued in another queue");
-        }
-        if (last==null) {
-            first=last=message;
-        } else {
-            if (last==null) {
-                throw new RuntimeException("last=null but first!=null");
-            }
-            last.next=message;
-            last=message;
-        }
-    }
-    
-    /**
-     * @return true if this queue is closed, false otherwise
-     */
-    public boolean isClosed() {
-        return closed;
-    }
-    
-    /**
-     * closes the queue
-     */
-    public void close() {
-        closed=true;
-    }
-    
+public class MessageQueue<M extends Link> extends Link {
     /**
      * @return true if this queue is empty, false otherwise
      */
     public boolean isEmpty() {
-        return first==null;
+        return !isLinked();
     }
-    
+
+    /**
+     * enqueues a message
+     * @param message the message to enqueue
+     * @throws IllegalArgumentException when message is null or is already enqueued
+     */
+    public void add(M newLink) {
+        if (newLink==null) {
+            throw new IllegalArgumentException("link is null");
+        }
+        if (newLink.isLinked()) {
+            throw new IllegalArgumentException("link is linked already");
+        }
+        link(newLink);
+    }
+
     /**
      * @return the next message, or null if the queue is empty
      */
-    @SuppressWarnings("unchecked")
     public M poll() {
-        M res=first;
-        if (res==null) {
+        if (isEmpty() ) {
             return null;
         }
-        if (res==last) {
-            first=last=null;
-        } else {
-            first=(M) res.next;
-        }
-        res.next=null;
-        return res;
-    }
+        Link res = previous;
+        res.unlink();
+        return (M) res;
+      }
 
 }

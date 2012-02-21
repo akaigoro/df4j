@@ -13,7 +13,7 @@ package com.github.rfqu.df4j.core;
 /**
  * abstract node with several inputs and outputs
  */
-public abstract class Function<R> {
+public abstract class Function<R> extends Task {
     int gateCount=0;
     int readyGateCount=0;
     Connector<R> res=new Connector<R>();;
@@ -55,7 +55,4 @@ public abstract class Function<R> {
     public void connect(Port<R>... sink) {
         res.connect(sink);
     }
-    
-    protected abstract void fire();
-    
 }

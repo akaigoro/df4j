@@ -19,16 +19,12 @@ import com.github.rfqu.df4j.io.AsyncSocketChannel;
 import com.github.rfqu.df4j.io.SocketIORequest;
 import com.github.rfqu.df4j.util.MessageSink;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Requires Java 7.
  */
 public class AsyncPingTest {
     PrintStream out=System.out;
     PrintStream err=System.err;
-    private static final Logger log = LoggerFactory.getLogger( AsyncPingTest.class ); 
     int clients=2000;//300;
     int rounds = 100; // per client
     int nThreads=Runtime.getRuntime().availableProcessors();
@@ -77,7 +73,6 @@ public class AsyncPingTest {
                     return; // fake empty packet after client has closed connection
                 }
                 long n = buffer.getLong();
-                log.debug("    server readcount="+readcount+" rem="+rem+" n="+n);
                 // switch to write
                 buffer.clear();
                 buffer.putLong(n); // flip auto
@@ -89,7 +84,6 @@ public class AsyncPingTest {
             public void writeCompleted(Integer result) {
                 sEndedW.incrementAndGet();
                 writecount++;
-                 log.debug("    server writecount="+writecount);
                 read(channel);
                 sStartedR.incrementAndGet();
             }
@@ -98,11 +92,9 @@ public class AsyncPingTest {
             public void writeFailed(Throwable exc) {
                 sEndedW.incrementAndGet();
                 if (!channel.getChannel().isOpen()) {
-                    log.debug("    server channel closed");
                     return;
                 }
                 // TODO Auto-generated method stub
-                log.debug("    ServerIOR writeFailed:");
                 exc.printStackTrace();
             }
 
@@ -115,14 +107,11 @@ public class AsyncPingTest {
                     return;
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
-                    log.debug("    ServerIOR.channel.close failed:");
                     e.printStackTrace();
                 }
                 if (!channel.getChannel().isOpen()) {
-                    log.debug("    server channel closed");
                     return;
                 }
-                log.debug("    ServerIOR readFailed:");
                 exc.printStackTrace();
             }
 
@@ -154,7 +143,6 @@ public class AsyncPingTest {
             public void onBuffAdded() {
                 if (numOp == 0) {
                     sink.send(null);
-                     log.debug("client close; readcount="+readcount+" writecount="+writecount);
                     try {
                         ch.getChannel().close();
                     } catch (IOException e) {
@@ -164,11 +152,9 @@ public class AsyncPingTest {
                     return;
                 }
                 if (numOp < 0) {
-                     log.debug("!!! client write started numOp ="+numOp+"!!! writecount="+writecount);
                     return;
                 }
                 numOp--;
-                 log.debug("client write started numOp ="+numOp+" writecount="+writecount);
                 // switch to write
                 buffer.clear();
                 buffer.putLong(numOp); // flip auto
@@ -180,7 +166,6 @@ public class AsyncPingTest {
             public void writeCompleted(Integer result) {
                 cEndedW.incrementAndGet();
                 writecount++;
-                 log.debug("client write ended, read started: numOp ="+numOp+" writecount="+writecount);
                 read(ch);
                 cStartedR.incrementAndGet();
             }
@@ -194,7 +179,6 @@ public class AsyncPingTest {
                 if (rem >= 8) {
                     n = buffer.getLong();
                 }
-                log.debug("client read ended numOp ="+numOp+" readcount="+readcount+" rem="+rem+" n="+n);
                 onBuffAdded();
             }
 
@@ -202,7 +186,6 @@ public class AsyncPingTest {
             public void readFailed(Throwable exc) {
                 cEndedR.incrementAndGet();
                 // TODO Auto-generated method stub
-                log.debug("    ClientIOR readFailed:");
                 exc.printStackTrace();
             }
 
@@ -210,7 +193,6 @@ public class AsyncPingTest {
             public void writeFailed(Throwable exc) {
                 cEndedW.incrementAndGet();
                 // TODO Auto-generated method stub
-                log.debug("    ClientIOR writeFailed:");
                 exc.printStackTrace();
             }
 

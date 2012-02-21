@@ -10,6 +10,7 @@
 package com.github.rfqu.df4j.core;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 
@@ -36,10 +37,18 @@ public class ThreadFactoryTL implements ThreadFactory {
     public Thread newThread(Runnable r) {
         return new ThreadTL(r);
     }
-    public class ThreadTL extends Thread {
+    
+    public static ExecutorService newFixedThreadPool(int nThreads) {
+		ThreadFactoryTL tf = new ThreadFactoryTL();
+	    ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
+	    tf.setExecutor(executor);
+		return executor;
+	}
+    
+	public class ThreadTL extends Thread {
         public ThreadTL(Runnable r) {
             super(r);
-            setName(getName()+" DF executor");
+            setName(getName()+" DF "+executor.getClass().getSimpleName());
         }
 
         @Override

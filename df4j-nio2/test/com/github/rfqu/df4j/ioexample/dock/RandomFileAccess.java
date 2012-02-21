@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.ioexample;
+package com.github.rfqu.df4j.ioexample.dock;
 
 import static java.nio.file.StandardOpenOption.WRITE;
 
@@ -43,39 +43,6 @@ public class RandomFileAccess {
 //        out.println("has="+ByteBuffer.allocate(blockSize).hasArray());
     }
 
-    public static void main(String args[]) throws Exception {
-        RandomFileAccess tst = new RandomFileAccess();
-        tst.init();
-        tst.testW_IO();
-        tst.testW_NIO();
-        tst.testW_dffwS();
-        tst.testW_dffwJUC();
-        // tst.testR();
-    }
-
-    /**
-     * writes file using traditional java.io facilities
-     * @throws Exception
-     */
-    @Test
-    public void testW_IO() throws Exception {
-        out.println("Test IO");
-        try {
-            RandomAccessFile rf = new RandomAccessFile(testfilename, "rw");
-            rf.setLength(blockSize*numBlocks);
-            long startTime = System.currentTimeMillis();
-            for (int i = 0; i < numBlocks; i++) {
-                long blockId = getBlockId(numBlocks, i);
-                fillBuf(rf, blockId);
-            }
-            rf.close();
-            float etime = System.currentTimeMillis() - startTime;
-            out.println("elapsed=" + etime / 1000 + " sec; mean io time=" + (etime / numBlocks) + " ms");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     /**
      * fills buffer and writes it to the specified file block
      * @param rf file to write
@@ -92,52 +59,6 @@ public class RandomFileAccess {
         }
         rf.seek(blockId*blockSize);
         rf.write(array);
-    }
-
-    /**
-     * writes file using java.nio, indirect buffers, and futures - without DF framework
-     *  @throws Exception
-     */
-    @Test
-    public void testW_NIO() throws Exception {
-        testW_NIO(false);
-    }
-
-    /**
-     * writes file using java.nio, direct buffers, and futures - without DF framework
-     *  @throws Exception
-     */
-    @Test
-    public void testW_NIOD() throws Exception {
-        testW_NIO(true);
-    }
-
-    private void testW_NIO(boolean direct) throws IOException, Exception {
-        out.println("Test NIO with futuires; direct="+direct);
-        AsynchronousFileChannel af = AsynchronousFileChannel.open(Paths.get(testfilename), WRITE);
-        af.truncate(blockSize*numBlocks);
-        for (int nb = 1; nb <= maxBufNo; nb=nb*2) {
-            long startTime = System.currentTimeMillis();
-            testWnio(af, nb, false);
-            float etime = System.currentTimeMillis() - startTime;
-            out.println("num bufs=" + nb + " elapsed=" + etime / 1000 + " sec; mean io time=" + (etime / numBlocks) + " ms");
-        }
-        af.force(true);
-        af.close();
-    }
-
-    void testWnio(AsynchronousFileChannel af, int nb, boolean direct) throws Exception {
-        Requestnio[] reqs = new Requestnio[nb];
-        for (int k = 0; k < nb; k++) {
-            reqs[k] = new Requestnio(af, direct);
-        }
-        for (int i = 0; i < numBlocks; i++) {
-            long blockId = getBlockId(numBlocks, i);
-            Requestnio req = reqs[i % nb];
-            req.await();
-            fillBuf(req.buf, blockId);
-            req.write(blockId);
-        }
     }
 
     /**
@@ -242,7 +163,7 @@ public class RandomFileAccess {
         AsynchronousFileChannel af;
         int nb;
         boolean direct;
-        Promise<Integer> sink = new Promise<Integer>();
+        PortFuture<Integer> sink = new PortFuture<Integer>();
         WriterActor wa = new WriterActor();
 
         public StarterW(AsynchronousFileChannel af, int nb, boolean direct) {
@@ -311,4 +232,15 @@ public class RandomFileAccess {
     public static long getBlockId(long range, int i) {
         return (i * 0x5DEECE66DL + 0xBL) % range;
     }
+
+    public static void main(String args[]) throws Exception {
+        RandomFileAccess tst = new RandomFileAccess();
+        tst.init();
+        tst.testW_IO();
+        tst.testW_NIO();
+        tst.testW_dffwS();
+        tst.testW_dffwJUC();
+        // tst.testR();
+    }
+
 }

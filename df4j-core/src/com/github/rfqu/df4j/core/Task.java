@@ -9,35 +9,32 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
+/**
+ *  Tasks themselves are messages and can be send to other Actors and Ports.
+ * @author kaigorodov
+ *
+ */
 public abstract class Task extends Link implements Runnable {
-    /** running task may not be fired (because it is fired already)
-     *  subclasses check and set this variable inside critical regions
-     */
-    protected boolean running;
+    protected ExecutorService executor;
 
-    /**
-     * activates this task by sending it to the current executor
-     */
-    public static void fire(Runnable task) {
-        Executor currentExecutor = getCurrentExecutor();
-        if (currentExecutor==null) {
-            throw new IllegalStateException("current executor is not set)");
-        }
-        currentExecutor.execute(task);
+    public Task(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public Task() {
+        this(getCurrentExecutor());
     }
 
     /**
-     * activates this task by sending it to the current executor
+     * activates this task by sending it to the executor
      */
-    public Task fire() {
-        fire(this);
-        return this;
+    protected void fire() {
+        executor.execute(this);
     }
 
-    /**
+	/**
      * sets current executor as a thread-local variable
      * @param exec
      */

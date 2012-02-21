@@ -10,88 +10,132 @@
 package com.github.rfqu.df4j.core;
 
 /**
- * Processes messages in asynchronous way using current executor.
- * Actors themselves are messages and can be send to other Actors and Ports
+ * Processes messages in asynchronous way.
  * @param <M> the type of accepted messages
  */
 public abstract class Actor<M extends Link> extends Task implements StreamPort<M> {
-	protected MessageQueue<M> input=new MessageQueue<M>();
+	private final boolean eager;
+    private MessageQueue<M> input=new MessageQueue<M>();
+    protected boolean closed=false;
+    protected boolean completed=false;
+    protected boolean fired;
     protected boolean ready=true;
+    
+    /**
+     * @param eager if false, the actor would process messages immediate a
+     * at the invocation of 'send', if no other messages are pending.
+     */
+    public Actor(boolean eager) {
+        this.eager=eager;
+    }
 
     public Actor() {
-    }
-    
-    /**
-     * @param ready if false, the actor would not process messages until
-     *  invocation of setReady(true)
-     */
-    public Actor(boolean ready) {
-        this.ready=ready;
-    }
-    
-    /**
-     * (non-Javadoc)
-     * @return 
-     * @see com.github.rfqu.df4j.core.Port#send(java.lang.Object)
-     */
-    @Override
-    public void send(M message) {
-        synchronized(this) {
-            input.enqueue(message);
-            if (running) {
-                return;
-            } else if (ready) {
-                running=true;
-            }
-        }
-        fire();
+        this(false);
     }
 
-    public void close(){
-        input.close();
-    }
-
-    /**
+	/**
      * @param ready allows/prohibit actor to process messages
      */
     public void setReady(boolean ready) {
         synchronized(this) {
             this.ready=ready;
-            if (running) {
+            if (fired || input.isEmpty() || closed || !ready) {
                 return;
-            } else if (ready && !input.isEmpty()) {
-                running=true;
             }
+            fired=true;
         }
         fire();
     }
 
+    public void send(M message) {
+        if (message==null) {
+            throw new NullPointerException("message may not be null");
+        }
+        synchronized (this) {
+            if (closed) {
+                throw new IllegalStateException("the queue is closed");
+            }
+            if (message.isLinked()) {
+                throw new IllegalArgumentException("message is already enqueued in another queue");
+            }
+            if (fired || !ready || !eager) {
+                input.add(message);
+                if (fired || !ready) {
+                    return;
+                }
+            }
+            fired=true;
+        }
+        if (eager) {
+            try {
+				act(message);
+			} catch (Exception e) {
+				failure(message, e);
+			} finally {
+				synchronized (this) {
+				    if (input.isEmpty()) {
+				    	fired=false;
+				        return;
+				    }
+				    fired=true;
+				}
+			}
+        }
+        fire();
+    }
+
+	public  void close(){
+        synchronized(this) {
+            closed=true;
+            if (fired || !ready) {
+                return;
+            }
+        }
+        fire();
+    }    
+
+	public boolean isClosed() {
+		return closed;
+	}
+        
+	public boolean isCompleted() {
+		return completed;
+	}
+
     /** loops through the accumulated message queue
      */
-    @Override
-    public void run() {
+	@Override
+	public void run() {
         for (;;) {
             M message;
             synchronized (this) {
                 message = input.poll();
-                if ((message == null) && !input.isClosed()) {
-                    running = false;
+                if ((message == null) && !closed) {
+                	fired=false;
                     return;
                 }
             }
-            try {
-                if (message == null) {
-                    complete();
-                } else {
-                    act(message);
-                }
-            } catch (Exception e) {
-                failure(message, e);
+            doAct(message);
+        }
+    }
+
+    private void doAct(M message) {
+        try {
+            if (message == null) {
+                complete();
+            } else {
+                act(message);
+            }
+        } catch (Exception e) {
+            failure(message, e);
+        } finally {
+            if (message == null) {
+                completed=true;
             }
         }
     }
 
-    /** handles the failure
+	/** handles the failure
      * 
      * @param message
      * @param e

@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.example;
+package com.github.rfqu.df4j.examples;
 
 import static org.junit.Assert.fail;
 
@@ -116,7 +116,7 @@ public class QuickSortTest {
         out.println("Using "+executor.getClass().getCanonicalName());
         long startTime = System.currentTimeMillis();
 
-        Promise<Integer> sink = new Promise<Integer>();
+        PortFuture<Integer> sink = new PortFuture<Integer>();
         QuickSort sorter = new QuickSort(sink, numbers);
         executor.execute(sorter);
         int tasknum = sink.get();
@@ -144,9 +144,7 @@ public class QuickSortTest {
 
     @Test
     public void testQuickSortPar() throws InterruptedException {
-        ThreadFactoryTL tf = new ThreadFactoryTL();
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
-        tf.setExecutor(executor);
+        ExecutorService executor = ThreadFactoryTL.newFixedThreadPool(nThreads);
         runQuickSort(executor);
     }
 

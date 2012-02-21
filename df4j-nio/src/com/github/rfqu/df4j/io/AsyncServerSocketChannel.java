@@ -61,7 +61,7 @@ public class AsyncServerSocketChannel extends AsyncChannel {
         SocketChannel res = serverChannel.accept();
         synchronized (this) {
             if (res == null) {
-                acceptors.enqueue(acceptor);
+                acceptors.add(acceptor);
                 interestOn(SelectionKey.OP_ACCEPT);
                 serverChannel.register(selector.selector, SelectionKey.OP_ACCEPT, this);
                 return;

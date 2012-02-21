@@ -11,8 +11,34 @@ package com.github.rfqu.df4j.core;
 
 /**
  * The base class of messages and actors (actors are also messages).
- * Allows messages and actors to be enqueued without instantiating a wrapper object
+ * Allows messages and actors to be enqueued without instantiating a wrapper object.
+ * Also serves as a queue head.
  */
 public class Link {
-    Link next;
+    protected Link next;
+    protected Link previous;
+    {
+        next = previous = this;
+    }
+
+    public boolean isLinked() {
+        return next != this;
+    }
+
+    /**
+     * links <newLink> after this link
+     */
+    void link(Link newLink) {
+        newLink.next = next;
+        newLink.previous = this;
+        next.previous = newLink;
+        next = newLink;
+    }
+
+    void unlink() {
+        next.previous = previous;
+        previous.next = next;
+        next = previous = this;
+    }
+
 }
