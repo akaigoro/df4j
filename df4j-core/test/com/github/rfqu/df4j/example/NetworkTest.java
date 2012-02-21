@@ -83,10 +83,10 @@ public class NetworkTest {
      */
     static class NodeActor extends Actor<Packet> {
         NodeActor[] nodes;
-        private final OutPort<Object> sink;
+        private final Port<Object> sink;
         private Random rand;
 
-        public NodeActor(long seed, NodeActor[] nodes, OutPort<Object> sink) {
+        public NodeActor(long seed, NodeActor[] nodes, Port<Object> sink) {
             this.nodes = nodes;
             this.sink = sink;
             this.rand = new Random(seed);

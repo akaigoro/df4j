@@ -5,12 +5,12 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.OutPort;
+import com.github.rfqu.df4j.core.Port;
 
 public class FileIORequest extends Link implements CompletionHandler<Integer, FileIORequest> {
     protected AsynchronousFileChannel channel;
     protected long position;
-    protected OutPort<FileIORequest> callback;
+    protected Port<FileIORequest> callback;
     protected ByteBuffer buf;
     protected Integer result=null;
     protected Throwable exc=null;
@@ -31,13 +31,13 @@ public class FileIORequest extends Link implements CompletionHandler<Integer, Fi
             buf.clear();
         }
     }
-    public void read(long position, OutPort<FileIORequest> callback) { 
+    public void read(long position, Port<FileIORequest> callback) { 
         this.position=position;
         this.callback=callback;
         channel.read(buf, position, this, this);
     }
 
-    public void write(long position, OutPort<FileIORequest> callback) { 
+    public void write(long position, Port<FileIORequest> callback) { 
         this.position=position;
         this.callback=callback;
         channel.write(buf, position, this, this);
@@ -68,7 +68,7 @@ public class FileIORequest extends Link implements CompletionHandler<Integer, Fi
         return buf;
     }
 
-    public OutPort<FileIORequest> getCallback() {
+    public Port<FileIORequest> getCallback() {
         return callback;
     }
 

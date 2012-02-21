@@ -18,14 +18,7 @@ import java.util.concurrent.Executors;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.OutPort;
-import com.github.rfqu.df4j.core.Request;
-import com.github.rfqu.df4j.core.SimpleExecutorService;
-import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
-
-//import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.core.*;
 
 
 /**
@@ -96,9 +89,9 @@ public class PingPongTest {
      */
     static class Ping extends Actor<Token> {
         Pong pong;
-        OutPort<Token> sink;
+        Port<Token> sink;
 
-        public Ping(Pong pong, OutPort<Token> sink) {
+        public Ping(Pong pong, Port<Token> sink) {
             this.pong = pong;
             this.sink = sink;
         }
@@ -136,9 +129,9 @@ public class PingPongTest {
      * 
      */
     static class Pong extends Actor<Token> {
-        private final OutPort<Token> sink;
+        private final Port<Token> sink;
 
-        public Pong(OutPort<Token> sink) {
+        public Pong(Port<Token> sink) {
             this.sink = sink;
         }
 
@@ -169,7 +162,7 @@ public class PingPongTest {
      * The ending node. This is a Port rather than actor, to be accessed outside
      * the actor world.
      */
-    static class MessageSink extends CountDownLatch implements OutPort<Token> {
+    static class MessageSink extends CountDownLatch implements Port<Token> {
         int remain;
 
         public MessageSink(int count) {

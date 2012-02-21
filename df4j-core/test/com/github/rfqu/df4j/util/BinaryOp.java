@@ -23,7 +23,7 @@ public abstract class BinaryOp<T> extends Operation<T> {
 
     @Override
     public void run() {
-        sendRes(operation(p1.operand, p2.operand));
+        setRes(operation(p1.operand, p2.operand));
     }
 
     abstract protected T operation(T opnd, T opnd2);

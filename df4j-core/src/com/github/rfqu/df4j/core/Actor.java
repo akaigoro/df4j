@@ -14,7 +14,7 @@ package com.github.rfqu.df4j.core;
  * Actors themselves are messages and can be send to other Actors and Ports
  * @param <M> the type of accepted messages
  */
-public abstract class Actor<M extends Link> extends Task implements OutStreamPort<M> {
+public abstract class Actor<M extends Link> extends Task implements StreamPort<M> {
 	protected MessageQueue<M> input=new MessageQueue<M>();
     protected boolean ready=true;
 
@@ -32,7 +32,7 @@ public abstract class Actor<M extends Link> extends Task implements OutStreamPor
     /**
      * (non-Javadoc)
      * @return 
-     * @see com.github.rfqu.df4j.core.OutPort#send(java.lang.Object)
+     * @see com.github.rfqu.df4j.core.Port#send(java.lang.Object)
      */
     @Override
     public void send(M message) {

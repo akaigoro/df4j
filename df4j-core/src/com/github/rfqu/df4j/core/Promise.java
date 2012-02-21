@@ -20,13 +20,13 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of accepted messages
  */
-public class Promise<T> implements OutPort<T>, Future<T> {
+public class Promise<T> implements Port<T>, Future<T> {
     protected volatile T message;
     
     /**
      * (non-Javadoc)
      * @return 
-     * @see com.github.rfqu.df4j.core.OutPort#send(java.lang.Object)
+     * @see com.github.rfqu.df4j.core.Port#send(java.lang.Object)
      */
     @Override
     public synchronized void send(T message) {

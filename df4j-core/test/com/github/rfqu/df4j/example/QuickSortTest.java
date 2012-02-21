@@ -33,12 +33,12 @@ import com.github.rfqu.df4j.util.IntAggregator;
  * http://www.vogella.de/articles/JavaAlgorithmsQuicksort/article.html
  */
 class QuickSort extends Task {
-	OutPort<Integer> caller;
+	Port<Integer> caller;
     int[] numbers;
     int low;
     int high;
 
-    QuickSort(OutPort<Integer> caller, int[] numbers, int low, int high) {
+    QuickSort(Port<Integer> caller, int[] numbers, int low, int high) {
     	this.caller=caller;
         this.numbers = numbers;
         this.low = low;
@@ -46,7 +46,7 @@ class QuickSort extends Task {
         // out.println(" from "+low+" to "+high);
     }
 
-    public QuickSort(OutPort<Integer> caller, int[] numbers) {
+    public QuickSort(Port<Integer> caller, int[] numbers) {
         this(caller, numbers, 0, numbers.length - 1);
     }
 

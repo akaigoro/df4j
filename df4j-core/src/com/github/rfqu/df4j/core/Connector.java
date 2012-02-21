@@ -18,25 +18,25 @@ import java.util.ArrayList;
  * 
  * @param <R>  type of result
  */
-public class Connector<R> implements OutPort<R> {
-    private OutPort<R> request;
-    private ArrayList<OutPort<R>> requests = new ArrayList<OutPort<R>>();
+public class Connector<R> implements Port<R> {
+    private Port<R> request;
+    private ArrayList<Port<R>> requests = new ArrayList<Port<R>>();
     private Streamer<R> streamer;
 
-	public void connect(OutPort<R> sink) {
+	public void connect(Port<R> sink) {
 		if (requests==null) {
 			if (request==null) {
 				request=sink;
 				return;
 			}
-			requests = new ArrayList<OutPort<R>>();
+			requests = new ArrayList<Port<R>>();
 			requests.add(request);
 			request=null;
 		}
 		requests.add(sink);
 	}
 
-	public void connect(OutStreamPort<R> sink) {
+	public void connect(StreamPort<R> sink) {
 		if (streamer==null) {
 			streamer=new Streamer<R>();
 			connect(streamer);
@@ -44,10 +44,10 @@ public class Connector<R> implements OutPort<R> {
 		streamer.connect(sink);
 	}
 
-	public void connect(OutPort<R>... sinks) {
-		for (OutPort<R> sink: sinks) {
-			if (sink instanceof OutStreamPort) {
-				connect((OutStreamPort<R>)sink);
+	public void connect(Port<R>... sinks) {
+		for (Port<R> sink: sinks) {
+			if (sink instanceof StreamPort) {
+				connect((StreamPort<R>)sink);
 			} else {
 				connect(sink);				
 			}			
@@ -56,16 +56,16 @@ public class Connector<R> implements OutPort<R> {
 
 	@Override
 	public void send(R m) {
-		for (OutPort<R> out: requests) {
+		for (Port<R> out: requests) {
 			out.send(m);
 		}
 		requests.clear();
 	}
 
-	static class Streamer<R> implements OutPort<R> {
-	    private OutStreamPort<R> request;
+	static class Streamer<R> implements Port<R> {
+	    private StreamPort<R> request;
 
-		public void connect(OutStreamPort<R> sink) {
+		public void connect(StreamPort<R> sink) {
 			if (request==null) {
 				request=sink;
 				return;

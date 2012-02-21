@@ -9,20 +9,20 @@
  */
 package com.github.rfqu.df4j.util;
 
-import com.github.rfqu.df4j.core.OutPort;
+import com.github.rfqu.df4j.core.Port;
 
 /**
  * collects values from  maxCount tokens and send the sum to the specified port
  * @author rfqu
  *
  */
-public class IntAggregator  implements OutPort<Integer> {
-    OutPort<Integer> port;
+public class IntAggregator  implements Port<Integer> {
+    Port<Integer> port;
     int maxCount=Integer.MAX_VALUE;
     int eventCount = 0;
     int value = 0;
 
-    public IntAggregator(OutPort<Integer> caller) {
+    public IntAggregator(Port<Integer> caller) {
         this.port = caller;
     }
 

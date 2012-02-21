@@ -1,3 +1,6 @@
+# eclipse files
+.settings
+
 # test results
 tmpfile*
 testfile*

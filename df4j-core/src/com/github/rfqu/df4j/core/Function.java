@@ -16,9 +16,9 @@ package com.github.rfqu.df4j.core;
 public abstract class Function<R> {
     int gateCount=0;
     int readyGateCount=0;
-    Connector<R> res;
+    Connector<R> res=new Connector<R>();;
 
-    public class Input<T> implements OutPort<T> {
+    public class Input<T> implements Port<T> {
         {gateCount++;}
         public T operand;
         protected boolean opndready = false;
@@ -40,7 +40,7 @@ public abstract class Function<R> {
         }
     }
 
-    public void sendRes(R val) {
+    public void setRes(R val) {
     	res.send(val);
     }
 
@@ -48,10 +48,14 @@ public abstract class Function<R> {
 		return res;
 	}
 
-	public void connect(OutPort<R> sink) {
-		res.connect(sink);
-	}
-	
+    public void connect(Port<R> sink) {
+        res.connect(sink);
+    }
+    
+    public void connect(Port<R>... sink) {
+        res.connect(sink);
+    }
+    
     protected abstract void fire();
     
 }

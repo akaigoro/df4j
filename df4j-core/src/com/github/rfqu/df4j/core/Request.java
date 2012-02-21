@@ -16,12 +16,12 @@ import com.github.rfqu.df4j.core.Link;
  * @param <R>
  */
 public class Request<R> extends Link {
-    public OutPort<R> callback;
+    public Port<R> callback;
 
     public Request() {
     }
 
-    public Request(OutPort<R> callback) {
+    public Request(Port<R> callback) {
         this.callback = callback;
     }
 
