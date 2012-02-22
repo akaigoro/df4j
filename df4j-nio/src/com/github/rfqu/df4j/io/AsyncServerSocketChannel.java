@@ -7,11 +7,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-import com.github.rfqu.df4j.core.MessageQueue;
+import com.github.rfqu.df4j.core.LinkedQueue;
 
 public class AsyncServerSocketChannel extends AsyncChannel {
     ServerSocketChannel serverChannel;
-    MessageQueue<AsyncSocketChannel> acceptors=new MessageQueue<AsyncSocketChannel>();
+    LinkedQueue<AsyncSocketChannel> acceptors=new LinkedQueue<AsyncSocketChannel>();
 
     public AsyncServerSocketChannel(InetSocketAddress listenAddr) throws IOException {
         serverChannel = ServerSocketChannel.open();

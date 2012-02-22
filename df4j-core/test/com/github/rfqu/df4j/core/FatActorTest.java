@@ -7,29 +7,28 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.examples;
+package com.github.rfqu.df4j.core;
 
 import static org.junit.Assert.assertEquals;
 
-import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.core.BaseActor.Demand;
-
-public class StreamNodeTest {
+public class FatActorTest {
     private static final double delta = 1E-14;
 
-    @Before
-    public void init() {
-        SimpleExecutorService executor = new SimpleExecutorService();
-        Task.setCurrentExecutor(executor);
-    }
+    static class Value extends Link {
+        double value;
 
+        public Value(double value) {
+            this.value = value;
+        }
+        
+    }
+    
     /**
      * computes sum and average of input values
      */
-	class Aggregator extends Actor<Value> {
+	class Aggregator extends FatActor<Value> {
 	    double _sum=0.0;
 	    long counter=0;
         // outputs
@@ -60,10 +59,11 @@ public class StreamNodeTest {
             node.avg.connect(avg);
         }
         double value=1.0;
-        int cnt=12345;
+        int cnt=12456;
         for (int k=0; k<cnt; k++) {
             value/=2;
             node.send(new Value(value));
+//            Thread.sleep(100500);
         }
         node.close();
         assertEquals(1.0, sum.get(), delta);
@@ -71,11 +71,4 @@ public class StreamNodeTest {
     }
 }
 
-class Value extends Link {
-    double value;
 
-    public Value(double value) {
-        this.value = value;
-    }
-    
-}

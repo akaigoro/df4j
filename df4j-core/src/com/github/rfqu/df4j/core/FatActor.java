@@ -9,46 +9,31 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.ExecutorService;
+
 /**
  * Processes messages in asynchronous way using its own thread.
  * @param <M> the type of accepted messages
  */
 public abstract class FatActor<M extends Link> extends Actor<M> {
-    protected Thread thread=new Thread(this);
-    {
-    	thread.setDaemon(true);
+	
+    private ExecutorService myExecutor;
+
+	public FatActor(ExecutorService executor) {
+		if (executor==null) {
+	    	myExecutor=ThreadFactoryTL.newSingleThreadExecutor();
+		} else {
+	    	myExecutor=ThreadFactoryTL.newSingleThreadExecutor(executor);
+		}
     }
-    
-    public void start() {
-        thread.start();
-	}
+
+    public FatActor() {
+    	this(Task.getCurrentExecutor());
+    }
 
     @Override
 	protected synchronized void fire() {
-    	notify();
+		notFired.remove(); // für ordnung
+		myExecutor.execute(this);
 	}
-
-    @Override
-    public void run() {
-        Task.setCurrentExecutor(executor);
-        for (;;) {
-            super.run();
-            synchronized (this) {
-                if (completed) {
-                	return;
-                }
-                for (;;) {
-                    if (fired) {
-                        break;
-                    }
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
 }

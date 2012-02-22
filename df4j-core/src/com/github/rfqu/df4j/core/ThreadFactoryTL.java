@@ -29,7 +29,14 @@ import java.util.concurrent.ThreadFactory;
 public class ThreadFactoryTL implements ThreadFactory {
     ExecutorService executor;
 
-    public void setExecutor(ExecutorService executor) {
+    public ThreadFactoryTL() {
+	}
+
+    public ThreadFactoryTL(ExecutorService executor) {
+		this.executor=executor;
+	}
+
+	protected void setExecutor(ExecutorService executor) {
         this.executor = executor;
     }
 
@@ -43,6 +50,17 @@ public class ThreadFactoryTL implements ThreadFactory {
 	    ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
 	    tf.setExecutor(executor);
 		return executor;
+	}
+    
+    public static ExecutorService newSingleThreadExecutor() {
+		ThreadFactoryTL tf = new ThreadFactoryTL();
+	    ExecutorService executor = Executors.newSingleThreadExecutor(tf);
+	    tf.setExecutor(executor);
+		return executor;
+	}
+    
+    public static ExecutorService newSingleThreadExecutor(ExecutorService executor) {
+		return Executors.newSingleThreadExecutor(new ThreadFactoryTL(executor));
 	}
     
 	public class ThreadTL extends Thread {

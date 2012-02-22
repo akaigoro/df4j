@@ -55,7 +55,6 @@ public class SimpleExecutorService extends AbstractExecutorService {
 
     class SimpleExecutor extends FatActor<Task> implements Executor {
     	{
-    		thread.setName(thread.getName() + " DF SimpleExecutorService");
     		executor=SimpleExecutorService.this;
     	}
 
@@ -92,13 +91,6 @@ public class SimpleExecutorService extends AbstractExecutorService {
     	protected void complete() throws Exception {
     		// TODO Auto-generated method stub
 
-    	}
-
-    	@Override
-    	protected void failure(Task message, Exception e) {
-    		// TODO Auto-generated method stub
-    		super.failure(message, e);
-    		thread.interrupt();
     	}
 
     }

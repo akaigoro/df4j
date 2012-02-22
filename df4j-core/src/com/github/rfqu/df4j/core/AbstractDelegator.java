@@ -6,23 +6,11 @@ package com.github.rfqu.df4j.core;
  * @author kaigorodov
  */
 public abstract class AbstractDelegator<M extends Link, H> extends Actor<M> {
-    H handler;
+    ScalarInput<H> handler=new ScalarInput<H>();
+    {start();}
     
-    public AbstractDelegator() {
-        setReady(false);
-    }
-
     public void setHandler(H handler) {
-        if (handler==null) {
-            throw new IllegalArgumentException("handler is null");
-        }
-        synchronized (this) {
-            if (this.handler!=null) {
-                throw new IllegalStateException("handler is docked already");
-            }
-            this.handler = handler;
-        }
-        setReady(true);
+    	this.handler.send(handler);
     }
     
     /**
@@ -31,29 +19,6 @@ public abstract class AbstractDelegator<M extends Link, H> extends Actor<M> {
      * @return
      */
     public H removeHandler() {
-        H res;
-        synchronized (this) {
-            if (handler==null) {
-                throw new IllegalStateException("handler is null");
-            }
-            res = handler;
-            handler=null;
-            setReady(false);
-        }
-        return res;
+        return this.handler.remove();
     }
-
-    @Override
-	protected void act(M message) throws Exception {
-		act(message, handler);
-	}
-
-	@Override
-	protected void complete() throws Exception {
-		complete(handler);
-	}
-
-	protected abstract void act(M message, H handler) throws Exception;
-
-    protected abstract void complete(H handler) throws Exception;
 }

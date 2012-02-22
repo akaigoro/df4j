@@ -1,13 +1,10 @@
-package com.github.rfqu.df4j.examples;
+package com.github.rfqu.df4j.core;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Before;
 import org.junit.Test;
-
-import com.github.rfqu.df4j.core.*;
 
 class Record implements Delegate<Action<Record>>{
     long val;
@@ -55,7 +52,7 @@ class Numbers extends AbstractDemux<Long, Action<Record>, Record> {
 
 	@Override
 	protected AbstractDelegator<Action<Record>, Record> createDelegator(Long tag) {
-		return new LiberalDelegator<Record>();
+		return new LiberalDelegator<Record>(){{start();}};
 	}
 
 	@Override

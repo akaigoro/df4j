@@ -2,7 +2,7 @@ package com.github.rfqu.df4j.ioexample.dock;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
-import com.github.rfqu.df4j.core.MessageQueue;
+import com.github.rfqu.df4j.core.LinkedQueue;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Task;
 
@@ -11,7 +11,7 @@ public class Dock extends Task {//implements Port<PageUser> {
     protected final boolean eager;
     PagePool ppool;
     int key;
-    MessageQueue<Action> actions=new MessageQueue<Action>();
+    LinkedQueue<Action> actions=new LinkedQueue<Action>();
     Page page;
     boolean running;
     

@@ -9,6 +9,8 @@
  */
 package com.github.rfqu.df4j.util;
 
+import com.github.rfqu.df4j.core.Function;
+
 /**
  * Binary operation: classic dataflow object.
  * Waits for both operands to arrive,
@@ -17,15 +19,16 @@ package com.github.rfqu.df4j.util;
  *
  * @param <T> the type of operands and the result
  */
-public abstract class BinaryOp<T> extends Operation<T> {
-    public Input<T> p1 = new Input<T>();
-    public Input<T> p2 = new Input<T>();
+public abstract class BinaryOp<T> extends Function<T> {
+    public ScalarInput<T> p1 = new ScalarInput<T>();
+    public ScalarInput<T> p2 = new ScalarInput<T>();
+    {start();}
 
     @Override
     public void run() {
-        setRes(operation(p1.operand, p2.operand));
+        setRes(eval(p1.remove(), p2.remove()));
     }
 
-    abstract protected T operation(T opnd, T opnd2);
+    abstract protected T eval(T opnd, T opnd2);
 
 }

@@ -10,49 +10,22 @@
 package com.github.rfqu.df4j.core;
 
 
+
 /**
- * abstract node with several inputs and outputs
+ * abstract node with several inputs and single output
  */
-public abstract class Function<R> extends Task {
-    int gateCount=0;
-    int readyGateCount=0;
-    Connector<R> res=new Connector<R>();;
-
-    public class Input<T> implements Port<T> {
-        {gateCount++;}
-        public T operand;
-        protected boolean opndready = false;
-
-        @Override
-        public void send(T value) {
-            if (opndready) {
-                throw new IllegalStateException("illegal send");
-            }
-            synchronized (this) {
-                operand = value;
-                opndready = true;
-                readyGateCount++;
-                if (readyGateCount<gateCount) {
-                    return;
-                }
-            }
-            fire();       
-        }
-    }
+public abstract class Function<R> extends BaseActor {
+	protected final Demand<R> res=new Demand<R>();
 
     public void setRes(R val) {
     	res.send(val);
     }
 
-    public Connector<R> getConnector() {
-		return res;
-	}
-
     public void connect(Port<R> sink) {
         res.connect(sink);
     }
     
-    public void connect(Port<R>... sink) {
-        res.connect(sink);
+    public void connect(Port<R>... sinks) {
+        res.connect(sinks);
     }
 }

@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Connector;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.PortFuture;
 import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.BinaryOp;
@@ -42,8 +43,10 @@ public class FormulaTest {
     @Test
     public void t01() throws InterruptedException {
 		Square sq=new Square();	
+	    PortFuture<Double> pr=new PortFuture<Double>();
+    	sq.connect(pr);
     	sq.send(2.0);
-        int res = sq.get().intValue();
+        int res = pr.get().intValue();
         assertEquals(4, res);
     }
 
@@ -53,9 +56,11 @@ public class FormulaTest {
     @Test
     public void t02() throws InterruptedException {
 		Mult node=new Mult();	
+	    PortFuture<Double> pr=new PortFuture<Double>();
+    	node.connect(pr);
     	node.p1.send(2.0);
     	node.p2.send(3.0);
-        assertEquals(6, node.get().intValue());
+        assertEquals(6, pr.get().intValue());
     }
 
     /**
@@ -77,9 +82,11 @@ public class FormulaTest {
     @Test
     public void t03() throws InterruptedException {
     	Module node = new Module();
+	    PortFuture<Double> pr=new PortFuture<Double>();
+    	node.connect(pr);
     	node.p1.send(3.0);
     	node.p2.send(4.0);
-        double res = node.get();
+        double res = pr.get();
         assertEquals(5, res, delta);
     }
 
@@ -119,7 +126,7 @@ public class FormulaTest {
         Diff diff=new Diff();
         // inputs
         Connector<Double> a=new Connector<Double>();
-		Connector<Double> b=new Connector<Double>();
+        Connector<Double> b=new Connector<Double>();
 		Port<Double> c=d.c;
 		// outputs
 		Div x1 = new Div();
@@ -142,51 +149,55 @@ public class FormulaTest {
     @Test
     public void t04() throws InterruptedException {
     	QuadEq node = new QuadEq();
+	    PortFuture<Double> pr1=new PortFuture<Double>();
+	    PortFuture<Double> pr2=new PortFuture<Double>();
+	    node.x1.connect(pr1);
+	    node.x2.connect(pr2);
     	node.a.send(2.0);
     	node.b.send(3.0);
     	node.c.send(-14.0);
-        assertEquals(2.0, node.x1.get(), delta);
-        assertEquals(-3.5, node.x2.get(), delta);
+        assertEquals(2.0, pr1.get(), delta);
+        assertEquals(-3.5, pr2.get(), delta);
     }
 
     class Square extends UnaryOp<Double> {
-        public Double operation(Double v) {
+        public Double eval(Double v) {
             return v * v;
         }
     }
 
     class Sqrt extends UnaryOp<Double> {
-        public Double operation(Double v) {
+        public Double eval(Double v) {
             return Math.sqrt(v.doubleValue());
         }
     }
 
     class Sum extends BinaryOp<Double> {
-        public Double operation(Double v1, Double v2) {
+        public Double eval(Double v1, Double v2) {
             return v1 + v2;
         }
     }
 
     class Mult extends BinaryOp<Double> {
-        public Double operation(Double v1, Double v2) {
+        public Double eval(Double v1, Double v2) {
             return v1 * v2;
         }
     }
 
     class UnaryMinus extends UnaryOp<Double> {
-        public Double operation(Double v) {
+        public Double eval(Double v) {
             return -v;
         }
     }
 
     class Diff extends BinaryOp<Double> {
-        public Double operation(Double v1, Double v2) {
+        public Double eval(Double v1, Double v2) {
             return v1 - v2;
         }
     }
 
     class Div extends BinaryOp<Double> {
-        public Double operation(Double v1, Double v2) {
+        public Double eval(Double v1, Double v2) {
             return v1 / v2;
         }
     }

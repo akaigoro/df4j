@@ -2,7 +2,7 @@ package com.github.rfqu.df4j.ioexample.dock;
 
 import java.util.concurrent.CountDownLatch;
 
-import com.github.rfqu.df4j.core.MessageQueue;
+import com.github.rfqu.df4j.core.LinkedQueue;
 import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
 
@@ -10,8 +10,8 @@ import com.github.rfqu.df4j.core.Task;
 public class PagePool {
 
 	final int size;
-	MessageQueue<Dock> idleDocks=new MessageQueue<Dock>();
-	MessageQueue<Dock> dock2Load=new MessageQueue<Dock>();
+	LinkedQueue<Dock> idleDocks=new LinkedQueue<Dock>();
+	LinkedQueue<Dock> dock2Load=new LinkedQueue<Dock>();
 	int pageCount=0;
 	
 	public PagePool(int size) {

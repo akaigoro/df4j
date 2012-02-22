@@ -10,10 +10,12 @@
 
 package com.github.rfqu.df4j.core;
 
-/** Simple one-way message queue
+import java.util.NoSuchElementException;
+
+/** Simple doubly linked message queue
  * @param <M> the type of the enqueued messages
  */
-public class MessageQueue<M extends Link> extends Link {
+public class LinkedQueue<M extends Link> extends Link {
     /**
      * @return true if this queue is empty, false otherwise
      */
@@ -42,6 +44,19 @@ public class MessageQueue<M extends Link> extends Link {
     public M poll() {
         if (isEmpty() ) {
             return null;
+        }
+        Link res = previous;
+        res.unlink();
+        return (M) res;
+      }
+
+    /**
+     * @return the next message
+     * @throws NoSuchElementException if the queue is empty
+     */
+    public M remove() {
+        if (isEmpty() ) {
+            throw new NoSuchElementException();
         }
         Link res = previous;
         res.unlink();

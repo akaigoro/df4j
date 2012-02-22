@@ -20,7 +20,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of accepted messages
  */
-public class PortFuture<T> implements Port<T>, Future<T> {
+public class PortFuture<T> extends Link implements Port<T>, Future<T> {
     protected volatile T message;
     
     /**

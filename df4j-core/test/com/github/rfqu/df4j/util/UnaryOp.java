@@ -9,6 +9,7 @@
  */
 package com.github.rfqu.df4j.util;
 
+import com.github.rfqu.df4j.core.Function;
 import com.github.rfqu.df4j.core.Port;
 
 /**
@@ -17,8 +18,9 @@ import com.github.rfqu.df4j.core.Port;
  * @param <T> type of the operand
  * @param <R> type of the result
  */
-public abstract class UnaryOp<T> extends Operation<T> implements Port<T> {
-    protected Input<T> input=new Input<T>();
+public abstract class UnaryOp<T> extends Function<T> implements Port<T> {
+    protected ScalarInput<T> input=new ScalarInput<T>();
+    {start();}
 
     @Override
     public void send(T value) {
@@ -27,9 +29,14 @@ public abstract class UnaryOp<T> extends Operation<T> implements Port<T> {
 
     @Override
     public void run() {
-        setRes(operation(input.operand));
+        ScalarInput<T> input2 = input;
+        if (input2==null) {
+        	throw new IllegalAccessError();
+        }
+		T result = input2.remove();
+		setRes(eval(result));
     }
 
-    abstract protected T operation(T opnd);
+    abstract protected T eval(T opnd);
 
 }

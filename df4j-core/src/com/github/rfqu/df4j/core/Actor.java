@@ -9,117 +9,60 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.ExecutorService;
+
 /**
- * Processes messages in asynchronous way.
- * @param <M> the type of accepted messages
+ * The most typical type of actor: with single stream port.
+ * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M extends Link> extends Task implements StreamPort<M> {
-	private final boolean eager;
-    private MessageQueue<M> input=new MessageQueue<M>();
-    protected boolean closed=false;
-    protected boolean completed=false;
-    protected boolean fired;
-    protected boolean ready=true;
-    
-    /**
-     * @param eager if false, the actor would process messages immediate a
-     * at the invocation of 'send', if no other messages are pending.
-     */
-    public Actor(boolean eager) {
-        this.eager=eager;
+public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
+	BooleanPlace notFired=new BooleanPlace(true); // 'true' state allows firing
+	StreamInput<M> input=new StreamInput<M>();
+	protected boolean completed;
+	
+    public Actor(ExecutorService executor) {
+    	super(executor);
     }
 
-    public Actor() {
-        this(false);
-    }
+    public Actor() {}
 
-	/**
-     * @param ready allows/prohibit actor to process messages
-     */
-    public void setReady(boolean ready) {
-        synchronized(this) {
-            this.ready=ready;
-            if (fired || input.isEmpty() || closed || !ready) {
-                return;
-            }
-            fired=true;
-        }
-        fire();
-    }
-
-    public void send(M message) {
-        if (message==null) {
-            throw new NullPointerException("message may not be null");
-        }
-        synchronized (this) {
-            if (closed) {
-                throw new IllegalStateException("the queue is closed");
-            }
-            if (message.isLinked()) {
-                throw new IllegalArgumentException("message is already enqueued in another queue");
-            }
-            if (fired || !ready || !eager) {
-                input.add(message);
-                if (fired || !ready) {
-                    return;
-                }
-            }
-            fired=true;
-        }
-        if (eager) {
-            try {
-				act(message);
-			} catch (Exception e) {
-				failure(message, e);
-			} finally {
-				synchronized (this) {
-				    if (input.isEmpty()) {
-				    	fired=false;
-				        return;
-				    }
-				    fired=true;
-				}
-			}
-        }
-        fire();
-    }
-
-	public  void close(){
-        synchronized(this) {
-            closed=true;
-            if (fired || !ready) {
-                return;
-            }
-        }
-        fire();
-    }    
-
-	public boolean isClosed() {
-		return closed;
-	}
-        
-	public boolean isCompleted() {
-		return completed;
+    @Override
+	public void send(M m) {
+		if (isClosed()) {
+			throw new IllegalStateException();
+		}
+		input.send(m);
 	}
 
-    /** loops through the accumulated message queue
+	@Override
+	public void close() {
+		input.close();
+	}
+
+	@Override
+	protected void fire() {
+		notFired.remove(); // to prevent multiple concurrent firings
+		super.fire();
+	}
+
+	/** loops through the accumulated message queue
      */
 	@Override
 	public void run() {
         for (;;) {
             M message;
             synchronized (this) {
-                message = input.poll();
-                if ((message == null) && !closed) {
-                	fired=false;
+                if (input.isEmpty()) {
+                	notFired.send(); // allow firing
                     return;
                 }
+                message = input.remove();
             }
             doAct(message);
         }
     }
 
-    private void doAct(M message) {
+    protected void doAct(M message) {
         try {
             if (message == null) {
                 complete();
@@ -134,6 +77,14 @@ public abstract class Actor<M extends Link> extends Task implements StreamPort<M
             }
         }
     }
+
+	public boolean isClosed() {
+		return input.isClosed();
+	}
+
+	public boolean isCompleted() {
+		return completed;
+	}
 
 	/** handles the failure
      * 
@@ -152,7 +103,7 @@ public abstract class Actor<M extends Link> extends Task implements StreamPort<M
     protected abstract void act(M message) throws Exception;
 
     /**
-     * processes one incoming message
+     * processes closing message
      * @throws Exception
      */
     protected abstract void complete() throws Exception;

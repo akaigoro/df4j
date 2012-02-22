@@ -8,12 +8,13 @@ package com.github.rfqu.df4j.core;
 public class LiberalDelegator<H> extends AbstractDelegator<Action<H>, H> {
 
 	@Override
-	protected void act(Action<H> message, H handler) throws Exception {
-		message.act(handler);
+	protected void act(Action<H> message) throws Exception {
+		message.act(handler.get());		
 	}
 
 	@Override
-	protected void complete(H handler) throws Exception {
+	protected void complete() throws Exception {
+		// TODO Auto-generated method stub
 		
 	}
 }
