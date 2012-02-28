@@ -7,19 +7,16 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.Port;
 
 public class SocketIORequest extends Link 
 implements CompletionHandler<Integer, AsyncSocketChannel> {
-    static AtomicInteger ids=new AtomicInteger();
+    static AtomicInteger ids=new AtomicInteger(); // DEBUG
     
     public int id=ids.addAndGet(1);
     protected AsyncSocketChannel channel;
     protected ByteBuffer buffer;
     protected boolean readOp;
-    protected boolean inTrans=false;
-    protected Throwable exc;
-    protected Port<SocketIORequest> callback;
+    protected volatile boolean inTrans=false;
     
     public SocketIORequest(int capacity, boolean direct) {
         if (direct) {
@@ -33,14 +30,6 @@ implements CompletionHandler<Integer, AsyncSocketChannel> {
         this.buffer = buf;
     }
     
-    public Throwable getExc() {
-        return exc;
-    }
-
-    public Port<SocketIORequest> getCallback() {
-        return callback;
-    }
-
     public ByteBuffer getBuffer() {
         return buffer;
     }
@@ -49,26 +38,22 @@ implements CompletionHandler<Integer, AsyncSocketChannel> {
         buffer.clear();
     }
 
-    public void startRead(Port<SocketIORequest> callback) {
+    public void startRead() {
         if (inTrans) {
             throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
         }
-        exc=null;
         inTrans=true;
         readOp=true;
-        this.callback = callback;
         buffer.clear();
     }
 
 
-    public void startWrite(Port<SocketIORequest> callback) {
+    public void startWrite() {
         if (inTrans) {
             throw new IllegalStateException("SocketIORequest.write: in "+(readOp?"read":"write")+" already");
         }
         inTrans=true;
-        exc=null;
         readOp=false;
-        this.callback = callback;
         buffer.flip();
     }
 
@@ -78,37 +63,36 @@ implements CompletionHandler<Integer, AsyncSocketChannel> {
         if (readOp) {
             //System.out.println("channel read completed id="+id);
             buffer.flip();
-            channel.readCompleted();
+            readCompleted(result, channel);
         } else {
             //System.out.println("channel write completed id="+id);
-            channel.writeCompleted();
             buffer.clear();
-        }
-        if (callback!=null) {
-            callback.send(this);
+            writeCompleted(result, channel);
         }
     }
 
     @Override
     public void failed(Throwable exc, AsyncSocketChannel channel) {
-        this.exc=exc;
         inTrans=false;
-        if (exc instanceof AsynchronousCloseException && channel!=null) {
-            try {
-                channel.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
         if (readOp) {
-            channel.readCompleted();
+            readFailed(exc, channel);
         } else {
-            channel.writeCompleted();
+            writeFailed(exc, channel);
         }
-        if (callback!=null) {
-            callback.send(this);
-        }
+    }
+
+    /* to be overwritten */
+    
+    public void readCompleted(Integer result, AsyncSocketChannel channel) {
+    }
+
+    public void readFailed(Throwable exc, AsyncSocketChannel channel) {
+    }
+
+    public void writeCompleted(Integer result, AsyncSocketChannel channel) {
+    }
+
+    public void writeFailed(Throwable exc, AsyncSocketChannel channel) {
     }
 }
  

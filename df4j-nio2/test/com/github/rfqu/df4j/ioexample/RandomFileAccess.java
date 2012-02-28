@@ -11,17 +11,19 @@ package com.github.rfqu.df4j.ioexample;
 
 import static java.nio.file.StandardOpenOption.WRITE;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,18 +31,27 @@ import com.github.rfqu.df4j.core.*;
 import com.github.rfqu.df4j.io.*;
 
 public class RandomFileAccess {
-
+    SimpleExecutorService executor;
     final static int blockSize = 4096*16; // bytes
     final static long numBlocks = 500; // items
     final static long fileSize = blockSize * numBlocks; // bytes
     final static int maxBufNo = 8; // max number of buffers
     PrintStream out = System.out;
-    String testfilename="testfile";
+    File testfile;
+    Path testfilePath;
     
     @Before
     public void init() {
+        testfile=new File("testfile.dat");
+        testfile.deleteOnExit();
+        testfilePath = Paths.get(testfile.getAbsolutePath());
         out.println("File of size " + fileSize + " with " + numBlocks + " blocks of size " + blockSize);
-//        out.println("has="+ByteBuffer.allocate(blockSize).hasArray());
+        executor = new SimpleExecutorService();
+        Task.setCurrentExecutor(executor);
+    }
+    @After
+    public void shutdown() {
+        executor.shutdown();
     }
 
     public static void main(String args[]) throws Exception {
@@ -49,8 +60,6 @@ public class RandomFileAccess {
         tst.testW_IO();
         tst.testW_NIO();
         tst.testW_dffwS();
-        tst.testW_dffwJUC();
-        // tst.testR();
     }
 
     /**
@@ -61,7 +70,7 @@ public class RandomFileAccess {
     public void testW_IO() throws Exception {
         out.println("testW_IO: java.io");
         try {
-            RandomAccessFile rf = new RandomAccessFile(testfilename, "rw");
+            RandomAccessFile rf = new RandomAccessFile(testfile, "rw");
             rf.setLength(blockSize*numBlocks);
             long startTime = System.currentTimeMillis();
             for (int i = 0; i < numBlocks; i++) {
@@ -83,7 +92,7 @@ public class RandomFileAccess {
      * writes file using java.nio, indirect buffers, and futures - without DF framework
      *  @throws Exception
      */
-    @Test
+    //@Test
     public void testW_NIO() throws Exception {
         testW_NIO(false);
     }
@@ -99,100 +108,83 @@ public class RandomFileAccess {
 
     private void testW_NIO(boolean direct) throws IOException, Exception {
         out.println("testW_NIO: NIO with futuires; direct="+direct);
-        AsynchronousFileChannel af = AsynchronousFileChannel.open(Paths.get(testfilename), WRITE);
+        AsynchronousFileChannel af 
+            = new AsyncFileChannel(testfilePath, WRITE).getChannel();
         af.truncate(blockSize*numBlocks);
-        for (int nb = 1; nb <= maxBufNo; nb=nb*2) {
+        for (int nb = maxBufNo*2; nb >0; nb=nb/2) {
             long startTime = System.currentTimeMillis();
             testWnio(af, nb, false);
             float etime = System.currentTimeMillis() - startTime;
-            out.println("num bufs=" + nb + " elapsed=" + etime / 1000 + " sec; mean io time=" + (etime / numBlocks) + " ms");
+            out.println("num bufs=" + nb + " elapsed=" + etime / 1000 + " sec; throughput=" + (etime / numBlocks) + " ms");
         }
-        af.force(true);
         af.close();
     }
 
     void testWnio(AsynchronousFileChannel af, int nb, boolean direct) throws Exception {
         Requestnio[] reqs = new Requestnio[nb];
         for (int k = 0; k < nb; k++) {
-            reqs[k] = new Requestnio(af, direct);
+            reqs[k] = new Requestnio(direct);
         }
         for (int i = 0; i < numBlocks; i++) {
             long blockId = getBlockId(numBlocks, i);
             Requestnio req = reqs[i % nb];
             req.await();
-            fillBuf(req.buf, blockId);
-            req.write(blockId);
+            fillBuf(req.buffer, blockSize * blockId);
+            req.write(af, blockSize * blockId);
         }
+        for (int k = 0; k < nb; k++) {
+            reqs[k].await();
+        }
+        af.force(true);
     }
 
     /**
-     * combines file, ByteBuffer, and Future
+     * combines ByteBuffer and Future
      */
     static class Requestnio {
         Future<Integer> fut = null;
-        AsynchronousFileChannel af;
-        ByteBuffer buf;
+        ByteBuffer buffer;
 
-        public Requestnio(AsynchronousFileChannel af, boolean direct) {
-            this.af = af;
-            buf = direct?ByteBuffer.allocateDirect(blockSize):ByteBuffer.allocate(blockSize);
+        public Requestnio(boolean direct) {
+            buffer = direct?ByteBuffer.allocateDirect(blockSize):ByteBuffer.allocate(blockSize);
         }
 
         public void await() throws InterruptedException, ExecutionException {
-            if (fut == null) {
+            if (fut==null) {
                 return;
             }
             fut.get();
-            fut = null;
+            fut=null;
         }
 
-        public void write(long blockId) {
-            fut = af.write(buf, blockSize * blockId);
+        public void write(AsynchronousFileChannel af, long pos) {
+            buffer.flip();
+            fut = af.write(buffer, pos);
         }
     }
 
     /**
-     * writes file using AsynchronousFileChannel, indirect buffers, and DF framework with SimpleExecutorService
+     * writes file using AsynchronousFileChannel and indirect buffers
      *  @throws Exception
      */
-    @Test
+    //@Test
     public void testW_dffwS() throws Exception {
-        SimpleExecutorService executor = new SimpleExecutorService();
-        testW_dffw(executor, false);
+        boolean direct=false;
+        out.println("testW_dffw: NIO2; direct="+direct);
+        AsyncFileChannel af = new AsyncFileChannel(testfilePath, WRITE);
+        testW_dffw(af,direct);
     }
 
     /**
-     * writes file using AsynchronousFileChannel, direct buffers, and DF framework with SimpleExecutorService
+     * writes file using AsynchronousFileChannel and direct buffers
      * @throws Exception
      */
     @Test
     public void testW_dffwSD() throws Exception {
-        SimpleExecutorService executor = new SimpleExecutorService();
-        testW_dffw(executor, true);
-    }
-
-    /**
-     * writes file using AsynchronousFileChannel, indirect buffers, and DF framework with java.util.concurrent.ExecutorService
-     * @throws Exception
-     */
-    @Test
-    public void testW_dffwJUC() throws Exception {
-        ThreadFactoryTL tf = new ThreadFactoryTL();
-        ExecutorService executor = Executors.newFixedThreadPool(2, tf);
-        tf.setExecutor(executor);
-        testW_dffw(executor, false);
-    }
-
-    /**
-     * writes file using AsynchronousFileChannel, direct buffers, and DF framework with java.util.concurrent.ExecutorService
-     * @throws Exception
-     */
-    @Test
-    public void testW_dffwJUCD() throws Exception {
-        ThreadFactoryTL tf = new ThreadFactoryTL();
-        ExecutorService executor = Executors.newFixedThreadPool(2, tf);
-        tf.setExecutor(executor);
-        testW_dffw(executor, true);
+        boolean direct=true;
+        out.println("testW_dffwSD: NIO2; direct="+direct);
+        AsyncFileChannel af = new AsyncFileChannel(testfilePath, WRITE);
+        testW_dffw(af,direct);
     }
 
     /** general dataflow test
@@ -201,99 +193,121 @@ public class RandomFileAccess {
      * @param direct if true, use direct buffers
      * @throws Exception
      */
-    public void testW_dffw(ExecutorService executor, boolean direct) throws Exception {
-        out.println("Using " + executor.getClass().getCanonicalName()+" direct="+direct);
-        Task.setCurrentExecutor(executor);
-        AsynchronousFileChannel af = AsyncFileChannel.open(Paths.get(testfilename), WRITE);
+    public void testW_dffw(AsyncFileChannel af, boolean direct) throws Exception {
         af.truncate(blockSize*numBlocks);
-        for (int nb = 1; nb <= maxBufNo; nb=nb*2) {
+        for (int nb = maxBufNo; nb >0; nb=nb/2) {
             long startTime = System.currentTimeMillis();
             StarterW command = new StarterW(af, nb, direct);
-            executor.execute(command);
             int res = command.sink.get();
             af.force(true);
             float etime = System.currentTimeMillis() - startTime;
-            out.println("num bufs=" + nb + " elapsed=" + etime / 1000 + " sec; mean io time=" + (etime / numBlocks) + " ms");
+            out.println("res="+res+" num bufs=" + nb + " elapsed=" + etime / 1000 + " sec; throughput=" + (etime / numBlocks) + " ms");
+            out.println("mean io time="+((float)command.accTime.get())/1000000/numBlocks+" ms");
+            if (res!=0) {
+                out.println("ERROR:"+res);
+            }
         }
         af.close();
-        executor.shutdown();
     }
 
     /** starting task
      * creates the Writer actor and sends it empty buffers
      *
      */
-    class StarterW extends Task {
-        AsynchronousFileChannel af;
+    class StarterW {
+        AsyncFileChannel af;
         int nb;
         boolean direct;
+        long started=0;
+        long finished=0;
+        AtomicLong accTime=new AtomicLong();
         PortFuture<Integer> sink = new PortFuture<Integer>();
-        WriterActor wa = new WriterActor();
 
-        public StarterW(AsynchronousFileChannel af, int nb, boolean direct) {
+        public StarterW(AsyncFileChannel af, int nb, boolean direct) {
             this.af = af;
             this.nb = nb;
             this.direct = direct;
-        }
-
-        @Override
-        public void run() {
             try {
                 for (int k = 0; k < nb; k++) {
                     ByteBuffer buf = direct?ByteBuffer.allocateDirect(blockSize):ByteBuffer.allocate(blockSize);
-                    FileIORequest req = new FileIORequest(af, buf);
-                    wa.send(req);
+                    Request req = new Request(buf);
+                    act(req);
                 }
             } catch (Exception e) {
                 sink.send(1);
             }
         }
+        
+        protected synchronized void act(Request req) {
+            if (started < numBlocks) { // has all io requests been launched?
+                req.clear();
+                long blockId = getBlockId(numBlocks, started);
+                fillBuf(req.getBuffer(), blockId);
+                try {
+                    af.write(req, blockId * blockSize);
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                started++;
+            }
+        }
+        
+        class Request extends FileIORequest {
+            private long start;
 
-        class WriterActor extends Actor<FileIORequest> {
-            int started = 0; // number of started io operations
-            int finished = 0;// number of finished io operations
+            public Request(ByteBuffer buf) {
+                super(buf);
+            }
 
             @Override
-            protected void act(FileIORequest req) throws Exception {
-                if (req.getResult() != null || req.getExc() != null) { // is it empty or used buffer?
-                    finished++;
-                    if (finished == numBlocks) { // has the whole file been written?
-                        setReady(false);
-                        sink.send(0); // signal the caller
-                        return;
-                    }
-                }
-                if (started < numBlocks) { // has all io requests been launched?
-                    req.clear();
-                    long blockId = getBlockId(numBlocks, started);
-                    fillBuf(req.getBuffer(), blockId);
-                    req.write(blockId * blockSize, this);
-                    started++;
+            public void startWrite(long position) {
+                super.startWrite(position);
+                start = System.nanoTime();
+            }
+
+            @Override
+            public void writeCompleted(Integer result, AsyncFileChannel channel) {
+                accTime.addAndGet(System.nanoTime()-start);
+                finished++;
+                if (finished < numBlocks) { // has the whole file been written?
+                    act(this);
+                } else {                    
+                    sink.send(0); // signal the caller
                 }
             }
 
             @Override
-            protected void complete() throws Exception {
-                // TODO Auto-generated method stub
-                
+            public void writeFailed(Throwable exc, AsyncFileChannel channel) {
+                exc.printStackTrace();
+                sink.send(1); // signal the caller
             }
+            
         }
     }
 
-    static void fillBuf(ByteBuffer buf, long blockId) {
-        buf.clear();
+    static void fillBuf(ByteBuffer buffer, long blockId) {
+        buffer.clear();
+        /*
         int capacity8 = buf.capacity()/8;
         long start = blockId*capacity8;
         for (int j = 0; j < capacity8; j++) {
-            buf.putLong(start+j);
+            try {
+                buf.putLong(start+j);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                return;
+            }
         }
-        buf.flip();
+        */
+        buffer.position(buffer.limit()); // imitate writing
     }
 
     /**
      * pseudo-randomizer, to simulate access to random file blocks 
      */
-    public static long getBlockId(long range, int i) {
+    public static long getBlockId(long range, long i) {
         return (i * 0x5DEECE66DL + 0xBL) % range;
     }
 }

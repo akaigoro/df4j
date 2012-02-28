@@ -19,7 +19,13 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.*;
 import com.github.rfqu.df4j.util.MessageSink;
 
-class Packet extends Link  {
+/**
+ * A set of identical Actors, passing packets to a randomly selected peer actor.
+ * A packet dies after passing predefined number of hops.
+ */
+public class DemuxGraphTest {
+
+static class Packet extends Link  {
     int hops_remained;
 
     public Packet(int hops_remained) {
@@ -27,18 +33,26 @@ class Packet extends Link  {
     }
 }
 
-class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
+static class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
     MessageSink sink = new MessageSink(DemuxGraphTest.NR_REQUESTS);
     Random rand = new Random(1);
 
 	@Override
 	protected AbstractDelegator<Packet, NodeActor> createDelegator(String tag) {
-		return new ConservativeDelegator<Packet, NodeActor>();
+		ConservativeDelegator<Packet, NodeActor> dock
+		    = new ConservativeDelegator<Packet, NodeActor>() /*{
+
+                @Override
+                protected void fire() {
+                    run();
+                }} */;
+		dock.start();
+        return dock;
 	}
 
 	@Override
 	protected void requestHandler(String tag, AbstractDelegator<Packet, NodeActor> gate) {
-        gate.setHandler(new NodeActor());
+        gate.handler.send(new NodeActor());
     }
     
     /**
@@ -46,7 +60,7 @@ class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
      */
     class NodeActor implements Delegate<Packet> {
 		@Override
-		public void act(Packet p) throws Exception {
+		public void act(Packet p) {
 	        int nextVal = p.hops_remained - 1;
 	        if (nextVal == 0) {
 	            sink.send(p);
@@ -57,7 +71,7 @@ class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
 		}
 
 		@Override
-		public void complete() throws Exception {
+		public void complete(){
 		}
     }
 
@@ -90,17 +104,11 @@ class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
 
 }
 
-/**
- * A set of identical Actors, passing packets to a randomly selected peer actor.
- * A packet dies after passing predefined number of hops.
- *
- */
-public class DemuxGraphTest {
     final static int NUM_ACTORS = 100; // number of nodes
     final static int NR_REQUESTS = NUM_ACTORS * 10; // 100; // number of tokens
     final static int TIME_TO_LIVE = 1000; // hops
     final static int nThreads = Runtime.getRuntime().availableProcessors();
-    final static int times = 10;
+    final static int times = 5;
     static PrintStream out = System.out;
 
     @Before

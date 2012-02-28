@@ -1,87 +1,118 @@
 package com.github.rfqu.df4j.io;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.Port;
 
-public class FileIORequest extends Link implements CompletionHandler<Integer, FileIORequest> {
-    protected AsynchronousFileChannel channel;
+public class FileIORequest extends Link 
+implements CompletionHandler<Integer, AsyncFileChannel> {
     protected long position;
-    protected Port<FileIORequest> callback;
-    protected ByteBuffer buf;
-    protected Integer result=null;
-    protected Throwable exc=null;
+    protected ByteBuffer buffer;
+    protected boolean readOp;
+    protected volatile boolean inTrans=false;
 
-    public FileIORequest(AsynchronousFileChannel channel) {
-        this.channel = channel;
+    public FileIORequest(int capacity, boolean direct) {
+        if (direct) {
+            buffer=ByteBuffer.allocateDirect(capacity);
+        } else {
+            buffer=ByteBuffer.allocate(capacity);
+        }
     }
     
-    public FileIORequest(AsynchronousFileChannel channel, ByteBuffer buf) {
-        this.channel = channel;
-        this.buf = buf;
+    public FileIORequest(ByteBuffer buf) {
+        this.buffer = buf;
     }
     
     public void clear() {
-        result=null;
-        exc=null;
-        if (buf!=null) {
-            buf.clear();
+        if (inTrans) {
+            throw new IllegalStateException("FileIORequest.write: in "+(readOp?"read":"write")+" already");
+        }
+        if (buffer!=null) {
+            buffer.clear();
         }
     }
-    public void read(long position, Port<FileIORequest> callback) { 
+
+    public void startRead(long position) { 
+        if (inTrans) {
+            throw new IllegalStateException("FileIORequest.write: in "+(readOp?"read":"write")+" already");
+        }
+        buffer.clear();
+        inTrans=true;
+        readOp=true;
         this.position=position;
-        this.callback=callback;
-        channel.read(buf, position, this, this);
     }
 
-    public void write(long position, Port<FileIORequest> callback) { 
+    public void startWrite(long position) { 
+        if (inTrans) {
+            throw new IllegalStateException("FileIORequest.write: in "+(readOp?"read":"write")+" already");
+        }
+        buffer.flip();
+        inTrans=true;
+        readOp=false;
         this.position=position;
-        this.callback=callback;
-        channel.write(buf, position, this, this);
     }
 
     @Override
-    public void completed(Integer result, FileIORequest attachment) {
-        this.result=result;
-        callback.send(this);
+    public void completed(Integer result, AsyncFileChannel channel) {
+        inTrans=false;
+        if (readOp) {
+            //System.out.println("channel read completed id="+id);
+            buffer.flip();
+            readCompleted(result, channel);
+        } else {
+            //System.out.println("channel write completed id="+id);
+            buffer.clear();
+            writeCompleted(result, channel);
+        }
     }
 
     @Override
-    public void failed(Throwable exc, FileIORequest attachment) {
-        this.exc=exc;
-        callback.send(this);
-    }
-
-    public AsynchronousFileChannel getChannel() {
-        return channel;
+    public void failed(Throwable exc, AsyncFileChannel channel) {
+        inTrans=false;
+        if (exc instanceof AsynchronousCloseException) {
+            try {
+                channel.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        if (readOp) {
+            readFailed(exc, channel);
+        } else {
+            writeFailed(exc, channel);
+        }
     }
 
     public FileIORequest setBuffer(ByteBuffer buf) {
-        this.buf = buf;
+        this.buffer = buf;
         return this;
     }
 
     public ByteBuffer getBuffer() {
-        return buf;
-    }
-
-    public Port<FileIORequest> getCallback() {
-        return callback;
+        return buffer;
     }
 
     public long getPosition() {
         return position;
     }
     
-    public Integer getResult() {
-        return result;
+    /* to be overwritten */
+    
+    public void readCompleted(Integer result, AsyncFileChannel channel) {
     }
 
-    public Throwable getExc() {
-        return exc;
+    public void readFailed(Throwable exc, AsyncFileChannel channel) {
     }
-    
+
+    public void writeCompleted(Integer result, AsyncFileChannel channel) {
+    }
+
+    public void writeFailed(Throwable exc, AsyncFileChannel channel) {
+    }
+
 }

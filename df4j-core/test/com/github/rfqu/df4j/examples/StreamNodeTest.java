@@ -15,21 +15,19 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.core.BaseActor.Demand;
 
 public class StreamNodeTest {
     private static final double delta = 1E-14;
 
     @Before
     public void init() {
-        SimpleExecutorService executor = new SimpleExecutorService();
-        Task.setCurrentExecutor(executor);
+        Task.setCurrentExecutor(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     /**
      * computes sum and average of input values
      */
-	class Aggregator extends Actor<Value> {
+	static class Aggregator extends Actor<Value> {
 	    double _sum=0.0;
 	    long counter=0;
         // outputs
@@ -50,7 +48,17 @@ public class StreamNodeTest {
         }
 
     }
-    @Test
+ 
+	static class Value extends Link {
+	    double value;
+
+	    public Value(double value) {
+	        this.value = value;
+	    }
+	    
+	}
+	
+	@Test
     public void t01() throws InterruptedException {
         Aggregator node = new Aggregator();
         PortFuture<Double> sum=new PortFuture<Double>();
@@ -71,11 +79,4 @@ public class StreamNodeTest {
     }
 }
 
-class Value extends Link {
-    double value;
 
-    public Value(double value) {
-        this.value = value;
-    }
-    
-}

@@ -14,12 +14,10 @@ import java.util.concurrent.ExecutorService;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.PortFuture;
 import com.github.rfqu.df4j.core.Request;
-import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.core.ThreadFactoryTL;
 
@@ -28,7 +26,7 @@ import com.github.rfqu.df4j.core.ThreadFactoryTL;
  * taken from Jactor
  * 
  */
-public class CounterTest {
+public class ExecServiceTest {
 	static final public class AddCount extends Request<AddCount> {
 	    public long number;
 
@@ -38,7 +36,7 @@ public class CounterTest {
 		}
 	}
 
-	static final public class CounterActor extends Actor<Link> {
+	static final public class CounterActor extends EagerActor<Link> {
 	    private long count = 0L;
 	    {start();}
 
@@ -64,8 +62,9 @@ public class CounterTest {
 			
 		}
 	}
-	static final public class Driver extends Actor<AddCount> {
-	    private long count = 0L;
+	static final public class Driver extends EagerActor<AddCount> {
+        long freeMemory;
+        long usedMemory;
 	    CounterActor counterActor;
 	    PortFuture<Long> future;
 	    long runs;
@@ -77,6 +76,8 @@ public class CounterTest {
 		}
 
 		public void start() {
+            System.gc();
+            freeMemory = Runtime.getRuntime().freeMemory();
 			long nm=(long) Math.sqrt(runs);
 			out.println("nm="+nm);
 			for (int k=0; k<nm; k++) {
@@ -96,6 +97,8 @@ public class CounterTest {
             } else if (runs==0 && future!=null) {
 //				out.println("Driver counterActor.send future "+runs);
             	counterActor.send(future);
+                System.gc();
+                usedMemory = freeMemory-Runtime.getRuntime().freeMemory();
             	future=null;
             }
 		}
@@ -113,6 +116,11 @@ public class CounterTest {
     
     @Test
     public void testS() throws InterruptedException {
+        runTest(new SimpleExecutorService());
+    }
+
+    @Test
+    public void testSJUC() throws InterruptedException {
         runTest(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
@@ -136,10 +144,11 @@ public class CounterTest {
         System.out.println("[java-shared] Count: " + count);
         System.out.println("[java-shared] Test time in seconds: " + elapsedTime);
         System.out.println("[java-shared] Messages per microsecond: " + ((float)runs)/1000000 / elapsedTime);
+        System.out.println("[java-shared] Used memory: " + driver.usedMemory);
     }
     
     public static void main(String args[]) throws Exception {
-    	CounterTest t=new CounterTest();
+    	ExecServiceTest t=new ExecServiceTest();
     	t.testJUC();
     	t.testS();
     }

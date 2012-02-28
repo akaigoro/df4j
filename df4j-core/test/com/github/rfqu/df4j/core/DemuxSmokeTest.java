@@ -57,7 +57,7 @@ class Numbers extends AbstractDemux<Long, Action<Record>, Record> {
 
 	@Override
 	protected void requestHandler(Long tag, AbstractDelegator<Action<Record>, Record> gate) {
-        gate.setHandler(new Record());
+        gate.handler.send(new Record());
 	}
 }
 
@@ -65,7 +65,7 @@ public class DemuxSmokeTest {
 
     @Before
     public void init() {
-        Task.setCurrentExecutor(new SimpleExecutorService());
+        Task.setCurrentExecutor(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test

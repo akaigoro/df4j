@@ -15,13 +15,11 @@ import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.util.IntAggregator;
 
 /**
  * Demonstrates how a recursive algorithm could be refactored into a network of tasks.
@@ -84,16 +82,48 @@ class QuickSort extends Task {
     	int resultcount=0;
         // imitate recursion
         if (low < j) {
-            new QuickSort(result, numbers, low, j).fire();
+            new QuickSort(result, numbers, low, j).start();
             resultcount++;
         }
         if (i < high) {
-            new QuickSort(result, numbers, i, high).fire();
+            new QuickSort(result, numbers, i, high).start();
             resultcount++;
         }
         result.setCount(resultcount);
     }
 
+    static class IntAggregator  implements Port<Integer> {
+        Port<Integer> port;
+        int maxCount=Integer.MAX_VALUE;
+        int eventCount = 0;
+        int value = 0;
+
+        public IntAggregator(Port<Integer> caller) {
+            this.port = caller;
+        }
+
+        @Override
+        public void send(Integer delta) {
+            synchronized (this) {
+                eventCount++;
+                value += delta;
+                if (eventCount < maxCount) {
+                    return;
+                }
+            }
+            port.send(new Integer(value));
+        }
+
+        public void setCount(int resultcount) {
+            synchronized (this) {
+                maxCount=resultcount;
+                if (eventCount < maxCount) {
+                    return;
+                }
+            }
+            port.send(new Integer(value));
+        }
+    }
 }
 
 public class QuickSortTest {
@@ -138,14 +168,12 @@ public class QuickSortTest {
 
     @Test
     public void testQuickSort() throws InterruptedException {
-        SimpleExecutorService executor = new SimpleExecutorService();
-        runQuickSort(executor);
+        runQuickSort(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test
     public void testQuickSortPar() throws InterruptedException {
-        ExecutorService executor = ThreadFactoryTL.newFixedThreadPool(nThreads);
-        runQuickSort(executor);
+        runQuickSort(ThreadFactoryTL.newFixedThreadPool(nThreads));
     }
 
     @Test

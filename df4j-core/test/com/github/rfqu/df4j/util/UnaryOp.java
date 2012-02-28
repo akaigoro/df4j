@@ -27,14 +27,16 @@ public abstract class UnaryOp<T> extends Function<T> implements Port<T> {
         input.send(value);
     }
 
+    T operand;
+    
     @Override
-    public void run() {
-        ScalarInput<T> input2 = input;
-        if (input2==null) {
-        	throw new IllegalAccessError();
-        }
-		T result = input2.remove();
-		setRes(eval(result));
+    protected void removeTokens() {
+        operand=input.remove();
+    }
+
+    @Override
+    protected void act() {
+        setRes(eval(operand));
     }
 
     abstract protected T eval(T opnd);

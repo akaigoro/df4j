@@ -16,24 +16,53 @@ import java.util.concurrent.ExecutorService;
  * @param <M> the type of accepted messages
  */
 public abstract class FatActor<M extends Link> extends Actor<M> {
-	
-    private ExecutorService myExecutor;
-
-	public FatActor(ExecutorService executor) {
-		if (executor==null) {
-	    	myExecutor=ThreadFactoryTL.newSingleThreadExecutor();
-		} else {
-	    	myExecutor=ThreadFactoryTL.newSingleThreadExecutor(executor);
-		}
+    private Thread myThread=new Thread(this);
+    {myThread.setDaemon(true);}
+    
+    public FatActor(ExecutorService executor) {
+        super(executor);
     }
 
-    public FatActor() {
-    	this(Task.getCurrentExecutor());
+    public FatActor() {}
+
+    public String getName() {
+        return myThread.getName();
+    }
+
+    public void setName(String threadName) {
+        myThread.setName(threadName);
+    }
+
+    @Override
+    public void start() {
+        myThread.start();
+        super.start();
     }
 
     @Override
 	protected synchronized void fire() {
-		notFired.remove(); // für ordnung
-		myExecutor.execute(this);
+		notify();
 	}
+    
+    @Override
+    public void run() {
+        Task.setCurrentExecutor(executor);
+        while (!completed) {
+            synchronized (this) {
+                while (!isReady()) {
+                    fired=false; // allow firing
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        return;
+                    }
+                }
+                removeTokens();
+            }
+            act();
+        }
+    }
+
+    
 }

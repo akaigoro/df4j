@@ -9,9 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-import com.github.rfqu.df4j.core.BaseActor.BooleanPlace;
-import com.github.rfqu.df4j.core.BaseActor.StreamInput;
-
 /**
  * Actor with 2 ports.
  * @param <M> the type of accepted messages

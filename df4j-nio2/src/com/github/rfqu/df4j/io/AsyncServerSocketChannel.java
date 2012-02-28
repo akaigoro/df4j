@@ -3,11 +3,17 @@ package com.github.rfqu.df4j.io;
 import java.io.IOException;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Link;
 
-public class AsyncServerSocketChannel extends Actor<AsyncSocketChannel> {
-    AsynchronousServerSocketChannel channel;
+public class AsyncServerSocketChannel 
+extends Actor<AsyncServerSocketChannel.AcceptHandler> {
+    private AsynchronousServerSocketChannel channel;
+    private BooleanPlace channelAcc=new BooleanPlace(true); // channel accessible
+    {start();}
     
     public AsyncServerSocketChannel() throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
@@ -24,9 +30,9 @@ public class AsyncServerSocketChannel extends Actor<AsyncSocketChannel> {
     }
 */
     @Override
-    protected void act(AsyncSocketChannel connection) throws Exception {
-        super.stop();
-        channel.accept(this, connection);
+    protected void act(AcceptHandler connection) throws Exception {
+        channelAcc.remove();
+        channel.accept(connection, handler);
     }
 
     @Override
@@ -34,8 +40,25 @@ public class AsyncServerSocketChannel extends Actor<AsyncSocketChannel> {
         channel.close();
     }
     
-    public void acceptCompleted() {
-        super.start();
-    }
+    CompletionHandler<AsynchronousSocketChannel,AcceptHandler> handler
+        = new CompletionHandler<AsynchronousSocketChannel,AcceptHandler>() {
 
+        @Override
+        public void completed(AsynchronousSocketChannel result, AcceptHandler attachment) {
+            channelAcc.send();
+            attachment.completed(result);
+        }
+
+        @Override
+        public void failed(Throwable exc, AcceptHandler attachment) {
+            channelAcc.send();
+            attachment.failed(exc);
+        }
+
+    };
+    
+    static abstract class AcceptHandler extends Link {
+        public abstract void failed(Throwable exc);
+        public abstract void completed(AsynchronousSocketChannel result);        
+    }
 }

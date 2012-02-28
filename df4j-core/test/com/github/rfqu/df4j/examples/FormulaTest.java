@@ -11,6 +11,8 @@ package com.github.rfqu.df4j.examples;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.concurrent.ExecutorService;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,7 +27,7 @@ import com.github.rfqu.df4j.util.UnaryOp;
 
 public class FormulaTest {
     private static final double delta = 1E-14;
-    SimpleExecutorService executor = new SimpleExecutorService();
+    ExecutorService executor = new SimpleExecutorService();
 
 	@Before
     public void init() {

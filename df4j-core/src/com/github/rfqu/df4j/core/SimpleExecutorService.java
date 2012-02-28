@@ -53,8 +53,9 @@ public class SimpleExecutorService extends AbstractExecutorService {
         worker.execute(command);
     }
 
-    class SimpleExecutor extends FatActor<Task> implements Executor {
+    class SimpleExecutor extends FatActor<Link> implements Executor {
     	{
+    		setName(getName() + " DF SimpleExecutorService");
     		executor=SimpleExecutorService.this;
     	}
 
@@ -70,8 +71,8 @@ public class SimpleExecutorService extends AbstractExecutorService {
     	@Override
     	public void execute(Runnable command) {
     		try {
-    			if (command instanceof Task) {
-    				send((Task) command);
+    			if (command instanceof Link) {
+    				send((Link) command);
     			} else {
     				send(new TaskWrapper(command));
     			}
@@ -83,19 +84,25 @@ public class SimpleExecutorService extends AbstractExecutorService {
     	}
 
     	@Override
-    	protected void act(Task task) throws Exception {
-    		task.run();
+    	protected void act(Link task) throws Exception {
+    		((Runnable)task).run();
     	}
 
     	@Override
     	protected void complete() throws Exception {
     		// TODO Auto-generated method stub
+    	}
 
+    	@Override
+    	protected void failure(Link message, Exception e) {
+    		// TODO Auto-generated method stub
+    		super.failure(message, e);
+    		//thread.interrupt();
     	}
 
     }
 
-	static class TaskWrapper extends Task {
+	static class TaskWrapper extends Link implements Runnable {
 	    Runnable command;
 
 	    public TaskWrapper(Runnable command) {

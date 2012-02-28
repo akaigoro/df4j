@@ -7,18 +7,25 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.util;
+package com.github.rfqu.df4j.core;
 
-import com.github.rfqu.df4j.core.Link;
+import java.util.concurrent.ExecutorService;
 
-/** 
- * A message that carries an integer value
+/**
+ * Processes messages in synchronous way.
+ * @param <M> the type of accepted messages
  */
-public class IntMessage extends Link {
-    int value;
+public abstract class EagerActor<M extends Link> extends Actor<M> {
 
-    public IntMessage(int value) {
-        this.value = value;
+    public EagerActor(ExecutorService executor) {
+        super(executor);
     }
 
+    public EagerActor() {}
+
+    @Override
+	protected synchronized void fire() {
+		run();
+	}
+    
 }

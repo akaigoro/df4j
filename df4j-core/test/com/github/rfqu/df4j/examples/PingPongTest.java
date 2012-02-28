@@ -50,7 +50,7 @@ public class PingPongTest {
         if (nThreads > 1) {
             out.println(" warning: SimpleExecutorService uses only 1 thread");
         }
-        runTest(new SimpleExecutorService());
+        runTest(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test
@@ -77,14 +77,23 @@ public class PingPongTest {
             this.hops_remained = hops_remained;
         }
     }
+    static abstract class EagerActor extends Actor<Token> {
 
+        @Override
+        protected void fire() {
+            run();
+        }
+        
+    }
+    
     /**
      * The pinging actor
      * 
      */
-    static class Ping extends Actor<Token> {
+    static class Ping extends EagerActor{// Actor<Token> {
         Pong pong;
         Port<Token> sink;
+        {start();}
 
         public Ping(Pong pong, Port<Token> sink) {
             this.pong = pong;
@@ -123,8 +132,9 @@ public class PingPongTest {
      * The ponging actor
      * 
      */
-    static class Pong extends Actor<Token> {
+    static class Pong extends EagerActor{//Actor<Token> {
         private final Port<Token> sink;
+        {start();}
 
         public Pong(Port<Token> sink) {
             this.sink = sink;

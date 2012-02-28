@@ -15,15 +15,15 @@ import java.util.concurrent.ExecutorService;
  * The most typical type of actor: with main stream port.
  * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
+public abstract class DemandDrivenActor<M extends Link> extends BaseActor implements StreamPort<M> {
 	protected StreamInput<M> input=new StreamInput<M>();
     protected volatile boolean completed;
 	
-    public Actor(ExecutorService executor) {
+    public DemandDrivenActor(ExecutorService executor) {
     	super(executor);
     }
 
-    public Actor() {}
+    public DemandDrivenActor() {}
 
     @Override
 	public void send(M m) {

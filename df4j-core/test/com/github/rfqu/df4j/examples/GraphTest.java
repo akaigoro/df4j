@@ -40,17 +40,12 @@ public class GraphTest {
 
     @Test
     public void testSimple() throws InterruptedException {
-        if (nThreads > 1) {
-            out.println(" warning: SimpleExecutorService uses only 1 thread");
-        }
-        SimpleExecutorService executor = new SimpleExecutorService();
-        runTest(executor);
+        runTest(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test
     public void testFixed() throws InterruptedException {
-        ExecutorService executor = ThreadFactoryTL.newFixedThreadPool(nThreads);
-        runTest(executor);
+        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
     }
 
 	private void runTest(ExecutorService executor) throws InterruptedException {
@@ -82,6 +77,7 @@ public class GraphTest {
         NodeActor[] nodes;
         private final Port<Object> sink;
         private Random rand;
+        {start();}
 
         public NodeActor(long seed, NodeActor[] nodes, Port<Object> sink) {
             this.nodes = nodes;

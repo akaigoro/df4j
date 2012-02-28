@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.core;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * abstract node with several inputs and outputs
@@ -22,7 +21,8 @@ public abstract class BaseActor extends Task {
     private int pinMask=0;
     private int readyPins=0;
     /** This pin is to prevent premature firing when the first declared pin is initialized as ready */
-    private BooleanPlace initialized=new BooleanPlace();
+    private final BooleanPlace initialized=new BooleanPlace();
+    protected boolean fired;
     
     public BaseActor(ExecutorService executor) {
     	super(executor);
@@ -30,6 +30,10 @@ public abstract class BaseActor extends Task {
 
     public BaseActor() {
     }
+
+    protected boolean isReady() {
+		return readyPins==pinMask;
+	}
 
     /**
      * indicates end of pin declarations.
@@ -42,6 +46,39 @@ public abstract class BaseActor extends Task {
     	initialized.remove();
     }
     
+    /**
+     * activates this task by sending it to the executor
+     */
+    protected void fire() {
+        executor.execute(this);
+    }
+
+    /** loops while all pins are ready
+     */
+    @Override
+    public void run() {
+        for (;;) {
+            synchronized (this) {
+                if (!isReady()) {
+                    fired=false; // allow firing
+                    return;
+                }
+                removeTokens();
+            }
+            act();
+        }
+    }
+    
+    /** Should remove at least 1 token.
+     * Should return quickly, as is called from synchronized block.
+     */
+    protected abstract void removeTokens();
+
+    /** process the retrieved tokens.
+     * 
+     */
+    protected abstract void act();
+
     protected abstract class Pin {
     	
     	private int portBit;
@@ -59,14 +96,20 @@ public abstract class BaseActor extends Task {
         }
 
         protected void turnOn() {
-        	readyPins=readyPins|portBit;
-            if (readyPins==pinMask) {
-                fire();       
+        	synchronized (BaseActor.this) {
+                readyPins = readyPins | portBit;
+                if (!isReady() || fired) {
+                    return;
+                }
+                fired = true; // to prevent multiple concurrent firings
             }
+            fire();
         }
 
         protected void turnOff() {
-        	readyPins=readyPins&~portBit;
+            synchronized (BaseActor.this) {
+                readyPins=readyPins&~portBit;
+            }
         }
 
     }
@@ -219,7 +262,7 @@ public abstract class BaseActor extends Task {
      */
     public class StreamInput<T extends Link> extends BasePort<T> implements StreamPort<T>{
     	protected LinkedQueue<T> queue=new LinkedQueue<T>();
-    	protected boolean closed=false;
+    	protected volatile boolean closed=false;
 
 		@Override
 		protected void add(T token) {
@@ -254,7 +297,6 @@ public abstract class BaseActor extends Task {
 
     /**
      * 
-     * A kind of dataflow variable: single input, multiple asynchronous outputs.
      * This pin carries demand(s) of the result.
      * @param <R>  type of result
      */
@@ -294,5 +336,6 @@ public abstract class BaseActor extends Task {
 		}
 
     }
+    
 
 }

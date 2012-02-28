@@ -24,9 +24,23 @@ public abstract class BinaryOp<T> extends Function<T> {
     public ScalarInput<T> p2 = new ScalarInput<T>();
     {start();}
 
+    T operand1, operand2;
+    
     @Override
-    public void run() {
-        setRes(eval(p1.remove(), p2.remove()));
+    protected void removeTokens() {
+        operand1=p1.remove();
+        operand2=p2.remove();
+    }
+
+    @Override
+    protected void fire() {
+        // TODO Auto-generated method stub
+        super.fire();
+    }
+
+    @Override
+    protected void act() {
+        setRes(eval(operand1, operand2));
     }
 
     abstract protected T eval(T opnd, T opnd2);

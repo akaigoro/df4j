@@ -5,21 +5,25 @@ import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.StreamPort;
 
-public class AsyncSocketChannel extends Link
-implements  CompletionHandler<AsynchronousSocketChannel,AsyncServerSocketChannel> {
+/**
+ * Wrapper over AsynchronousSocketChannel.
+ * Simplifies input-output, handling queues of requests.
+ * @author rfq
+ *
+ */
+public class AsyncSocketChannel extends Link {
     protected AsynchronousSocketChannel channel;
     protected boolean connected=false;
     protected boolean closed=false;
     protected Throwable connectionFailure=null;
-    protected RequestQueue readRequests=new RequestQueue();
-    protected RequestQueue writeRequests=new RequestQueue();
+    public final StreamPort<SocketIORequest> reader=new Reader();
+    public final StreamPort<SocketIORequest> writer=new Writer();
 
     /**
      * for client-side socket
@@ -31,109 +35,143 @@ implements  CompletionHandler<AsynchronousSocketChannel,AsyncServerSocketChannel
         channel.connect(remote, null, new CompletionHandler<Void, Object>() {
             @Override
             public void completed(Void result, Object attachment) {
-                connected=true;
-                readRequests.start();
-                writeRequests.start();
+                connCompleted();
             }
             @Override
             public void failed(Throwable exc, Object attachment) {
-                connectionFailure=exc;
+                connFailed(exc);
             } 
         });
     }
 
     /**
      * For server-side socket.
-     * Callback for successful acceptance of incoming connection.
-     * First do AsyncServerSocketChannel.send(this);
      */
-    @Override
-    public void completed(AsynchronousSocketChannel result, AsyncServerSocketChannel attachment) {
-        channel=result;
+	public void connect(AsyncServerSocketChannel assc) {
+		assc.send(new AsyncServerSocketChannel.AcceptHandler() {
+		    @Override
+		    public void completed(AsynchronousSocketChannel result) {
+//		        System.out.println("AsyncSocketChannel: connected to server");
+		        channel=result;
+                connCompleted();
+		    }
+
+		    @Override
+		    public void failed(Throwable exc) {
+		        connFailed(exc);
+		    }
+
+		});
+	}
+
+	protected void connCompleted() {
         connected=true;
-        readRequests.start();
-        writeRequests.start();
-        attachment.acceptCompleted();
+        ((RequestQueue)reader).start();
+        ((RequestQueue)writer).start();
     }
 
-    /**
-     * For server-side socket.
-     * Callback for failed acceptance of incoming connection.
-     * First do AsyncServerSocketChannel.send(this);
-     */
-    @Override
-    public void failed(Throwable exc, AsyncServerSocketChannel attachment) {
+    protected void connFailed(Throwable exc) {
+        //System.err.println("AsyncSocketChannel: connection failed:");
         connectionFailure=exc;
-        attachment.acceptCompleted();
+        //exc.printStackTrace();
     }
 
-    public void read(SocketIORequest request, Port<SocketIORequest> callback) throws ClosedChannelException {
-        checkRequest(request);
-        request.startRead(callback);
-        readRequests.send(request);
-    }
-
-    public void write(SocketIORequest request, Port<SocketIORequest> callback) throws ClosedChannelException {
-        checkRequest(request);
-        request.startWrite(callback);
-        writeRequests.send(request);
-    }
-
-    protected void checkRequest(SocketIORequest request) throws ClosedChannelException {
-        if (request==null) {
-            throw new IllegalArgumentException(connectionFailure);
-        }
-        if (connectionFailure!=null) {
-            throw new IllegalStateException(connectionFailure);
-        }
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-    }
-
-    /** read request completed, channel is free
-     */
-    protected void readCompleted() {
-        readRequests.start();
-    }
-
-    /** read request completed, channel is free
-     */
-    protected void writeCompleted() {
-        writeRequests.start();
-    }
-
-    class RequestQueue extends Actor<SocketIORequest> {
-
-        @Override
-        protected void act(SocketIORequest request) throws Exception {
-            if (closed) {
-                request.failed(new AsynchronousCloseException(), null);
-            }
-            stop();
-            if (request.readOp) {
-                //System.out.println("channel read started id="+request.id);
-                channel.read(request.buffer, AsyncSocketChannel.this, request);
-            } else {
-                //System.out.println("channel write started id="+request.id +" limit="+request.buffer.limit());
-                channel.write(request.buffer, AsyncSocketChannel.this, request);
-            }
-        }
-        @Override
-        protected void complete() throws Exception {
-            // TODO Auto-generated method stub
-        }
-    }
-    
     public AsynchronousSocketChannel getChannel() {
         return channel;
     }
 
     public void close() throws IOException {
         closed=true;
-        readRequests.start();
-        writeRequests.start();
         channel.close();
     }
 
+    abstract class RequestQueue extends Actor<SocketIORequest> {
+        protected BooleanPlace channelAcc=new BooleanPlace(true); // channel accessible
+        CompletionHandler<Integer, SocketIORequest> handler =
+                new CompletionHandler<Integer, SocketIORequest>() {
+
+                    @Override
+                    public void completed(Integer result, SocketIORequest attachment) {
+                        resume();
+                        attachment.completed(result, AsyncSocketChannel.this);
+                    }
+
+                    @Override
+                    public void failed(Throwable exc, SocketIORequest attachment) {
+                        if (exc instanceof AsynchronousCloseException) {
+                            try {
+                                AsyncSocketChannel.this.close();
+                            } catch (IOException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
+                        } else {
+                            resume();
+                        }
+                        attachment.failed(exc, AsyncSocketChannel.this);
+                    }
+            
+        };
+        protected void checkRequest(SocketIORequest request) {
+            if (request==null) {
+                throw new IllegalArgumentException("request==null");
+            }
+            if (connectionFailure!=null) {
+                throw new IllegalStateException(connectionFailure);
+            }
+            if (closed) {
+                throw new IllegalStateException("channel closed");
+            }
+        }
+
+        protected void resume() {
+            channelAcc.send();
+        }
+        
+        protected void suspend() {
+            channelAcc.remove();
+        }
+
+        @Override
+        protected void complete() throws Exception {
+            // TODO Auto-generated method stub
+        }
+    }
+    
+    class Reader extends RequestQueue {
+
+        @Override
+        public void send(SocketIORequest request) {
+            checkRequest(request);
+            request.startRead();
+            super.send(request);
+        }
+        
+        @Override
+        protected void act(SocketIORequest request) throws Exception {
+            suspend(); // block channel
+//          System.out.println("channel read started id="+request.id);
+            channel.read(request.buffer, request, handler);
+        }
+        
+    }
+    
+    class Writer extends RequestQueue {
+
+        @Override
+        public void send(SocketIORequest request) {
+            checkRequest(request);
+            request.startWrite();
+            super.send(request);
+        }
+        
+        @Override
+        protected void act(SocketIORequest request) throws Exception {
+            suspend(); // block channel
+//          System.out.println("channel read started id="+request.id);
+            channel.write(request.buffer, request, handler);
+        }
+        
+    }
+    
 }

@@ -17,12 +17,6 @@ import java.util.concurrent.ThreadFactory;
 /**
  * Allows standard java.util.concurrent executor to be used as a context executor
  * <p>
- * Usage:
- * <pre>
- *     	ThreadFactoryTL tf=new ThreadFactoryTL();
- *      ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
- *      tf.setExecutor(executor);
- * </pre>            
  * @author rfq
  *
  */
