@@ -27,3 +27,5 @@ testfile*
 *.tar
 *.zip
 
+###
+*.bak

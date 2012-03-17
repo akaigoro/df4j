@@ -1,8 +1,6 @@
 package com.github.rfqu.df4j.io;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,7 +11,6 @@ implements CompletionHandler<Integer, AsyncSocketChannel> {
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
     
     public int id=ids.addAndGet(1);
-    protected AsyncSocketChannel channel;
     protected ByteBuffer buffer;
     protected boolean readOp;
     protected volatile boolean inTrans=false;

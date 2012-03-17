@@ -7,6 +7,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.util.Random;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.Test;
@@ -101,26 +103,30 @@ static class ServerRequest extends SocketIORequest {
 }
 
 static class ClientConnection extends AsyncSocketChannel {
+    static final int PERIOD = 300000000; // 300 ms
     private static final int BUF_SIZE = 1024;
     ClientRequest request;
     AtomicLong rounds;
     Aggregator sink;
     int writeCount=0;
+    ScheduledThreadPoolExecutor timer;
 
-    public ClientConnection(InetSocketAddress addr, int rounds, Aggregator sink) throws IOException {
+    public ClientConnection(InetSocketAddress addr, int rounds, Aggregator sink, ScheduledThreadPoolExecutor timer) throws IOException {
         this.rounds=new AtomicLong(rounds);
         this.sink=sink;
+        this.timer=timer;
         super.connect(addr);
         request = new ClientRequest(BUF_SIZE, false);
-        request.start(this);
+        request.start();
     }
 
-    class ClientRequest extends SocketIORequest {
+    class ClientRequest extends SocketIORequest implements Runnable {
         Random rand=new Random();
         int data;
-        long start;
+        long startTime;
         long sum=0;
         long count=0;
+        AsyncSocketChannel channel=ClientConnection.this;
         
         public ClientRequest(int capacity, boolean direct) {
             super(capacity, direct);
@@ -130,8 +136,8 @@ static class ClientConnection extends AsyncSocketChannel {
             super(buf);
         }
 
-        void start(AsyncSocketChannel channel) {
-            start = System.nanoTime();
+        void start() {
+            startTime = System.nanoTime();
             data=rand.nextInt();
             buffer.clear();
             buffer.putInt(data);
@@ -161,7 +167,8 @@ static class ClientConnection extends AsyncSocketChannel {
                 if (dataFromServer!=data) {
                     System.out.println("written: "+data+"; read:"+dataFromServer);
                 }
-                sum+=(System.nanoTime()-start);
+                long currentTime = System.nanoTime();
+                sum+=(currentTime-startTime);
                 count++;
                 rounds.decrementAndGet();
                 if (rounds.get()==0) {
@@ -169,8 +176,13 @@ static class ClientConnection extends AsyncSocketChannel {
                     sink.send(new Value(((double)sum)/count));
                     return;
                 }
-                // write it back
-                start(channel);
+                long delay=startTime+PERIOD-currentTime;
+                if (delay>1000) {
+                    timer.schedule(this, delay, TimeUnit.NANOSECONDS);
+                } else {
+                    // write it back immediately
+                    start();
+                }
             } catch (Exception e) {
 //                System.err.println("ClientRequest write err: id="+id+":");
                 e.printStackTrace();
@@ -181,6 +193,12 @@ static class ClientConnection extends AsyncSocketChannel {
         public void readFailed(Throwable exc, AsyncSocketChannel channel) {
 //            System.err.println("ClientRequest readFailed id="+id+":");
             exc.printStackTrace();
+        }
+
+        // for timer
+        @Override
+        public void run() {
+            start();
         }
         
     }
@@ -228,8 +246,8 @@ static class Value extends Link {
     InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
     PrintStream out=System.out;
     PrintStream err=System.err;
-    static int numclients=100;
-    static int rounds = 100; // per client
+    static int numclients=1000;
+    static int rounds = 20; // per client
     static int nThreads=Runtime.getRuntime().availableProcessors();
 
     @Test
@@ -239,10 +257,12 @@ static class Value extends Link {
         
         Task.setCurrentExecutor(new SimpleExecutorService());
         Aggregator sink = new Aggregator(numclients);
+        ScheduledThreadPoolExecutor timer=new ScheduledThreadPoolExecutor(1);
+
         ClientConnection[] clients=new ClientConnection[numclients];
         long start = System.nanoTime();
         for (int i = 0; i < numclients; i++) {
-            clients[i]=new ClientConnection(local9999, rounds, sink);
+            clients[i]=new ClientConnection(local9999, rounds, sink, timer);
         }
         double avgLatency=sink.avg.get();
         es.close();
