@@ -31,7 +31,7 @@ public abstract class Task extends Link implements Runnable {
      * activates this task.
      */
     public void start() {
-        executor.execute(this);
+        fire();
     }
     
     /**

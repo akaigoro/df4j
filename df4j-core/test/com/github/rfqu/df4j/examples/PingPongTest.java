@@ -77,20 +77,12 @@ public class PingPongTest {
             this.hops_remained = hops_remained;
         }
     }
-    static abstract class EagerActor extends Actor<Token> {
-
-        @Override
-        protected void fire() {
-            run();
-        }
-        
-    }
     
     /**
      * The pinging actor
      * 
      */
-    static class Ping extends EagerActor{// Actor<Token> {
+    static class Ping extends EagerActor<Token> {
         Pong pong;
         Port<Token> sink;
         {start();}
@@ -132,7 +124,7 @@ public class PingPongTest {
      * The ponging actor
      * 
      */
-    static class Pong extends EagerActor{//Actor<Token> {
+    static class Pong extends EagerActor<Token> {
         private final Port<Token> sink;
         {start();}
 

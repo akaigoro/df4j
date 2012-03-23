@@ -90,6 +90,8 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
      * processes closing message
      * @throws Exception
      */
-    protected abstract void complete() throws Exception;
+    protected void complete() throws Exception {
+    	
+    }
 
 }

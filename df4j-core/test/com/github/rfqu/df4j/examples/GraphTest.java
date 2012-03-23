@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
 
@@ -59,21 +60,10 @@ public class GraphTest {
 	}
 
     /**
-     * the type of messages floating between nodes
-     */
-    static class Packet extends Link {
-        int hops_remained;
-
-        public Packet(int hops_remained) {
-            this.hops_remained = hops_remained;
-        }
-    }
-
-    /**
      * The intermediate passing node
      * 
      */
-    static class NodeActor extends Actor<Packet> {
+    static class NodeActor extends Actor<IntValue> {
         NodeActor[] nodes;
         private final Port<Object> sink;
         private Random rand;
@@ -91,21 +81,15 @@ public class GraphTest {
          * send it to sink, otherwise send to another node.
          */
         @Override
-        protected void act(Packet token) throws Exception {
-            int nextVal = token.hops_remained - 1;
+        protected void act(IntValue token) throws Exception {
+            int nextVal = token.value - 1;
             if (nextVal == 0) {
                 sink.send(token);
             } else {
-                token.hops_remained = nextVal;
+                token.value = nextVal;
                 NodeActor nextNode = nodes[rand.nextInt(nodes.length)];
                 nextNode.send(token);
             }
-        }
-
-        @Override
-        protected void complete() throws Exception {
-            // TODO Auto-generated method stub
-            
         }
     }
 
@@ -125,8 +109,8 @@ public class GraphTest {
         }
         // send packets to random nodes
         for (int k = 0; k < NR_REQUESTS; k++) {
-            Actor<Packet> nextInbox = nodes[rand.nextInt(nodes.length)];
-            nextInbox.send(new Packet(TIME_TO_LIVE));
+            Actor<IntValue> nextInbox = nodes[rand.nextInt(nodes.length)];
+            nextInbox.send(new IntValue(TIME_TO_LIVE));
         }
 
         // wait for all packets to die.

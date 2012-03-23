@@ -46,13 +46,6 @@ public abstract class BaseActor extends Task {
     	initialized.remove();
     }
     
-    /**
-     * activates this task by sending it to the executor
-     */
-    protected void fire() {
-        executor.execute(this);
-    }
-
     /** loops while all pins are ready
      */
     @Override

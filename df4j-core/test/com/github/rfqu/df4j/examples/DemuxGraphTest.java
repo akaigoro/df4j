@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
 /**
@@ -25,22 +26,14 @@ import com.github.rfqu.df4j.util.MessageSink;
  */
 public class DemuxGraphTest {
 
-static class Packet extends Link  {
-    int hops_remained;
-
-    public Packet(int hops_remained) {
-        this.hops_remained = hops_remained;
-    }
-}
-
-static class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
+static class Graph extends AbstractDemux<String, IntValue, Graph.NodeActor> {
     MessageSink sink = new MessageSink(DemuxGraphTest.NR_REQUESTS);
     Random rand = new Random(1);
 
 	@Override
-	protected AbstractDelegator<Packet, NodeActor> createDelegator(String tag) {
-		ConservativeDelegator<Packet, NodeActor> dock
-		    = new ConservativeDelegator<Packet, NodeActor>() /*{
+	protected AbstractDelegator<IntValue, NodeActor> createDelegator(String tag) {
+		ConservativeDelegator<IntValue, NodeActor> dock
+		    = new ConservativeDelegator<IntValue, NodeActor>() /*{
 
                 @Override
                 protected void fire() {
@@ -51,21 +44,21 @@ static class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
 	}
 
 	@Override
-	protected void requestHandler(String tag, AbstractDelegator<Packet, NodeActor> gate) {
+	protected void requestHandler(String tag, AbstractDelegator<IntValue, NodeActor> gate) {
         gate.handler.send(new NodeActor());
     }
     
     /**
      * Intermediate passing node
      */
-    class NodeActor implements Delegate<Packet> {
+    class NodeActor implements Delegate<IntValue> {
 		@Override
-		public void act(Packet p) {
-	        int nextVal = p.hops_remained - 1;
+		public void act(IntValue p) {
+	        int nextVal = p.value - 1;
 	        if (nextVal == 0) {
 	            sink.send(p);
 	        } else {
-	            p.hops_remained = nextVal;
+	            p.value = nextVal;
 	        	toRandomNode(p);
 	        }
 		}
@@ -75,7 +68,7 @@ static class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
 		}
     }
 
-    void toRandomNode(Packet p) {
+    void toRandomNode(IntValue p) {
         String tag = Long.toHexString(rand.nextInt(DemuxGraphTest.NUM_ACTORS));
         send(tag, p);
     }
@@ -88,7 +81,7 @@ static class Graph extends AbstractDemux<String, Packet, Graph.NodeActor> {
 
         // send packets to random nodes
         for (int k = 0; k < DemuxGraphTest.NR_REQUESTS; k++) {
-            toRandomNode(new Packet(DemuxGraphTest.TIME_TO_LIVE));
+            toRandomNode(new IntValue(DemuxGraphTest.TIME_TO_LIVE));
         }
 
         // wait for all packets to die.

@@ -47,7 +47,7 @@ public class ExecServiceTest {
 	            AddCount addCount = (AddCount) request;
 	            count += addCount.number;
 	            addCount.reply(addCount);
-	        } else if (request instanceof PortFuture) {
+	        } else if (request instanceof PortFuture<?>) {
 //				out.println("counterActor send");
 	        	Long current = new Long(count);
 	            count = 0;

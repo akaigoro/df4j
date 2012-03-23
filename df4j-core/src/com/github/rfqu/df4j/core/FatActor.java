@@ -19,6 +19,9 @@ public abstract class FatActor<M extends Link> extends Actor<M> {
     private Thread myThread=new Thread(this);
     {myThread.setDaemon(true);}
     
+    /**
+     * @param executor
+     */
     public FatActor(ExecutorService executor) {
         super(executor);
     }

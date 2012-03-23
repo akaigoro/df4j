@@ -89,11 +89,6 @@ public class SimpleExecutorService extends AbstractExecutorService {
     	}
 
     	@Override
-    	protected void complete() throws Exception {
-    		// TODO Auto-generated method stub
-    	}
-
-    	@Override
     	protected void failure(Link message, Exception e) {
     		// TODO Auto-generated method stub
     		super.failure(message, e);

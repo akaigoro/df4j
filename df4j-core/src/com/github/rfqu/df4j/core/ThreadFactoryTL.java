@@ -15,7 +15,7 @@ import java.util.concurrent.ThreadFactory;
 
 
 /**
- * Allows standard java.util.concurrent executor to be used as a context executor
+ * Allows standard java.util.concurrent executors to be used as context executors
  * <p>
  * @author rfq
  *
@@ -39,13 +39,6 @@ public class ThreadFactoryTL implements ThreadFactory {
         return new ThreadTL(r);
     }
     
-    public static ExecutorService newFixedThreadPool(int nThreads) {
-		ThreadFactoryTL tf = new ThreadFactoryTL();
-	    ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
-	    tf.setExecutor(executor);
-		return executor;
-	}
-    
     public static ExecutorService newSingleThreadExecutor() {
 		ThreadFactoryTL tf = new ThreadFactoryTL();
 	    ExecutorService executor = Executors.newSingleThreadExecutor(tf);
@@ -53,8 +46,18 @@ public class ThreadFactoryTL implements ThreadFactory {
 		return executor;
 	}
     
-    public static ExecutorService newSingleThreadExecutor(ExecutorService executor) {
-		return Executors.newSingleThreadExecutor(new ThreadFactoryTL(executor));
+    public static ExecutorService newFixedThreadPool(int nThreads) {
+		ThreadFactoryTL tf = new ThreadFactoryTL();
+	    ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
+	    tf.setExecutor(executor);
+		return executor;
+	}
+    
+    public static ExecutorService newCachedThreadPool() {
+		ThreadFactoryTL tf = new ThreadFactoryTL();
+	    ExecutorService executor = Executors.newCachedThreadPool(tf);
+	    tf.setExecutor(executor);
+		return executor;
 	}
     
 	public class ThreadTL extends Thread {
