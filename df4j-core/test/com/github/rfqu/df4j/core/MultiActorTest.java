@@ -32,11 +32,6 @@ public class MultiActorTest extends MultiActor {
 	public MultiActorTest() {
 		super(ThreadFactoryTL.newFixedThreadPool(nThreads));
 	}
-
-	@After
-	public void shudown() {
-		executor.shutdown();
-	}
 	
 	volatile NodeActor activeNode;
 	volatile boolean jam=false;

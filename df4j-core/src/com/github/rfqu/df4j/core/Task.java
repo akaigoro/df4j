@@ -9,7 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 /**
  *  Tasks themselves are messages and can be send to other Actors and Ports.
@@ -17,9 +17,9 @@ import java.util.concurrent.ExecutorService;
  *
  */
 public abstract class Task extends Link implements Runnable {
-    protected ExecutorService executor;
+    protected Executor executor;
 
-    public Task(ExecutorService executor) {
+    public Task(Executor executor) {
         this.executor = executor;
     }
 
@@ -38,23 +38,27 @@ public abstract class Task extends Link implements Runnable {
      * activates this task by sending it to the executor
      */
     protected void fire() {
-        executor.execute(this);
+        if (executor==null) {
+            run();
+        } else {
+            executor.execute(this);
+        }
     }
 
 	/**
      * sets current executor as a thread-local variable
      * @param exec
      */
-    public static void setCurrentExecutor(ExecutorService executor) {
+    public static void setCurrentExecutor(Executor executor) {
         currentExecutorKey.set(executor);
     }
 
     /**
      * retrieves current executor as a thread-local variable
      */
-    public static ExecutorService getCurrentExecutor() {
+    public static Executor getCurrentExecutor() {
         return currentExecutorKey.get();
     }
 
-    private static final ThreadLocal <ExecutorService> currentExecutorKey = new ThreadLocal <ExecutorService> () {};
+    private static final ThreadLocal <Executor> currentExecutorKey = new ThreadLocal <Executor> () {};
 }

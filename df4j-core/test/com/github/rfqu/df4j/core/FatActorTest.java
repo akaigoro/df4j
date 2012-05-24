@@ -28,7 +28,11 @@ public class FatActorTest {
     /**
      * computes sum and average of input values
      */
-	class Aggregator extends FatActor<Value> {
+	class Aggregator extends Actor<Value> {
+	    Aggregator() {
+	        super(new PrivateExecutor());
+	    }
+
 	    double _sum=0.0;
 	    long counter=0;
         // outputs

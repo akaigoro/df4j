@@ -36,7 +36,9 @@ public class ThreadFactoryTL implements ThreadFactory {
 
     @Override
     public Thread newThread(Runnable r) {
-        return new ThreadTL(r);
+        ThreadTL threadTL = new ThreadTL(r);
+        threadTL.setDaemon(true);
+        return threadTL;
     }
     
     public static ExecutorService newSingleThreadExecutor() {

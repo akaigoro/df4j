@@ -18,7 +18,7 @@ public class AsyncFileChannel {
 
     public AsyncFileChannel(Path file, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         close();
-        channel=AsynchronousFileChannel.open(file, options, Task.getCurrentExecutor(), attrs);
+        channel=AsynchronousFileChannel.open(file, options, Task.getCurrentExecutorService(), attrs);
         closed=false;
     }
 
@@ -28,7 +28,7 @@ public class AsyncFileChannel {
             options2.add(opt);
         }
         close();
-        channel=AsynchronousFileChannel.open(file, options2, Task.getCurrentExecutor(), new FileAttribute<?>[0]);
+        channel=AsynchronousFileChannel.open(file, options2, Task.getCurrentExecutorService(), new FileAttribute<?>[0]);
         closed=false;
     }
 

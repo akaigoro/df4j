@@ -9,7 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 /**
  * The most typical type of actor: with main stream port.
@@ -19,7 +19,7 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
 	protected StreamInput<M> input=new StreamInput<M>();
     protected volatile boolean completed;
 	
-    public Actor(ExecutorService executor) {
+    public Actor(Executor executor) {
     	super(executor);
     }
 

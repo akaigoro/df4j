@@ -10,7 +10,7 @@
 package com.github.rfqu.df4j.core;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 /**
  * abstract node with several inputs and outputs
@@ -24,7 +24,7 @@ public abstract class BaseActor extends Task {
     private final BooleanPlace initialized=new BooleanPlace();
     protected boolean fired;
     
-    public BaseActor(ExecutorService executor) {
+    public BaseActor(Executor executor) {
     	super(executor);
     }
 

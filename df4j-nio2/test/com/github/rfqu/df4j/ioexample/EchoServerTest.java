@@ -66,7 +66,6 @@ static class ServerRequest extends SocketIORequest {
 
 	@Override
 	public void readCompleted(Integer result, AsyncSocketChannel channel) {
-	    assert(true);
 //       System.out.println("  ServerRequest readCompleted id="+id);
         // read client's message
         try {

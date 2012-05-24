@@ -53,10 +53,13 @@ public class SimpleExecutorService extends AbstractExecutorService {
         worker.execute(command);
     }
 
-    class SimpleExecutor extends FatActor<Link> implements Executor {
-    	{
-    		setName(getName() + " DF SimpleExecutorService");
-    		executor=SimpleExecutorService.this;
+    class SimpleExecutor extends Actor<Link> implements Executor {
+        private PrivateExecutor myThread=new PrivateExecutor(executor);
+        {executor=myThread;}
+        
+        public SimpleExecutor(){
+    	    super(SimpleExecutorService.this);
+    	    myThread.setName(myThread.getName() + " DF SimpleExecutorService");
     	}
 
     	/**

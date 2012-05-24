@@ -82,7 +82,7 @@ public class PingPongTest {
      * The pinging actor
      * 
      */
-    static class Ping extends EagerActor<Token> {
+    static class Ping extends Actor<Token> {
         Pong pong;
         Port<Token> sink;
         {start();}
@@ -124,7 +124,7 @@ public class PingPongTest {
      * The ponging actor
      * 
      */
-    static class Pong extends EagerActor<Token> {
+    static class Pong extends Actor<Token> {
         private final Port<Token> sink;
         {start();}
 

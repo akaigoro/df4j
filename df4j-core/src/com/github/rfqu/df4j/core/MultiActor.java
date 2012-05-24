@@ -9,7 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 /**
  * A set of Actors, running synchronously (one at a time).
@@ -19,7 +19,7 @@ public class MultiActor extends com.github.rfqu.df4j.core.Actor<Task> {
 	public MultiActor() {
 	}
 
-	public MultiActor(ExecutorService executor) {
+	public MultiActor(Executor executor) {
 		super(executor);
 	}
 
