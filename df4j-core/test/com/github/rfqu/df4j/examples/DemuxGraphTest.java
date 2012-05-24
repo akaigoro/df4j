@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.examples;
 
 import java.io.PrintStream;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -33,12 +32,7 @@ static class Graph extends AbstractDemux<String, IntValue, Graph.NodeActor> {
 	@Override
 	protected AbstractDelegator<IntValue, NodeActor> createDelegator(String tag) {
 		ConservativeDelegator<IntValue, NodeActor> dock
-		    = new ConservativeDelegator<IntValue, NodeActor>() /*{
-
-                @Override
-                protected void fire() {
-                    run();
-                }} */;
+		    = new ConservativeDelegator<IntValue, NodeActor>();
 		dock.start();
         return dock;
 	}
@@ -110,30 +104,17 @@ static class Graph extends AbstractDemux<String, IntValue, Graph.NodeActor> {
     }
 
     @Test
-    public void testSimple() throws InterruptedException {
-        runTest(new SimpleExecutorService());
-    }
-
-    @Test
-    public void testFixed() throws InterruptedException {
-        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
-    }
-
-	private void runTest(ExecutorService executor) throws InterruptedException {
-        out.println("Using " + executor.getClass().getCanonicalName());
-		Task.setCurrentExecutor(executor);
+    public void runTest() throws InterruptedException {
         for (int i = 0; i < times; i++) {
             new Graph().runNetwork();
         }
-        executor.shutdown();
 	}
 
 
     public static void main(String args[]) throws InterruptedException {
         DemuxGraphTest nt = new DemuxGraphTest();
         nt.init();
-        nt.testSimple();
-        nt.testFixed();
+        nt.runTest();
     }
 
 }

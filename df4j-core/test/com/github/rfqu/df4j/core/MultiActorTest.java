@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.core;
 
 import java.util.Random;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,10 +28,6 @@ public class MultiActorTest extends MultiActor {
     final static int TIME_TO_LIVE = 4; // hops
     final static int nThreads = Runtime.getRuntime().availableProcessors()*4;
     
-	public MultiActorTest() {
-		super(ThreadFactoryTL.newFixedThreadPool(nThreads));
-	}
-	
 	volatile NodeActor activeNode;
 	volatile boolean jam=false;
 	
@@ -109,7 +104,7 @@ public class MultiActorTest extends MultiActor {
     public static void main(String args[]) throws InterruptedException {
         GraphTest nt = new GraphTest();
         nt.init();
-        nt.testSimple();
+        nt.testSingle();
         nt.testFixed();
     }
 

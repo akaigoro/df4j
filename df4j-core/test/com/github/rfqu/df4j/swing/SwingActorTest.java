@@ -22,8 +22,6 @@ import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.SimpleExecutorService;
-import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.StringMessage;
 
 /**
@@ -68,7 +66,7 @@ public class SwingActorTest extends JFrame {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            // GUI (JTextField) -> Executor (computing actor) 
+            // GUI (JTextField) -> computing actor 
             send(new StringMessage(jTextField.getText()));
         }
 
@@ -91,21 +89,19 @@ public class SwingActorTest extends JFrame {
                 }
             }
             m.setStr(str);
-            pa.send(m); // Executor (computing actor) -> GUI (printing actor)
+            // computing actor -> GUI (printing actor)
+            pa.send(m); 
         }
-
-        @Override
-        protected void complete() throws Exception {
-            // TODO Auto-generated method stub
-        }
-
     }
 
     /**
      * Processes messages on EDT.
      */
-    class PrintingActor extends SwingActor<StringMessage> {
-        {start();}
+    class PrintingActor extends Actor<StringMessage> {
+    	PrintingActor(){
+    		super(SwingSupport.getSwingExecutor());
+    		start();
+    	}
 
         @Override
         protected void act(StringMessage m) throws Exception {
@@ -116,7 +112,6 @@ public class SwingActorTest extends JFrame {
     public static void main(String[] args) throws Exception {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
-                Task.setCurrentExecutor(new SimpleExecutorService());
                 new SwingActorTest().setVisible(true);
             }
         });

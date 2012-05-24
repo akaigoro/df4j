@@ -23,22 +23,13 @@ import java.util.concurrent.ThreadFactory;
 public class ThreadFactoryTL implements ThreadFactory {
     ExecutorService executor;
 
-    public ThreadFactoryTL() {
-	}
-
-    public ThreadFactoryTL(ExecutorService executor) {
-		this.executor=executor;
-	}
-
 	protected void setExecutor(ExecutorService executor) {
         this.executor = executor;
     }
 
     @Override
     public Thread newThread(Runnable r) {
-        ThreadTL threadTL = new ThreadTL(r);
-        threadTL.setDaemon(true);
-        return threadTL;
+        return new ThreadTL(r);
     }
     
     public static ExecutorService newSingleThreadExecutor() {
@@ -66,11 +57,12 @@ public class ThreadFactoryTL implements ThreadFactory {
         public ThreadTL(Runnable r) {
             super(r);
             setName(getName()+" DF "+executor.getClass().getSimpleName());
+            setDaemon(true);
         }
 
         @Override
         public void run() {
-            Task.setCurrentExecutor(executor);
+            Task.setCurrentExecutorService(executor);
             super.run();
         }
     }

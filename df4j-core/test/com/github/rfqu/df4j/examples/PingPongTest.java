@@ -41,30 +41,14 @@ public class PingPongTest {
     public static void main(String args[]) throws InterruptedException {
         PingPongTest nt = new PingPongTest();
         nt.init();
-        nt.testS();
-        nt.testJUC();
+        nt.runTest();
     }
 
     @Test
-    public void testS() throws InterruptedException {
-        if (nThreads > 1) {
-            out.println(" warning: SimpleExecutorService uses only 1 thread");
-        }
-        runTest(ThreadFactoryTL.newSingleThreadExecutor());
-    }
-
-    @Test
-    public void testJUC() throws InterruptedException {
-        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
-    }
-
-	private void runTest(ExecutorService executor) throws InterruptedException {
-        out.println("Using " + executor.getClass().getCanonicalName());
-		Task.setCurrentExecutor(executor);
+    public void runTest() throws InterruptedException {
 		for (int i = 0; i < times; i++) {
             runPingPong();
         }
-        executor.shutdown();
 	}
 
     /**
@@ -111,13 +95,6 @@ public class PingPongTest {
                 }
             }
         }
-
-		@Override
-		protected void complete() throws Exception {
-			// TODO Auto-generated method stub
-			
-		}
-
     }
 
     /**
@@ -146,12 +123,6 @@ public class PingPongTest {
                 token.hops_remained = nextVal;
                 token.reply(token);
             }
-        }
-
-        @Override
-        protected void complete() throws Exception {
-            // TODO Auto-generated method stub
-            
         }
     }
 

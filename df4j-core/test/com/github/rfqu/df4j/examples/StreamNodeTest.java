@@ -11,23 +11,18 @@ package com.github.rfqu.df4j.examples;
 
 import static org.junit.Assert.assertEquals;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.util.*;
 
 public class StreamNodeTest {
     private static final double delta = 1E-14;
 
-    @Before
-    public void init() {
-        Task.setCurrentExecutor(ThreadFactoryTL.newSingleThreadExecutor());
-    }
-
     /**
      * computes sum and average of input values
      */
-	static class Aggregator extends Actor<Value> {
+	static class Aggregator extends Actor<DoubleValue> {
 	    double _sum=0.0;
 	    long counter=0;
         // outputs
@@ -36,7 +31,7 @@ public class StreamNodeTest {
         {super.start();}
 
         @Override
-        protected void act(Value message) throws Exception {
+        protected void act(DoubleValue message) throws Exception {
             counter++;
             _sum+=message.value;
         }
@@ -49,15 +44,6 @@ public class StreamNodeTest {
 
     }
  
-	static class Value extends Link {
-	    double value;
-
-	    public Value(double value) {
-	        this.value = value;
-	    }
-	    
-	}
-	
 	@Test
     public void t01() throws InterruptedException {
         Aggregator node = new Aggregator();
@@ -71,7 +57,7 @@ public class StreamNodeTest {
         int cnt=12345;
         for (int k=0; k<cnt; k++) {
             value/=2;
-            node.send(new Value(value));
+            node.send(new DoubleValue(value));
         }
         node.close();
         assertEquals(1.0, sum.get(), delta);

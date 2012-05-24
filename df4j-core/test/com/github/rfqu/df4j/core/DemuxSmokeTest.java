@@ -63,11 +63,6 @@ class Numbers extends AbstractDemux<Long, Action<Record>, Record> {
 
 public class DemuxSmokeTest {
 
-    @Before
-    public void init() {
-        Task.setCurrentExecutor(ThreadFactoryTL.newSingleThreadExecutor());
-    }
-
     @Test
     public void test() throws InterruptedException {
         Numbers numbers=new Numbers();
@@ -83,7 +78,6 @@ public class DemuxSmokeTest {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         DemuxSmokeTest smokeTest = new DemuxSmokeTest();
-        smokeTest.init();
         smokeTest.test();
     }
 }

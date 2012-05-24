@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
 import com.github.rfqu.df4j.io.*;
+import com.github.rfqu.df4j.util.DoubleValue;
 
 public class EchoServerTest {
 
@@ -172,7 +173,7 @@ static class ClientConnection extends AsyncSocketChannel {
                 rounds.decrementAndGet();
                 if (rounds.get()==0) {
 //                    System.out.println("ClientRequest finished id="+id);
-                    sink.send(new Value(((double)sum)/count));
+                    sink.send(new DoubleValue(((double)sum)/count));
                     return;
                 }
                 long delay=startTime+PERIOD-currentTime;
@@ -207,7 +208,7 @@ static class ClientConnection extends AsyncSocketChannel {
 /**
  * computes average of input values
  */
-static class Aggregator extends Actor<Value> {
+static class Aggregator extends Actor<DoubleValue> {
     int numclients;
     long sum=0;
     long counter=0;
@@ -219,7 +220,7 @@ static class Aggregator extends Actor<Value> {
     }
 
     @Override
-    protected void act(Value message) throws Exception {
+    protected void act(DoubleValue message) throws Exception {
         counter++;
         sum+=message.value;
         if (counter==numclients) {
@@ -234,14 +235,6 @@ static class Aggregator extends Actor<Value> {
 
 }
 
-static class Value extends Link {
-    double value;
-
-    public Value(double value) {
-        this.value = value;
-    }
-    
-}
     InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
     PrintStream out=System.out;
     PrintStream err=System.err;
@@ -251,10 +244,10 @@ static class Value extends Link {
 
     @Test
     public void testThroughput() throws Exception, IOException, InterruptedException {
-        Task.setCurrentExecutor(new SimpleExecutorService());
+        Task.setCurrentExecutorService(ThreadFactoryTL.newFixedThreadPool(2));
         EchoServer es=new EchoServer(local9999, numclients);
         
-        Task.setCurrentExecutor(new SimpleExecutorService());
+        Task.setCurrentExecutorService(ThreadFactoryTL.newFixedThreadPool(2));
         Aggregator sink = new Aggregator(numclients);
         ScheduledThreadPoolExecutor timer=new ScheduledThreadPoolExecutor(1);
 

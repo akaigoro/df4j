@@ -12,7 +12,7 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Executor;
 
 /**
- * An Actors with several input Ports
+ * An Actor with several input Ports
  */
 public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
 

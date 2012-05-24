@@ -20,24 +20,12 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Connector;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.PortFuture;
-import com.github.rfqu.df4j.core.SimpleExecutorService;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.BinaryOp;
 import com.github.rfqu.df4j.util.UnaryOp;
 
 public class FormulaTest {
     private static final double delta = 1E-14;
-    ExecutorService executor = new SimpleExecutorService();
-
-	@Before
-    public void init() {
-        Task.setCurrentExecutor(executor);
-    }
-	
-	@After
-	public void deinit() {
-	    executor.shutdownNow();
-	}
 
     /**
      * compute a^2
@@ -206,11 +194,9 @@ public class FormulaTest {
     
     public static void main(String args[]) throws InterruptedException {
     	FormulaTest qt = new FormulaTest();
-        qt.init();
         qt.t01();
         qt.t02();
         qt.t03();
         qt.t04();
-        qt.deinit();
     }
 }

@@ -40,23 +40,24 @@ public class GraphTest {
     }
 
     @Test
-    public void testSimple() throws InterruptedException {
+    public void testSingle() throws InterruptedException {
         runTest(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test
     public void testFixed() throws InterruptedException {
-        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
+        runTest(ThreadFactoryTL.newFixedThreadPool(2));
     }
 
 	private void runTest(ExecutorService executor) throws InterruptedException {
         String workerName = executor.getClass().getCanonicalName();
         out.println("Using " + workerName);
-		Task.setCurrentExecutor(executor);
+		Task.setCurrentExecutorService(executor);
         for (int i = 0; i < times; i++) {
             runNetwork();
         }
         executor.shutdown();
+		Task.removeCurrentExecutorService();
 	}
 
     /**
@@ -127,7 +128,7 @@ public class GraphTest {
     public static void main(String args[]) throws InterruptedException {
         GraphTest nt = new GraphTest();
         nt.init();
-        nt.testSimple();
+        nt.testSingle();
         nt.testFixed();
     }
 

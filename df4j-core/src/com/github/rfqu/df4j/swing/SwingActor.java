@@ -39,7 +39,7 @@ public abstract class SwingActor<M extends Link> extends Actor<M> {
 
             @Override
             public void run() {
-                Task.setCurrentExecutor(executor);
+                Task.setCurrentExecutorService(executor);
             }
             
         });

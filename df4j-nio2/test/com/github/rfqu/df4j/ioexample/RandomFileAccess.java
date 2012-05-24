@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,7 +30,6 @@ import com.github.rfqu.df4j.core.*;
 import com.github.rfqu.df4j.io.*;
 
 public class RandomFileAccess {
-    SimpleExecutorService executor;
     final static int blockSize = 4096*16; // bytes
     final static long numBlocks = 500; // items
     final static long fileSize = blockSize * numBlocks; // bytes
@@ -46,12 +44,6 @@ public class RandomFileAccess {
         testfile.deleteOnExit();
         testfilePath = Paths.get(testfile.getAbsolutePath());
         out.println("File of size " + fileSize + " with " + numBlocks + " blocks of size " + blockSize);
-        executor = new SimpleExecutorService();
-        Task.setCurrentExecutor(executor);
-    }
-    @After
-    public void shutdown() {
-        executor.shutdown();
     }
 
     public static void main(String args[]) throws Exception {

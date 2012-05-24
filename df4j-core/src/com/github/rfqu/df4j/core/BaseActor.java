@@ -13,16 +13,19 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 
 /**
- * abstract node with several inputs and outputs
+ * Abstract dataflow node with several inputs and outputs.
+ * Typical use is:
+ *  - create 1 or more pins for inputs and/or outputs
+ *  - redefine abstract methods removeTokens() and act()
  */
 public abstract class BaseActor extends Task {
 	static final int allOnes=0xFFFFFFFF;
     private int pinCount=0;
-    private int pinMask=0;
-    private int readyPins=0;
+    private int pinMask=0; // mask with 1 for all existing pins
+    private int readyPins=0;  // mask with 1 for all ready pins
     /** This pin is to prevent premature firing when the first declared pin is initialized as ready */
     private final BooleanPlace initialized=new BooleanPlace();
-    protected boolean fired;
+    protected boolean fired=false; // true when this actor runs
     
     public BaseActor(Executor executor) {
     	super(executor);
@@ -31,9 +34,25 @@ public abstract class BaseActor extends Task {
     public BaseActor() {
     }
 
-    protected boolean isReady() {
+    /**
+     * @return true if the actor has all its pins on and so is ready for execution
+     */
+    private final boolean isReady() {
 		return readyPins==pinMask;
 	}
+
+    /** 
+     * Removes tokens from pins.
+     * Removed tokens are to be saved and then used in the act() method.
+     * Should remove at least 1 token to avoid infinite loop.
+     * Should return quickly, as is called from synchronized block.
+     */
+    protected abstract void removeTokens();
+
+    /** 
+     * process the retrieved tokens.
+     */
+    protected abstract void act();
 
     /**
      * indicates end of pin declarations.
@@ -62,19 +81,14 @@ public abstract class BaseActor extends Task {
         }
     }
     
-    /** Should remove at least 1 token.
-     * Should return quickly, as is called from synchronized block.
+    /**
+     * Like a pin of a chip.
+     * can be turned on or off. 
+     *
      */
-    protected abstract void removeTokens();
-
-    /** process the retrieved tokens.
-     * 
-     */
-    protected abstract void act();
-
     protected abstract class Pin {
     	
-    	private int portBit;
+    	private final int pinBit;
         {
         	int count;
         	synchronized (BaseActor.this) {
@@ -83,14 +97,14 @@ public abstract class BaseActor extends Task {
               	  throw new IllegalStateException("only 32 pins culd be created");
                 }
                 pinCount++;
-                portBit = 1<<count;
-            	pinMask=pinMask|portBit;
+                pinBit = 1<<count;
+            	pinMask=pinMask|pinBit;
 			}
         }
 
         protected void turnOn() {
         	synchronized (BaseActor.this) {
-                readyPins = readyPins | portBit;
+                readyPins = readyPins | pinBit;
                 if (!isReady() || fired) {
                     return;
                 }
@@ -101,7 +115,7 @@ public abstract class BaseActor extends Task {
 
         protected void turnOff() {
             synchronized (BaseActor.this) {
-                readyPins=readyPins&~portBit;
+                readyPins=readyPins&~pinBit;
             }
         }
 
@@ -254,8 +268,9 @@ public abstract class BaseActor extends Task {
     /** A Queue of tokens of type <T>
      */
     public class StreamInput<T extends Link> extends BasePort<T> implements StreamPort<T>{
-    	protected LinkedQueue<T> queue=new LinkedQueue<T>();
-    	protected volatile boolean closed=false;
+    	private LinkedQueue<T> queue=new LinkedQueue<T>();
+    	private boolean closeRequested=false;
+    	private boolean closeHandled=false;
 
 		@Override
 		protected void add(T token) {
@@ -267,22 +282,36 @@ public abstract class BaseActor extends Task {
 
 		@Override
 		protected boolean isEmpty() {
-			return queue.isEmpty() && !closed;
-		}
-
-		public boolean isClosed() {
-			return closed;
+			if (!queue.isEmpty()) {
+				return false;
+			}
+			return closeRequested==closeHandled;
 		}
 
 		@Override
 		protected T _remove() {
-			return queue.poll(); // may be null
+			T res = queue.poll();
+			if (res!=null) {
+				return res;
+			}
+			if (closeRequested) {
+				closeHandled=true;
+			}
+			return null;
 		}
 
+		public boolean isClosed() {
+			return closeRequested;
+		}
+
+		/** Signals the end of the stream. 
+		 * Turns this pin on. Removed value is null 
+		 * (null cannot be send with StreamInput.add(message)).
+		 */
 		@Override
 		public void close() {
             synchronized (BaseActor.this) {
-    			closed=true;
+    			closeRequested=true;
             	turnOn();
             }
 		}
