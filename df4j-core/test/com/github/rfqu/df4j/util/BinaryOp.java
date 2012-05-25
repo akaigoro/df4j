@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.util;
 
-import com.github.rfqu.df4j.core.Function;
 
 /**
  * Binary operation: classic dataflow object.
@@ -30,12 +29,6 @@ public abstract class BinaryOp<T> extends Function<T> {
     protected void removeTokens() {
         operand1=p1.remove();
         operand2=p2.remove();
-    }
-
-    @Override
-    protected void fire() {
-        // TODO Auto-generated method stub
-        super.fire();
     }
 
     @Override

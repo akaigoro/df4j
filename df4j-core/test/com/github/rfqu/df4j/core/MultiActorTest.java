@@ -8,6 +8,7 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
+import com.github.rfqu.df4j.core.*;
 
 import java.util.Random;
 
@@ -15,6 +16,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.examples.GraphTest;
+import com.github.rfqu.df4j.ext.SerialExecutor;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
@@ -22,7 +24,7 @@ import com.github.rfqu.df4j.util.MessageSink;
  * A set of identical Actors, passing packets to a randomly selected peer actor.
  * A packet dies after passing predefined number of hops.
  */
-public class MultiActorTest extends MultiActor {
+public class MultiActorTest extends SerialExecutor {
     final static int NUM_ACTORS = 4; // number of nodes
     final static int NR_REQUESTS = NUM_ACTORS * 10; // 100; // number of tokens
     final static int TIME_TO_LIVE = 4; // hops
@@ -38,12 +40,13 @@ public class MultiActorTest extends MultiActor {
         NodeActor[] nodes;
         private final Port<Object> sink;
         private Random rand;
-        {start();}
 
         public NodeActor(long seed, NodeActor[] nodes, Port<Object> sink) {
+            super(MultiActorTest.this);
             this.nodes = nodes;
             this.sink = sink;
             this.rand = new Random(seed);
+            start();
         }
 
         /**

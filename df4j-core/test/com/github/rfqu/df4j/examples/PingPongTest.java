@@ -12,12 +12,12 @@ package com.github.rfqu.df4j.examples;
 import java.io.PrintStream;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 
 import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.util.Request;
 
 
 /**

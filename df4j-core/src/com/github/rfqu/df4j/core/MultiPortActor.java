@@ -8,11 +8,13 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
+import com.github.rfqu.df4j.core.*;
 
 import java.util.concurrent.Executor;
 
 /**
- * An Actor with several input Ports
+ * An Actor with several input Ports. Each port has specific message handler.
+ * Messages for all ports share single message queue.
  */
 public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
 
@@ -33,7 +35,6 @@ public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
         message.act();
     }
 
-    
     public static class Message<M> extends Link {
         PortHandler<M> handler;
         private M m;
@@ -48,7 +49,7 @@ public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
         }
     }
     
-    protected abstract class PortHandler<M> implements Port <M>{
+    public abstract class PortHandler<M> implements Port <M>{
 
         @Override
         public final void send(M m) {

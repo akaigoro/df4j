@@ -281,7 +281,7 @@ public abstract class BaseActor extends Task {
 		}
 
 		@Override
-		protected boolean isEmpty() {
+        public boolean isEmpty() {
 			if (!queue.isEmpty()) {
 				return false;
 			}

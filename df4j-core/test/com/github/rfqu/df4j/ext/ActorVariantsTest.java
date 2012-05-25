@@ -7,14 +7,14 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.ext;
+import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.ext.PrivateExecutor;
+import com.github.rfqu.df4j.ext.SwingSupport;
 
 import static org.junit.Assert.assertEquals;
-
 import java.util.concurrent.Executor;
-
 import org.junit.Test;
-
 import com.github.rfqu.df4j.util.DoubleValue;
 
 public class ActorVariantsTest {
@@ -87,7 +87,13 @@ public class ActorVariantsTest {
     // fat actor
     @Test
     public void t03() throws InterruptedException {
-    	runTest(new PrivateExecutor());
+        runTest(new PrivateExecutor());
+    }
+
+    // swing actor
+    @Test
+    public void t04() throws InterruptedException {
+        runTest(SwingSupport.getSwingExecutor());
     }
 }
 

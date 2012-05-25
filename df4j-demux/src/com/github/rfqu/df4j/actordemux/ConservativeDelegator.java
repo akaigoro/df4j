@@ -7,39 +7,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
-
-import java.util.concurrent.ExecutorService;
+package com.github.rfqu.df4j.actordemux;
+import com.github.rfqu.df4j.core.*;
 
 /**
- * A set of Actors, running synchronously (one at a time).
+ * Communication part of decoupled actor (delegator).
+ * @param <H> Computational part of decoupled actor (delegate).
+ * @author kaigorodov
  */
-public class MultiActor extends com.github.rfqu.df4j.core.Actor<Task> {
+public class ConservativeDelegator<M extends Link, H extends Delegate<M>>
+extends AbstractDelegator<M, H> {
 
-	public MultiActor() {
-	}
-
-	public MultiActor(ExecutorService executor) {
-		super(executor);
-	}
-
-	@Override
-	protected void act(Task task) throws Exception {
-		task.run();
-	}
-
+    @Override
+    protected void act(M message) {
+        _handler.act(message);
+    }
+    
 	@Override
 	protected void complete() throws Exception {
-		super.close();
+		_handler.complete();
 	}
-
-	abstract class Actor<M extends Link> extends com.github.rfqu.df4j.core.Actor<M> {
-
-		@Override
-		protected void fire() {
-			MultiActor.this.send(this);
-		}
-
-	}
-
 }

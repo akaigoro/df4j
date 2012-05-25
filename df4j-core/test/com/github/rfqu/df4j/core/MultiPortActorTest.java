@@ -8,6 +8,7 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
+import com.github.rfqu.df4j.core.*;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -18,21 +19,21 @@ public class MultiPortActorTest {
         int sum;
         {start();}
         
-        PortHandler<Integer> add=new PortHandler<Integer>() {
+        final PortHandler<Integer> add=new PortHandler<Integer>() {
             @Override
             protected void act(Integer m) {
                sum+=m;
             }
         };
         
-        PortHandler<Integer> sub=new PortHandler<Integer>() {
+        final PortHandler<Integer> sub=new PortHandler<Integer>() {
             @Override
             protected void act(Integer m) {
                sum-=m;
             }
         };
         
-        PortHandler<PortFuture<Integer>> get=new PortHandler<PortFuture<Integer>>() {
+        final PortHandler<PortFuture<Integer>> get=new PortHandler<PortFuture<Integer>>() {
             @Override
             protected void act(PortFuture<Integer> m) {
                 m.send(sum);
