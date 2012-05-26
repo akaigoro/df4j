@@ -7,28 +7,15 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.util;
 
-import com.github.rfqu.df4j.core.Link;
+package com.github.rfqu.df4j.ext;
+
 import com.github.rfqu.df4j.core.Port;
 
 /**
- * A message that carries callback port.
- * @param <R>
+ * output port for multiple messages
+ * @param <M> the type of the message
  */
-public class Request<R> extends Link {
-    public Port<R> callback;
-
-    public Request() {
-    }
-
-    public Request(Port<R> callback) {
-        this.callback = callback;
-    }
-
-    public void reply(R result) {
-        if (callback == null)
-            return;
-        callback.send(result);
-    }
+public interface Callback<M> extends Port<M>{
+    public void sendFailure(Throwable exc);
 }

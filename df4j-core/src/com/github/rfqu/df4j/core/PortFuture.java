@@ -24,11 +24,6 @@ import java.util.concurrent.TimeoutException;
 public class PortFuture<T> extends Link implements Port<T>, Future<T> {
     protected volatile T message;
     
-    /**
-     * (non-Javadoc)
-     * @return 
-     * @see com.github.rfqu.df4j.core.Port#send(java.lang.Object)
-     */
     @Override
     public synchronized void send(T message) {
         this.message=message;

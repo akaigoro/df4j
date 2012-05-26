@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutorService;
  *
  */
 public abstract class Task extends Link implements Runnable {
-    protected Executor executor;
+    protected final Executor executor;
 
     public Task(Executor executor) {
         this.executor = executor;
@@ -31,7 +31,7 @@ public abstract class Task extends Link implements Runnable {
     /**
      * activates this task by sending it to the executor
      */
-    protected void fire() {
+    protected final void fire() {
         if (executor==null) {
             run();
         } else {
@@ -49,7 +49,7 @@ public abstract class Task extends Link implements Runnable {
 
 	/**
      * sets current executor as a thread-local variable
-     * @param exec
+     * @param executor
      */
     public static void setCurrentExecutorService(ExecutorService executor) {
     	currentExecutorServiceKey.set(executor);

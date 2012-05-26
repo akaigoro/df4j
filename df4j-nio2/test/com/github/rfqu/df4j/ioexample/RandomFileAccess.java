@@ -27,7 +27,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.io.*;
+import com.github.rfqu.df4j.nio2.*;
 
 public class RandomFileAccess {
     final static int blockSize = 4096*16; // bytes

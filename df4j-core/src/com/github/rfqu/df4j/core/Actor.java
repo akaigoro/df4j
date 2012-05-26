@@ -12,7 +12,7 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Executor;
 
 /**
- * The most typical type of actor: with main stream port.
+ * A dataflow node with one stream port.
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
@@ -39,7 +39,7 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
 	}
 
 	@Override
-    protected void removeTokens() {
+    protected void retrieveTokens() {
 	    input.retrieve();
     }
 

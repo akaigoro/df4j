@@ -41,11 +41,11 @@ public abstract class BaseActor extends Task {
 
     /** 
      * Removes tokens from pins.
-     * Removed tokens are to be saved and then used in the act() method.
+     * Removed tokens are expected to be used used in the act() method.
      * Should remove at least 1 token to avoid infinite loop.
      * Should return quickly, as is called from synchronized block.
      */
-    protected abstract void removeTokens();
+    protected abstract void retrieveTokens();
 
     /** 
      * process the retrieved tokens.
@@ -62,19 +62,19 @@ public abstract class BaseActor extends Task {
                     fired=false; // allow firing
                     return;
                 }
-                removeTokens();
+                retrieveTokens();
             }
             act();
         }
     }
     
     /**
-     * Like a place in Petri net.
+     * Stores input messages.
      * Can be turned on or off. 
      * Initial state should be off, to prevent premature firing.
      */
     protected abstract class Pin {
-    	private final int pinBit;
+    	private final int pinBit; // distinct for all pins of a node 
 
     	Pin(){
         	synchronized (BaseActor.this) {
@@ -82,12 +82,15 @@ public abstract class BaseActor extends Task {
                 if (count==32) {
               	  throw new IllegalStateException("only 32 pins could be created");
                 }
-                pinCount++;
                 pinBit = 1<<count;
             	pinMask=pinMask|pinBit;
+                pinCount++;
 			}
         }
 
+    	/**
+    	 * sets pin's bit on and fires task if all pins are on
+    	 */
         protected void turnOn() {
         	synchronized (BaseActor.this) {
                 readyPins |= pinBit;
@@ -99,6 +102,9 @@ public abstract class BaseActor extends Task {
             fire();
         }
 
+        /**
+         * sets pin's bit off
+         */
         protected void turnOff() {
             synchronized (BaseActor.this) {
                 readyPins &= ~pinBit;
@@ -108,27 +114,27 @@ public abstract class BaseActor extends Task {
     }
 
     /**
-     *  Only stops/allows actor execution
+     *  Stops/allows actor execution
      */
-    protected class BooleanPlace extends Pin {
+    protected class Switch extends Pin {
     	private boolean on=false;
     	
-		public BooleanPlace() { }
+		public Switch() { }
 
-        public void send() {
+        public void on() {
             synchronized (BaseActor.this) {
             	if (on) {
-    				throw new IllegalStateException("place is occupied already"); 
+    				throw new IllegalStateException("turned on already"); 
             	}
             	on=true;
             	turnOn();
             }
         }
 
-        public void remove() {
+        public void off() {
             synchronized (BaseActor.this) {
             	if (!on) {
-    				throw new IllegalStateException("place is not occupied"); 
+    				throw new IllegalStateException("turned off already"); 
             	}
             	on=false;
             	turnOff();
@@ -140,47 +146,11 @@ public abstract class BaseActor extends Task {
 		}
     }
 
-    /** 
-     * holds tokens without data 
+
+    /**
+     * Token storage with standard Port interface.
+     * @param <T> type of accepted tokens.
      */
-    protected class PetriPlace extends Pin {
-    	private int count=0;
-    	
-        public PetriPlace() { }
-
-        public void send(int delta) {
-            synchronized (BaseActor.this) {
-                if (delta<0) {
-                    throw new IllegalArgumentException("PetriPlace.send: delta<0");
-                }
-                if (delta==0) {
-                    return;
-                }
-                boolean doTurn=(count==0);
-            	count+=delta;
-            	if (doTurn) {
-            		turnOn();
-            	}
-            }
-        }
-
-        public void remove() {
-            synchronized (BaseActor.this) {
-            	if (count==0) {
-    				throw new IllegalStateException("place is empty"); 
-            	}
-            	count--;
-            	if (count==0) {
-                	turnOff();
-            	}
-            }
-        }
-
-		protected boolean isEmpty() {
-			return count==0;
-		}
-    }
-
     protected abstract class BasePort<T> extends Pin implements Port<T> {
         public T token=null;
 
@@ -202,8 +172,20 @@ public abstract class BaseActor extends Task {
             }
         }
 
+        /**
+         * saves passed token
+         * @param newToken
+         */
 		protected abstract void add(T newToken);
+		/**
+		 * 
+		 * @return true if the pin is not ready
+		 */
 		protected abstract boolean isEmpty();
+		/**
+		 * removes token from the storage
+		 * @return removed token
+		 */
 		protected abstract T _remove();
     }
 

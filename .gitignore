@@ -13,6 +13,10 @@ testfile*
 *.exe
 *.o
 *.so
+*.html
+*.gif
+*.css
+*/doc/*
 
 # Packages #
 ############

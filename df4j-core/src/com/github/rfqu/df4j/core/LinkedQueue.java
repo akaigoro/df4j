@@ -24,7 +24,7 @@ public class LinkedQueue<M extends Link> extends Link {
 
     /**
      * enqueues a message
-     * @param message the message to enqueue
+     * @param newLink the message to enqueue
      * @throws IllegalArgumentException when message is null or is already enqueued
      */
     public void add(M newLink) {

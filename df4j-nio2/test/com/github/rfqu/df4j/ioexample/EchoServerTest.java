@@ -9,12 +9,14 @@ import java.nio.channels.AsynchronousCloseException;
 import java.util.Random;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.io.*;
+import com.github.rfqu.df4j.nio2.*;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel.Writer;
 import com.github.rfqu.df4j.util.DoubleValue;
 
 public class EchoServerTest {
@@ -24,8 +26,7 @@ static class EchoServer {
     AsyncSocketChannel[] connections;
     
     public EchoServer(InetSocketAddress addr, int connCount) throws IOException {
-        assc=new AsyncServerSocketChannel();
-        assc.getChannel().bind(addr);
+        assc=new AsyncServerSocketChannel(addr);
         connections=new AsyncSocketChannel[connCount];
         for (int k=0; k<connections.length; k++) {
         	AsyncSocketChannel connection = new AsyncSocketChannel();
@@ -53,58 +54,61 @@ static class EchoServer {
         }
     }
     
-}
+    static class ServerRequest extends SocketIORequest {
+        static AtomicInteger ids=new AtomicInteger(); // DEBUG
+        
+        public int id=ids.addAndGet(1);
 
-static class ServerRequest extends SocketIORequest {
-
-	public ServerRequest(int capacity, boolean direct) {
-		super(capacity, direct);
-	}
-
-	public ServerRequest(ByteBuffer buf) {
-		super(buf);
-	}
-
-	@Override
-	public void readCompleted(Integer result, AsyncSocketChannel channel) {
-//       System.out.println("  ServerRequest readCompleted id="+id);
-        // read client's message
-        try {
-            // as if all the data read and written back
-            buffer.position(buffer.limit());
-            // write it back
-            channel.writer.send(this);
-        } catch (Exception e) {
-            System.err.println("  ServerRequest write id="+id);
-            e.printStackTrace();
+        public ServerRequest(int capacity, boolean direct) {
+            super(capacity, direct);
         }
-	}
 
-	@Override
-	public void readFailed(Throwable exc, AsyncSocketChannel channel) {
-	    if (exc instanceof AsynchronousCloseException) {
-	        return; // user closed connection
-	    }
-        System.err.println("  ServerRequest read failed id="+id+":");
-        exc.printStackTrace();
-        System.err.println("  t n="+Thread.currentThread().getName());
-	}
+        public ServerRequest(ByteBuffer buf) {
+            super(buf);
+        }
 
-	@Override
-	public void writeCompleted(Integer result, AsyncSocketChannel channel) {
-	    //           System.out.println("  ServerRequest writeCompleted id="+id);
-        channel.reader.send(this);
-	}
+        @Override
+        public void readCompleted(Integer result, AsyncSocketChannel channel) {
+//           System.out.println("  ServerRequest readCompleted id="+id);
+            // read client's message
+            try {
+                // as if all the data read and written back
+                buffer.position(buffer.limit());
+                // write it back
+                channel.writer.send(this);
+            } catch (Exception e) {
+                System.err.println("  ServerRequest write id="+id);
+                e.printStackTrace();
+            }
+        }
 
-	@Override
-	public void writeFailed(Throwable exc, AsyncSocketChannel channel) {
-	}
+        @Override
+        public void readFailed(Throwable exc, AsyncSocketChannel channel) {
+            if (exc instanceof AsynchronousCloseException) {
+                return; // user closed connection
+            }
+            System.err.println("  ServerRequest read failed id="+id+":");
+            exc.printStackTrace();
+            System.err.println("  t n="+Thread.currentThread().getName());
+        }
 
+        @Override
+        public void writeCompleted(Integer result, AsyncSocketChannel channel) {
+            //           System.out.println("  ServerRequest writeCompleted id="+id);
+            channel.reader.send(this);
+        }
+
+        @Override
+        public void writeFailed(Throwable exc, AsyncSocketChannel channel) {
+        }
+
+    }
 }
 
-static class ClientConnection extends AsyncSocketChannel {
-    static final int PERIOD = 300000000; // 300 ms
+static class ClientConnection {
+    static final int PERIOD = 30000000; // 30 ms
     private static final int BUF_SIZE = 1024;
+    AsyncSocketChannel channel=new AsyncSocketChannel();
     ClientRequest request;
     AtomicLong rounds;
     Aggregator sink;
@@ -115,9 +119,9 @@ static class ClientConnection extends AsyncSocketChannel {
         this.rounds=new AtomicLong(rounds);
         this.sink=sink;
         this.timer=timer;
-        super.connect(addr);
+        channel.connect(addr);
         request = new ClientRequest(BUF_SIZE, false);
-        request.start();
+        request.start(channel.writer);
     }
 
     class ClientRequest extends SocketIORequest implements Runnable {
@@ -126,23 +130,18 @@ static class ClientConnection extends AsyncSocketChannel {
         long startTime;
         long sum=0;
         long count=0;
-        AsyncSocketChannel channel=ClientConnection.this;
         
         public ClientRequest(int capacity, boolean direct) {
             super(capacity, direct);
         }
 
-        public ClientRequest(ByteBuffer buf) {
-            super(buf);
-        }
-
-        void start() {
+        void start(Writer writer) {
             startTime = System.nanoTime();
             data=rand.nextInt();
             buffer.clear();
             buffer.putInt(data);
 //            System.out.println("ClientRequest started id="+id);
-            channel.writer.send(this);
+            writer.send(this);
         }
         
         @Override
@@ -181,7 +180,7 @@ static class ClientConnection extends AsyncSocketChannel {
                     timer.schedule(this, delay, TimeUnit.NANOSECONDS);
                 } else {
                     // write it back immediately
-                    start();
+                    start(channel.writer);
                 }
             } catch (Exception e) {
 //                System.err.println("ClientRequest write err: id="+id+":");
@@ -198,11 +197,9 @@ static class ClientConnection extends AsyncSocketChannel {
         // for timer
         @Override
         public void run() {
-            start();
-        }
-        
+            start(channel.writer);
+        }        
     }
-
 }
 
 /**
@@ -215,6 +212,7 @@ static class Aggregator extends Actor<DoubleValue> {
     PortFuture<Double> avg=new PortFuture<Double>();
 
     public Aggregator(int numclients) {
+        super(null);
         this.numclients=numclients;
     }
 
@@ -238,7 +236,7 @@ static class Aggregator extends Actor<DoubleValue> {
     PrintStream out=System.out;
     PrintStream err=System.err;
     static int numclients=1000;
-    static int rounds = 20; // per client
+    static int rounds = 10; // per client
     static int nThreads=Runtime.getRuntime().availableProcessors();
 
     @Test

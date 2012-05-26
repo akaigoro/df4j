@@ -7,21 +7,33 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.actordemux;
-import com.github.rfqu.df4j.core.*;
+package com.github.rfqu.df4j.ext;
+
+import com.github.rfqu.df4j.core.Link;
 
 /**
- * Communication part of decoupled actor (delegator).
- * @param <H> Computational part of decoupled actor (delegate).
- * @author kaigorodov
+ * A message that carries callback port.
+ * @param <R>
  */
-public abstract class AbstractDelegator<M extends Link, H> extends Actor<M> {
-    public final ScalarInput<H> handler=new ScalarInput<H>();
-    protected H _handler;
+public class Request<R> extends Link {
+    public Callback<R> callback;
 
-    @Override
-    protected void retrieveTokens() {
-        super.retrieveTokens(); // remove message
-        _handler=handler.get();
+    public Request() {
+    }
+
+    public Request(Callback<R> callback) {
+        this.callback = callback;
+    }
+
+    public void reply(R result) {
+        if (callback == null)
+            return;
+        callback.send(result);
+    }
+
+    public void replyFailure(Throwable exc) {
+        if (callback == null)
+            return;
+        callback.sendFailure(exc);
     }
 }

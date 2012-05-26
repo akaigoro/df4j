@@ -28,7 +28,7 @@ public class SerialExecutor extends Actor<Link> implements Executor {
 	/**
 	 * Executes the given command at some time in the future.
 	 * 
-	 * @param <command> the runnable
+	 * @param command the runnable
 	 * @throws NullPointerException if command is null
 	 * @throws RejectedExecutionException if this
 	 * task cannot be accepted for execution. 

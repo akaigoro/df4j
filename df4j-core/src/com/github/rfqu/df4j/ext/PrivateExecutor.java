@@ -24,7 +24,8 @@ public class PrivateExecutor extends Thread implements Executor {
     private boolean completed=false;
     
     /**
-     * @param executor
+     * @param defaultExecutor - default executor for actors
+     * created vien this thread runs
      */
     public PrivateExecutor(ExecutorService defaultExecutor) {
         this.defaultExecutor=defaultExecutor;

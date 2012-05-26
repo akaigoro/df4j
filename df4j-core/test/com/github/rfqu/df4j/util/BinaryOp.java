@@ -23,7 +23,7 @@ public abstract class BinaryOp<T> extends Function<T> {
     public ScalarInput<T> p2 = new ScalarInput<T>();
 
     @Override
-    protected void removeTokens() {
+    protected void retrieveTokens() {
         p1.retrieve();
         p2.retrieve();
     }

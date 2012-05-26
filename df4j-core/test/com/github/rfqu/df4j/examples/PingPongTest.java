@@ -18,7 +18,8 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.util.Request;
+import com.github.rfqu.df4j.ext.Callback;
+import com.github.rfqu.df4j.ext.Request;
 
 
 /**
@@ -67,7 +68,7 @@ public class PingPongTest {
      * The pinging actor
      * 
      */
-    static class Ping extends Actor<Token> {
+    static class Ping extends Actor<Token> implements Callback<Token>{
         Pong pong;
         Port<Token> sink;
 
@@ -94,6 +95,10 @@ public class PingPongTest {
                     pong.send(token);
                 }
             }
+        }
+
+        @Override
+        public void sendFailure(Throwable exc) {
         }
     }
 
