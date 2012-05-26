@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.util;
 
 import com.github.rfqu.df4j.core.BaseActor;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.BaseActor.Demand;
 
 /**
  * abstract node with several inputs and single output

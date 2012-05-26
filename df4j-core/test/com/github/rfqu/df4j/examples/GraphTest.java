@@ -16,7 +16,10 @@ import java.util.concurrent.ExecutorService;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.ThreadFactoryTL;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
@@ -68,7 +71,6 @@ public class GraphTest {
         NodeActor[] nodes;
         private final Port<Object> sink;
         private Random rand;
-        {start();}
 
         public NodeActor(long seed, NodeActor[] nodes, Port<Object> sink) {
             this.nodes = nodes;

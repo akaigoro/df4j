@@ -19,23 +19,20 @@ import com.github.rfqu.df4j.core.Port;
  */
 public abstract class UnaryOp<T> extends Function<T> implements Port<T> {
     protected ScalarInput<T> input=new ScalarInput<T>();
-    {start();}
 
     @Override
     public void send(T value) {
         input.send(value);
     }
 
-    T operand;
-    
     @Override
     protected void removeTokens() {
-        operand=input.remove();
+        input.retrieve();
     }
 
     @Override
     protected void act() {
-        setRes(eval(operand));
+        setRes(eval(input.token));
     }
 
     abstract protected T eval(T opnd);

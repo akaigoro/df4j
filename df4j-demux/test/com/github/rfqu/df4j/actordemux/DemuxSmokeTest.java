@@ -51,7 +51,7 @@ class Numbers extends AbstractDemux<Long, Action<Record>, Record> {
 
 	@Override
 	protected AbstractDelegator<Action<Record>, Record> createDelegator(Long tag) {
-		return new LiberalDelegator<Record>(){{start();}};
+		return new LiberalDelegator<Record>();
 	}
 
 	@Override

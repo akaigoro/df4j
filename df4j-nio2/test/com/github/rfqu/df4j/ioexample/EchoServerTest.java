@@ -213,7 +213,6 @@ static class Aggregator extends Actor<DoubleValue> {
     long sum=0;
     long counter=0;
     PortFuture<Double> avg=new PortFuture<Double>();
-    {super.start();}
 
     public Aggregator(int numclients) {
         this.numclients=numclients;

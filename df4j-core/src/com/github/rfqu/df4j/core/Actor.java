@@ -8,7 +8,6 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
-import com.github.rfqu.df4j.core.*;
 
 import java.util.concurrent.Executor;
 
@@ -39,15 +38,14 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
 		input.close();
 	}
 
-    M message;
-
 	@Override
     protected void removeTokens() {
-	    message=input.remove();
+	    input.retrieve();
     }
 
     @Override
     protected void act() {
+        M message=input.token;
         try {
             if (message == null) {
                 complete();

@@ -23,8 +23,6 @@ public abstract class BaseActor extends Task {
     private int pinCount=0;
     private int pinMask=0; // mask with 1 for all existing pins
     private int readyPins=0;  // mask with 1 for all ready pins
-    /** This pin is to prevent premature firing when the first declared pin is initialized as ready */
-    private final BooleanPlace initialized=new BooleanPlace();
     protected boolean fired=false; // true when this actor runs
     
     public BaseActor(Executor executor) {
@@ -54,17 +52,6 @@ public abstract class BaseActor extends Task {
      */
     protected abstract void act();
 
-    /**
-     * indicates end of pin declarations.
-     */
-    public void start() {
-    	initialized.send();
-    }
-    
-    public void stop() {
-    	initialized.remove();
-    }
-    
     /** loops while all pins are ready
      */
     @Override
@@ -82,19 +69,18 @@ public abstract class BaseActor extends Task {
     }
     
     /**
-     * Like a pin of a chip.
-     * can be turned on or off. 
-     *
+     * Like a place in Petri net.
+     * Can be turned on or off. 
+     * Initial state should be off, to prevent premature firing.
      */
     protected abstract class Pin {
-    	
     	private final int pinBit;
-        {
-        	int count;
+
+    	Pin(){
         	synchronized (BaseActor.this) {
-            	count = pinCount;
+            	int count = pinCount;
                 if (count==32) {
-              	  throw new IllegalStateException("only 32 pins culd be created");
+              	  throw new IllegalStateException("only 32 pins could be created");
                 }
                 pinCount++;
                 pinBit = 1<<count;
@@ -104,8 +90,8 @@ public abstract class BaseActor extends Task {
 
         protected void turnOn() {
         	synchronized (BaseActor.this) {
-                readyPins = readyPins | pinBit;
-                if (!isReady() || fired) {
+                readyPins |= pinBit;
+                if (fired || !isReady()) {
                     return;
                 }
                 fired = true; // to prevent multiple concurrent firings
@@ -115,7 +101,7 @@ public abstract class BaseActor extends Task {
 
         protected void turnOff() {
             synchronized (BaseActor.this) {
-                readyPins=readyPins&~pinBit;
+                readyPins &= ~pinBit;
             }
         }
 
@@ -127,17 +113,9 @@ public abstract class BaseActor extends Task {
     protected class BooleanPlace extends Pin {
     	private boolean on=false;
     	
-        public BooleanPlace(boolean on) {
-			this.on = on;
-        	if (on) {
-            	turnOn();
-        	}
-		}
+		public BooleanPlace() { }
 
-        public BooleanPlace() {
-		}
-
-		public void send() {
+        public void send() {
             synchronized (BaseActor.this) {
             	if (on) {
     				throw new IllegalStateException("place is occupied already"); 
@@ -168,20 +146,19 @@ public abstract class BaseActor extends Task {
     protected class PetriPlace extends Pin {
     	private int count=0;
     	
-        public PetriPlace(int count) {
-			this.count = count;
-        	if (count>0) {
-        		turnOn();
-        	}
-		}
+        public PetriPlace() { }
 
-        public PetriPlace() {
-		}
-
-		public void send() {
+        public void send(int delta) {
             synchronized (BaseActor.this) {
-            	count++;
-            	if (count==1) {
+                if (delta<0) {
+                    throw new IllegalArgumentException("PetriPlace.send: delta<0");
+                }
+                if (delta==0) {
+                    return;
+                }
+                boolean doTurn=(count==0);
+            	count+=delta;
+            	if (doTurn) {
             		turnOn();
             	}
             }
@@ -205,6 +182,7 @@ public abstract class BaseActor extends Task {
     }
 
     protected abstract class BasePort<T> extends Pin implements Port<T> {
+        public T token=null;
 
         @Override
         public void send(T token) {
@@ -214,17 +192,17 @@ public abstract class BaseActor extends Task {
             }
         }
 
-        public T remove() {
+        public T retrieve() {
             synchronized (BaseActor.this) {
-            	T res =_remove();
+                token =_remove();
             	if (isEmpty()) {
                 	turnOff();
             	}
-            	return res;
+            	return token;
             }
         }
 
-		protected abstract void add(T token);
+		protected abstract void add(T newToken);
 		protected abstract boolean isEmpty();
 		protected abstract T _remove();
     }
@@ -232,17 +210,19 @@ public abstract class BaseActor extends Task {
     /** A place for single token loaded with a reference of type <T>
      */
     public class ScalarInput<T> extends BasePort<T> {
-    	protected T operand=null;
+        protected T operand=null;
+
+        public ScalarInput() { }
 
 		@Override
-		protected void add(T token) {
-			if (token==null) {
+		protected void add(T newToken) {
+			if (newToken==null) {
 				throw new IllegalArgumentException("operand may not be null"); 
 			}
 			if (operand!=null) {
 				throw new IllegalStateException("place is occupied already"); 
 			}
-			operand=token;
+			operand=newToken;
 		}
 
 		@Override
@@ -255,7 +235,7 @@ public abstract class BaseActor extends Task {
 	        if (isEmpty() ) {
 	            throw new NoSuchElementException();
 	        }
-			T res=operand;
+	        T res=operand;
 			operand=null;
 			return res;
 		}
@@ -271,6 +251,8 @@ public abstract class BaseActor extends Task {
     	private LinkedQueue<T> queue=new LinkedQueue<T>();
     	private boolean closeRequested=false;
     	private boolean closeHandled=false;
+
+        public StreamInput() { }
 
 		@Override
 		protected void add(T token) {

@@ -7,14 +7,15 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
-import com.github.rfqu.df4j.core.*;
+package com.github.rfqu.df4j.ext;
 
 import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.examples.GraphTest;
 import com.github.rfqu.df4j.ext.SerialExecutor;
 import com.github.rfqu.df4j.util.IntValue;
@@ -46,7 +47,6 @@ public class MultiActorTest extends SerialExecutor {
             this.nodes = nodes;
             this.sink = sink;
             this.rand = new Random(seed);
-            start();
         }
 
         /**
@@ -77,7 +77,7 @@ public class MultiActorTest extends SerialExecutor {
     }
 
     /**
-     * checks that NodeActor never run in parallel
+     * checks that NodeActors never run in parallel
      * @throws InterruptedException
      */
     @Test
@@ -95,8 +95,6 @@ public class MultiActorTest extends SerialExecutor {
             Actor<IntValue> nextInbox = nodes[rand.nextInt(nodes.length)];
             nextInbox.send(new IntValue(TIME_TO_LIVE));
         }
-        
-        super.start();
 
         // wait for all packets to die.
         sink.await();

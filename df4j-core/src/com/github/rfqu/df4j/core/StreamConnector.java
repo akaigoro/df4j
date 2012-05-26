@@ -80,7 +80,8 @@ class StreamConnector<R> implements StreamPort<R> {
 			tokens.add(m);
 		}
 
-		@Override
+		@SuppressWarnings("unchecked")
+        @Override
 		public void close() {
 			request.send((R[]) tokens.toArray(new Object[tokens.size()]));
 		}

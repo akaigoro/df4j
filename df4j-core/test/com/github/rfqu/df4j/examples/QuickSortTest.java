@@ -82,11 +82,11 @@ class QuickSort extends Task {
     	int resultcount=0;
         // imitate recursion
         if (low < j) {
-            new QuickSort(result, numbers, low, j).start();
+            new QuickSort(result, numbers, low, j).fire();
             resultcount++;
         }
         if (i < high) {
-            new QuickSort(result, numbers, i, high).start();
+            new QuickSort(result, numbers, i, high).fire();
             resultcount++;
         }
         result.setCount(resultcount);

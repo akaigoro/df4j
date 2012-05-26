@@ -11,16 +11,11 @@ package com.github.rfqu.df4j.examples;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.concurrent.ExecutorService;
-
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Connector;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.PortFuture;
-import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.BinaryOp;
 import com.github.rfqu.df4j.util.UnaryOp;
 

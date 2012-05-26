@@ -66,8 +66,8 @@ public class AsyncSocketChannel extends Link {
 
 	protected void connCompleted() {
         connected=true;
-        ((RequestQueue)reader).start();
-        ((RequestQueue)writer).start();
+        ((RequestQueue)reader).resume();
+        ((RequestQueue)writer).resume();
     }
 
     protected void connFailed(Throwable exc) {
@@ -86,7 +86,7 @@ public class AsyncSocketChannel extends Link {
     }
 
     abstract class RequestQueue extends Actor<SocketIORequest> {
-        protected BooleanPlace channelAcc=new BooleanPlace(true); // channel accessible
+        protected BooleanPlace channelAcc=new BooleanPlace(); // channel accessible
         CompletionHandler<Integer, SocketIORequest> handler =
                 new CompletionHandler<Integer, SocketIORequest>() {
 

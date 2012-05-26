@@ -32,7 +32,6 @@ static class Graph extends AbstractDemux<String, IntValue, Graph.NodeActor> {
 	protected AbstractDelegator<IntValue, NodeActor> createDelegator(String tag) {
 		ConservativeDelegator<IntValue, NodeActor> dock
 		    = new ConservativeDelegator<IntValue, NodeActor>();
-		dock.start();
         return dock;
 	}
 

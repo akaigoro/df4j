@@ -29,13 +29,6 @@ public abstract class Task extends Link implements Runnable {
     }
 
     /**
-     * activates this task.
-     */
-    public void start() {
-        fire();
-    }
-    
-    /**
      * activates this task by sending it to the executor
      */
     protected void fire() {

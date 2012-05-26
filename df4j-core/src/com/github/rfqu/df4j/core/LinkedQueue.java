@@ -7,7 +7,6 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-
 package com.github.rfqu.df4j.core;
 
 import java.util.NoSuchElementException;
@@ -41,6 +40,7 @@ public class LinkedQueue<M extends Link> extends Link {
     /**
      * @return the next message, or null if the queue is empty
      */
+    @SuppressWarnings("unchecked")
     public M poll() {
         if (isEmpty() ) {
             return null;
@@ -54,6 +54,7 @@ public class LinkedQueue<M extends Link> extends Link {
      * @return the next message
      * @throws NoSuchElementException if the queue is empty
      */
+    @SuppressWarnings("unchecked")
     public M remove() {
         if (isEmpty() ) {
             throw new NoSuchElementException();

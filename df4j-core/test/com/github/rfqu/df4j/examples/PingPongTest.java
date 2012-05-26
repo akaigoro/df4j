@@ -16,7 +16,8 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.util.Request;
 
 
@@ -69,7 +70,6 @@ public class PingPongTest {
     static class Ping extends Actor<Token> {
         Pong pong;
         Port<Token> sink;
-        {start();}
 
         public Ping(Pong pong, Port<Token> sink) {
             this.pong = pong;
@@ -103,7 +103,6 @@ public class PingPongTest {
      */
     static class Pong extends Actor<Token> {
         private final Port<Token> sink;
-        {start();}
 
         public Pong(Port<Token> sink) {
             this.sink = sink;

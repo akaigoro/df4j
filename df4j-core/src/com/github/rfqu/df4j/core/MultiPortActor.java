@@ -8,13 +8,12 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
-import com.github.rfqu.df4j.core.*;
 
 import java.util.concurrent.Executor;
 
 /**
  * An Actor with several input Ports. Each port has specific message handler.
- * Messages for all ports share single message queue.
+ * Messages for all ports are stored in the single message queue.
  */
 public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
 

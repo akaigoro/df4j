@@ -28,7 +28,6 @@ public class StreamNodeTest {
         // outputs
         Demand<Double> sum=new Demand<Double>();
         Demand<Double> avg=new Demand<Double>();
-        {super.start();}
 
         @Override
         protected void act(DoubleValue message) throws Exception {

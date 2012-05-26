@@ -13,7 +13,7 @@ package com.github.rfqu.df4j.util;
 /**
  * Binary operation: classic dataflow object.
  * Waits for both operands to arrive,
- * computes the operation, and sends result to the DataSource object,
+ * computes the operation, and sends result to the Demand object,
  * which routes the result to the interested parties.
  *
  * @param <T> the type of operands and the result
@@ -21,19 +21,16 @@ package com.github.rfqu.df4j.util;
 public abstract class BinaryOp<T> extends Function<T> {
     public ScalarInput<T> p1 = new ScalarInput<T>();
     public ScalarInput<T> p2 = new ScalarInput<T>();
-    {start();}
 
-    T operand1, operand2;
-    
     @Override
     protected void removeTokens() {
-        operand1=p1.remove();
-        operand2=p2.remove();
+        p1.retrieve();
+        p2.retrieve();
     }
 
     @Override
     protected void act() {
-        setRes(eval(operand1, operand2));
+        setRes(eval(p1.token, p2.token));
     }
 
     abstract protected T eval(T opnd, T opnd2);

@@ -63,7 +63,6 @@ public class SwingActorTest extends JFrame {
     }
 
     class ComputingActor extends Actor<StringMessage> implements ActionListener{
-        {start();}
 
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -101,7 +100,6 @@ public class SwingActorTest extends JFrame {
     class PrintingActor extends Actor<StringMessage> {
     	PrintingActor(){
     		super(SwingSupport.getSwingExecutor());
-    		start();
     	}
 
         @Override

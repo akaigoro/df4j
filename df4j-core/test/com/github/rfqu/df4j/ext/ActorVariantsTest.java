@@ -37,7 +37,6 @@ public class ActorVariantsTest {
         // outputs
         Demand<Double> sum=new Demand<Double>();
         Demand<Double> avg=new Demand<Double>();
-        {super.start();}
 
         @Override
         protected void act(DoubleValue message) throws Exception {
@@ -67,7 +66,7 @@ public class ActorVariantsTest {
             value/=2;
             node.send(new DoubleValue(value));
         }
-        node.close();
+        node.close(); // causes node.complete()
         assertEquals(1.0, sum.get(), delta);
         assertEquals(1.0/cnt, avg.get(), delta);
     }

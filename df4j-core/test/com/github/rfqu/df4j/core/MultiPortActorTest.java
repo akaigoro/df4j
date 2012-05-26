@@ -8,7 +8,6 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
-import com.github.rfqu.df4j.core.*;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -17,7 +16,6 @@ public class MultiPortActorTest {
 
     static class Accum extends MultiPortActor {
         int sum;
-        {start();}
         
         final PortHandler<Integer> add=new PortHandler<Integer>() {
             @Override

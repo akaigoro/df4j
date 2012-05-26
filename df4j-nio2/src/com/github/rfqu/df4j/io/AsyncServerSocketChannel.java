@@ -12,9 +12,7 @@ import com.github.rfqu.df4j.core.Link;
 public class AsyncServerSocketChannel 
 extends Actor<AsyncServerSocketChannel.AcceptHandler> {
     private AsynchronousServerSocketChannel channel;
-    private BooleanPlace channelAcc=new BooleanPlace(true); // channel accessible
-    {start();}
-    
+    private BooleanPlace channelAcc=new BooleanPlace(); // channel accessible   
     public AsyncServerSocketChannel() throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
