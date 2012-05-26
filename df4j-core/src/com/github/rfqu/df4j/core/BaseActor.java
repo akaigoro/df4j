@@ -190,6 +190,7 @@ public abstract class BaseActor extends Task {
     }
 
     /** A place for single token loaded with a reference of type <T>
+     * @param <T> 
      */
     public class ScalarInput<T> extends BasePort<T> {
         protected T operand=null;
@@ -221,13 +222,14 @@ public abstract class BaseActor extends Task {
 			operand=null;
 			return res;
 		}
-
+		
 		public T get() {
-			return operand;
+		    return operand;
 		}
     }
 
     /** A Queue of tokens of type <T>
+     * @param <T> 
      */
     public class StreamInput<T extends Link> extends BasePort<T> implements StreamPort<T>{
     	private LinkedQueue<T> queue=new LinkedQueue<T>();

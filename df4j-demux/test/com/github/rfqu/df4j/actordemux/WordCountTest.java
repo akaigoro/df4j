@@ -3,13 +3,23 @@ package com.github.rfqu.df4j.actordemux;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.PortFuture;
 
-public class DemuxSmokeTest {
 
-    static class Record {
-        long val;
+public class WordCountTest {
+
+    static class Record implements Delegate<Action<Record>>{
+        long counter;
+
+        @Override
+        public void act(Action<Record> message) {
+            message.act(this);
+        }
+
+        @Override
+        public void complete() {
+            // TODO Auto-generated method stub
+        }
     }
 
     static class Add extends Action<Record> {
@@ -21,7 +31,7 @@ public class DemuxSmokeTest {
 
         @Override
         public void act(Record record) {
-            record.val+=load;
+            record.counter+=load;
         }
     }
 
@@ -34,21 +44,27 @@ public class DemuxSmokeTest {
         
         @Override
         public void act(Record ship) {
-            sink.send(ship.val);
+            sink.send(ship.counter);
         }
     }
 
-    static class Numbers extends LiberalDemux<Long, Action<Record>, Record> {
+    static class Words extends AbstractDemux<String, Action<Record>, Record> {
 
         @Override
-        protected void requestHandler(Long tag, Port<Record> handler) {
-            handler.send(new Record());
+        protected AbstractDelegator<Action<Record>, Record> createDelegator(String tag) {
+            return new LiberalDelegator<Record>();
+        }
+
+        @Override
+        protected void requestHandler(String tag, AbstractDelegator<Action<Record>, Record> gate) {
+            gate.handler.send(new Record());
         }
     }
+
 
     @Test
     public void test() throws InterruptedException {
-        Numbers numbers=new Numbers();
+        Words numbers=new Words();
         PortFuture<Long> sink1 = new PortFuture<Long>();
         PortFuture<Long> sink2 = new PortFuture<Long>();
         numbers.send(1L, new Add(1));
@@ -62,7 +78,7 @@ public class DemuxSmokeTest {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        DemuxSmokeTest smokeTest = new DemuxSmokeTest();
+        WordCountTest smokeTest = new WordCountTest();
         smokeTest.test();
     }
 }

@@ -16,7 +16,7 @@ import java.util.concurrent.Executor;
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
-	protected StreamInput<M> input=new StreamInput<M>();
+	protected final StreamInput<M> input=new StreamInput<M>();
     protected volatile boolean completed;
 	
     public Actor(Executor executor) {

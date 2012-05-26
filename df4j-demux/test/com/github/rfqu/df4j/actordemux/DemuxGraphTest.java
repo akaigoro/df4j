@@ -15,6 +15,8 @@ import java.util.Random;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.rfqu.df4j.core.BaseActor.ScalarInput;
+import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
@@ -24,20 +26,13 @@ import com.github.rfqu.df4j.util.MessageSink;
  */
 public class DemuxGraphTest {
 
-static class Graph extends AbstractDemux<String, IntValue, Graph.NodeActor> {
+static class Graph extends ConservativeDemux<String, IntValue, Graph.NodeActor> {
     MessageSink sink = new MessageSink(DemuxGraphTest.NR_REQUESTS);
     Random rand = new Random(1);
 
 	@Override
-	protected AbstractDelegator<IntValue, NodeActor> createDelegator(String tag) {
-		ConservativeDelegator<IntValue, NodeActor> dock
-		    = new ConservativeDelegator<IntValue, NodeActor>();
-        return dock;
-	}
-
-	@Override
-	protected void requestHandler(String tag, AbstractDelegator<IntValue, NodeActor> gate) {
-        gate.handler.send(new NodeActor());
+	protected void requestHandler(String tag, Port<NodeActor> handler) {
+        handler.send(new NodeActor());
     }
     
     /**
