@@ -8,20 +8,24 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.actordemux;
-import com.github.rfqu.df4j.core.*;
 
-/**
- * Communication part of decoupled actor (delegator).
- * @param <H> Computational part of decoupled actor (delegate).
- * @author kaigorodov
+/** Associative array of decoupled actors. Yes, this is tagged dataflow.
+ * 
+ * @param Tag type of key
+ * @param M type of messages for actors
+ * @param H type of handler
  */
-public abstract class AbstractDelegator<M extends Link, H> extends Actor<M> {
-    public final ScalarInput<H> handler=new ScalarInput<H>();
-    protected H _handler;
+public abstract class LiberalDemux<Tag, M extends Action<H>, H>
+	extends AbstractDemux<Tag, M, H>
+{
+    protected AbstractDelegator<M,H> createDelegator(Tag tag) {
+        return new AbstractDelegator<M,H>() {
 
-    @Override
-    protected void retrieveTokens() {
-        super.retrieveTokens(); // remove message
-        _handler=handler.get();
+            @Override
+            protected void act() {
+                input.token.act(handler.get());     
+            }
+            
+        };
     }
 }

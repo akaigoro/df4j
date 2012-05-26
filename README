@@ -2,11 +2,12 @@ df4j is a basic dataflow library. It can easily be extended for specific needs.
 
 df4j-core contains core functionality. It requires java 1.5 or higher.
 df4j-demux (in progress) base for remote and/or persistent actors.
-df4j-nio2 contains a wrapper to nio2 asyncronous input-output functionality. It requires java 1.7 or higher.
+df4j-nio2 contains a wrapper to nio2 asyncronous input-output functionality.
+It requires java 1.7 or higher.
 
 See examples directory for various custom-made dataflow objects and their usage.
 
-If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new, 
+If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
 or send email at alexei.kaigorodov($)gmail.com
 
 Version history:
@@ -15,5 +16,6 @@ v0.1 2011/09/22 initial release
 
 v0.2 2011/02/04 the project split in 3: core (universal), nio (for jdk1.6), nio2 (for jdk1.7)
 
-v0.2 2012/05/26 refactored as 3 projects: core  (universal), demux (tagged dataflow), nio2 (for jdk1.7).
-Simplified and documented.
+v0.3 2012/05/26 Core project simplified and minimized. Nio project deleted.
+Tagged dataflow extracted into separete project (demux). 
+Classes partially documented.

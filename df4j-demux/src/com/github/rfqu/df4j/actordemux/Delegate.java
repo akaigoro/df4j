@@ -7,8 +7,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+/**
+ * Actor-like interface
+ */
 package com.github.rfqu.df4j.actordemux;
-import com.github.rfqu.df4j.core.*;
+
+import com.github.rfqu.df4j.core.Link;
 
 public interface Delegate<M extends Link> {
 	public void act(M message);

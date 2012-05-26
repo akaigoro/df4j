@@ -13,12 +13,11 @@ import com.github.rfqu.df4j.core.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-/** Associative array of decoupled actors. Yes, this is tagged dataflow.
- * 
- * @author rfq
+/** Associative array of decoupled actors. Yes, this is kind of tagged dataflow.
  *
- * @param <Tag>
- * @param <H>
+ * @param Tag type of key
+ * @param M type of messages for actors
+ * @param H type of delegate
  */
 public abstract class AbstractDemux<Tag, M extends Link, H>
 	implements TaggedPort <Tag, M>
@@ -41,11 +40,21 @@ public abstract class AbstractDemux<Tag, M extends Link, H>
             }
         }
         if (dorequest) {
-            requestHandler(tag, gate);
+            requestHandler(tag, gate.handler);
         }
-        gate.send(message);
+        gate.input.send(message);
     }
 
     protected abstract AbstractDelegator<M,H> createDelegator(Tag tag);
-    protected abstract void requestHandler(Tag tag, AbstractDelegator<M,H> gate);
+    protected abstract void requestHandler(Tag tag, Port<H> handler);
+
+    static abstract class AbstractDelegator<M extends Link, H> extends BaseActor {
+        protected final StreamInput<M> input=new StreamInput<M>();
+        protected final ScalarInput<H> handler=new ScalarInput<H>();
+
+        @Override
+        protected void retrieveTokens() {
+            input.retrieve();
+        }
+    }
 }

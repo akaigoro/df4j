@@ -2,14 +2,17 @@ package com.github.rfqu.df4j.core;
 
 import java.util.ArrayList;
 
+/** Facility to replicate results to multiple sinks of type StreamPort.
+ * @param <R> type of accepted messages
+ */
 class StreamConnector<R> implements StreamPort<R> {
     private StreamPort<R> request;
     private ArrayList<StreamPort<R>> requests;
-    private StreamConnector.Collector<R> collector;
+    private Collector<R> collector;
 
 	public void connect(Port<R[]> sink) {
 		if (collector==null) {
-			collector=new StreamConnector.Collector<R>();
+			collector=new Collector<R>();
 			connect(collector);
 		}
 		collector.connect(sink);

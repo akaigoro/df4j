@@ -56,7 +56,7 @@ public abstract class Task extends Link implements Runnable {
     }
 
     /**
-     * retrieves current executor as a thread-local variable
+     * @return current executor stored in thread-local variable
      */
     public static ExecutorService getCurrentExecutorService() {
         return currentExecutorServiceKey.get();
