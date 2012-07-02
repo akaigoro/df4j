@@ -5,10 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousCloseException;
 import java.util.Random;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -16,190 +13,97 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.*;
 import com.github.rfqu.df4j.nio2.*;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel.Writer;
 import com.github.rfqu.df4j.util.DoubleValue;
 
 public class EchoServerTest {
 
-static class EchoServer {
-    AsyncServerSocketChannel assc;
-    AsyncSocketChannel[] connections;
-    
-    public EchoServer(InetSocketAddress addr, int connCount) throws IOException {
-        assc=new AsyncServerSocketChannel(addr);
-        connections=new AsyncSocketChannel[connCount];
-        for (int k=0; k<connections.length; k++) {
-        	AsyncSocketChannel connection = new AsyncSocketChannel();
-        	connection.connect(assc);
-            ServerRequest request=new ServerRequest(1024, false);
-            connection.reader.send(request);
-            connections[k]=connection;
-       }
-    }
-
-    public void close() {
-        for (int k=0; k<connections.length; k++) {
-            try {
-                connections[k].close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        try {
-            assc.close();
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
-    
-    static class ServerRequest extends SocketIORequest {
-        static AtomicInteger ids=new AtomicInteger(); // DEBUG
-        
-        public int id=ids.addAndGet(1);
-
-        public ServerRequest(int capacity, boolean direct) {
-            super(capacity, direct);
-        }
-
-        public ServerRequest(ByteBuffer buf) {
-            super(buf);
-        }
-
-        @Override
-        public void readCompleted(Integer result, AsyncSocketChannel channel) {
-//           System.out.println("  ServerRequest readCompleted id="+id);
-            // read client's message
-            try {
-                // as if all the data read and written back
-                buffer.position(buffer.limit());
-                // write it back
-                channel.writer.send(this);
-            } catch (Exception e) {
-                System.err.println("  ServerRequest write id="+id);
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void readFailed(Throwable exc, AsyncSocketChannel channel) {
-            if (exc instanceof AsynchronousCloseException) {
-                return; // user closed connection
-            }
-            System.err.println("  ServerRequest read failed id="+id+":");
-            exc.printStackTrace();
-            System.err.println("  t n="+Thread.currentThread().getName());
-        }
-
-        @Override
-        public void writeCompleted(Integer result, AsyncSocketChannel channel) {
-            //           System.out.println("  ServerRequest writeCompleted id="+id);
-            channel.reader.send(this);
-        }
-
-        @Override
-        public void writeFailed(Throwable exc, AsyncSocketChannel channel) {
-        }
-
-    }
-}
-
 static class ClientConnection {
-    static final int PERIOD = 30000000; // 30 ms
-    private static final int BUF_SIZE = 1024;
+    static final int PERIOD = 1; // ms
+    static final int BUF_SIZE = 128;
+    static AtomicInteger ids=new AtomicInteger(); // DEBUG
+    
+    public int id=ids.addAndGet(1);
+    SerialExecutor serex=new SerialExecutor();
     AsyncSocketChannel channel=new AsyncSocketChannel();
-    ClientRequest request;
+    SocketIORequest request;
+    private ByteBuffer buffer;
+
     AtomicLong rounds;
     Aggregator sink;
     int writeCount=0;
-    ScheduledThreadPoolExecutor timer;
 
-    public ClientConnection(InetSocketAddress addr, int rounds, Aggregator sink, ScheduledThreadPoolExecutor timer) throws IOException {
+    Random rand=new Random();
+    int data;
+    long startTime;
+    long sum=0;
+    long count=0;
+
+    public ClientConnection(InetSocketAddress addr, int rounds, Aggregator sink) throws IOException {
         this.rounds=new AtomicLong(rounds);
         this.sink=sink;
-        this.timer=timer;
         channel.connect(addr);
-        request = new ClientRequest(BUF_SIZE, false);
-        request.start(channel.writer);
+        request = new SocketIORequest(BUF_SIZE, false);
+        buffer=request.getBuffer();
+        startWrite.send(request);
     }
 
-    class ClientRequest extends SocketIORequest implements Runnable {
-        Random rand=new Random();
-        int data;
-        long startTime;
-        long sum=0;
-        long count=0;
-        
-        public ClientRequest(int capacity, boolean direct) {
-            super(capacity, direct);
-        }
-
-        void start(Writer writer) {
+    AsyncHandler<SocketIORequest> startWrite = new AsyncHandler<SocketIORequest>(serex) {
+        @Override
+        protected void act(SocketIORequest request) throws Exception {
             startTime = System.nanoTime();
             data=rand.nextInt();
             buffer.clear();
             buffer.putInt(data);
-//            System.out.println("ClientRequest started id="+id);
-            writer.send(this);
+            System.out.println("client Request write started id="+id);
+            channel.write(request, startRead);
+        }
+    };
+
+    AsyncHandler<SocketIORequest> startRead = new AsyncHandler<SocketIORequest>(serex) {
+
+        @Override
+        protected void act(SocketIORequest message) throws Exception {
+            System.out.println("client Request read started id="+id);
+            channel.read(request, endRead);
         }
         
+    };
+    
+    AsyncHandler<SocketIORequest> endRead = new AsyncHandler<SocketIORequest>(serex) {
         @Override
-        public void writeCompleted(Integer result, AsyncSocketChannel channel) {
-//          System.out.println("ClientRequest writeCompleted res:"+result+" id="+id+" read started");
-            channel.reader.send(this);
-        }
-
-        @Override
-        public void writeFailed(Throwable exc, AsyncSocketChannel channel) {
-//            System.err.println("ClientRequest writeFailed id="+id);
-            exc.printStackTrace();
-        }
-
-        @Override
-        public void readCompleted(Integer result, AsyncSocketChannel channel) {
-            //System.out.println("ServerConnection write init id="+message.id);
+        protected void act(SocketIORequest request) throws Exception {
+            System.out.println("client Request write ended id="+id);
             // read client's message
             try {
-//                    System.out.println("ClientRequest readCompleted count="+count+"  id="+id+" res="+result);
-                int dataFromServer=getBuffer().getInt();
+//                    System.out.println("SocketIORequest readCompleted count="+count+"  id="+id+" res="+result);
+                int dataFromServer=buffer.getInt();
                 if (dataFromServer!=data) {
                     System.out.println("written: "+data+"; read:"+dataFromServer);
                 }
-                long currentTime = System.nanoTime();
+                long currentTime = System.currentTimeMillis();
                 sum+=(currentTime-startTime);
                 count++;
                 rounds.decrementAndGet();
                 if (rounds.get()==0) {
-//                    System.out.println("ClientRequest finished id="+id);
+//                    System.out.println("SocketIORequest finished id="+id);
                     sink.send(new DoubleValue(((double)sum)/count));
                     return;
                 }
                 long delay=startTime+PERIOD-currentTime;
-                if (delay>1000) {
-                    timer.schedule(this, delay, TimeUnit.NANOSECONDS);
+                if (delay>0) {
+                    Timer.schedule(startWrite, request, delay);
                 } else {
                     // write it back immediately
-                    start(channel.writer);
+//                    startWrite.act(request);
+                    startWrite.send(request);
                 }
             } catch (Exception e) {
-//                System.err.println("ClientRequest write err: id="+id+":");
+//                System.err.println("SocketIORequest write err: id="+id+":");
                 e.printStackTrace();
             }
         }
-
-        @Override
-        public void readFailed(Throwable exc, AsyncSocketChannel channel) {
-//            System.err.println("ClientRequest readFailed id="+id+":");
-            exc.printStackTrace();
-        }
-
-        // for timer
-        @Override
-        public void run() {
-            start(channel.writer);
-        }        
-    }
+    };
+    
 }
 
 /**
@@ -235,24 +139,26 @@ static class Aggregator extends Actor<DoubleValue> {
     InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
     PrintStream out=System.out;
     PrintStream err=System.err;
-    static int numclients=1000;
-    static int rounds = 10; // per client
+    int numclients=3000;
+    int rounds = 10; // per client
     static int nThreads=Runtime.getRuntime().availableProcessors();
 
-    @Test
-    public void testThroughput() throws Exception, IOException, InterruptedException {
+    public void testThroughput(int numclients, int rounds) throws Exception, IOException, InterruptedException {
+        this.numclients=numclients;
+        this.rounds=rounds;
         Task.setCurrentExecutorService(ThreadFactoryTL.newFixedThreadPool(2));
         EchoServer es=new EchoServer(local9999, numclients);
         
         Task.setCurrentExecutorService(ThreadFactoryTL.newFixedThreadPool(2));
         Aggregator sink = new Aggregator(numclients);
-        ScheduledThreadPoolExecutor timer=new ScheduledThreadPoolExecutor(1);
 
         ClientConnection[] clients=new ClientConnection[numclients];
         long start = System.nanoTime();
         for (int i = 0; i < numclients; i++) {
-            clients[i]=new ClientConnection(local9999, rounds, sink, timer);
+            clients[i]=new ClientConnection(local9999, rounds, sink);
+            Thread.sleep(1);
         }
+        out.printf("Started clients:"+numclients);
         double avgLatency=sink.avg.get();
         es.close();
         out.println("all closed");
@@ -260,10 +166,26 @@ static class Aggregator extends Actor<DoubleValue> {
         float rate = numclients*rounds / time;
         out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate);
         out.printf("Latency=%f msec \n", avgLatency/1000000);
+        Timer.shutdown();
     }
+
+    @Test
+    public void smokeTest() throws Exception, IOException, InterruptedException {
+        testThroughput(1,1);
+   }
+
+    @Test
+    public void lightTest() throws Exception, IOException, InterruptedException {
+        testThroughput(10,3);
+   }
+
+    @Test
+    public void heavyTest() throws Exception, IOException, InterruptedException {
+        testThroughput(1000,10);
+   }
 
     public static void main(String[] args) throws Exception {
         EchoServerTest t=new EchoServerTest();
-        t.testThroughput();
+        t.smokeTest();
     }
 }

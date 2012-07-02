@@ -18,6 +18,7 @@ import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Link;
+import com.github.rfqu.df4j.core.Port;
 
 /**
  * Wrapper over AsynchronousSocketChannel.
@@ -31,8 +32,8 @@ implements CompletionHandler<Void, AsynchronousSocketChannel> {
     protected boolean connected=false;
     protected boolean closed=false;
     protected Throwable connectionFailure=null;
-    public final Reader reader=new Reader();
-    public final Writer writer=new Writer();
+    protected final Reader reader=new Reader();
+    protected final Writer writer=new Writer();
 
     /**
      * for client-side socket
@@ -77,38 +78,52 @@ implements CompletionHandler<Void, AsynchronousSocketChannel> {
 
     public void close() throws IOException {
         closed=true;
-        channel.close();
+        if (channel!=null) {
+            channel.close();
+        }
     }
 
+    protected void checkRequest(SocketIORequest request) {
+        if (request==null) {
+            throw new IllegalArgumentException("request==null");
+        }
+        if (connectionFailure!=null) {
+            throw new IllegalStateException(connectionFailure);
+        }
+        if (closed) {
+            throw new IllegalStateException("channel closed");
+        }
+    }
+
+    public void write(SocketIORequest request, Port<SocketIORequest> replyTo) {
+        checkRequest(request);
+        request.start(this, false, replyTo);
+        writer.send(request);
+    }
+    
+    public void read(SocketIORequest request, Port<SocketIORequest> replyTo) {
+        checkRequest(request);
+        request.start(this, true, replyTo);
+        reader.send(request);
+    }
+    
     abstract class RequestQueue extends Actor<SocketIORequest>
-    implements CompletionHandler<Integer, SocketIORequest>
+       implements CompletionHandler<Integer, SocketIORequest>
     {
         protected Switch channelAcc=new Switch(); // channel accessible
-
-        protected void checkRequest(SocketIORequest request) {
-            if (request==null) {
-                throw new IllegalArgumentException("request==null");
-            }
-            if (connectionFailure!=null) {
-                throw new IllegalStateException(connectionFailure);
-            }
-            if (closed) {
-                throw new IllegalStateException("channel closed");
-            }
-        }
 
         protected void resume() {
             channelAcc.on();
         }
         
         @Override
-        public void completed(Integer result, SocketIORequest attachment) {
+        public void completed(Integer result, SocketIORequest request) {
             channelAcc.on();
-            attachment.completed(result, AsyncSocketChannel.this);
+            request.completed(result, AsyncSocketChannel.this);
         }
 
         @Override
-        public void failed(Throwable exc, SocketIORequest attachment) {
+        public void failed(Throwable exc, SocketIORequest request) {
             if (exc instanceof AsynchronousCloseException) {
                 try {
                     AsyncSocketChannel.this.close();
@@ -119,19 +134,11 @@ implements CompletionHandler<Void, AsynchronousSocketChannel> {
             } else {
                 channelAcc.on();
             }
-            attachment.failed(exc, AsyncSocketChannel.this);
+            request.failed(exc, AsyncSocketChannel.this);
         }
     }
     
     public final class Reader extends RequestQueue {
-
-        @Override
-        public void send(SocketIORequest request) {
-            checkRequest(request);
-            request.start(true);
-            super.send(request);
-        }
-        
         @Override
         protected void act(SocketIORequest request) throws Exception {
             channelAcc.off(); // block channel
@@ -142,14 +149,6 @@ implements CompletionHandler<Void, AsynchronousSocketChannel> {
     }
     
     public final class Writer extends RequestQueue {
-
-        @Override
-        public void send(SocketIORequest request) {
-            checkRequest(request);
-            request.start(false);
-            super.send(request);
-        }
-        
         @Override
         protected void act(SocketIORequest request) throws Exception {
             channelAcc.off(); // block channel

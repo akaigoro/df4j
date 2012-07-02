@@ -16,8 +16,8 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.SerialExecutor;
 import com.github.rfqu.df4j.examples.GraphTest;
-import com.github.rfqu.df4j.ext.SerialExecutor;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
@@ -103,10 +103,8 @@ public class MultiActorTest extends SerialExecutor {
     }
 
     public static void main(String args[]) throws InterruptedException {
-        GraphTest nt = new GraphTest();
-        nt.init();
-        nt.testSingle();
-        nt.testFixed();
+        MultiActorTest nt = new MultiActorTest();
+        nt.runTest();
     }
 
 }

@@ -13,12 +13,17 @@ import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Link;
+import com.github.rfqu.df4j.core.Port;
 
 public class SocketIORequest extends Link 
 implements CompletionHandler<Integer, AsyncSocketChannel> {
     protected ByteBuffer buffer;
-    protected boolean readOp;
+    protected AsyncSocketChannel channel;
+    protected Port<SocketIORequest> replyTo;
     protected volatile boolean inTrans=false;
+    protected boolean readOp;
+    protected Integer result;
+    protected Throwable exc;
     
     public SocketIORequest(int capacity, boolean direct) {
         if (direct) {
@@ -36,55 +41,61 @@ implements CompletionHandler<Integer, AsyncSocketChannel> {
         return buffer;
     }
 
-    public void start(boolean read) {
+    public AsyncSocketChannel getChannel() {
+        return channel;
+    }
+
+    public boolean isInTrans() {
+        return inTrans;
+    }
+
+    public boolean isReadOp() {
+        return readOp;
+    }
+
+    public Integer getResult() {
+        return result;
+    }
+
+    public Throwable getExc() {
+        return exc;
+    }
+
+    public void start(AsyncSocketChannel channel, boolean read, Port<SocketIORequest> replyTo) {
         if (inTrans) {
             throw new IllegalStateException("SocketIORequest.read: in "+(readOp?"read":"write")+" already");
         }
         inTrans=true;
+        this.channel=channel;
         readOp=read;
+        this.replyTo=replyTo;
         if (read) {
             buffer.clear();
         } else {
             buffer.flip();
         }
+        result=null;
+        exc=null;
     }
 
     @Override
     public void completed(Integer result, AsyncSocketChannel channel) {
         inTrans=false;
+        this.result=result;
         if (readOp) {
             //System.out.println("channel read completed id="+id);
             buffer.flip();
-            readCompleted(result, channel);
         } else {
             //System.out.println("channel write completed id="+id);
             buffer.clear();
-            writeCompleted(result, channel);
         }
     }
 
     @Override
     public void failed(Throwable exc, AsyncSocketChannel channel) {
         inTrans=false;
-        if (readOp) {
-            readFailed(exc, channel);
-        } else {
-            writeFailed(exc, channel);
-        }
+        this.exc=exc;
     }
 
-    /* to be overwritten */
-    
-    public void readCompleted(Integer result, AsyncSocketChannel channel) {
-    }
-
-    public void readFailed(Throwable exc, AsyncSocketChannel channel) {
-    }
-
-    public void writeCompleted(Integer result, AsyncSocketChannel channel) {
-    }
-
-    public void writeFailed(Throwable exc, AsyncSocketChannel channel) {
-    }
 }
  

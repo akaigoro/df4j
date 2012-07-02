@@ -69,7 +69,7 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
 		return completed;
 	}
 
-	/** handles the failure
+	/** handles failures
      * 
      * @param message
      * @param e
