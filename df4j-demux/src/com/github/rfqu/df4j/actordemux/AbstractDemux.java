@@ -9,6 +9,8 @@
  */
 package com.github.rfqu.df4j.actordemux;
 import com.github.rfqu.df4j.core.*;
+import com.github.rfqu.df4j.core.BaseActor.ScalarInput;
+import com.github.rfqu.df4j.core.BaseActor.StreamInput;
 
 import java.util.concurrent.ConcurrentHashMap;
 
