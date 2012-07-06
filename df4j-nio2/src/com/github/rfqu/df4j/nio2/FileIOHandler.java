@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 by Alexei Kaigorodov
+ * Copyright 2012 by Alexei Kaigorodov
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -7,27 +7,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.util;
+package com.github.rfqu.df4j.nio2;
 
-import com.github.rfqu.df4j.core.BaseActor;
-import com.github.rfqu.df4j.core.Port;
+import java.util.concurrent.Executor;
 
 /**
- * abstract node with several inputs and single output
- * @param <R> type of result
+ * Handles the results of an IO operation.
+ * Can be seen as a simplified actor, with space for only 1 incoming meassage.
+ * @param <M> the type of accepted messages.
  */
-public abstract class Function<R> extends BaseActor {
-	protected final Demand<R> res=new Demand<R>();
+public abstract class FileIOHandler extends IOHandler<FileIORequest, AsyncFileChannel> {
 
-    public void setRes(R val) {
-    	res.send(val);
+    public FileIOHandler(Executor executor) {
+        super(executor);
     }
 
-    public void connect(Port<R> sink) {
-        res.connect(sink);
+    public FileIOHandler() {
     }
-    
-    public void connect(Port<R>... sinks) {
-        res.connect(sinks);
-    }
+
 }

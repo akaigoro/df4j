@@ -10,7 +10,6 @@
 package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 
 import com.github.rfqu.df4j.core.Task;
 
@@ -19,7 +18,7 @@ import com.github.rfqu.df4j.core.Task;
  * Intended to serve a single Task (or Actor) or a set of coordinated Tasks.
  */
 public class PrivateExecutor extends Thread implements Executor {
-	ExecutorService defaultExecutor;
+	Executor defaultExecutor;
     Runnable command;
     private boolean completed=false;
     
@@ -27,14 +26,14 @@ public class PrivateExecutor extends Thread implements Executor {
      * @param defaultExecutor - default executor for actors
      * created vien this thread runs
      */
-    public PrivateExecutor(ExecutorService defaultExecutor) {
+    public PrivateExecutor(Executor defaultExecutor) {
         this.defaultExecutor=defaultExecutor;
         setDaemon(true);
         start();
     }
 
     public PrivateExecutor() {
-        this(Task.getCurrentExecutorService());
+        this(Task.getCurrentExecutor());
     }
 
     @Override
@@ -53,7 +52,7 @@ public class PrivateExecutor extends Thread implements Executor {
 
     @Override
     public void run() {
-        Task.setCurrentExecutorService(defaultExecutor);
+        Task.setCurrentExecutor(defaultExecutor);
         for (;;) {
             Runnable command=null;
             synchronized (this) {

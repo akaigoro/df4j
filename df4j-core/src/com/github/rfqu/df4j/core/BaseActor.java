@@ -13,8 +13,9 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 
 /**
- * Abstract dataflow node with several inputs and outputs.
- * Typical use is:
+ * General dataflow node with several inputs and outputs.
+ * Firing occur when all inputs are filled.
+ * Typical use case is:
  *  - create 1 or more pins for inputs and/or outputs
  *  - redefine abstract methods removeTokens() and act()
  */
@@ -90,25 +91,22 @@ public abstract class BaseActor extends Task {
 
     	/**
     	 * sets pin's bit on and fires task if all pins are on
+    	 *  @return true if actor became ready and must be fired
     	 */
-        protected void turnOn() {
-        	synchronized (BaseActor.this) {
-                readyPins |= pinBit;
-                if (fired || !isReady()) {
-                    return;
-                }
-                fired = true; // to prevent multiple concurrent firings
+        protected boolean turnOn() {
+            readyPins |= pinBit;
+            if (fired || !isReady()) {
+                return false;
             }
-            fire();
+            fired = true; // to prevent multiple concurrent firings
+            return true;
         }
 
         /**
          * sets pin's bit off
          */
         protected void turnOff() {
-            synchronized (BaseActor.this) {
-                readyPins &= ~pinBit;
-            }
+            readyPins &= ~pinBit;
         }
 
     }
@@ -122,12 +120,16 @@ public abstract class BaseActor extends Task {
 		public Switch() { }
 
         public void on() {
+        	boolean doFire;
             synchronized (BaseActor.this) {
             	if (on) {
     				throw new IllegalStateException("turned on already"); 
             	}
             	on=true;
-            	turnOn();
+            	doFire=turnOn();
+            }
+            if (doFire) {
+            	fire();
             }
         }
 
@@ -156,9 +158,13 @@ public abstract class BaseActor extends Task {
 
         @Override
         public void send(T token) {
+        	boolean doFire;
             synchronized (BaseActor.this) {
             	add(token);
-            	turnOn();
+            	doFire=turnOn();
+            }
+            if (doFire) {
+            	fire();
             }
         }
 
@@ -276,9 +282,13 @@ public abstract class BaseActor extends Task {
 		 */
 		@Override
 		public void close() {
+        	boolean doFire;
             synchronized (BaseActor.this) {
     			closeRequested=true;
-            	turnOn();
+            	doFire=turnOn();
+            }
+            if (doFire) {
+            	fire();
             }
 		}
     }
@@ -295,25 +305,35 @@ public abstract class BaseActor extends Task {
          * @param sink Port to send the result
          */
         public void connect(Port<R> sink) {
+        	boolean doFire;
             synchronized (BaseActor.this) {
             	connector.connect(sink);
-            	turnOn();
+            	doFire=turnOn();
+            }
+            if (doFire) {
+            	fire();
             }
     	}
 
     	public void connect(StreamPort<R> sink) {
+        	boolean doFire;
             synchronized (BaseActor.this) {
-                synchronized (BaseActor.this) {
-                	connector.connect(sink);
-                	turnOn();
-                }
+            	connector.connect(sink);
+            	doFire=turnOn();
+            }
+            if (doFire) {
+            	fire();
             }
     	}
 
     	public void connect(Port<R>... sinks) {
+        	boolean doFire;
             synchronized (BaseActor.this) {
             	connector.connect(sinks);
-            	turnOn();
+            	doFire=turnOn();
+            }
+            if (doFire) {
+            	fire();
             }
     	}
 

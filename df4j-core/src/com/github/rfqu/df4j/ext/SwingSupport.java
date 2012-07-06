@@ -24,7 +24,7 @@ public class SwingSupport {
 
             @Override
             public void run() {
-                Task.setCurrentExecutorService(executor);
+                Task.setCurrentExecutor(executor);
             }
             
         });

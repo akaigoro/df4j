@@ -8,13 +8,12 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
-import com.github.rfqu.df4j.core.*;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
 /**
- * A set of Actors, running synchronously (one at a time).
+ * Serves a set of Actors, running synchronously (one at a time).
  */
 public class SerialExecutor extends Actor<Link> implements Executor {
 

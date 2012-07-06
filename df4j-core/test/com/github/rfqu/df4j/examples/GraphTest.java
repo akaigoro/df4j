@@ -11,7 +11,7 @@ package com.github.rfqu.df4j.examples;
 
 import java.io.PrintStream;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -52,15 +52,13 @@ public class GraphTest {
         runTest(ThreadFactoryTL.newFixedThreadPool(2));
     }
 
-	private void runTest(ExecutorService executor) throws InterruptedException {
+	private void runTest(Executor executor) throws InterruptedException {
         String workerName = executor.getClass().getCanonicalName();
         out.println("Using " + workerName);
-		Task.setCurrentExecutorService(executor);
+		Task.setCurrentExecutor(executor);
         for (int i = 0; i < times; i++) {
             runNetwork();
         }
-        executor.shutdown();
-		Task.removeCurrentExecutorService();
 	}
 
     /**

@@ -9,9 +9,10 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 
 
 /**
@@ -21,9 +22,20 @@ import java.util.concurrent.ThreadFactory;
  *
  */
 public class ThreadFactoryTL implements ThreadFactory {
-    ExecutorService executor;
+    static String dfprefix = " DF ";
+    String prefix;
+    Executor executor;
 
-	protected void setExecutor(ExecutorService executor) {
+	public ThreadFactoryTL(String prefix, Executor executor) {
+        this.executor=executor;
+        this.prefix=prefix;
+    }
+
+    public ThreadFactoryTL(String prefix) {
+        this.prefix=prefix;
+    }
+
+    protected void setExecutor(Executor executor) {
         this.executor = executor;
     }
 
@@ -32,37 +44,38 @@ public class ThreadFactoryTL implements ThreadFactory {
         return new ThreadTL(r);
     }
     
-    public static ExecutorService newSingleThreadExecutor() {
-		ThreadFactoryTL tf = new ThreadFactoryTL();
-	    ExecutorService executor = Executors.newSingleThreadExecutor(tf);
+    public static Executor newSingleThreadExecutor() {
+		ThreadFactoryTL tf = new ThreadFactoryTL(dfprefix);
+	    Executor executor = Executors.newSingleThreadExecutor(tf);
 	    tf.setExecutor(executor);
 		return executor;
 	}
     
-    public static ExecutorService newFixedThreadPool(int nThreads) {
-		ThreadFactoryTL tf = new ThreadFactoryTL();
-	    ExecutorService executor = Executors.newFixedThreadPool(nThreads, tf);
+    public static ThreadPoolExecutor newFixedThreadPool(int nThreads) {
+		ThreadFactoryTL tf = new ThreadFactoryTL(dfprefix);
+		ThreadPoolExecutor executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(nThreads, tf);
 	    tf.setExecutor(executor);
 		return executor;
 	}
     
-    public static ExecutorService newCachedThreadPool() {
-		ThreadFactoryTL tf = new ThreadFactoryTL();
-	    ExecutorService executor = Executors.newCachedThreadPool(tf);
+    public static ThreadPoolExecutor newCachedThreadPool() {
+		ThreadFactoryTL tf = new ThreadFactoryTL(dfprefix);
+		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool(tf);
 	    tf.setExecutor(executor);
 		return executor;
 	}
     
 	public class ThreadTL extends Thread {
+	    
         public ThreadTL(Runnable r) {
             super(r);
-            setName(getName()+" DF "+executor.getClass().getSimpleName());
+            setName(getName()+prefix+executor.getClass().getSimpleName());
             setDaemon(true);
         }
 
         @Override
         public void run() {
-            Task.setCurrentExecutorService(executor);
+            Task.setCurrentExecutor(executor);
             super.run();
         }
     }

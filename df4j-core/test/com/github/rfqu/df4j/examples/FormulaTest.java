@@ -24,6 +24,7 @@ public class FormulaTest {
 
     /**
      * compute a^2
+     * @throws InterruptedException 
      */
     @Test
     public void t01() throws InterruptedException {
@@ -37,6 +38,7 @@ public class FormulaTest {
 
     /**
      * compute 2*3
+     * @throws InterruptedException 
      */
     @Test
     public void t02() throws InterruptedException {

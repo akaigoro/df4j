@@ -36,15 +36,15 @@ public class AsyncChannelCroup {
 
             @Override
             protected AsynchronousChannelGroup initialValue() {
-                ExecutorService executor=Task.getCurrentExecutorService();
+                ExecutorService service = Task.getCurrentExecutorService();
 
                 try {
-                    return AsynchronousChannelGroup.withThreadPool(executor);
+                    return AsynchronousChannelGroup.withThreadPool(service);
                 } catch (IOException e) {
                     return null;
                 }
             }
-        
+
     };
-    
+
 }

@@ -7,31 +7,34 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.nio2;
 
 import java.util.concurrent.Executor;
 
-/**
- * A dataflow node with one stream port.
- * @param <M> the type of accepted messages.
- */
-public abstract class AsyncHandler<M> extends Task implements Port<M> {
-    protected boolean fired=false; // true when this actor runs
-    protected M message=null;
+import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Task;
 
-    public AsyncHandler(Executor executor) {
+/**
+ * Handles the result of an IO operation.
+ * Can be seen as a simplified actor, with space for only 1 incoming message.
+ * @param <R> the type of accepted messages.
+ */
+public abstract class IOHandler<R extends IORequest<R, C>, C>
+  extends Task implements Port<R>
+{
+    protected boolean fired=false; // true when this actor runs
+    protected R message=null;
+
+    public IOHandler(Executor executor) {
         super(executor);
     }
 
-    public AsyncHandler() {
+    public IOHandler() {
     }
 
     @Override
-    public void send(M message) {
+    public void send(R message) {
         synchronized (this) {
-            if (this.message!=null) {
-                throw new IllegalStateException("place is occupied already"); 
-            }
             if (fired) {
                 throw new IllegalStateException("fired already"); 
             }
@@ -59,15 +62,28 @@ public abstract class AsyncHandler<M> extends Task implements Port<M> {
      * @param message the message to process
      * @throws Exception
      */
-    protected abstract void act(M message) throws Exception;
+    protected void act(R request) throws Exception {
+    	Throwable exc=request.getExc();
+		if (exc!=null) {
+			failed(exc, request);
+    	} else {
+    		completed(request.result, request);
+    	}
+    }
 
     /** handles failures
      * 
      * @param message
      * @param e
      */
-    protected void failure(M message, Exception e) {
+    protected void failure(R message, Exception e) {
         e.printStackTrace();
     }
     
+    protected abstract void completed(Integer result, R request) throws Exception;
+
+    protected void failed(Throwable exc, R request) throws Exception {
+    	exc.printStackTrace();
+    }
+
 }

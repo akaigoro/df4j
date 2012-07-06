@@ -14,7 +14,7 @@ import static org.junit.Assert.fail;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -142,7 +142,7 @@ public class QuickSortTest {
         }
     }
 
-    public void runQuickSort(ExecutorService executor) throws InterruptedException {
+    public void runQuickSort(Executor executor) throws InterruptedException {
         out.println("Using "+executor.getClass().getCanonicalName());
         long startTime = System.currentTimeMillis();
 
@@ -154,7 +154,6 @@ public class QuickSortTest {
         long stopTime = System.currentTimeMillis();
         long elapsedTime = stopTime - startTime;
         System.out.println(" elapsed=" + elapsedTime + " ms; tasknum=" + tasknum);
-        executor.shutdown();
         validate(numbers);
     }
 

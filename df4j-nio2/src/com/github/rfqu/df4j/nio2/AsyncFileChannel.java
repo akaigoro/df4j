@@ -10,6 +10,7 @@
 package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.OpenOption;
@@ -18,6 +19,7 @@ import java.nio.file.attribute.FileAttribute;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Task;
 
 public class AsyncFileChannel {
@@ -27,7 +29,7 @@ public class AsyncFileChannel {
 
     public AsyncFileChannel(Path file, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         close();
-        channel=AsynchronousFileChannel.open(file, options, Task.getCurrentExecutorService(), attrs);
+//        channel=AsynchronousFileChannel.open(file, options, Task.getCurrentExecutorService(), attrs);
         closed=false;
     }
 
@@ -37,29 +39,34 @@ public class AsyncFileChannel {
             options2.add(opt);
         }
         close();
-        channel=AsynchronousFileChannel.open(file, options2, Task.getCurrentExecutorService(), new FileAttribute<?>[0]);
+        channel=AsynchronousFileChannel.open(file, options2,
+                Task.getCurrentExecutorService(), new FileAttribute<?>[0]);
         closed=false;
     }
 
-    public void read(FileIORequest request, long position) throws Exception { 
-        checkRequest(request);
-        request.startRead(position);
-        channel.read(request.buffer, position, this, request);
+    public <R extends FileIORequest> R read(R request, long position, Port<R> replyTo) throws Exception { 
+        checkState();
+        request.prepare(this, true, position, replyTo);
+        channel.read(request.buffer, request.getPosition(), this, request);
+        return request;
     }
     
-    public void write(FileIORequest request, long position) throws Exception {
-        checkRequest(request);
-        request.startWrite(position);
-        channel.write(request.buffer, position, this, request);
+    public FileIORequest read(ByteBuffer buf, long position, Port<FileIORequest> replyTo) throws Exception { 
+        return read(new FileIORequest(buf), position, replyTo);
+    }
+    
+    public <R extends FileIORequest> R write(R request, long position, Port<R> replyTo) throws Exception { 
+        checkState();
+        request.prepare(this, true, position, replyTo);
+        channel.write(request.buffer, request.getPosition(), this, request);
+        return request;
     }
 
-    protected void checkRequest(FileIORequest request) throws ClosedChannelException {
-        if (request==null) {
-            throw new IllegalArgumentException("request==null");
-        }
-        if (channel==null) {
-            throw new IllegalStateException("channel not opened");
-        }
+    public FileIORequest write(ByteBuffer buf, long position, Port<FileIORequest> replyTo) throws Exception {
+        return write(new FileIORequest(buf), position, replyTo);
+    }
+
+    protected void checkState() throws ClosedChannelException {
         if (closed) {
             throw new ClosedChannelException();
         }

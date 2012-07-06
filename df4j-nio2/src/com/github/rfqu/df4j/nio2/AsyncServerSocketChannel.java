@@ -19,8 +19,8 @@ import java.nio.channels.CompletionHandler;
 import com.github.rfqu.df4j.core.Actor;
 
 public class AsyncServerSocketChannel 
-extends Actor<AsyncSocketChannel> 
-implements CompletionHandler<AsynchronousSocketChannel,AsyncSocketChannel>
+  extends Actor<AsyncSocketChannel> 
+  implements CompletionHandler<AsynchronousSocketChannel,AsyncSocketChannel>
 {
     private AsynchronousServerSocketChannel channel;
     private Switch channelAcc=new Switch(); // channel accessible   

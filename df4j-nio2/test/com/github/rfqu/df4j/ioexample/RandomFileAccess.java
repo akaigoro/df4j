@@ -194,7 +194,7 @@ public class RandomFileAccess {
             af.force(true);
             float etime = System.currentTimeMillis() - startTime;
             out.println("res="+res+" num bufs=" + nb + " elapsed=" + etime / 1000 + " sec; throughput=" + (etime / numBlocks) + " ms");
-            out.println("mean io time="+((float)command.accTime.get())/1000000/numBlocks+" ms");
+            out.println("mean io time="+((float)command.accTime.get())/numBlocks+" ms");
             if (res!=0) {
                 out.println("ERROR:"+res);
             }
@@ -206,7 +206,8 @@ public class RandomFileAccess {
      * creates the Writer actor and sends it empty buffers
      *
      */
-    class StarterW {
+    static class StarterW extends Actor<Request>{
+        SerialExecutor serex=new SerialExecutor();
         AsyncFileChannel af;
         int nb;
         boolean direct;
@@ -223,59 +224,60 @@ public class RandomFileAccess {
                 for (int k = 0; k < nb; k++) {
                     ByteBuffer buf = direct?ByteBuffer.allocateDirect(blockSize):ByteBuffer.allocate(blockSize);
                     Request req = new Request(buf);
-                    act(req);
+                    write(req);
                 }
             } catch (Exception e) {
                 sink.send(1);
             }
         }
         
-        protected synchronized void act(Request req) {
+		protected synchronized void write(Request req) throws Exception {
             if (started < numBlocks) { // has all io requests been launched?
                 req.clear();
                 long blockId = getBlockId(numBlocks, started);
                 fillBuf(req.getBuffer(), blockId);
-                try {
-                    af.write(req, blockId * blockSize);
-                } catch (Exception e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+                Port<Request> port=this;
+				af.write(req, blockId * blockSize, port);
                 started++;
             }
         }
         
-        class Request extends FileIORequest {
-            private long start;
-
-            public Request(ByteBuffer buf) {
-                super(buf);
-            }
-
-            @Override
-            public void startWrite(long position) {
-                super.startWrite(position);
-                start = System.nanoTime();
-            }
-
-            @Override
-            public void writeCompleted(Integer result, AsyncFileChannel channel) {
-                accTime.addAndGet(System.nanoTime()-start);
+        /** handles result of IO reqiest
+         */
+		@Override
+        protected void act(Request request) throws Exception {
+        	Throwable exc=request.getExc();
+			if (exc!=null) {
+                exc.printStackTrace();
+                sink.send(1); // signal the caller
+			} else {
+                accTime.addAndGet(System.currentTimeMillis()-request.start);
                 finished++;
                 if (finished < numBlocks) { // has the whole file been written?
-                    act(this);
+                    write(request);
                 } else {                    
                     sink.send(0); // signal the caller
                 }
-            }
-
-            @Override
-            public void writeFailed(Throwable exc, AsyncFileChannel channel) {
-                exc.printStackTrace();
-                sink.send(1); // signal the caller
-            }
-            
+			}
         }
+        
+    }
+    
+    static class Request extends FileIORequest {
+        long start;
+
+		public Request(ByteBuffer buf) {
+			super(buf);
+		}
+
+        @Override
+	    public <R extends FileIORequest> void prepare(AsyncFileChannel channel,
+	            boolean read, long position, Port<R> replyTo)
+	    {
+			super.prepare(channel, read, position, replyTo);
+			start=System.currentTimeMillis();
+		}
+    	
     }
 
     static void fillBuf(ByteBuffer buffer, long blockId) {

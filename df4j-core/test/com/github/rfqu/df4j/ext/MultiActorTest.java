@@ -17,7 +17,6 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.SerialExecutor;
-import com.github.rfqu.df4j.examples.GraphTest;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 

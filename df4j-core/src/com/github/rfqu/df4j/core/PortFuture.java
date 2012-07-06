@@ -26,6 +26,9 @@ public class PortFuture<T> extends Link implements Port<T>, Future<T> {
     
     @Override
     public synchronized void send(T message) {
+        if (message==null) {
+            throw new NullPointerException();
+        }
         this.message=message;
         notifyAll();
     }
