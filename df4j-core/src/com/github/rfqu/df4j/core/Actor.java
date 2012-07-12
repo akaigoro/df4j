@@ -17,7 +17,9 @@ import java.util.concurrent.Executor;
  */
 public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
 	protected final StreamInput<M> input=new StreamInput<M>();
-    protected volatile boolean completed;
+	protected boolean completed;
+    protected long actCounter=0; // DEBUG
+    protected long failureCounter=0; // DEBUG
 	
     public Actor(Executor executor) {
     	super(executor);
@@ -50,9 +52,11 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
             if (message == null) {
                 complete();
             } else {
+                actCounter++;
                 act(message);
             }
         } catch (Exception e) {
+            failureCounter++;
             failure(message, e);
         } finally {
             if (message == null) {
@@ -65,6 +69,9 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
 		return input.isClosed();
 	}
 
+    /**
+     * @return true when the method complete() has finished
+     */
 	public boolean isCompleted() {
 		return completed;
 	}

@@ -24,7 +24,7 @@ public class PrivateExecutor extends Thread implements Executor {
     
     /**
      * @param defaultExecutor - default executor for actors
-     * created vien this thread runs
+     * created when this thread runs
      */
     public PrivateExecutor(Executor defaultExecutor) {
         this.defaultExecutor=defaultExecutor;

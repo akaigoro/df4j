@@ -18,8 +18,7 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.ext.Callback;
-import com.github.rfqu.df4j.ext.Request;
+import com.github.rfqu.df4j.core.Request;
 
 
 /**
@@ -56,7 +55,7 @@ public class PingPongTest {
     /**
      * the type of messages floating between nodes
      */
-    static class Token extends Request<Token> {
+    static class Token extends Request<Token, Void> {
         int hops_remained;
 
         public Token(int hops_remained) {
@@ -68,7 +67,7 @@ public class PingPongTest {
      * The pinging actor
      * 
      */
-    static class Ping extends Actor<Token> implements Callback<Token>{
+    static class Ping extends Actor<Token> {
         Pong pong;
         Port<Token> sink;
 
@@ -83,8 +82,8 @@ public class PingPongTest {
          * sink, otherwise send to the Pong actor.
          */
         protected void act(Token token) throws Exception {
-            if (token.callback == null) {
-                token.callback = this;
+            if (token.getReplyTo() == null) {
+                token.setReplyTo(this);
                 pong.send(token);
             } else {
                 int nextVal = token.hops_remained - 1;
@@ -95,10 +94,6 @@ public class PingPongTest {
                     pong.send(token);
                 }
             }
-        }
-
-        @Override
-        public void sendFailure(Throwable exc) {
         }
     }
 
@@ -125,7 +120,7 @@ public class PingPongTest {
                 sink.send(token);
             } else {
                 token.hops_remained = nextVal;
-                token.reply(token);
+                token.reply(null);
             }
         }
     }

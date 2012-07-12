@@ -9,52 +9,24 @@
  */
 package com.github.rfqu.df4j.nio2;
 
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.InterruptedByTimeoutException;
 import java.util.concurrent.Executor;
 
-import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.Actor;
 
 /**
  * Handles the result of an IO operation.
- * Can be seen as a simplified actor, with space for only 1 incoming message.
- * @param <R> the type of accepted messages.
+ * @param <R> the type of accepted I/O requests.
  */
 public abstract class IOHandler<R extends IORequest<R, C>, C>
-  extends Task implements Port<R>
+  extends Actor<R>
 {
-    protected boolean fired=false; // true when this actor runs
-    protected R message=null;
-
     public IOHandler(Executor executor) {
         super(executor);
     }
 
     public IOHandler() {
-    }
-
-    @Override
-    public void send(R message) {
-        synchronized (this) {
-            if (fired) {
-                throw new IllegalStateException("fired already"); 
-            }
-            this.message=message;
-            fired=true;
-        }
-        fire();
-    }
-
-    @Override
-    public void run() {
-        try {
-            act(message);
-        } catch (Exception e) {
-            failure(message, e);
-        } finally {
-            synchronized (this) {
-                fired=false;
-            }
-        }
     }
 
     /**
@@ -63,27 +35,35 @@ public abstract class IOHandler<R extends IORequest<R, C>, C>
      * @throws Exception
      */
     protected void act(R request) throws Exception {
-    	Throwable exc=request.getExc();
-		if (exc!=null) {
-			failed(exc, request);
-    	} else {
-    		completed(request.result, request);
-    	}
+        Throwable exc = request.getExc();
+        if (exc == null) {
+            int result = request.getResult();
+            if (result==-1) {
+                closed(request);
+            } else {
+                completed(result, request);
+            }
+        } else {
+            if (exc instanceof AsynchronousCloseException) {
+                // System.out.println("  ServerRequest conn closed id="+id);
+                closed(request);
+            } else if (exc instanceof InterruptedByTimeoutException) {
+                timedOut(request);
+            } else {
+                // System.out.println("  ServerRequest read failed id="+id+"; exc="+exc);
+                failed(exc, request);
+            }
+        }
     }
 
-    /** handles failures
-     * 
-     * @param message
-     * @param e
-     */
-    protected void failure(R message, Exception e) {
-        e.printStackTrace();
+    protected abstract void completed(int result, R request) throws Exception;
+
+    protected void timedOut(R request) {
     }
-    
-    protected abstract void completed(Integer result, R request) throws Exception;
+
+    protected void closed(R request) throws Exception {
+    }
 
     protected void failed(Throwable exc, R request) throws Exception {
-    	exc.printStackTrace();
     }
-
 }

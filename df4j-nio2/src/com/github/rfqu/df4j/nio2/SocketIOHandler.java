@@ -9,8 +9,6 @@
  */
 package com.github.rfqu.df4j.nio2;
 
-import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.InterruptedByTimeoutException;
 import java.util.concurrent.Executor;
 
 /**
@@ -18,9 +16,7 @@ import java.util.concurrent.Executor;
  * Can be seen as a simplified actor, with space for only 1 incoming meassage.
  * @param <M> the type of accepted messages.
  */
-//public abstract class SocketIOHandler extends IOHandler<SocketIORequest, AsyncSocketChannel> {
-//R extends IORequest<R, C>
-public abstract class SocketIOHandler extends IOHandler<SocketIORequest, AsyncSocketChannel> {
+public abstract class SocketIOHandler<R extends SocketIORequest<R>> extends IOHandler<R, AsyncSocketChannel> {
 
     public SocketIOHandler(Executor executor) {
         super(executor);
@@ -29,25 +25,4 @@ public abstract class SocketIOHandler extends IOHandler<SocketIORequest, AsyncSo
     public SocketIOHandler() {
     }
 
-    @Override
-    protected void failed(Throwable exc, SocketIORequest request) throws Exception {
-        if (exc instanceof AsynchronousCloseException) {
-//          System.out.println("  ServerRequest conn closed id="+id);
-            closed(request);
-        } else if (exc instanceof InterruptedByTimeoutException) {
-		    timedOut(request);
-        } else {
-//          System.out.println("  ServerRequest read failed id="+id+"; exc="+exc);
-        	ioerror(exc, request);
-        }
-    }
-    
-    protected void timedOut(SocketIORequest request) {
-    }
-
-    protected void closed(SocketIORequest request) throws Exception {
-    }
-
-    protected void ioerror(Throwable exc, SocketIORequest request) throws Exception {
-    }
 }

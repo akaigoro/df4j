@@ -44,24 +44,24 @@ public class AsyncFileChannel {
         closed=false;
     }
 
-    public <R extends FileIORequest> R read(R request, long position, Port<R> replyTo) throws Exception { 
+    public <R extends FileIORequest<R>> R read(R request, long position, Port<R> replyTo) throws Exception { 
         checkState();
         request.prepare(this, true, position, replyTo);
         channel.read(request.buffer, request.getPosition(), this, request);
         return request;
     }
     
-    public FileIORequest read(ByteBuffer buf, long position, Port<FileIORequest> replyTo) throws Exception { 
-        return read(new FileIORequest(buf), position, replyTo);
-    }
-    
-    public <R extends FileIORequest> R write(R request, long position, Port<R> replyTo) throws Exception { 
+    public <R extends FileIORequest<R>> R write(R request, long position, Port<R> replyTo) throws Exception { 
         checkState();
         request.prepare(this, true, position, replyTo);
         channel.write(request.buffer, request.getPosition(), this, request);
         return request;
     }
 
+    public FileIORequest read(ByteBuffer buf, long position, Port<FileIORequest> replyTo) throws Exception { 
+        return read(new FileIORequest(buf), position, replyTo);
+    }
+    
     public FileIORequest write(ByteBuffer buf, long position, Port<FileIORequest> replyTo) throws Exception {
         return write(new FileIORequest(buf), position, replyTo);
     }

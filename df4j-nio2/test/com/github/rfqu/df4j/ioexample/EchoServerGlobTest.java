@@ -1,58 +1,66 @@
-
 package com.github.rfqu.df4j.ioexample;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.PortFuture;
-import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.util.DoubleValue;
 
-public class EchoServerTest {
-    static final int PERIOD = 5; // ms between subsequent requests for given client
+/**
+ * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched
+ */
+public class EchoServerGlobTest {
+	static final long PERIOD = 5; // ms between subsequent requests for given client
     static final int BUF_SIZE = 128;
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
     static int nThreads=Runtime.getRuntime().availableProcessors();
+    static int availableProcessors = Runtime.getRuntime().availableProcessors();
+    static PrintStream out=System.out;
+    static PrintStream err=System.err;
 
-    int availableProcessors = Runtime.getRuntime().availableProcessors();
-    InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
-    PrintStream out=System.out;
-    PrintStream err=System.err;
-    int numclients=3000;
-    int rounds = 10; // per client
+	InetSocketAddress iaddr = new InetSocketAddress("localhost", EchoServer.defaultPort);
+	int numclients;
+    int rounds; // per client
 	Timer timer;
-	EchoServer es;
-	ArrayList<ClientConnection> clients=new ArrayList<ClientConnection>();
+	HashMap<Integer, ClientConnection> clients=new HashMap<Integer, ClientConnection>();
+    Aggregator sink;
 	
+    public synchronized void removeClientConnection(ClientConnection clientConnection) {
+        clients.remove(clientConnection.id);
+    }
+
+	public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
+		sink.send(avg);
+		removeClientConnection(clientConnection);
+	}
+
     public void testThroughput(int numclients, int rounds)
     		throws Exception, IOException, InterruptedException
     {
         this.numclients=numclients;
         this.rounds=rounds;
 		timer=Timer.getCurrentTimer();
-        es=new EchoServer(local9999);
+        sink = new Aggregator(numclients);
         
-        Aggregator sink = new Aggregator(numclients);
-
         long start = System.currentTimeMillis();
         for (int i = 0; i < numclients; i++) {
-            clients.add(new ClientConnection(this, local9999, rounds, sink));
-//            System.out.println("clients="+clients.size());
-            Thread.sleep(2);
+            ClientConnection cconn = new ClientConnection(this, iaddr, rounds);
+			clients.put(cconn.id, cconn);
+			PortFuture<AsynchronousSocketChannel> listener=new PortFuture<AsynchronousSocketChannel>();
+			cconn.addConnectListener(listener);
+			listener.get(); // wait connection to connect
+//            Thread.sleep(2);
         }
         out.println("Started clients:"+numclients);
         double avgLatency=sink.avg.get();
-        es.close();
-        out.println("all closed");
         float time = (System.currentTimeMillis() - start)/1000.0f; // sec
         float rate = numclients*rounds / time;
         out.printf("Elapsed=%f sec; throughput = %f roundtrips/sec \n", time, rate);
@@ -66,26 +74,26 @@ public class EchoServerTest {
      */
     static class Aggregator extends Actor<DoubleValue> {
         int numclients;
-        long sum=0;
+		int reportPeriod = 1000;
+        double sum=0;
         long counter=0;
         PortFuture<Double> avg=new PortFuture<Double>();
-        AtomicInteger ac=new AtomicInteger();
+        long startTime=System.currentTimeMillis();
 
         public Aggregator(int numclients) {
-            super(null);
             this.numclients=numclients;
-        }
-
-        @Override
-        public void send(DoubleValue m) {
-            ac.addAndGet(1);
-            super.send(m);
         }
 
         @Override
         protected void act(DoubleValue message) throws Exception {
             counter++;
             sum+=message.value;
+			if (counter%reportPeriod==0) {
+    			long curTime=System.currentTimeMillis();
+            	double rate=(reportPeriod*1000d)/(curTime-startTime);
+            	out.printf("finished clients=%d; clients/sec=%f roundtrips/sec \n", counter, rate);
+            	startTime=curTime;
+    		}
             if (counter==numclients) {
                 complete();
             }
@@ -93,40 +101,54 @@ public class EchoServerTest {
         
         @Override
         protected void complete() throws Exception {
-            avg.send(((double)sum)/counter);
+            avg.send(sum/counter);
         }
 
     }
 
     @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
-        testThroughput(1,1);
+    	testThroughput(1,1);
    }
 
     @Test
     public void lightTest() throws Exception, IOException, InterruptedException {
-        testThroughput(5,5);
+    	testThroughput(2,2);
    }
 
     @Test
     public void mediumTest() throws Exception, IOException, InterruptedException {
-        testThroughput(100,200);
+    	testThroughput(100,200);
+   }
+
+    @Test
+    public void heavyTest() throws Exception, IOException, InterruptedException {
+    	testThroughput(1000,100);
    }
 
 //    @Test
-    public void heavyTest() throws Exception, IOException, InterruptedException {
-        testThroughput(1000,200);
-   }
-
- //   @Test
     public void veryHeavyTest() throws Exception, IOException, InterruptedException {
-        testThroughput(10000,1000);
+    	testThroughput(10000,1000);
    }
 
     public static void main(String[] args) throws Exception {
-        EchoServerTest t=new EchoServerTest();
-        t.smokeTest();
-        t.lightTest();
-        t.heavyTest();
+    	String host;
+    	if (args.length<1) {
+//    		System.out.println("Usage: EchoServerGlobTest host port");
+//    		System.exit(-1);
+    		host="localhost";
+    	} else {
+    		host = args[0];
+    	}
+    	Integer port;
+    	if (args.length<2) {
+    		port=EchoServer.defaultPort;
+    	} else {
+    	    port = Integer.valueOf(args[1]);
+    	}
+    	EchoServerGlobTest t=new EchoServerGlobTest();
+		t.iaddr = new InetSocketAddress(host, port);
+        t.mediumTest();
     }
+
 }

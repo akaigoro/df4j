@@ -38,6 +38,10 @@ public class Timer {
         timerThread.schedule(command, delay, TimeUnit.MILLISECONDS);
     }
     
+    public  <T> void schedule(Runnable task, long delay) {
+        timerThread.schedule(task, delay, TimeUnit.MILLISECONDS);
+    }
+    
     public  <T> void scheduleAt(Runnable task, long timeToFire) {
         timerThread.schedule(task, timeToFire-System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }

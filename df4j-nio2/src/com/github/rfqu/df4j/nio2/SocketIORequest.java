@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
 
 import com.github.rfqu.df4j.core.Port;
 
-public class SocketIORequest extends IORequest<SocketIORequest, AsyncSocketChannel> {
+public class SocketIORequest<R extends SocketIORequest<R>> extends IORequest<R, AsyncSocketChannel> {
 	long timeout; // milliseconds
 	boolean timed;
 
@@ -22,14 +22,14 @@ public class SocketIORequest extends IORequest<SocketIORequest, AsyncSocketChann
     }
 
     @Override
-    public void prepare(AsyncSocketChannel channel, boolean read, Port<SocketIORequest> replyTo2) {
-        super.prepare(channel, read, replyTo2);
+    public void prepare(AsyncSocketChannel channel, boolean read, Port<R> replyTo) {
+        super.prepare(channel, read, replyTo);
         timed=false;
         this.timeout=0;
     }
 
     public void prepare(AsyncSocketChannel channel, boolean read, 
-            Port<SocketIORequest> replyTo, long timeout)
+            Port<R> replyTo, long timeout)
     {
         super.prepare(channel, read, replyTo);
         timed=false;

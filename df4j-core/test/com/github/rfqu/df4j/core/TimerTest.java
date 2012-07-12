@@ -22,16 +22,44 @@ public class TimerTest {
 		}
     }
 
+    class Act implements Runnable {
+        int value;
+
+        public Act(int value) {
+            this.value = value;
+        }
+
+        @Override
+        public void run() {
+            long elapsed = System.currentTimeMillis()-start;
+            System.out.println("act "+value+" at "+elapsed);
+        }
+    }
+    
     @Test
-    public void runTest() throws InterruptedException {
-    	Portik<Integer> portik=new Portik<Integer>();
+    public void scheduleTest2() throws InterruptedException {        
         Timer timer= Timer.getCurrentTimer();
-        timer.schedule(portik, 112, 100);
-        timer.schedule(portik, 24, 20);
+        timer.schedule(new Act(112), 112);
+        timer.schedule(new Act(24), 24);
+        timer.schedule(new Act(1), 1);
+        timer.schedule(new Act(2), 2);
+        timer.schedule(new Act(10), 10);
+        timer.schedule(new Act(57), 57);
+        System.out.println("about to shut down");
+        timer.shutdown().get();
+        System.out.println("shut down");
+    }
+
+    @Test
+    public void scheduleTest3() throws InterruptedException {
+        Portik<Integer> portik=new Portik<Integer>();
+        Timer timer= Timer.getCurrentTimer();
+        timer.schedule(portik, 112, 112);
+        timer.schedule(portik, 24, 24);
         timer.schedule(portik, 1, 1);
         timer.schedule(portik, 2, 2);
         timer.schedule(portik, 10, 10);
-        timer.schedule(portik, 57, 50);
+        timer.schedule(portik, 57, 57);
         System.out.println("about to shut down");
         timer.shutdown().get();
         System.out.println("shut down");
@@ -39,7 +67,8 @@ public class TimerTest {
 
     public static void main(String args[]) throws InterruptedException {
         TimerTest nt = new TimerTest();
-        nt.runTest();
+        nt.scheduleTest2();
+        nt.scheduleTest3();
     }
 
 }

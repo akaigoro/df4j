@@ -117,7 +117,12 @@ public abstract class BaseActor extends Task {
     protected class Switch extends Pin {
     	private boolean on=false;
     	
-		public Switch() { }
+        public Switch() { }
+        public Switch(boolean on) {
+            if (on) {
+                on();
+            }
+        }
 
         public void on() {
         	boolean doFire;
@@ -148,6 +153,47 @@ public abstract class BaseActor extends Task {
 		}
     }
 
+    /** 
+     * holds tokens without data 
+     */
+    protected class Semaphore extends Pin {
+        private int count=0;
+        
+        public Semaphore(int count) {
+            this.count = count;
+            if (count>0) {
+                turnOn();
+            }
+        }
+
+        public Semaphore() {
+        }
+
+        public void send() {
+            synchronized (BaseActor.this) {
+                count++;
+                if (count==1) {
+                    turnOn();
+                }
+            }
+        }
+
+        public void remove() {
+            synchronized (BaseActor.this) {
+                if (count==0) {
+                    throw new IllegalStateException("place is empty"); 
+                }
+                count--;
+                if (count==0) {
+                    turnOff();
+                }
+            }
+        }
+
+        protected boolean isEmpty() {
+            return count==0;
+        }
+    }
 
     /**
      * Token storage with standard Port interface.
@@ -299,7 +345,7 @@ public abstract class BaseActor extends Task {
      * @param <R>  type of result
      */
     public class Demand<R> extends Pin implements Port<R>{
-        private Connector<R> connector=new Connector<R>();
+        private Promise<R> connector=new Promise<R>();
 
         /** indicates a demand
          * @param sink Port to send the result
@@ -307,18 +353,7 @@ public abstract class BaseActor extends Task {
         public void connect(Port<R> sink) {
         	boolean doFire;
             synchronized (BaseActor.this) {
-            	connector.connect(sink);
-            	doFire=turnOn();
-            }
-            if (doFire) {
-            	fire();
-            }
-    	}
-
-    	public void connect(StreamPort<R> sink) {
-        	boolean doFire;
-            synchronized (BaseActor.this) {
-            	connector.connect(sink);
+            	connector.addListener(sink);
             	doFire=turnOn();
             }
             if (doFire) {
@@ -329,7 +364,7 @@ public abstract class BaseActor extends Task {
     	public void connect(Port<R>... sinks) {
         	boolean doFire;
             synchronized (BaseActor.this) {
-            	connector.connect(sinks);
+            	connector.add(sinks);
             	doFire=turnOn();
             }
             if (doFire) {

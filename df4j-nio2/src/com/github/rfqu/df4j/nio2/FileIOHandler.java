@@ -16,7 +16,7 @@ import java.util.concurrent.Executor;
  * Can be seen as a simplified actor, with space for only 1 incoming meassage.
  * @param <M> the type of accepted messages.
  */
-public abstract class FileIOHandler extends IOHandler<FileIORequest, AsyncFileChannel> {
+public abstract class FileIOHandler<R extends FileIORequest<R>> extends IOHandler<R, AsyncFileChannel> {
 
     public FileIOHandler(Executor executor) {
         super(executor);

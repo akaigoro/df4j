@@ -14,25 +14,32 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-
 /**
- * Connects Actor's world and the outer space.
- * Actors are allowed to send messages to it, but not to get from
+ * A kind of dataflow variable: single input, multiple asynchronous outputs.
+ * Connects Actors and Threads.
+ * Actors are allowed to send messages to it, but not to get from. 
+ * Threads are allowed both to send and get.
  *
  * @param <T> the type of accepted messages
  */
-public class PortFuture<T> extends Link implements Port<T>, Future<T> {
-    protected volatile T message;
+public class PortFuture<T> implements Port<T>, Future<T> {
+	protected volatile boolean _hasValue;
+    protected T value;
     
     @Override
     public synchronized void send(T message) {
-        if (message==null) {
-            throw new NullPointerException();
+        if (_hasValue) {
+            throw new IllegalStateException("has value already");
         }
-        this.message=message;
+        this.value=message;
+        _hasValue=true;
         notifyAll();
     }
 
+    public boolean hasValue() {
+        return _hasValue;
+    }
+    
     /**
      * waits until a message arrive
      * @return received message
@@ -40,18 +47,10 @@ public class PortFuture<T> extends Link implements Port<T>, Future<T> {
      */
     @Override
     public synchronized T get() throws InterruptedException {
-        while (message==null) {
+        while (!_hasValue) {
             wait();
         }
-        return (T) message;
-    }
-
-    /**
-     * checks if the message has arrived.
-     * @return received message, or null if no message arrived
-     */
-    public synchronized T poll() {
-        return (T) message;
+        return value;
     }
 
     @Override
@@ -68,21 +67,21 @@ public class PortFuture<T> extends Link implements Port<T>, Future<T> {
 
     @Override
     public boolean isDone() {
-        return message!=null;
+        return _hasValue;
     }
 
     @Override
     public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        if (message!=null) {
-            return message;
+        if (value!=null) {
+            return value;
         }
         long duration = unit.toMillis(timeout);
         long startTime=System.currentTimeMillis();
         long endTime=startTime+duration;
         for (;;) {
             wait(duration);            
-            if (message!=null) {
-                return message;
+            if (value!=null) {
+                return value;
             }
             long currentTime=System.currentTimeMillis();
             duration=(endTime-currentTime);

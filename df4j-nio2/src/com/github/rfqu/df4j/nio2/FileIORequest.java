@@ -16,18 +16,17 @@ import java.nio.channels.AsynchronousCloseException;
 import com.github.rfqu.df4j.core.Port;
 
 //public class FileIORequest<R extends IORequest<R, AsyncFileChannel>> extends IORequest<R, AsyncFileChannel> {
-public class FileIORequest extends IORequest<FileIORequest, AsyncFileChannel> {
+public class FileIORequest<R extends FileIORequest<R>> extends IORequest<R, AsyncFileChannel> {
     private long position;
     
     public FileIORequest(ByteBuffer buf) {
         super(buf);
     }
 
-    @SuppressWarnings("unchecked")
-    public <R extends FileIORequest> void prepare(AsyncFileChannel channel,
+    public void prepare(AsyncFileChannel channel,
             boolean read, long position, Port<R> replyTo)
     {
-        super.prepare(channel, read, (Port<FileIORequest>) replyTo);
+        super.prepare(channel, read, replyTo);
         this.position = position;
     }
 

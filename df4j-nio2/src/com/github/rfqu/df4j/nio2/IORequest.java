@@ -13,39 +13,36 @@ import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Request;
 
-public class IORequest<R extends IORequest<R, C>, C> extends Link 
+public class IORequest<R extends IORequest<R, C>, C> extends Request<R, Integer>
   implements CompletionHandler<Integer, C>, Runnable
 {
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
 
     public int rid=ids.addAndGet(1);
     protected C channel;
-    protected State state=State.FREE;
     protected ByteBuffer buffer;
-    private Port<R> replyTo;
-    protected Integer result;
-    protected Throwable exc;
+    private boolean inRead;
     private boolean inTrans=false;
 
 	public IORequest(ByteBuffer buffer) {
 		this.buffer = buffer;
 	}
 
-    public void prepare(C channel, boolean read, Port<R> replyTo2) {
+    public void prepare(C channel, boolean read, Port<R> replyTo) {
+        super.prepare(replyTo);
         this.channel = channel;
+        this.inRead=read;
         if (read) {
-            state = State.READ;
             buffer.clear();
         } else {
-            state = State.WRITE;
             buffer.flip();
         }
-        this.replyTo = replyTo2;
-        result = null;
-        exc = null;
+        if (buffer.remaining()==0) {
+            throw new IllegalArgumentException("no free space in the buffer");
+        }
     }
 
     public void clear() {
@@ -58,25 +55,12 @@ public class IORequest<R extends IORequest<R, C>, C> extends Link
     /** for timer */
     @Override
     public synchronized void run() {
-        switch (state) {
-        case READ:
-        case WRITE:
-            state=State.TIMER;
-            doReply();
-            break;
-        }
+        forward();
     }
 
-    @SuppressWarnings("unchecked")
-    private final void doReply() {
-        if (replyTo!=null) {
-            replyTo.send((R)this);
-        }
-    }
-    
     private void checkInTrans() {
         if (inTrans) {
-            throw new IllegalStateException("in transfer already");
+            throw new IllegalStateException("in transfer state already");
         }
         inTrans=true;
     }
@@ -85,43 +69,23 @@ public class IORequest<R extends IORequest<R, C>, C> extends Link
 	public synchronized void completed(Integer result, C attachment) {
 //        System.err.println(" IORequest.completed "+state+" rid="+rid);
         checkInTrans();
-        this.result=result;
-        switch (state) {
-        case READ:
+        if (inRead) {
             //System.out.println("channel read completed id="+id);
             buffer.flip();
-            break;
-        case WRITE:
-            //System.out.println("channel write completed id="+id);
+        } else {
+        	//System.out.println("channel write completed id="+id);
             buffer.clear();
-            break;
-        case TIMER:
-            return;
-        default:
-            throw new IllegalStateException("IORequest.completed: in "+state+" already");
         }
-        state=State.FREE;
         inTrans=false;
-        doReply();
+        reply(result);
 	}
 
     @Override
     public synchronized void failed(Throwable exc, C channel) {
         checkInTrans();
-        switch (state) {
-        case READ:
-        case WRITE:
-//            System.err.println("channel "+state+" failed rid="+rid+" exc="+exc);
-            break;
-        case TIMER:
-            return;
-        default:
-            throw new IllegalStateException("IORequest.failed: in "+state+" already");
-        }
         this.exc=exc;
-        state=State.ERROR;
         inTrans=false;
-        doReply();
+        forward();
     }
 
 	public C getChannel() {
@@ -137,28 +101,10 @@ public class IORequest<R extends IORequest<R, C>, C> extends Link
     }
 
 	public boolean isReadOp() {
-		return state==State.READ;
+		return inRead;
 	}
 
 	public boolean isInTrans() {
-        return state!=State.FREE;
+        return inTrans;
 	}
-
-    public Integer getResult() {
-        return result;
-    }
-
-	public Throwable getExc() {
-		return exc;
-	}
-
-	public Port<R> getReplyTo() {
-		return replyTo;
-	}
-
-	public void setReplyTo(Port<R> replyTo) {
-		this.replyTo = replyTo;
-	}
-
-	public enum State{FREE, READ, WRITE, TIMER, ERROR}
 }

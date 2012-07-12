@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Connector;
+import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.PortFuture;
 import com.github.rfqu.df4j.util.BinaryOp;
@@ -81,7 +81,7 @@ public class FormulaTest {
      * compute the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
-	class Discr extends Connector<Double> {
+	class Discr extends Promise<Double> {
 		Square sq=new Square();	
 		Mult mu1=new Mult();	
 		Mult mu2=new Mult();	
@@ -112,16 +112,16 @@ public class FormulaTest {
         Sum sum = new Sum();
         Diff diff=new Diff();
         // inputs
-        Connector<Double> a=new Connector<Double>();
-        Connector<Double> b=new Connector<Double>();
+        Promise<Double> a=new Promise<Double>();
+        Promise<Double> b=new Promise<Double>();
 		Port<Double> c=d.c;
 		// outputs
 		Div x1 = new Div();
 		Div x2 = new Div();      
         {
-            a.connect(d.a, mul.p2);
-            b.connect(d.b, mb);
-            d.connect(sqrt);
+            a.add(d.a, mul.p2);
+            b.add(d.b, mb);
+            d.addListener(sqrt);
         	
             mb.connect(sum.p1, diff.p1);
             sqrt.connect(sum.p2, diff.p2);

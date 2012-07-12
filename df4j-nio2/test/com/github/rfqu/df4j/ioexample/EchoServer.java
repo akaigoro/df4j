@@ -5,137 +5,122 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.SerialExecutor;
+import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.Promise;
+import com.github.rfqu.df4j.core.StreamPort;
 import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.SocketIOHandler;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 
-public class EchoServer extends AsyncServerSocketChannel {
-    static final int BUF_SIZE = 128;
-    static AtomicInteger ids=new AtomicInteger(); // DEBUG
-    
-    ArrayList<Connection> connections=new ArrayList<Connection>();
-    
-    public EchoServer(InetSocketAddress addr) throws IOException {
+public class EchoServer extends AsyncServerSocketChannel
+  implements StreamPort<AsynchronousSocketChannel>
+{
+	public static final int defaultPort = 9998;
+    public static final int numconnections=100; // max simultaneous server connections
+    public static final int BUF_SIZE = 128;
+
+    AtomicInteger ids=new AtomicInteger(); // for DEBUG    
+    InetSocketAddress addr;
+	int maxConn=numconnections;
+    /** active connections */
+    HashMap<Integer, ServerConnection> connections=new HashMap<Integer, ServerConnection>();
+    /** listeners to the closing event */
+    protected Promise<InetSocketAddress> closeListeners=new Promise<InetSocketAddress>();
+        
+    public EchoServer(InetSocketAddress addr, int maxConn) throws IOException {
         super(addr);
-        welcome();
+        super.open(this, maxConn);
+        this.addr=addr;
     }
 
-    /** prepare connection handler for future connections 
-     */
-    private synchronized void welcome() throws ClosedChannelException {
-        AsyncSocketChannel channel=new AsyncSocketChannel();
-        this.send(channel);
-        Connection connection = new Connection(channel);
-        connections.add(connection);
-//        System.out.println("connections="+connections.size());
-    }
-
-    /** Accept client connection request.
-     *  Prepare new ready Connection object.
-     */
     @Override
-    public void completed(AsynchronousSocketChannel result, AsyncSocketChannel channel) {
-        super.completed(result, channel);
-        //  System.out.println("  Server connection accepted");
-        // prepare another connection handler for future connections
+    public void send(AsynchronousSocketChannel m) {
+        AsyncSocketChannel channel=new AsyncSocketChannel(m);
         try {
-            welcome();
-        } catch (ClosedChannelException e) {
-        }
-    }
-
-    public synchronized void close() {
-        for (;;) {
-            int sz=connections.size();
-            if (sz==0) break;
-            try {
-                connections.get(sz-1).close(); // removes from the collection
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            ServerConnection connection = new ServerConnection(this, channel);
+            synchronized(this) {
+                connections.put(connection.id, connection);
             }
-        }
-        try {
-        	super.complete();
-            super.close();
-        } catch (Exception e) {
+        } catch (ClosedChannelException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
-    
-    class Connection implements Comparable<Connection>{
-        
-        public int id=ids.addAndGet(1);
-        AsyncSocketChannel channel;
-        SerialExecutor serex=new SerialExecutor();
-        private ByteBuffer buffer;
-        boolean closed=false;
 
-        public Connection(AsyncSocketChannel channel) throws ClosedChannelException {
-            this.channel=channel;
-            buffer=ByteBuffer.allocate(EchoServerTest.BUF_SIZE);
-            startRead(channel);
-        }
-
-		private void startRead(AsyncSocketChannel channel) throws ClosedChannelException {
-//            System.out.println("  ServerRequest read started id="+id);
-			channel.read(buffer, endRead);
-		}
-
-        public void close() throws IOException {
-            closed=true;
-            channel.close();
-            synchronized(EchoServer.this) {
-                connections.remove(Connection.this);
+    @Override
+    public void close() {
+        synchronized (this) {
+            if (!opened) {
+                return;
             }
-//            System.out.println("connections="+connections.size());
         }
-
-        SocketIOHandler endRead = new SocketIOHandler(serex) {
-            @Override
-            protected void completed(Integer result, SocketIORequest request) {
-                // System.out.println("  ServerRequest readCompleted id="+id);
-                // read client's message as if all the data have been read
-                buffer.position(buffer.limit());
-                // write it back
+        super.close();
+        for (;;) {
+            synchronized (this) {
+                Set<Integer> keys = connections.keySet();
+                Iterator<Integer> it = keys.iterator();
+                if (!it.hasNext()) {
+                    break;
+                }
                 try {
-                    channel.write(request.getBuffer(), endWrite);
-                } catch (ClosedChannelException e) {
+                    Integer firstKey = it.next();
+                    connections.get(firstKey).close(); // removes from the collection
+                    connections.remove(firstKey);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
             }
-
-            @Override
-            protected  void closed(SocketIORequest request) throws IOException {
-                Connection.this.close();
-            }
-        };
-
-        SocketIOHandler endWrite = new SocketIOHandler(serex) {
-            @Override
-            protected void completed(Integer result, SocketIORequest request) {
-//              System.out.println("  ServerRequest writeCompleted id="+id);
-                try {
-                    startRead(channel);
-                } catch (ClosedChannelException e) {
-                }
-            }
-
-            @Override
-            protected  void closed(SocketIORequest request) throws IOException {
-                Connection.this.close();
-            }
-        };
-
-        @Override
-        public int compareTo(Connection o) {
-            return id-o.id;
         }
-        
+        closeListeners.send(addr);
     }
+
+    protected void conncClosed(ServerConnection connection) {
+        synchronized(this) {
+            connections.remove(connection);
+            if (!opened) {
+                return;
+            }
+        }
+        //            System.out.println("connections="+connections.size());
+        super.maxConnUp(); // allow another connection
+    }
+
+    public <R extends Port<InetSocketAddress>> R addCloseListener(R listener) {
+        closeListeners.addListener(listener);
+        return listener;
+    }
+
+    static class Request extends SocketIORequest<Request> {
+		public Request(ByteBuffer buf) {
+			super(buf);
+		}    	
+    }
+    
+    public static void main(String[] args) throws Exception {
+    	Integer port;
+    	if (args.length<1) {
+//    		System.out.println("Usage: EchoServer port maxConn");
+//    		System.exit(-1);
+    		port=defaultPort;
+    	} else {
+    	    port = Integer.valueOf(args[0]);
+    	}
+    	int maxConn;
+    	if (args.length<2) {
+    		maxConn=numconnections;
+    	} else {
+    		maxConn = Integer.valueOf(args[1]);
+    	}
+		InetSocketAddress addr=new InetSocketAddress("localhost", port);
+        EchoServer es=new EchoServer(addr, maxConn);
+        es.addCloseListener(new PortFuture<InetSocketAddress>()).get(); // inet addr is free now
+    }
+    
 }

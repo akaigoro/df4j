@@ -263,7 +263,7 @@ public class RandomFileAccess {
         
     }
     
-    static class Request extends FileIORequest {
+    static class Request extends FileIORequest<Request> {
         long start;
 
 		public Request(ByteBuffer buf) {
@@ -271,8 +271,8 @@ public class RandomFileAccess {
 		}
 
         @Override
-	    public <R extends FileIORequest> void prepare(AsyncFileChannel channel,
-	            boolean read, long position, Port<R> replyTo)
+	    public void prepare(AsyncFileChannel channel,
+	            boolean read, long position, Port<Request> replyTo)
 	    {
 			super.prepare(channel, read, position, replyTo);
 			start=System.currentTimeMillis();

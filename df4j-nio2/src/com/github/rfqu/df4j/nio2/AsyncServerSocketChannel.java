@@ -12,50 +12,123 @@ package com.github.rfqu.df4j.nio2;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.StreamPort;
 
 public class AsyncServerSocketChannel 
-  extends Actor<AsyncSocketChannel> 
-  implements CompletionHandler<AsynchronousSocketChannel,AsyncSocketChannel>
+  implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
+    private StreamPort<AsynchronousSocketChannel> consumer;
+    /** max number of simultaneous connections */
+    private int maxConn;
+    /** an accept request is pending */
+    private boolean pending=false;
+    protected boolean opened=false;
     private AsynchronousServerSocketChannel channel;
-    private Switch channelAcc=new Switch(); // channel accessible   
     
     public AsyncServerSocketChannel(InetSocketAddress addr) throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
-        channelAcc.on();
+    }
+    
+    public synchronized void open(StreamPort<AsynchronousSocketChannel> consumer, int maxConn) {
+        synchronized (this) {
+            if (opened) {
+                throw new IllegalStateException("opened already");
+            }
+            opened=true;
+        }
+        this.consumer=consumer;
+        this.maxConn=maxConn;
+        acceptIfPossible();
     }
 
+    private void acceptIfPossible() {
+        synchronized (this) {
+            if (!opened) {
+                throw new IllegalStateException("not opened");
+            }
+            if (pending || maxConn==0) {
+                return;
+            }
+            maxConn--;
+            pending=true;
+        }
+        accept();
+    }
+
+    public void maxConnUp() {
+        synchronized (this) {
+            if (!opened) {
+                throw new IllegalStateException("not opened");
+            }
+            if (pending) {
+                maxConn++;
+                return;
+            }
+            pending=true;
+        }
+        accept();
+    }
+    
+    private void accept() {
+        try {
+            channel.accept(null, this);
+//        } catch (ClosedChannelException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
+            close();
+        }
+    }
+
+    /** new client connected */
+    @Override
+    public void completed(AsynchronousSocketChannel result, Void attachment) {
+        synchronized (this) {
+            pending=false;
+        }
+        consumer.send(result);
+        acceptIfPossible();
+    }
+
+    /** new client connection failed */
+    @Override
+    public void failed(Throwable exc, Void attachment) {
+        if (exc instanceof AsynchronousCloseException) {
+            try {
+                close();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            return;
+        }
+        exc.printStackTrace();
+        maxConnUp(); // TODO log and set max attempt counter 
+        acceptIfPossible();
+    }
+
+    public void close() {
+        synchronized (this) {
+            if (!opened) {
+                return;
+            }
+            opened=false;
+        }
+        try {
+            channel.close();
+        } catch (IOException e) {
+        }
+        consumer.close();
+    }
+    
     public AsynchronousServerSocketChannel getChannel() {
         return channel;
     }
 
-    @Override
-    protected void act(AsyncSocketChannel connection) throws Exception {
-        channelAcc.off();
-        channel.accept(connection, this);
-    }
-
-    @Override
-    protected void complete() throws Exception {
-        channel.close();
-    }
-    
-    @Override
-    public void completed(AsynchronousSocketChannel result, AsyncSocketChannel attachment) {
-        channelAcc.on();
-        attachment.completed(null, result);
-    }
-
-    @Override
-    public void failed(Throwable exc, AsyncSocketChannel attachment) {
-        channelAcc.on();
-        attachment.failed(exc, null);
-    }
 }
