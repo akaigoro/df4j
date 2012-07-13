@@ -11,14 +11,14 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.PortFuture;
-import com.github.rfqu.df4j.core.Timer;
+import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.util.DoubleValue;
 
 /**
  * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched
  */
 public class EchoServerGlobTest {
-	static final long PERIOD = 5; // ms between subsequent requests for given client
+	static final long PERIOD = 0;//5; // ms between subsequent requests for given client
     static final int BUF_SIZE = 128;
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
     static int nThreads=Runtime.getRuntime().availableProcessors();
@@ -106,22 +106,22 @@ public class EchoServerGlobTest {
 
     }
 
-    @Test
+//    @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
     	testThroughput(1,1);
    }
 
-    @Test
+//    @Test
     public void lightTest() throws Exception, IOException, InterruptedException {
     	testThroughput(2,2);
    }
 
-    @Test
+//    @Test
     public void mediumTest() throws Exception, IOException, InterruptedException {
     	testThroughput(100,200);
    }
 
-    @Test
+//    @Test
     public void heavyTest() throws Exception, IOException, InterruptedException {
     	testThroughput(1000,100);
    }

@@ -27,6 +27,9 @@ public class Request<T extends Request<T, R>, R> extends Link {
         this.replyTo = callback;
     }
 
+    /** initialize
+     * @param replyTo destination
+     */
     public void prepare(Port<T> replyTo) {
         this.replyTo = replyTo;
         result = null;
@@ -44,22 +47,20 @@ public class Request<T extends Request<T, R>, R> extends Link {
         replyTo.send((T) this);
     }
 
-    @SuppressWarnings("unchecked")
+    /** sets the result and forwards to the destination
+     * @param result
+     */
     public void reply(R result) {
-        if (replyTo == null) {
-            return;
-        }
         this.result=result;
-        replyTo.send((T) this);
+        forward();
     }
 
-    @SuppressWarnings("unchecked")
+    /** sets the error and forwards to the destination
+     * @param result
+     */
     public void replyFailure(Throwable exc) {
-        if (replyTo == null) {
-            return;
-        }
         this.exc=exc;
-        replyTo.send((T) this);
+        forward();
     }
 
     public Port<T> getReplyTo() {

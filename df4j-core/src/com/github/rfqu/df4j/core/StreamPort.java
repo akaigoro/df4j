@@ -16,7 +16,7 @@ package com.github.rfqu.df4j.core;
  */
 public interface StreamPort<M> extends Port<M>{
     /**
-     * indicates the end of token stream 
+     * signals the end of token stream 
      */
     public void close();
 }

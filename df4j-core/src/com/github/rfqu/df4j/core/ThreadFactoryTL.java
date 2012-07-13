@@ -16,8 +16,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 
 /**
- * Allows standard java.util.concurrent executors to be used as context executors
- * <p>
+ * Creates threads marked with an Executor, allowing standard java.util.concurrent
+ * executors to be used as context executors.
  * @author rfq
  *
  */

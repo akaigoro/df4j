@@ -12,7 +12,8 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Executor;
 
 /**
- * An Actor with several input Ports. Each port has specific message handler.
+ * An Actor with several input Ports, subclassed from MultiPortActor.PortHandler.
+ * Each port has specific message handler PortHandler.act().
  * Messages for all ports are stored in the single message queue.
  */
 public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {

@@ -30,7 +30,7 @@ public class FormulaTest {
     public void t01() throws InterruptedException {
 		Square sq=new Square();	
 	    PortFuture<Double> pr=new PortFuture<Double>();
-    	sq.connect(pr);
+    	sq.addListener(pr);
     	sq.send(2.0);
         int res = pr.get().intValue();
         assertEquals(4, res);
@@ -44,14 +44,14 @@ public class FormulaTest {
     public void t02() throws InterruptedException {
 		Mult node=new Mult();	
 	    PortFuture<Double> pr=new PortFuture<Double>();
-    	node.connect(pr);
+    	node.addListener(pr);
     	node.p1.send(2.0);
     	node.p2.send(3.0);
         assertEquals(6, pr.get().intValue());
     }
 
     /**
-     * compute sqrt(a^2+b^2)
+     * computes sqrt(a^2+b^2)
      */
 	class Module extends Sqrt {
 		Square sq1=new Square();	
@@ -60,9 +60,9 @@ public class FormulaTest {
 		Port<Double> p1=sq1;
 		Port<Double> p2=sq2;
         {
-        	sq1.connect(sum.p1);
-        	sq2.connect(sum.p2);
-            sum.connect(this);
+        	sq1.addListener(sum.p1);
+        	sq2.addListener(sum.p2);
+            sum.addListener(this);
         }
 	}
 	
@@ -70,7 +70,7 @@ public class FormulaTest {
     public void t03() throws InterruptedException {
     	Module node = new Module();
 	    PortFuture<Double> pr=new PortFuture<Double>();
-    	node.connect(pr);
+    	node.addListener(pr);
     	node.p1.send(3.0);
     	node.p2.send(4.0);
         double res = pr.get();
@@ -78,7 +78,7 @@ public class FormulaTest {
     }
 
     /**
-     * compute the discriminant of a quadratic equation
+     * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
 	class Discr extends Promise<Double> {
@@ -92,10 +92,10 @@ public class FormulaTest {
 		Port<Double> c=mu2.p2;
 		{
             mu1.p1.send(4.0);
-            mu1.connect(mu2.p1);
-            sq.connect(diff.p1);
-            mu2.connect(diff.p2);
-            diff.connect(this);
+            mu1.addListener(mu2.p1);
+            sq.addListener(diff.p1);
+            mu2.addListener(diff.p2);
+            diff.addListener(this);
         }
 	}
     /**
@@ -119,27 +119,27 @@ public class FormulaTest {
 		Div x1 = new Div();
 		Div x2 = new Div();      
         {
-            a.add(d.a, mul.p2);
-            b.add(d.b, mb);
+            a.addListeners(d.a, mul.p2);
+            b.addListeners(d.b, mb);
             d.addListener(sqrt);
         	
-            mb.connect(sum.p1, diff.p1);
-            sqrt.connect(sum.p2, diff.p2);
-            sum.connect(x1.p1);
-            mul.connect(x1.p2, x2.p2);
+            mb.addListeners(sum.p1, diff.p1);
+            sqrt.addListeners(sum.p2, diff.p2);
+            sum.addListeners(x1.p1);
+            mul.addListeners(x1.p2, x2.p2);
         	
-            diff.connect(x2.p1);
+            diff.addListeners(x2.p1);
             mul.p1.send(2.0);
         }
-
 	}
-    @Test
+
+	@Test
     public void t04() throws InterruptedException {
     	QuadEq node = new QuadEq();
 	    PortFuture<Double> pr1=new PortFuture<Double>();
 	    PortFuture<Double> pr2=new PortFuture<Double>();
-	    node.x1.connect(pr1);
-	    node.x2.connect(pr2);
+	    node.x1.addListener(pr1);
+	    node.x2.addListener(pr2);
     	node.a.send(2.0);
     	node.b.send(3.0);
     	node.c.send(-14.0);

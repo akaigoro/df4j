@@ -43,7 +43,7 @@ public class EchoServerLocTest {
     	localTest(100, 1000,100);
    }
 
-//    @Test
+    @Test
     public void veryHeavyTest() throws Exception, IOException, InterruptedException {
     	localTest(1000, 10000,1000);
    }

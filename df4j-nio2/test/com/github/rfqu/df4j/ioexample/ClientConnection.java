@@ -11,8 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.SerialExecutor;
-import com.github.rfqu.df4j.core.Timer;
-import com.github.rfqu.df4j.ioexample.EchoServerGlobTest.Aggregator;
+import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio2.SocketIOHandler;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
@@ -28,7 +27,7 @@ class ClientConnection implements Comparable<ClientConnection> {
     public int serverId;
     SerialExecutor serex=new SerialExecutor();
     AsyncSocketChannel channel=new AsyncSocketChannel();
-    Request request;
+    CliRequest request;
     AtomicLong rounds;
     Random rand=new Random();
     long sum=0;
@@ -41,7 +40,7 @@ class ClientConnection implements Comparable<ClientConnection> {
         this.rounds=new AtomicLong(rounds);
         channel.connect(addr);
         ByteBuffer buffer = ByteBuffer.allocate(EchoServerGlobTest.BUF_SIZE);
-        request=new Request(buffer);
+        request=new CliRequest(buffer);
         channel.read(request, endRead1, timeout);
     }
 
@@ -49,9 +48,9 @@ class ClientConnection implements Comparable<ClientConnection> {
 		channel.addConnectListener(listener);
 	}
 
-    SocketIOHandler<Request> endRead1 = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<CliRequest> endRead1 = new SocketIOHandler<CliRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) throws Exception {
+        protected void completed(int result, CliRequest request) throws Exception {
             serverId=request.getBuffer().getInt();
 //            timer.schedule(startRead, request, EchoServerTest.PERIOD);
             startWrite.send(request);
@@ -60,9 +59,9 @@ class ClientConnection implements Comparable<ClientConnection> {
     
     /** starts write operation
      */
-    SocketIOHandler<Request> startWrite = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<CliRequest> startWrite = new SocketIOHandler<CliRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) throws Exception {
+        protected void completed(int result, CliRequest request) throws Exception {
             counterRun++;
             request.start = System.currentTimeMillis();
             request.data = rand.nextInt();
@@ -73,24 +72,24 @@ class ClientConnection implements Comparable<ClientConnection> {
         }
     };
 
-    SocketIOHandler<Request> endWrite = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<CliRequest> endWrite = new SocketIOHandler<CliRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) throws ClosedChannelException {
+        protected void completed(int result, CliRequest request) throws ClosedChannelException {
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
             channel.read(request, endRead, timeout);
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
         }
 
         @Override
-        protected void timedOut(Request request) {
+        protected void timedOut(CliRequest request) {
             System.err.println("endWrite.timedOut!");
             Thread.dumpStack();
         }       
     };
     
-    SocketIOHandler<Request> endRead = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<CliRequest> endRead = new SocketIOHandler<CliRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) {
+        protected void completed(int result, CliRequest request) {
 //            System.err.println("  client Request read ended; id="+id+" rid="+request.rid+" count="+count);
             // read client's message
             request.checkData();
@@ -122,17 +121,17 @@ class ClientConnection implements Comparable<ClientConnection> {
         }
 
         @Override
-        protected void timedOut(Request request) {
+        protected void timedOut(CliRequest request) {
             System.err.println("endRead.timedOut!");
             Thread.dumpStack();
         }
     };
 
-    static class Request extends SocketIORequest<Request> {
+    static class CliRequest extends TracingRequest<CliRequest> {
         long start;
         int data;
 
-        public Request(ByteBuffer buf) {
+        public CliRequest(ByteBuffer buf) {
             super(buf);
         }
 

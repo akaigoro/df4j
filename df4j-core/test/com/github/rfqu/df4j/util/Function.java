@@ -13,7 +13,7 @@ import com.github.rfqu.df4j.core.BaseActor;
 import com.github.rfqu.df4j.core.Port;
 
 /**
- * abstract node with several inputs and single output
+ * abstract node with single output
  * @param <R> type of result
  */
 public abstract class Function<R> extends BaseActor {
@@ -23,11 +23,11 @@ public abstract class Function<R> extends BaseActor {
     	res.send(val);
     }
 
-    public void connect(Port<R> sink) {
-        res.connect(sink);
+    public void addListener(Port<R> sink) {
+        res.addListener(sink);
     }
     
-    public void connect(Port<R>... sinks) {
-        res.connect(sinks);
+    public void addListeners(Port<R>... sinks) {
+        res.addListeners(sinks);
     }
 }

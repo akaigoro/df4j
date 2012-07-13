@@ -54,24 +54,7 @@ public class PortFuture<T> implements Port<T>, Future<T> {
     }
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean isDone() {
-        return _hasValue;
-    }
-
-    @Override
-    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (value!=null) {
             return value;
         }
@@ -91,4 +74,24 @@ public class PortFuture<T> implements Port<T>, Future<T> {
         }
     }
 
+    public T get(long timeoutMillis) throws InterruptedException, ExecutionException, TimeoutException {
+        return get(timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+    
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return _hasValue;
+    }
 }

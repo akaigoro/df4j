@@ -2,7 +2,6 @@ package com.github.rfqu.df4j.ioexample;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
@@ -16,7 +15,6 @@ import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.StreamPort;
 import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.SocketIORequest;
 
 public class EchoServer extends AsyncServerSocketChannel
   implements StreamPort<AsynchronousSocketChannel>
@@ -27,7 +25,6 @@ public class EchoServer extends AsyncServerSocketChannel
 
     AtomicInteger ids=new AtomicInteger(); // for DEBUG    
     InetSocketAddress addr;
-	int maxConn=numconnections;
     /** active connections */
     HashMap<Integer, ServerConnection> connections=new HashMap<Integer, ServerConnection>();
     /** listeners to the closing event */
@@ -83,7 +80,7 @@ public class EchoServer extends AsyncServerSocketChannel
 
     protected void conncClosed(ServerConnection connection) {
         synchronized(this) {
-            connections.remove(connection);
+            connections.remove(connection.id);
             if (!opened) {
                 return;
             }
@@ -97,12 +94,6 @@ public class EchoServer extends AsyncServerSocketChannel
         return listener;
     }
 
-    static class Request extends SocketIORequest<Request> {
-		public Request(ByteBuffer buf) {
-			super(buf);
-		}    	
-    }
-    
     public static void main(String[] args) throws Exception {
     	Integer port;
     	if (args.length<1) {

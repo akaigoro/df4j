@@ -57,8 +57,8 @@ public class ActorVariantsTest {
         PortFuture<Double> sum=new PortFuture<Double>();
         PortFuture<Double> avg=new PortFuture<Double>();
         {
-            node.sum.connect(sum);
-            node.avg.connect(avg);
+            node.sum.addListener(sum);
+            node.avg.addListener(avg);
         }
         double value=1.0;
         int cnt=12456;

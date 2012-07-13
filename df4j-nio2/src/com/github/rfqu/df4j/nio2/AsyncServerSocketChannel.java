@@ -53,12 +53,18 @@ public class AsyncServerSocketChannel
             if (!opened) {
                 throw new IllegalStateException("not opened");
             }
-            if (pending || maxConn==0) {
+            if (pending) {
+                System.out.println("acceptIfPossible: not (pending)");
+                return;
+            }
+            if (maxConn==0) {
+                System.out.println("acceptIfPossible: not (maxConn==0)");
                 return;
             }
             maxConn--;
             pending=true;
         }
+        System.out.println("acceptIfPossible: yes");
         accept();
     }
 
@@ -68,11 +74,13 @@ public class AsyncServerSocketChannel
                 throw new IllegalStateException("not opened");
             }
             if (pending) {
+                System.out.println("maxConnUp: not (pending)");
                 maxConn++;
                 return;
             }
             pending=true;
         }
+        System.out.println("maxConnUp: yes");
         accept();
     }
     
@@ -89,6 +97,7 @@ public class AsyncServerSocketChannel
     /** new client connected */
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachment) {
+        System.out.println("accepted");
         synchronized (this) {
             pending=false;
         }
