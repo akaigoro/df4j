@@ -14,6 +14,7 @@ import static org.junit.Assert.fail;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 import org.junit.Before;
@@ -142,11 +143,11 @@ public class QuickSortTest {
         }
     }
 
-    public void runQuickSort(Executor executor) throws InterruptedException {
+    public void runQuickSort(Executor executor) throws InterruptedException, ExecutionException {
         out.println("Using "+executor.getClass().getCanonicalName());
         long startTime = System.currentTimeMillis();
 
-        PortFuture<Integer> sink = new PortFuture<Integer>();
+        CallbackFuture<Integer> sink = new CallbackFuture<Integer>();
         QuickSort sorter = new QuickSort(sink, numbers);
         executor.execute(sorter);
         int tasknum = sink.get();
@@ -166,12 +167,12 @@ public class QuickSortTest {
     }
 
     @Test
-    public void testQuickSort() throws InterruptedException {
+    public void testQuickSort() throws InterruptedException, ExecutionException {
         runQuickSort(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test
-    public void testQuickSortPar() throws InterruptedException {
+    public void testQuickSortPar() throws InterruptedException, ExecutionException {
         runQuickSort(ThreadFactoryTL.newFixedThreadPool(nThreads));
     }
 
@@ -184,7 +185,7 @@ public class QuickSortTest {
         out.println("Standard Java sort " + elapsedTime+" ms");
     }
 
-    public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) throws InterruptedException, ExecutionException {
         QuickSortTest qt = new QuickSortTest();
         qt.setUp();
         qt.testQuickSortPar();

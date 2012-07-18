@@ -9,6 +9,8 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.ExecutionException;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,9 +33,9 @@ public class MultiPortActorTest {
             }
         };
         
-        final PortHandler<PortFuture<Integer>> get=new PortHandler<PortFuture<Integer>>() {
+        final PortHandler<CallbackFuture<Integer>> get=new PortHandler<CallbackFuture<Integer>>() {
             @Override
-            protected void act(PortFuture<Integer> m) {
+            protected void act(CallbackFuture<Integer> m) {
                 m.send(sum);
             }
         };
@@ -41,16 +43,16 @@ public class MultiPortActorTest {
     }
 
     @Test
-    public void runTest() throws InterruptedException {
+    public void runTest() throws InterruptedException, ExecutionException {
         Accum acc=new Accum();
         acc.add.send(11);
         acc.sub.send(9);
-        PortFuture<Integer> res=new PortFuture<Integer>();
+        CallbackFuture<Integer> res=new CallbackFuture<Integer>();
         acc.get.send(res);
     	Assert.assertEquals(new Integer(2), res.get());
     }
 
-    public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) throws InterruptedException, ExecutionException {
         MultiPortActorTest nt = new MultiPortActorTest();
         nt.runTest();
     }

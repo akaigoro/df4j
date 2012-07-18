@@ -7,27 +7,16 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.util;
 
-import com.github.rfqu.df4j.core.BaseActor;
-import com.github.rfqu.df4j.core.Port;
+package com.github.rfqu.df4j.core;
 
 /**
- * abstract node with single output
- * @param <R> type of result
+ * Port for handling result of a computation
+ * @param <M> the type of the message
  */
-public abstract class Function<R> extends BaseActor {
-	protected final Demand<R> res=new Demand<R>();
-
-    public void setRes(R val) {
-    	res.send(val);
-    }
-
-    public void addListener(Port<R> sink) {
-        res.addListener(sink);
-    }
-    
-    public void addListeners(Port<R>... sinks) {
-        res.addListeners(sinks);
-    }
+public interface Callback<M> extends Port<M>{
+    /**
+     * signals failure 
+     */
+    public void sendFailure(Throwable exc);
 }

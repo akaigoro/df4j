@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 
 /**
@@ -36,7 +35,7 @@ public abstract class BaseActor extends Task {
     /**
      * @return true if the actor has all its pins on and so is ready for execution
      */
-    private final boolean isReady() {
+    protected final boolean isReady() {
 		return readyPins==pinMask;
 	}
 
@@ -109,28 +108,28 @@ public abstract class BaseActor extends Task {
             readyPins &= ~pinBit;
         }
 
+        protected boolean isOn() {
+            return (readyPins&pinBit)!=0;
+        }
+
+        protected boolean isOff() {
+            return (readyPins&pinBit)==0;
+        }
     }
 
     /**
      *  Stops/allows actor execution
      */
     protected class Switch extends Pin {
-    	private boolean on=false;
     	
         public Switch() { }
-        public Switch(boolean on) {
-            if (on) {
-                on();
-            }
-        }
 
         public void on() {
         	boolean doFire;
             synchronized (BaseActor.this) {
-            	if (on) {
+            	if (isOn()) {
     				throw new IllegalStateException("turned on already"); 
             	}
-            	on=true;
             	doFire=turnOn();
             }
             if (doFire) {
@@ -140,17 +139,12 @@ public abstract class BaseActor extends Task {
 
         public void off() {
             synchronized (BaseActor.this) {
-            	if (!on) {
+                if (isOff()) {
     				throw new IllegalStateException("turned off already"); 
             	}
-            	on=false;
             	turnOff();
             }
         }
-
-		protected boolean isEmpty() {
-			return !on;
-		}
     }
 
     /** 
@@ -210,6 +204,9 @@ public abstract class BaseActor extends Task {
 
         public T retrieve() {
             synchronized (BaseActor.this) {
+                if (isEmpty() ) {
+                    throw new IllegalStateException("no tokens");
+                }
                 token =_remove();
             	if (isEmpty()) {
                 	turnOff();
@@ -240,37 +237,28 @@ public abstract class BaseActor extends Task {
      */
     public class ScalarInput<T> extends BasePort<T> {
         protected T operand=null;
-
-        public ScalarInput() { }
+        protected boolean filled=false;
 
 		@Override
-		protected void add(T newToken) {
-			if (newToken==null) {
-				throw new IllegalArgumentException("operand may not be null"); 
-			}
-			if (operand!=null) {
+		protected synchronized void add(T newToken) {
+			if (filled) {
 				throw new IllegalStateException("place is occupied already"); 
 			}
 			operand=newToken;
+			filled=true;
 		}
 
 		@Override
 		protected boolean isEmpty() {
-			return operand==null;
+			return !filled;
 		}
 
 		@Override
 		protected T _remove() {
-	        if (isEmpty() ) {
-	            throw new NoSuchElementException();
-	        }
 	        T res=operand;
 			operand=null;
+			filled=false;
 			return res;
-		}
-		
-		public T get() {
-		    return operand;
 		}
     }
 
@@ -341,13 +329,13 @@ public abstract class BaseActor extends Task {
      * the result should be sent. 
      * @param <R>  type of result
      */
-    public class Demand<R> extends Pin implements Port<R>{
+    public class Demand<R> extends Pin implements Callback<R>{
         private Promise<R> listeners=new Promise<R>();
 
         /** indicates a demand
          * @param sink Port to send the result
          */
-        public void addListener(Port<R> sink) {
+        public void addListener(Callback<R> sink) {
         	boolean doFire;
             synchronized (BaseActor.this) {
             	listeners.addListener(sink);
@@ -358,7 +346,7 @@ public abstract class BaseActor extends Task {
             }
     	}
 
-    	public void addListeners(Port<R>... sinks) {
+    	public void addListeners(Callback<R>... sinks) {
         	boolean doFire;
             synchronized (BaseActor.this) {
             	listeners.addListeners(sinks);
@@ -375,5 +363,10 @@ public abstract class BaseActor extends Task {
 		public void send(R m) {
 			listeners.send(m);
 		}
+
+        @Override
+        public void sendFailure(Throwable exc) {
+            listeners.sendFailure(exc);
+        }
     }
 }

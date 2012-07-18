@@ -22,9 +22,10 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of accepted messages
  */
-public class PortFuture<T> implements Port<T>, Future<T> {
+public class CallbackFuture<T> implements Callback<T>, Future<T> {
 	protected volatile boolean _hasValue;
-    protected T value;
+    protected volatile T value;
+    protected volatile Throwable exc;
     
     @Override
     public synchronized void send(T message) {
@@ -36,21 +37,40 @@ public class PortFuture<T> implements Port<T>, Future<T> {
         notifyAll();
     }
 
-    public boolean hasValue() {
-        return _hasValue;
+    @Override
+    public synchronized void sendFailure(Throwable exc) {
+        if (_hasValue) {
+            throw new IllegalStateException("has value already");
+        }
+        this.exc=exc;
+        _hasValue=true;
+        notifyAll();
     }
     
+    @Override
+    public boolean isDone() {
+        return _hasValue;
+    }
+
+    public Throwable getException() {
+        return exc;
+    }
+
     /**
      * waits until a message arrive
      * @return received message
      * @throws InterruptedException if the current thread was interrupted while waiting
      */
     @Override
-    public synchronized T get() throws InterruptedException {
+    public synchronized T get() throws InterruptedException, ExecutionException {
         while (!_hasValue) {
             wait();
         }
-        return value;
+        if (exc==null) {
+            return value;
+        } else {
+            throw new ExecutionException(exc);
+        }
     }
 
     @Override
@@ -88,10 +108,5 @@ public class PortFuture<T> implements Port<T>, Future<T> {
     public boolean isCancelled() {
         // TODO Auto-generated method stub
         return false;
-    }
-
-    @Override
-    public boolean isDone() {
-        return _hasValue;
     }
 }

@@ -17,12 +17,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * 
  * @param <T>  type of result
  */
-public class Promise<T> implements Port<T> {
+public class Promise<T> implements Callback<T> {
 	protected volatile boolean _hasValue;
     protected T value;
-    protected Port<T> listener;
+    protected Throwable exc;
+    protected Callback<T> listener;
     
-	public void addListener(Port<T> sink) {
+	public void addListener(Callback<T> sink) {
 	    checkReady:
 		synchronized (this) {
 		    if (_hasValue) {
@@ -43,11 +44,15 @@ public class Promise<T> implements Port<T> {
             proxy.addListener(sink);
             return;
         }
-	    sink.send(value);
+	    if (exc!=null) {
+	        sink.sendFailure(exc);
+	    } else {
+	        sink.send(value);
+	    }
 	}
 
-	public void addListeners(Port<T>... sinks) {
-		for (Port<T> sink: sinks) {
+	public void addListeners(Callback<T>... sinks) {
+		for (Callback<T> sink: sinks) {
 			addListener(sink);				
 		}
 	}
@@ -57,31 +62,41 @@ public class Promise<T> implements Port<T> {
         if (_hasValue) {
             throw new IllegalStateException("value set already");
         }
+        Callback<T> listenerLoc;
 		synchronized (this) {
 		    _hasValue=true;
 		    value=m;
             if (listener == null) {
                 return;
             }
+            listenerLoc=listener;
+            listener=null;
         }
-        listener.send(m);
+		listenerLoc.send(m);
 	}
 
-    public boolean hasValue() {
-        return _hasValue;
-    }
-    
-    public T get() {
-        if (!_hasValue) {
-            throw new IllegalStateException("value not set");
+    @Override
+    public void sendFailure(Throwable exc) {
+        if (_hasValue) {
+            throw new IllegalStateException("value set already");
         }
-        return value;
+        Callback<T> listenerLoc;
+        synchronized (this) {
+            _hasValue=true;
+            this.exc=exc;
+            if (listener == null) {
+                return;
+            }
+            listenerLoc=listener;
+            listener=null;
+        }
+        listenerLoc.sendFailure(exc);  
     }
-    
-	private class Listeners implements Port<T>{
-	    private ConcurrentLinkedQueue<Port<T>> listeners = new ConcurrentLinkedQueue<Port<T>>();
 
-		void addListener(Port<T> listener) {
+	private class Listeners implements Callback<T>{
+	    private ConcurrentLinkedQueue<Callback<T>> listeners = new ConcurrentLinkedQueue<Callback<T>>();
+
+		void addListener(Callback<T> listener) {
 			listeners.add(listener);
 		}
 
@@ -93,5 +108,14 @@ public class Promise<T> implements Port<T> {
 				out.send(m);
 			}
 		}
+
+        @Override
+        public void sendFailure(Throwable exc) {
+            for (;;) {
+                Callback<T> out=listeners.poll();
+                if (out==null) return;
+                out.sendFailure(exc);
+            }
+        }
 	}
 }

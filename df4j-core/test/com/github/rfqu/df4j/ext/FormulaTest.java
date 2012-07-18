@@ -7,15 +7,19 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.examples;
+package com.github.rfqu.df4j.ext;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Test;
 
+import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.util.BinaryOp;
 import com.github.rfqu.df4j.util.UnaryOp;
 
@@ -23,27 +27,48 @@ public class FormulaTest {
     private static final double delta = 1E-14;
 
     /**
-     * compute a^2
+     * computes a^2
      * @throws InterruptedException 
+     * @throws ExecutionException 
      */
     @Test
-    public void t01() throws InterruptedException {
-		Square sq=new Square();	
-	    PortFuture<Double> pr=new PortFuture<Double>();
-    	sq.addListener(pr);
-    	sq.send(2.0);
+    public void t01() throws InterruptedException, ExecutionException {
+        Square sq=new Square(); 
+        CallbackFuture<Double> pr=new CallbackFuture<Double>();
+        sq.addListener(pr);
+        sq.send(2.0);
         int res = pr.get().intValue();
         assertEquals(4, res);
     }
 
     /**
-     * compute 2*3
+     * checks that execution exception is propagated
      * @throws InterruptedException 
+     * @throws ExecutionException 
      */
     @Test
-    public void t02() throws InterruptedException {
+    public void t011() throws InterruptedException {
+        Sqrt sq=new Sqrt(); 
+        CallbackFuture<Double> pr=new CallbackFuture<Double>();
+        sq.addListener(pr);
+        sq.send(-2.0);
+        try {
+            pr.get().intValue();
+            fail("no ExecutionException");
+        } catch (ExecutionException e) {
+            assertTrue( e.getCause() instanceof IllegalArgumentException);
+        }
+    }
+
+    /**
+     * compute 2*3
+     * @throws InterruptedException 
+     * @throws ExecutionException 
+     */
+    @Test
+    public void t02() throws InterruptedException, ExecutionException {
 		Mult node=new Mult();	
-	    PortFuture<Double> pr=new PortFuture<Double>();
+	    CallbackFuture<Double> pr=new CallbackFuture<Double>();
     	node.addListener(pr);
     	node.p1.send(2.0);
     	node.p2.send(3.0);
@@ -67,9 +92,9 @@ public class FormulaTest {
 	}
 	
     @Test
-    public void t03() throws InterruptedException {
+    public void t03() throws InterruptedException, ExecutionException {
     	Module node = new Module();
-	    PortFuture<Double> pr=new PortFuture<Double>();
+	    CallbackFuture<Double> pr=new CallbackFuture<Double>();
     	node.addListener(pr);
     	node.p1.send(3.0);
     	node.p2.send(4.0);
@@ -87,9 +112,9 @@ public class FormulaTest {
 		Mult mu2=new Mult();	
 		Diff diff = new Diff();
         // inputs
-		Port<Double> a=mu1.p2;
-		Port<Double> b=sq;
-		Port<Double> c=mu2.p2;
+		Callback<Double> a=mu1.p2;
+		Callback<Double> b=sq;
+		Callback<Double> c=mu2.p2;
 		{
             mu1.p1.send(4.0);
             mu1.addListener(mu2.p1);
@@ -133,18 +158,44 @@ public class FormulaTest {
         }
 	}
 
-	@Test
-    public void t04() throws InterruptedException {
-    	QuadEq node = new QuadEq();
-	    PortFuture<Double> pr1=new PortFuture<Double>();
-	    PortFuture<Double> pr2=new PortFuture<Double>();
-	    node.x1.addListener(pr1);
-	    node.x2.addListener(pr2);
-    	node.a.send(2.0);
-    	node.b.send(3.0);
-    	node.c.send(-14.0);
+    @Test
+    public void t04() throws InterruptedException, ExecutionException {
+        QuadEq node = new QuadEq();
+        node.a.send(2.0);
+        node.b.send(3.0);
+        node.c.send(-14.0);
+
+        CallbackFuture<Double> pr1=new CallbackFuture<Double>();
+        CallbackFuture<Double> pr2=new CallbackFuture<Double>();
+        node.x1.addListener(pr1);
+        node.x2.addListener(pr2);
         assertEquals(2.0, pr1.get(), delta);
         assertEquals(-3.5, pr2.get(), delta);
+    }
+
+    @Test
+    public void t041() throws InterruptedException, ExecutionException {
+        QuadEq node = new QuadEq();
+        node.a.send(2.0);
+        node.b.send(3.0);
+        node.c.send(14.0);
+
+        CallbackFuture<Double> pr1=new CallbackFuture<Double>();
+        CallbackFuture<Double> pr2=new CallbackFuture<Double>();
+        node.x1.addListener(pr1);
+        node.x2.addListener(pr2);
+        try {
+            pr1.get().intValue();
+            fail("no ExecutionException");
+        } catch (ExecutionException e) {
+            assertTrue( e.getCause() instanceof IllegalArgumentException);
+        }
+        try {
+            pr2.get().intValue();
+            fail("no ExecutionException");
+        } catch (ExecutionException e) {
+            assertTrue( e.getCause() instanceof IllegalArgumentException);
+        }
     }
 
     class Square extends UnaryOp<Double> {
@@ -155,7 +206,11 @@ public class FormulaTest {
 
     class Sqrt extends UnaryOp<Double> {
         public Double eval(Double v) {
-            return Math.sqrt(v.doubleValue());
+            double val = Math.sqrt(v.doubleValue());
+            if (Double.isNaN(val)) {
+                throw new IllegalArgumentException();
+            }
+            return val;
         }
     }
 
@@ -189,11 +244,13 @@ public class FormulaTest {
         }
     }
     
-    public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) throws InterruptedException, ExecutionException {
     	FormulaTest qt = new FormulaTest();
-        qt.t01();
+        qt.t041();
+        /*
         qt.t02();
         qt.t03();
         qt.t04();
+        */
     }
 }

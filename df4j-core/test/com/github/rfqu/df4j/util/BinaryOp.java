@@ -9,6 +9,7 @@
  */
 package com.github.rfqu.df4j.util;
 
+import com.github.rfqu.df4j.ext.Function;
 
 /**
  * Binary operation: classic dataflow object.
@@ -19,8 +20,8 @@ package com.github.rfqu.df4j.util;
  * @param <T> the type of operands and the result
  */
 public abstract class BinaryOp<T> extends Function<T> {
-    public ScalarInput<T> p1 = new ScalarInput<T>();
-    public ScalarInput<T> p2 = new ScalarInput<T>();
+    public CallbackInput<T> p1 = new CallbackInput<T>();
+    public CallbackInput<T> p2 = new CallbackInput<T>();
 
     @Override
     protected void retrieveTokens() {
@@ -29,8 +30,8 @@ public abstract class BinaryOp<T> extends Function<T> {
     }
 
     @Override
-    protected void act() {
-        setRes(eval(p1.token, p2.token));
+    protected T eval() {
+        return eval(p1.token, p2.token);
     }
 
     abstract protected T eval(T opnd, T opnd2);

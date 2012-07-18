@@ -3,7 +3,7 @@ package com.github.rfqu.df4j.actordemux;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 
 
 public class WordCountTest {
@@ -36,9 +36,9 @@ public class WordCountTest {
     }
 
     static class Get extends Action<Record> {
-        PortFuture<Long> sink;
+        CallbackFuture<Long> sink;
         
-        public Get(PortFuture<Long> sink) {
+        public Get(CallbackFuture<Long> sink) {
             this.sink = sink;
         }
         
@@ -65,8 +65,8 @@ public class WordCountTest {
     @Test
     public void test() throws InterruptedException {
         Words numbers=new Words();
-        PortFuture<Long> sink1 = new PortFuture<Long>();
-        PortFuture<Long> sink2 = new PortFuture<Long>();
+        CallbackFuture<Long> sink1 = new CallbackFuture<Long>();
+        CallbackFuture<Long> sink2 = new CallbackFuture<Long>();
         numbers.send(1L, new Add(1));
         numbers.send(2L, new Add(1));
         numbers.send(1L, new Add(-11));

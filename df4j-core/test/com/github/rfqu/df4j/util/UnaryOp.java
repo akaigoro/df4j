@@ -9,19 +9,25 @@
  */
 package com.github.rfqu.df4j.util;
 
-import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.ext.Function;
 
 /**
  * Unary operation
  *
  * @param <T> type of the operand and the result
  */
-public abstract class UnaryOp<T> extends Function<T> implements Port<T> {
-    protected ScalarInput<T> input=new ScalarInput<T>();
+public abstract class UnaryOp<T> extends Function<T> implements Callback<T> {
+    protected CallbackInput<T> input=new CallbackInput<T>();
 
     @Override
     public void send(T value) {
         input.send(value);
+    }
+
+    @Override
+    public void sendFailure(Throwable exc) {
+        input.sendFailure(exc);
     }
 
     @Override
@@ -30,8 +36,8 @@ public abstract class UnaryOp<T> extends Function<T> implements Port<T> {
     }
 
     @Override
-    protected void act() {
-        setRes(eval(input.token));
+    protected T eval() {
+        return eval(input.token);
     }
 
     abstract protected T eval(T opnd);
