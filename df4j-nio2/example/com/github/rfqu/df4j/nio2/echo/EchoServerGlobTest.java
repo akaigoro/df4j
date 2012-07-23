@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.ioexample;
+package com.github.rfqu.df4j.nio2.echo;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -10,12 +10,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.util.DoubleValue;
 
 /**
- * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched
+ * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched as an application
  */
 public class EchoServerGlobTest {
 	static final long PERIOD = 0;//5; // ms between subsequent requests for given client
@@ -54,7 +54,7 @@ public class EchoServerGlobTest {
         for (int i = 0; i < numclients; i++) {
             ClientConnection cconn = new ClientConnection(this, iaddr, rounds);
 			clients.put(cconn.id, cconn);
-			PortFuture<AsynchronousSocketChannel> listener=new PortFuture<AsynchronousSocketChannel>();
+			CallbackFuture<AsynchronousSocketChannel> listener=new CallbackFuture<AsynchronousSocketChannel>();
 			cconn.addConnectListener(listener);
 			listener.get(); // wait connection to connect
 //            Thread.sleep(2);
@@ -77,7 +77,7 @@ public class EchoServerGlobTest {
 		int reportPeriod = 1000;
         double sum=0;
         long counter=0;
-        PortFuture<Double> avg=new PortFuture<Double>();
+        CallbackFuture<Double> avg=new CallbackFuture<Double>();
         long startTime=System.currentTimeMillis();
 
         public Aggregator(int numclients) {
@@ -116,7 +116,7 @@ public class EchoServerGlobTest {
     	testThroughput(2,2);
    }
 
-//    @Test
+    @Test
     public void mediumTest() throws Exception, IOException, InterruptedException {
     	testThroughput(100,200);
    }

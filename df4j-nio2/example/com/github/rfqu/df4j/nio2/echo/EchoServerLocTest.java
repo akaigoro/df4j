@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.ioexample;
+package com.github.rfqu.df4j.nio2.echo;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -6,7 +6,7 @@ import java.net.InetSocketAddress;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 
 public class EchoServerLocTest {
     static PrintStream out=System.out;
@@ -17,9 +17,10 @@ public class EchoServerLocTest {
 	
     public void localTest(int maxConn, int numclients, int rounds) throws Exception  {
         es=new EchoServer(t.iaddr, maxConn);
+        Thread.sleep(100);
         t.testThroughput(numclients, rounds);
         es.close(); // start closing process
-        es.addCloseListener(new PortFuture<InetSocketAddress>()).get(); // inet addr is free now
+        es.addCloseListener(new CallbackFuture<InetSocketAddress>()).get(); // inet addr is free now
         out.println("all closed");
     }
 
@@ -40,7 +41,7 @@ public class EchoServerLocTest {
 
     @Test
     public void heavyTest() throws Exception, IOException, InterruptedException {
-    	localTest(100, 1000,100);
+    	localTest(1000, 2000,10);
    }
 
     @Test
@@ -65,7 +66,7 @@ public class EchoServerLocTest {
     	}
     	EchoServerLocTest t=new EchoServerLocTest();
 		t.t.iaddr = new InetSocketAddress(host, port);
-        t.mediumTest();
+        t.heavyTest();
     }
 
 }

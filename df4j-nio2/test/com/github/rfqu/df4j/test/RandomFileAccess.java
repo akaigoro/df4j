@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.ioexample;
+package com.github.rfqu.df4j.test;
 
 import static java.nio.file.StandardOpenOption.WRITE;
 
@@ -214,7 +214,7 @@ public class RandomFileAccess {
         long started=0;
         long finished=0;
         AtomicLong accTime=new AtomicLong();
-        PortFuture<Integer> sink = new PortFuture<Integer>();
+        CallbackFuture<Integer> sink = new CallbackFuture<Integer>();
 
         public StarterW(AsyncFileChannel af, int nb, boolean direct) {
             this.af = af;
@@ -271,10 +271,9 @@ public class RandomFileAccess {
 		}
 
         @Override
-	    public void prepare(AsyncFileChannel channel,
-	            boolean read, long position, Port<Request> replyTo)
+	    public void prepare(boolean read, long position, Port<Request> replyTo)
 	    {
-			super.prepare(channel, read, position, replyTo);
+			super.prepare(read, position, replyTo);
 			start=System.currentTimeMillis();
 		}
     	

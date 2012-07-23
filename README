@@ -5,7 +5,7 @@ df4j-demux (in progress) base for remote and/or persistent actors.
 df4j-nio2 contains a wrapper to nio2 asyncronous input-output functionality.
 It requires java 1.7 or higher.
 
-See examples directory for various custom-made dataflow objects and their usage.
+See examples directories for various custom-made dataflow objects and their usage.
 
 If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
 or send email at alexei.kaigorodov($)gmail.com
@@ -17,7 +17,7 @@ v0.1 2011/09/22 initial release
 v0.2 2011/02/04 the project split in 3: core (universal), nio (for jdk1.6), nio2 (for jdk1.7)
 
 v0.3 2012/05/26 Core project simplified and minimized. Nio project deleted.
-Tagged dataflow extracted into separate project (demux). 
+Tagged dataflow extracted into a separate project (demux). 
 Classes partially documented.
 
 v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).

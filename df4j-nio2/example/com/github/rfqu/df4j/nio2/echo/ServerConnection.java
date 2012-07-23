@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.ioexample;
+package com.github.rfqu.df4j.nio2.echo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -7,6 +7,7 @@ import java.nio.channels.ClosedChannelException;
 import com.github.rfqu.df4j.core.SerialExecutor;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio2.SocketIOHandler;
+import com.github.rfqu.df4j.nio2.SocketIORequest;
 
 class ServerConnection {
     private final EchoServer echoServer;
@@ -87,7 +88,7 @@ class ServerConnection {
         }
     };
 
-    static class SerRequest extends TracingRequest<SerRequest> {
+    static class SerRequest extends SocketIORequest<SerRequest> {
 
         public SerRequest(ByteBuffer buf) {
             super(buf);

@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.ext;
+package com.github.rfqu.df4j.examples;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.*;
@@ -20,8 +20,8 @@ import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.util.BinaryOp;
-import com.github.rfqu.df4j.util.UnaryOp;
+import com.github.rfqu.df4j.ext.BinaryOp;
+import com.github.rfqu.df4j.ext.UnaryOp;
 
 public class FormulaTest {
     private static final double delta = 1E-14;

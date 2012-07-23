@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.ioexample;
+package com.github.rfqu.df4j.nio2.echo;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -9,7 +9,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.SerialExecutor;
 import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
@@ -26,7 +26,7 @@ class ClientConnection implements Comparable<ClientConnection> {
     public int id=EchoServerGlobTest.ids.addAndGet(1);
     public int serverId;
     SerialExecutor serex=new SerialExecutor();
-    AsyncSocketChannel channel=new AsyncSocketChannel();
+    AsyncSocketChannel channel;
     CliRequest request;
     AtomicLong rounds;
     Random rand=new Random();
@@ -38,13 +38,13 @@ class ClientConnection implements Comparable<ClientConnection> {
         this.echoServerTest = echoServerTest;
         this.timer = echoServerTest.timer;
         this.rounds=new AtomicLong(rounds);
-        channel.connect(addr);
+        channel=new AsyncSocketChannel(addr);
         ByteBuffer buffer = ByteBuffer.allocate(EchoServerGlobTest.BUF_SIZE);
         request=new CliRequest(buffer);
         channel.read(request, endRead1, timeout);
     }
 
-	public void addConnectListener(Port<AsynchronousSocketChannel> listener) {
+	public void addConnectListener(Callback<AsynchronousSocketChannel> listener) {
 		channel.addConnectListener(listener);
 	}
 
@@ -127,7 +127,7 @@ class ClientConnection implements Comparable<ClientConnection> {
         }
     };
 
-    static class CliRequest extends TracingRequest<CliRequest> {
+    static class CliRequest extends SocketIORequest<CliRequest> {
         long start;
         int data;
 

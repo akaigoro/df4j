@@ -12,12 +12,12 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Executor;
 
 /**
- * A dataflow node with one stream port.
+ * A dataflow node with one stream input port.
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
 	protected final StreamInput<M> input=new StreamInput<M>();
-	/** true if closing signal has been processed */
+	/** true when the closing signal has been processed */
 	protected boolean completed;
     protected long actCounter=0; // DEBUG
     protected long failureCounter=0; // DEBUG
