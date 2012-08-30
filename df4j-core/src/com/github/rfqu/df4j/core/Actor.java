@@ -17,6 +17,7 @@ import java.util.concurrent.Executor;
  */
 public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
 	protected final StreamInput<M> input=new StreamInput<M>();
+	/** true if closing signal has been processed */
 	protected boolean completed;
     protected long actCounter=0; // DEBUG
     protected long failureCounter=0; // DEBUG
@@ -93,7 +94,7 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
     protected abstract void act(M message) throws Exception;
 
     /**
-     * processes closing message
+     * processes closing signal
      * @throws Exception
      */
     protected void complete() throws Exception {}

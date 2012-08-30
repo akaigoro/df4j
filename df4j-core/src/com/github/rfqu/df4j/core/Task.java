@@ -20,7 +20,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- *  Tasks themselves are messages and can be send to other Actors and Ports.
+ * Base class for dataflow nodes (including Actors).
+ * Features:
+ *  - Task is Runnable - can be submitted to an Executor
+ *  - Task holds default executor, which was set at the moment of creation:
+ *  either explicitly, or implicitly via thread-local current executor.
+ *  If executor is null, firing executes immediately on the thread which fires the task.
+ *  - Task is Link, and can be enqueued in the standard LinkedQueue, e.g can be sent 
+ *  to Actors and Ports.
+ * Static part of this class holds thread-local current executor machinery.
+ *   
  * @author kaigorodov
  *
  */

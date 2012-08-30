@@ -15,11 +15,8 @@ package com.github.rfqu.df4j.core;
  * Also serves as a queue head.
  */
 public class Link {
-    protected Link next;
-    protected Link previous;
-    {
-        next = previous = this;
-    }
+    protected Link next=this;
+    protected Link previous=this;
 
     public boolean isLinked() {
         return next != this;

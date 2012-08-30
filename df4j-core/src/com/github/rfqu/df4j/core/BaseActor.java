@@ -159,23 +159,17 @@ public abstract class BaseActor extends Task {
     protected class Semaphore extends Pin {
         private int count=0;
         
-        public Semaphore(int count) {
-            this.count = count;
-            if (count>0) {
-                turnOn();
-            }
-        }
-
-        public Semaphore() {
-        }
-
-        public void send() {
+        public void up(int delta) {
             synchronized (BaseActor.this) {
-                count++;
+                count+=delta;
                 if (count==1) {
                     turnOn();
                 }
             }
+        }
+
+        public void up() {
+            up(1);
         }
 
         public void remove() {
@@ -342,18 +336,21 @@ public abstract class BaseActor extends Task {
     /**
      * 
      * This pin carries demand(s) of the result.
+     * Demand is two-fold: it is a pin, so firing possible only if
+     * someone demanded the execution, and it holds consumer's port where
+     * the result should be sent. 
      * @param <R>  type of result
      */
     public class Demand<R> extends Pin implements Port<R>{
-        private Promise<R> connector=new Promise<R>();
+        private Promise<R> listeners=new Promise<R>();
 
         /** indicates a demand
          * @param sink Port to send the result
          */
-        public void connect(Port<R> sink) {
+        public void addListener(Port<R> sink) {
         	boolean doFire;
             synchronized (BaseActor.this) {
-            	connector.addListener(sink);
+            	listeners.addListener(sink);
             	doFire=turnOn();
             }
             if (doFire) {
@@ -361,10 +358,10 @@ public abstract class BaseActor extends Task {
             }
     	}
 
-    	public void connect(Port<R>... sinks) {
+    	public void addListeners(Port<R>... sinks) {
         	boolean doFire;
             synchronized (BaseActor.this) {
-            	connector.add(sinks);
+            	listeners.addListeners(sinks);
             	doFire=turnOn();
             }
             if (doFire) {
@@ -376,10 +373,7 @@ public abstract class BaseActor extends Task {
     	 */
     	@Override
 		public void send(R m) {
-			connector.send(m);
+			listeners.send(m);
 		}
-
     }
-    
-
 }

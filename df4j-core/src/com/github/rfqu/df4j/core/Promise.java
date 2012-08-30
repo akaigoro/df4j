@@ -46,7 +46,7 @@ public class Promise<T> implements Port<T> {
 	    sink.send(value);
 	}
 
-	public void add(Port<T>... sinks) {
+	public void addListeners(Port<T>... sinks) {
 		for (Port<T> sink: sinks) {
 			addListener(sink);				
 		}

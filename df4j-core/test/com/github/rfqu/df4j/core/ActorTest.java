@@ -7,16 +7,19 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.examples;
+package com.github.rfqu.df4j.core;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.*;
 import com.github.rfqu.df4j.util.*;
 
-public class StreamNodeTest {
+public class ActorTest {
     private static final double delta = 1E-14;
 
     /**
@@ -44,13 +47,13 @@ public class StreamNodeTest {
     }
  
 	@Test
-    public void t01() throws InterruptedException {
+    public void t01() throws InterruptedException, ExecutionException {
         Aggregator node = new Aggregator();
         PortFuture<Double> sum=new PortFuture<Double>();
         PortFuture<Double> avg=new PortFuture<Double>();
         {
-            node.sum.connect(sum);
-            node.avg.connect(avg);
+//            node.sum.connect(sum);
+            node.avg.addListener(avg);
         }
         double value=1.0;
         int cnt=12345;
@@ -59,7 +62,15 @@ public class StreamNodeTest {
             node.send(new DoubleValue(value));
         }
         node.close();
-        assertEquals(1.0, sum.get(), delta);
+        Double sumValue;
+        try {
+            sumValue= sum.get(100); // node not ready
+            fail("no TimeoutException");
+        } catch (TimeoutException e) {
+        }
+        node.sum.addListener(sum); // trigger execution;
+        sumValue=sum.get();
+        assertEquals(1.0, sumValue, delta);
         assertEquals(1.0/cnt, avg.get(), delta);
     }
 }

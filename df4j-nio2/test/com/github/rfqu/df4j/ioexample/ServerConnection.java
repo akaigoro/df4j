@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 
 import com.github.rfqu.df4j.core.SerialExecutor;
-import com.github.rfqu.df4j.ioexample.EchoServer.Request;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio2.SocketIOHandler;
 
@@ -15,7 +14,7 @@ class ServerConnection {
     public int id;
     SerialExecutor serex = new SerialExecutor();
     private ByteBuffer buffer;
-    Request request;
+    SerRequest request;
     boolean closed = false;
 
     public ServerConnection(EchoServer echoServer, AsyncSocketChannel channel) throws ClosedChannelException {
@@ -23,7 +22,7 @@ class ServerConnection {
         this.channel = channel;
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
-        request = new EchoServer.Request(buffer);
+        request = new SerRequest(buffer);
         buffer.putInt(id);
         channel.write(request, endWrite1);
     }
@@ -44,16 +43,16 @@ class ServerConnection {
 		}
     }
 
-    SocketIOHandler<Request> endWrite1 = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<SerRequest> endWrite1 = new SocketIOHandler<SerRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) throws Exception {
+        protected void completed(int result, SerRequest request) throws Exception {
             channel.read(request, endRead);
         }
     };
     
-    SocketIOHandler<Request> endRead = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<SerRequest> endRead = new SocketIOHandler<SerRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) {
+        protected void completed(int result, SerRequest request) {
             // System.out.println("  ServerRequest readCompleted id="+id);
             // read client's message as if all the data have been read
             buffer.position(buffer.limit());
@@ -65,14 +64,14 @@ class ServerConnection {
         }
 
         @Override
-        protected void closed(Request request) throws IOException {
+        protected void closed(SerRequest request) throws IOException {
             ServerConnection.this.close();
         }
     };
 
-    SocketIOHandler<Request> endWrite = new SocketIOHandler<Request>(serex) {
+    SocketIOHandler<SerRequest> endWrite = new SocketIOHandler<SerRequest>(serex) {
         @Override
-        protected void completed(int result, Request request) throws IOException {
+        protected void completed(int result, SerRequest request) throws IOException {
             // System.out.println("  ServerRequest writeCompleted id="+id);
             try {
                 // System.out.println("  ServerRequest read started id="+id);
@@ -83,9 +82,15 @@ class ServerConnection {
         }
 
         @Override
-        protected void closed(Request request) throws IOException {
+        protected void closed(SerRequest request) throws IOException {
             ServerConnection.this.close();
         }
     };
 
+    static class SerRequest extends TracingRequest<SerRequest> {
+
+        public SerRequest(ByteBuffer buf) {
+            super(buf);
+        }
+    }
 }
