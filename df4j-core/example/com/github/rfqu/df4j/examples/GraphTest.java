@@ -13,7 +13,6 @@ import java.io.PrintStream;
 import java.util.Random;
 import java.util.concurrent.Executor;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
@@ -22,7 +21,6 @@ import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.core.ThreadFactoryTL;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
-
 
 /**
  * A set of identical Actors, passing packets to a randomly selected peer actor.
@@ -33,26 +31,25 @@ public class GraphTest {
     final static int NUM_ACTORS = 100; // number of nodes
     final static int NR_REQUESTS = NUM_ACTORS * 10; // 100; // number of tokens
     final static int TIME_TO_LIVE = 1000; // hops
-    final static int nThreads = Runtime.getRuntime().availableProcessors();
     final static int times = 10;
-    PrintStream out = System.out;
-
-    @Before
-    public void init() {
-        out.println("Graph with " + NUM_ACTORS + " nodes, " + NR_REQUESTS + " tokens, with " + TIME_TO_LIVE + " each, on " + nThreads + " threads");
-    }
+    final static PrintStream out = System.out;
+    
+    int nThreads;
 
     @Test
     public void testSingle() throws InterruptedException {
+        nThreads=1;
         runTest(ThreadFactoryTL.newSingleThreadExecutor());
     }
 
     @Test
     public void testFixed() throws InterruptedException {
-        runTest(ThreadFactoryTL.newFixedThreadPool(2));
+        nThreads= Runtime.getRuntime().availableProcessors();
+        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
     }
 
 	private void runTest(Executor executor) throws InterruptedException {
+        out.println("Graph with " + NUM_ACTORS + " nodes, " + NR_REQUESTS + " tokens, with " + TIME_TO_LIVE + " each, on " + nThreads + " threads");
         String workerName = executor.getClass().getCanonicalName();
         out.println("Using " + workerName);
 		Task.setCurrentExecutor(executor);
@@ -127,7 +124,6 @@ public class GraphTest {
 
     public static void main(String args[]) throws InterruptedException {
         GraphTest nt = new GraphTest();
-        nt.init();
         nt.testSingle();
         nt.testFixed();
     }

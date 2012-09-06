@@ -1,14 +1,11 @@
 /*
- * Copyright 2011-2012 by Alexei Kaigorodov
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright 2011 by Alexei Kaigorodov
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions
- * and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.nio2;
 
@@ -25,14 +22,13 @@ import com.github.rfqu.df4j.core.StreamPort;
 public class AsyncServerSocketChannel 
   implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
-    private AsynchronousServerSocketChannel channel;
-    /** max number of accepted connections */
+    private StreamPort<AsynchronousSocketChannel> consumer;
+    /** max number of simultaneous connections */
     private int maxConn;
     /** an accept request is pending */
     private boolean pending=false;
-    private boolean opened=false;
-    /** consumer of accepted connections */
-    private StreamPort<AsynchronousSocketChannel> consumer;
+    protected boolean opened=false;
+    private AsynchronousServerSocketChannel channel;
     
     public AsyncServerSocketChannel(InetSocketAddress addr) throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
@@ -40,9 +36,9 @@ public class AsyncServerSocketChannel
         channel.bind(addr);
     }
     
-    public synchronized void start(StreamPort<AsynchronousSocketChannel> consumer, int maxConn) {
+    public synchronized void open(StreamPort<AsynchronousSocketChannel> consumer, int maxConn) {
         synchronized (this) {
-            if (isOpened()) {
+            if (opened) {
                 throw new IllegalStateException("opened already");
             }
             opened=true;
@@ -54,7 +50,7 @@ public class AsyncServerSocketChannel
 
     private void acceptIfPossible() {
         synchronized (this) {
-            if (!isOpened()) {
+            if (!opened) {
                 throw new IllegalStateException("not opened");
             }
             if (pending) {
@@ -74,7 +70,7 @@ public class AsyncServerSocketChannel
 
     public void maxConnUp() {
         synchronized (this) {
-            if (!isOpened()) {
+            if (!opened) {
                 throw new IllegalStateException("not opened");
             }
             if (pending) {
@@ -128,7 +124,7 @@ public class AsyncServerSocketChannel
 
     public void close() {
         synchronized (this) {
-            if (!isOpened()) {
+            if (!opened) {
                 return;
             }
             opened=false;
@@ -147,4 +143,5 @@ public class AsyncServerSocketChannel
     public boolean isOpened() {
         return opened;
     }
+
 }

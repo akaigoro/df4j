@@ -27,6 +27,18 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
     protected volatile T value;
     protected volatile Throwable exc;
     
+    public CallbackFuture(){
+    }
+    
+    public CallbackFuture(DataSource<T> source){
+        source.addListener(this);
+    }
+    
+    public CallbackFuture<T> listenTo(DataSource<T> source){
+        source.addListener(this);
+        return this;        
+    }
+    
     @Override
     public synchronized void send(T message) {
         if (_hasValue) {
@@ -109,4 +121,9 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
         // TODO Auto-generated method stub
         return false;
     }
+
+    public static <R> R getFrom(DataSource<R> source) throws InterruptedException, ExecutionException {
+        return new CallbackFuture<R>(source).get();
+    }
+
 }

@@ -17,13 +17,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * 
  * @param <T>  type of result
  */
-public class Promise<T> implements Callback<T> {
+public class Promise<T> implements Callback<T>, DataSource<T> {
 	protected volatile boolean _hasValue;
     protected T value;
     protected Throwable exc;
     protected Callback<T> listener;
     
-	public void addListener(Callback<T> sink) {
+    @Override
+	public DataSource<T> addListener(Callback<T> sink) {
 	    checkReady:
 		synchronized (this) {
 		    if (_hasValue) {
@@ -31,7 +32,7 @@ public class Promise<T> implements Callback<T> {
 		    }
             if (listener == null) {
                 listener = sink;
-                return;
+                return this;
             }
             Listeners proxy;
             if (listener instanceof Promise.Listeners) {
@@ -42,25 +43,21 @@ public class Promise<T> implements Callback<T> {
                 listener = proxy;
             }
             proxy.addListener(sink);
-            return;
+            return this;
         }
 	    if (exc!=null) {
 	        sink.sendFailure(exc);
 	    } else {
 	        sink.send(value);
 	    }
-	}
-
-	public void addListeners(Callback<T>... sinks) {
-		for (Callback<T> sink: sinks) {
-			addListener(sink);				
-		}
+        return this;
 	}
 
 	@Override
 	public void send(T m) {
         if (_hasValue) {
-            throw new IllegalStateException("value set already");
+            Object v=this.exc!=null?this.exc:value;
+            throw new IllegalStateException("value set already: "+v);
         }
         Callback<T> listenerLoc;
 		synchronized (this) {
@@ -78,7 +75,8 @@ public class Promise<T> implements Callback<T> {
     @Override
     public void sendFailure(Throwable exc) {
         if (_hasValue) {
-            throw new IllegalStateException("value set already");
+            Object v=this.exc!=null?this.exc:value;
+            throw new IllegalStateException("value set already: "+v);
         }
         Callback<T> listenerLoc;
         synchronized (this) {

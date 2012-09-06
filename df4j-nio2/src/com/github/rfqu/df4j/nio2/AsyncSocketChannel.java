@@ -39,9 +39,9 @@ public class AsyncSocketChannel extends Link
     protected volatile boolean closed=false;
     protected Throwable connectionFailure=null;
     /** read request queue */
-    protected final Reader reader=new Reader();
+    protected final RequestQueue reader=new RequestQueue();
     /** write request queue */
-    protected final Writer writer=new Writer();
+    protected final RequestQueue writer=new RequestQueue();
     protected Promise<AsynchronousSocketChannel> connectListeners;
 
     /**
@@ -176,7 +176,7 @@ public class AsyncSocketChannel extends Link
         return closed;
     }
 
-    abstract class RequestQueue extends Actor<SocketIORequest<?>>
+    class RequestQueue extends Actor<SocketIORequest<?>>
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
         protected Switch channelAcc=new Switch(); // channel accessible
@@ -194,12 +194,25 @@ public class AsyncSocketChannel extends Link
         	}
         	currentRequest=request;
             channelAcc.off(); // block channel
-            act2(request);
+            if (request.isReadOp()) {
+//              System.out.println("channel read started id="+request.id);
+                if (request.timed) {
+                    channel.read(request.buffer,
+                            request.timeout, TimeUnit.MILLISECONDS, request, this);
+                } else {
+                    channel.read(request.buffer, request, this);
+                }
+            } else {
+//              System.out.println("channel write started id="+request.id);
+                if (request.timed) {
+                    channel.write(request.buffer, request.timeout, TimeUnit.MILLISECONDS,
+                            request, this);
+                } else {
+                    channel.write(request.buffer, request, this);
+                }
+            }
         }
         
-        protected abstract void act2(SocketIORequest<?> request)
-                throws Exception;
-
 		@Override
         public void completed(Integer result, SocketIORequest<?> request) {
 		    currentRequest=null;
@@ -220,34 +233,6 @@ public class AsyncSocketChannel extends Link
             }
             request.failed(exc);
         }
-    }
-    
-    public final class Reader extends RequestQueue {
-        @Override
-        protected void act2(SocketIORequest<?> request) throws Exception {
-//          System.out.println("channel read started id="+request.id);
-            if (request.timed) {
-                channel.read(request.buffer,
-                        request.timeout, TimeUnit.MILLISECONDS, request, this);
-            } else {
-                channel.read(request.buffer, request, this);
-            }
-        }
-        
-    }
-    
-    public final class Writer extends RequestQueue {
-        @Override
-        protected void act2(SocketIORequest<?> request) throws Exception {
-//          System.out.println("channel read started id="+request.id);
-            if (request.timed) {
-                channel.write(request.buffer, request.timeout, TimeUnit.MILLISECONDS,
-                        request, this);
-            } else {
-                channel.write(request.buffer, request, this);
-            }
-        }
-        
     }
     
 }

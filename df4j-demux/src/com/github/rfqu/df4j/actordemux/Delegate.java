@@ -14,7 +14,7 @@ package com.github.rfqu.df4j.actordemux;
 
 import com.github.rfqu.df4j.core.Link;
 
-public interface Delegate<M extends Link> {
-	public void act(M message);
+public interface Delegate<Tag, M extends Link> {
+	public void act(Tag tag, M message);
 	public void complete();
 }

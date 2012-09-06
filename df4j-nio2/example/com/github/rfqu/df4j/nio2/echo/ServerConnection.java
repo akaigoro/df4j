@@ -24,8 +24,7 @@ class ServerConnection {
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);
-        buffer.putInt(id);
-        channel.write(request, endWrite1);
+        channel.read(request, endRead);
     }
 
     public void close() throws IOException {
@@ -44,13 +43,6 @@ class ServerConnection {
 		}
     }
 
-    SocketIOHandler<SerRequest> endWrite1 = new SocketIOHandler<SerRequest>(serex) {
-        @Override
-        protected void completed(int result, SerRequest request) throws Exception {
-            channel.read(request, endRead);
-        }
-    };
-    
     SocketIOHandler<SerRequest> endRead = new SocketIOHandler<SerRequest>(serex) {
         @Override
         protected void completed(int result, SerRequest request) {

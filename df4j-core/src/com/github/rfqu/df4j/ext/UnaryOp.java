@@ -30,15 +30,10 @@ public abstract class UnaryOp<T> extends Function<T> implements Callback<T> {
     }
 
     @Override
-    protected void retrieveTokens() {
-        input.retrieve();
-    }
-
-    @Override
     protected T eval() {
-        return eval(input.token);
+        return eval(input.value);
     }
 
-    abstract protected T eval(T opnd);
+    abstract protected T eval(T operand);
 
 }

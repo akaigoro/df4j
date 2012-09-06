@@ -75,7 +75,7 @@ public class AsyncServerSocketChannelTest {
             
         public Server(InetSocketAddress addr, int maxConn) throws IOException {
             assch=new AsyncServerSocketChannel(addr);
-            assch.start(inport, maxConn);
+            assch.open(inport, maxConn);
         }
         
 		StreamPort<AsynchronousSocketChannel> inport=new StreamPort<AsynchronousSocketChannel>() {

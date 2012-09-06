@@ -39,35 +39,6 @@ public abstract class BaseActor extends Task {
 		return readyPins==pinMask;
 	}
 
-    /** 
-     * Removes tokens from pins.
-     * Removed tokens are expected to be used used in the act() method.
-     * Should remove at least 1 token to avoid infinite loop.
-     * Should return quickly, as is called from synchronized block.
-     */
-    protected abstract void retrieveTokens();
-
-    /** 
-     * process the retrieved tokens.
-     */
-    protected abstract void act();
-
-    /** loops while all pins are ready
-     */
-    @Override
-    public void run() {
-        for (;;) {
-            synchronized (this) {
-                if (!isReady()) {
-                    fired=false; // allow firing
-                    return;
-                }
-                retrieveTokens();
-            }
-            act();
-        }
-    }
-    
     /**
      * Stores input messages.
      * Can be turned on or off. 
@@ -76,7 +47,7 @@ public abstract class BaseActor extends Task {
     protected abstract class Pin {
     	private final int pinBit; // distinct for all pins of a node 
 
-    	Pin(){
+    	protected Pin(){
         	synchronized (BaseActor.this) {
             	int count = pinCount;
                 if (count==32) {
@@ -188,7 +159,7 @@ public abstract class BaseActor extends Task {
      * @param <T> type of accepted tokens.
      */
     protected abstract class BasePort<T> extends Pin implements Port<T> {
-        public T token=null;
+        public T value=null;
 
         @Override
         public void send(T token) {
@@ -202,16 +173,16 @@ public abstract class BaseActor extends Task {
             }
         }
 
-        public T retrieve() {
+        public T consume() {
             synchronized (BaseActor.this) {
                 if (isEmpty() ) {
                     throw new IllegalStateException("no tokens");
                 }
-                token =_remove();
+                value = remove();
             	if (isEmpty()) {
                 	turnOff();
             	}
-            	return token;
+            	return value;
             }
         }
 
@@ -229,37 +200,7 @@ public abstract class BaseActor extends Task {
 		 * removes token from the storage
 		 * @return removed token
 		 */
-		protected abstract T _remove();
-    }
-
-    /** A place for single token loaded with a reference of type <T>
-     * @param <T> 
-     */
-    public class ScalarInput<T> extends BasePort<T> {
-        protected T operand=null;
-        protected boolean filled=false;
-
-		@Override
-		protected synchronized void add(T newToken) {
-			if (filled) {
-				throw new IllegalStateException("place is occupied already"); 
-			}
-			operand=newToken;
-			filled=true;
-		}
-
-		@Override
-		protected boolean isEmpty() {
-			return !filled;
-		}
-
-		@Override
-		protected T _remove() {
-	        T res=operand;
-			operand=null;
-			filled=false;
-			return res;
-		}
+		protected abstract T remove();
     }
 
     /** A Queue of tokens of type <T>
@@ -289,7 +230,7 @@ public abstract class BaseActor extends Task {
 		}
 
 		@Override
-		protected T _remove() {
+		protected T remove() {
 			T res = queue.poll();
 			if (res!=null) {
 				return res;
@@ -329,13 +270,15 @@ public abstract class BaseActor extends Task {
      * the result should be sent. 
      * @param <R>  type of result
      */
-    public class Demand<R> extends Pin implements Callback<R>{
+    public class Demand<R> extends Pin implements DataSource<R>, Callback<R> {
         private Promise<R> listeners=new Promise<R>();
 
         /** indicates a demand
          * @param sink Port to send the result
+         * @return 
          */
-        public void addListener(Callback<R> sink) {
+        @Override
+        public DataSource<R> addListener(Callback<R> sink) {
         	boolean doFire;
             synchronized (BaseActor.this) {
             	listeners.addListener(sink);
@@ -344,17 +287,7 @@ public abstract class BaseActor extends Task {
             if (doFire) {
             	fire();
             }
-    	}
-
-    	public void addListeners(Callback<R>... sinks) {
-        	boolean doFire;
-            synchronized (BaseActor.this) {
-            	listeners.addListeners(sinks);
-            	doFire=turnOn();
-            }
-            if (doFire) {
-            	fire();
-            }
+            return this;
     	}
 
     	/** satisfy demand(s)

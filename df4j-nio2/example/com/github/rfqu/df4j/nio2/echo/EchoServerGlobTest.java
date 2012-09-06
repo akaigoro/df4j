@@ -1,6 +1,9 @@
 package com.github.rfqu.df4j.nio2.echo;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -106,12 +109,12 @@ public class EchoServerGlobTest {
 
     }
 
-//    @Test
+    @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
     	testThroughput(1,1);
    }
 
-//    @Test
+    @Test
     public void lightTest() throws Exception, IOException, InterruptedException {
     	testThroughput(2,2);
    }
@@ -121,7 +124,7 @@ public class EchoServerGlobTest {
     	testThroughput(100,200);
    }
 
-//    @Test
+    @Test
     public void heavyTest() throws Exception, IOException, InterruptedException {
     	testThroughput(1000,100);
    }
@@ -131,6 +134,32 @@ public class EchoServerGlobTest {
     	testThroughput(10000,1000);
    }
 
+   static  class StreamPrinter extends Thread {
+        BufferedReader in;
+        PrintStream out;
+
+        public StreamPrinter(InputStream in, PrintStream out) {
+            this.in=new BufferedReader(new InputStreamReader(in));
+            this.out=out;
+            super.setName("StreamPrinter");
+            super.setDaemon(true);
+        }
+        
+        public void run() {
+            for (;;) {
+                try {
+                    String line=in.readLine();
+                    if (line==null) {
+                        out.println("StreamPrinter exit");
+                        return;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    
     public static void main(String[] args) throws Exception {
     	String host;
     	if (args.length<1) {
@@ -146,9 +175,16 @@ public class EchoServerGlobTest {
     	} else {
     	    port = Integer.valueOf(args[1]);
     	}
+    	ProcessBuilder pb=new ProcessBuilder();
+    	pb.command("java", "-cp", "bin", "com.github.rfqu.df4j.nio2.echo.EchoServer",
+    	        Integer.toString(port));
+    	Process pr=pb.start();
+        new StreamPrinter(pr.getErrorStream(), System.err).start();
+        new StreamPrinter(pr.getInputStream(), System.out).start();
     	EchoServerGlobTest t=new EchoServerGlobTest();
 		t.iaddr = new InetSocketAddress(host, port);
         t.mediumTest();
+        pr.destroy();
     }
 
 }

@@ -41,22 +41,15 @@ class ClientConnection implements Comparable<ClientConnection> {
         channel=new AsyncSocketChannel(addr);
         ByteBuffer buffer = ByteBuffer.allocate(EchoServerGlobTest.BUF_SIZE);
         request=new CliRequest(buffer);
-        channel.read(request, endRead1, timeout);
+//        channel.read(request, endRead1, timeout);
+        request.setResult(0);
+        startWrite.send(request);
     }
 
 	public void addConnectListener(Callback<AsynchronousSocketChannel> listener) {
 		channel.addConnectListener(listener);
 	}
 
-    SocketIOHandler<CliRequest> endRead1 = new SocketIOHandler<CliRequest>(serex) {
-        @Override
-        protected void completed(int result, CliRequest request) throws Exception {
-            serverId=request.getBuffer().getInt();
-//            timer.schedule(startRead, request, EchoServerTest.PERIOD);
-            startWrite.send(request);
-        }
-    };
-    
     /** starts write operation
      */
     SocketIOHandler<CliRequest> startWrite = new SocketIOHandler<CliRequest>(serex) {

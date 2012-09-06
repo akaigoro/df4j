@@ -7,15 +7,9 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.actordemux;
-import com.github.rfqu.df4j.core.*;
 
-/** Active message. Contains logic to act on actor's state.
- * 
- * @author kaigorodov
- *
- * @param <Handler>
- */
-public abstract class Action<Tag, Handler> extends Link {
-    public abstract void act(Tag tag, Handler p);
+package com.github.rfqu.df4j.core;
+
+public interface DataSource<T> {
+    public DataSource<T> addListener(Callback<T> sink);
 }

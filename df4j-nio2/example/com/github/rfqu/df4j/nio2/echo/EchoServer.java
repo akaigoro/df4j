@@ -32,7 +32,7 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
         
     public EchoServer(InetSocketAddress addr, int maxConn) throws IOException {
         assch=new AsyncServerSocketChannel(addr);
-        assch.start(this, maxConn);
+        assch.open(this, maxConn);
         this.addr=addr;
     }
 
@@ -112,6 +112,7 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
 		InetSocketAddress addr=new InetSocketAddress("localhost", port);
         EchoServer es=new EchoServer(addr, maxConn);
         es.addCloseListener(new CallbackFuture<InetSocketAddress>()).get(); // inet addr is free now
+        System.out.println("EchoServer started");
     }
     
 }

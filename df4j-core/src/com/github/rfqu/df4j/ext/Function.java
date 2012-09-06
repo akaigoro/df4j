@@ -12,93 +12,94 @@ package com.github.rfqu.df4j.ext;
 
 import com.github.rfqu.df4j.core.BaseActor;
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.DataSource;
 
 /**
- * abstract node with single output and exception handling
+ * abstract node with multiple inputs, single output and exception handling
+ * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends BaseActor {
+public abstract class Function<R> extends BaseActor implements DataSource<R> {
     protected Throwable exc=null;
-    protected boolean excpending=false;
 	protected final Demand<R> res=new Demand<R>();
+    protected boolean shot=false;
 
-    public void addListener(Callback<R> sink) {
-        res.addListener(sink);
-    }
-    
-    public void addListeners(Callback<R>... sinks) {
-        res.addListeners(sinks);
-    }
-    
+    /**
+     * Subscribes a consumer to which the result will be send.
+     * Function evaluation would not start until at least one
+     * consumer subscribes.
+     * It is allowed to subscribe after the function is evaluated.
+     * @param sink
+     * @return 
+     */
     @Override
+    public Function<R> addListener(Callback<R> sink) {
+        res.addListener(sink);
+        return this;
+    }
+    
     public void run() {
-        for (;;) {
-            Throwable exc=null;
-            synchronized (this) {
-                if (this.exc != null) {
-//                    System.err.println("run:"+exc);
-                    exc=this.exc;
-                    if (isReady()) {
-//                        System.err.println("  run: isReady");
-                        retrieveTokens();
-                        this.exc=null;
-                        if (excpending) {
-                            excpending=false; // exc handling finished
-                            continue;
-                        }
-                        excpending=false; // exc handling finished
-                    } else {
-                        excpending=true;  // to be continued
-                    }
-                } else if (!isReady()) {
-//                    System.err.println("run:!isReady");
-                    fired = false; // allow firing
-                    return;
-                } else {
-//                    System.err.println("run: isReady");
-                    retrieveTokens();
-                }
-            }
-            if (exc==null) {
-                act();
-            } else {
-                handleException(exc);
-            }
-        }
+       if (exc==null) {
+           try {
+               res.send(eval());
+           } catch (Exception e) {
+               handleException(e);
+           }
+       } else {
+           handleException(exc);
+       }
     }
 
-   public void act() {
-        try {
-            res.send(eval());
-        } catch (Exception e) {
-            handleException(e);
-        }
-    }
-
+    /**
+     * evaluates the function's result
+     * @return
+     */
     abstract protected R eval();
 
     protected void handleException(Throwable exc) {
         res.sendFailure(exc);
     }
 
-    public class CallbackInput<T> extends ScalarInput<T> implements Callback<T> {
+    /** A place for single token loaded with a reference of type <T>
+     * @param <T> 
+     */
+    public class CallbackInput<T> extends Pin implements Callback<T> {
+        public T value=null;
+        protected boolean filled=false;
+
         @Override
-        public void sendFailure(Throwable exc) {
+        public void send(T newToken) {
             boolean doFire;
             synchronized (Function.this) {
-                if (Function.this.exc==null) {
-                    Function.this.exc=exc;
-                    doFire=!fired;
-                    fired=true;
-                    filled=true;
-                    turnOn();
-                } else {
-                    doFire=turnOn();
+                if (filled) {
+                    throw new IllegalStateException("place is occupied already"); 
                 }
+                if (shot) {
+                    return;
+                }
+                value=newToken;
+                filled=true;
+                shot=doFire=turnOn();
             }
             if (doFire) {
                 fire();
             }
+        }
+
+        @Override
+        public void sendFailure(Throwable exc) {
+            synchronized (Function.this) {
+                if (filled) {
+                    throw new IllegalStateException("place is occupied already"); 
+                }
+                if (shot) {
+                    return;
+                }
+                Function.this.exc=exc;
+                fired=filled=true;
+                turnOn();
+            }
+            fire();
         }
     }
 }

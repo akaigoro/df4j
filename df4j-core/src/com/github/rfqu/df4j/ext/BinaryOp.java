@@ -23,14 +23,8 @@ public abstract class BinaryOp<T> extends Function<T> {
     public CallbackInput<T> p2 = new CallbackInput<T>();
 
     @Override
-    protected void retrieveTokens() {
-        p1.retrieve();
-        p2.retrieve();
-    }
-
-    @Override
     protected T eval() {
-        return eval(p1.token, p2.token);
+        return eval(p1.value, p2.value);
     }
 
     abstract protected T eval(T opnd, T opnd2);
