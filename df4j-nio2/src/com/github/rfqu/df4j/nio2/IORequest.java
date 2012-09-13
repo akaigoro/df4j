@@ -20,10 +20,9 @@ import com.github.rfqu.df4j.core.Request;
 /**
  * Request for an I/O operation.
  * @param <R> actual type of the request, after subclassing.
- * @param <C> C
  */
 public class IORequest<R extends IORequest<R>>
-  extends Request<R, Integer> implements Runnable
+  extends Request<R, Integer> //implements Runnable
 {
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
 
@@ -57,7 +56,7 @@ public class IORequest<R extends IORequest<R>>
     }
 
     /** for timer */
-    @Override
+//    @Override
     public synchronized void run() {
         forward();
     }

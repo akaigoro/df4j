@@ -1,19 +1,16 @@
 package com.github.rfqu.df4j.nio2.echo;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 
-import com.github.rfqu.df4j.core.SerialExecutor;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.SocketIOHandler;
+import com.github.rfqu.df4j.nio2.Connection;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 
-class ServerConnection {
+class ServerConnection extends Connection {
     private final EchoServer echoServer;
     AsyncSocketChannel channel;
     public int id;
-    SerialExecutor serex = new SerialExecutor();
     private ByteBuffer buffer;
     SerRequest request;
     boolean closed = false;
@@ -27,7 +24,7 @@ class ServerConnection {
         channel.read(request, endRead);
     }
 
-    public void close() throws IOException {
+    public void close() {
         synchronized (this) {
             if (closed) {
                 return;
@@ -43,7 +40,7 @@ class ServerConnection {
 		}
     }
 
-    SocketIOHandler<SerRequest> endRead = new SocketIOHandler<SerRequest>(serex) {
+    SocketIOHandler<SerRequest> endRead = new SocketIOHandler<SerRequest>() {
         @Override
         protected void completed(int result, SerRequest request) {
             // System.out.println("  ServerRequest readCompleted id="+id);
@@ -57,14 +54,14 @@ class ServerConnection {
         }
 
         @Override
-        protected void closed(SerRequest request) throws IOException {
+        protected void closed(SerRequest request) {//throws IOException {
             ServerConnection.this.close();
         }
     };
 
-    SocketIOHandler<SerRequest> endWrite = new SocketIOHandler<SerRequest>(serex) {
+    SocketIOHandler<SerRequest> endWrite = new SocketIOHandler<SerRequest>() {
         @Override
-        protected void completed(int result, SerRequest request) throws IOException {
+        protected void completed(int result, SerRequest request) {//throws IOException {
             // System.out.println("  ServerRequest writeCompleted id="+id);
             try {
                 // System.out.println("  ServerRequest read started id="+id);
@@ -75,7 +72,7 @@ class ServerConnection {
         }
 
         @Override
-        protected void closed(SerRequest request) throws IOException {
+        protected void closed(SerRequest request) {//throws IOException {
             ServerConnection.this.close();
         }
     };

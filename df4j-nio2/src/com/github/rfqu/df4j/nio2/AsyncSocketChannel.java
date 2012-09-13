@@ -28,8 +28,8 @@ import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
 
 /**
- * Wrapper over AsynchronousSocketChannel.
- * Simplifies input-output, handling queues of requests.
+ * Wrapper over {@link java.nio.channels.AsynchronousSocketChannel}.
+ * Simplifies input-output, handling queues of I/O requests.
  */
 public class AsyncSocketChannel extends Link 
    implements CompletionHandler<Void, AsynchronousSocketChannel>

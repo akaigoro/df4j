@@ -65,14 +65,9 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
                 if (!it.hasNext()) {
                     break;
                 }
-                try {
-                    Integer firstKey = it.next();
-                    connections.get(firstKey).close(); // removes from the collection
-                    connections.remove(firstKey);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+                Integer firstKey = it.next();
+                connections.get(firstKey).close(); // removes from the collection
+                connections.remove(firstKey);
             }
         }
         closeListeners.send(addr);

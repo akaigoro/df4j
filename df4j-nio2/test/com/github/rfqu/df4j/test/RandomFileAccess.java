@@ -181,7 +181,6 @@ public class RandomFileAccess {
 
     /** general dataflow test
      * 
-     * @param executor context executor (accessible via thread context)
      * @param direct if true, use direct buffers
      * @throws Exception
      */
@@ -207,7 +206,6 @@ public class RandomFileAccess {
      *
      */
     static class StarterW extends Actor<Request>{
-        SerialExecutor serex=new SerialExecutor();
         AsyncFileChannel af;
         int nb;
         boolean direct;

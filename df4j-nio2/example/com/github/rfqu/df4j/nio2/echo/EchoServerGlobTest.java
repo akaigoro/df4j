@@ -94,7 +94,7 @@ public class EchoServerGlobTest {
 			if (counter%reportPeriod==0) {
     			long curTime=System.currentTimeMillis();
             	double rate=(reportPeriod*1000d)/(curTime-startTime);
-            	out.printf("finished clients=%d; clients/sec=%f roundtrips/sec \n", counter, rate);
+            	out.printf("finished clients=%d; clients/sec=%f \n", counter, rate);
             	startTime=curTime;
     		}
             if (counter==numclients) {

@@ -10,14 +10,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.SerialExecutor;
 import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.SocketIOHandler;
+import com.github.rfqu.df4j.nio2.Connection;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 import com.github.rfqu.df4j.util.DoubleValue;
 
-class ClientConnection implements Comparable<ClientConnection> {
+class ClientConnection extends Connection implements Comparable<ClientConnection> {
     static final long timeout=1000;// ms
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
 
@@ -25,7 +24,6 @@ class ClientConnection implements Comparable<ClientConnection> {
     private final Timer timer;
     public int id=EchoServerGlobTest.ids.addAndGet(1);
     public int serverId;
-    SerialExecutor serex=new SerialExecutor();
     AsyncSocketChannel channel;
     CliRequest request;
     AtomicLong rounds;
@@ -52,24 +50,34 @@ class ClientConnection implements Comparable<ClientConnection> {
 
     /** starts write operation
      */
-    SocketIOHandler<CliRequest> startWrite = new SocketIOHandler<CliRequest>(serex) {
+    SocketIOHandler<CliRequest> startWrite = new SocketIOHandler<CliRequest>() {
         @Override
-        protected void completed(int result, CliRequest request) throws Exception {
+        protected void completed(int result, CliRequest request) {// throws Exception {
             counterRun++;
             request.start = System.currentTimeMillis();
             request.data = rand.nextInt();
             ByteBuffer buffer = request.getBuffer();
             buffer.clear();
             buffer.putInt(request.data);
-            channel.write(request, endWrite, timeout);
+            try {
+                channel.write(request, endWrite, timeout);
+            } catch (ClosedChannelException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
     };
 
-    SocketIOHandler<CliRequest> endWrite = new SocketIOHandler<CliRequest>(serex) {
+    SocketIOHandler<CliRequest> endWrite = new SocketIOHandler<CliRequest>() {
         @Override
-        protected void completed(int result, CliRequest request) throws ClosedChannelException {
+        protected void completed(int result, CliRequest request) {//throws ClosedChannelException {
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
-            channel.read(request, endRead, timeout);
+            try {
+                channel.read(request, endRead, timeout);
+            } catch (ClosedChannelException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
         }
 
@@ -80,7 +88,7 @@ class ClientConnection implements Comparable<ClientConnection> {
         }       
     };
     
-    SocketIOHandler<CliRequest> endRead = new SocketIOHandler<CliRequest>(serex) {
+    SocketIOHandler<CliRequest> endRead = new SocketIOHandler<CliRequest>() {
         @Override
         protected void completed(int result, CliRequest request) {
 //            System.err.println("  client Request read ended; id="+id+" rid="+request.rid+" count="+count);

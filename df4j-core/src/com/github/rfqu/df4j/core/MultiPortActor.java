@@ -50,7 +50,7 @@ public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
         }
     }
     
-    public abstract class PortHandler<M> implements Port <M>{
+    protected abstract class PortHandler<M> implements Port <M>{
 
         @Override
         public final void send(M m) {

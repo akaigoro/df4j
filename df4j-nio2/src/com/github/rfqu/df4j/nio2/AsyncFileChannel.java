@@ -26,10 +26,14 @@ import java.util.Set;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Task;
 
+/**
+ * Wrapper over {@link java.nio.channels.AsynchronousFileChannel}.
+ * @author rfqu
+ *
+ */
 public class AsyncFileChannel
   implements CompletionHandler<Integer, FileIORequest<?>>
-{
-    
+{    
     AsynchronousFileChannel channel=null;
     boolean closed=false;
 

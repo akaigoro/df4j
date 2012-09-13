@@ -18,10 +18,15 @@ import java.util.concurrent.ExecutorService;
 
 import com.github.rfqu.df4j.core.Task;
 
+/**
+ * Provides access to the current {@link java.nio.channels.AsynchronousChannelGroup}
+ * supported by the current {@link java.util.concurrent.Executor}.
+ * @author rfqu
+ */
 public class AsyncChannelCroup {
     /**
      * sets current group as a thread-local variable
-     * @param exec
+     * @param group
      */
     public static void setCurrentACGroup(AsynchronousChannelGroup group) {
         currentACGroup.set(group);
@@ -40,7 +45,6 @@ public class AsyncChannelCroup {
             @Override
             protected AsynchronousChannelGroup initialValue() {
                 ExecutorService service = Task.getCurrentExecutorService();
-
                 try {
                     return AsynchronousChannelGroup.withThreadPool(service);
                 } catch (IOException e) {

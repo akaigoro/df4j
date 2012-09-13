@@ -19,6 +19,12 @@ import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.StreamPort;
 
+/**
+ * Wrapper over {@link java.nio.channels.AsynchronousServerSocketChannel}.
+ * Simplifies input-output, handling queues of accept requests.
+ * @author rfqu
+ *
+ */
 public class AsyncServerSocketChannel 
   implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
