@@ -15,15 +15,15 @@ package com.github.rfqu.df4j.actordemux;
  * @param M type of messages for actors
  * @param H type of handler
  */
-public abstract class LiberalDemux<Tag, M extends Action<H>, H>
-	extends AbstractDemux<Tag, M, H>
+public abstract class LiberalDemux<Tag, H>
+	extends AbstractDemux<Tag, Action<Tag, H>, H>
 {
-    protected AbstractDelegator<M,H> createDelegator(Tag tag) {
-        return new AbstractDelegator<M,H>() {
+    protected AbstractDelegator<Tag, Action<Tag, H>, H> createDelegator(Tag tag) {
+        return new AbstractDelegator<Tag, Action<Tag, H>, H>(tag) {
 
             @Override
-            protected void act() {
-                input.token.act(handler.get());     
+            protected void act(Action<Tag, H> message) throws Exception {
+                message.act(tag, handler.token);     
             }
             
         };

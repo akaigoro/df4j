@@ -22,6 +22,7 @@ import com.github.rfqu.df4j.util.MessageSink;
 
 /**
  * A set of identical Actors, passing packets to a randomly selected peer actor.
+ * Unlike MultiPortActor, each actor has its own queue.
  * A packet dies after passing predefined number of hops.
  */
 public class MultiActorTest {

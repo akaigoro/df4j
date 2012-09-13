@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.After;
@@ -15,7 +16,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.StreamPort;
 import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
@@ -42,7 +43,7 @@ public class AsyncServerSocketChannelTest {
      * tests that overall connection count can be more than maxConn
      */
     @Test
-    public void maxConnTest() throws IOException, InterruptedException {
+    public void maxConnTest() throws Exception {
         ArrayList<ClientConnection>allConns=new ArrayList<ClientConnection>();
         int half=maxConn/2;
         int clConns=maxConn+half;
@@ -68,7 +69,7 @@ public class AsyncServerSocketChannelTest {
     static class Server extends Actor<AsyncSocketChannel> {        
         AsyncServerSocketChannel assch;    
         ArrayList<AsyncSocketChannel>allConns=new ArrayList<AsyncSocketChannel>();
-        PortFuture<Boolean> unbounded=new PortFuture<Boolean>();
+        CallbackFuture<Boolean> unbounded=new CallbackFuture<Boolean>();
         int channelCounter=0;
         boolean allOpened=true;
             
@@ -110,15 +111,14 @@ public class AsyncServerSocketChannelTest {
 
     static class ClientConnection {
         AsyncSocketChannel conn;
-        PortFuture<AsynchronousSocketChannel> listener=new PortFuture<AsynchronousSocketChannel>();
+        CallbackFuture<AsynchronousSocketChannel> listener=new CallbackFuture<AsynchronousSocketChannel>();
         
         ClientConnection(InetSocketAddress addr) throws IOException {
-            conn=new AsyncSocketChannel();
-            conn.connect(addr);
+            conn=new AsyncSocketChannel(addr);
             conn.addConnectListener(listener);
         }
 
-        public void get() throws InterruptedException {
+        public void get() throws InterruptedException, ExecutionException {
         	listener.get();
         }
     }

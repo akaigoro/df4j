@@ -1,11 +1,14 @@
 /*
- * Copyright 2011 by Alexei Kaigorodov
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Copyright 2011-2012 by Alexei Kaigorodov
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
  */
 package com.github.rfqu.df4j.nio2;
 
@@ -19,15 +22,14 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
 
 /**
- * Wrapper over AsynchronousSocketChannel.
- * Simplifies input-output, handling queues of requests.
- * @author rfq
- *
+ * Wrapper over {@link java.nio.channels.AsynchronousSocketChannel}.
+ * Simplifies input-output, handling queues of I/O requests.
  */
 public class AsyncSocketChannel extends Link 
    implements CompletionHandler<Void, AsynchronousSocketChannel>
@@ -36,11 +38,25 @@ public class AsyncSocketChannel extends Link
     protected volatile boolean connected=false;
     protected volatile boolean closed=false;
     protected Throwable connectionFailure=null;
-    protected final Reader reader=new Reader();
-    protected final Writer writer=new Writer();
+    /** read request queue */
+    protected final RequestQueue reader=new RequestQueue();
+    /** write request queue */
+    protected final RequestQueue writer=new RequestQueue();
     protected Promise<AsynchronousSocketChannel> connectListeners;
 
-    public AsyncSocketChannel() {
+    /**
+     * for client-side socket
+     * Starts connection to a server.
+     * IO requests can be queued immediately,
+     * but will be executed only after connection completes.
+     * If interested in the moment when connection established,
+     * add a listener. 
+     * @throws IOException
+     */
+    public AsyncSocketChannel(SocketAddress addr) throws IOException {
+        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
+        channel=AsynchronousSocketChannel.open(acg);
+        channel.connect(addr, channel, this);
     }
 
     /**
@@ -49,16 +65,6 @@ public class AsyncSocketChannel extends Link
      */
     public AsyncSocketChannel(AsynchronousSocketChannel assch) {
         completed(null, assch);
-    }
-
-    /**
-     * for client-side socket
-     * @throws IOException
-     */
-    public void connect(SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
-        channel=AsynchronousSocketChannel.open(acg);
-        channel.connect(addr, channel, this);
     }
     
     /**
@@ -80,7 +86,10 @@ public class AsyncSocketChannel extends Link
         }           
     }
     
-    public void addConnectListener(Port<AsynchronousSocketChannel> listener) {
+    /** signals connection completion
+     * @param listener
+     */
+    public void addConnectListener(Callback<AsynchronousSocketChannel> listener) {
         checkConnected:
     	synchronized (this) {
     	    if (connected) {
@@ -121,30 +130,40 @@ public class AsyncSocketChannel extends Link
         }
     }
 
-    public <T extends SocketIORequest<T>> T write(T socketIORequest, Port<T> replyTo) throws ClosedChannelException {
+    public <T extends SocketIORequest<T>>
+        T write(T socketIORequest, Port<T> replyTo) throws ClosedChannelException
+    {
         checkState();
-        socketIORequest.prepare(this, false, replyTo);
+        socketIORequest.prepare(false, replyTo);
         writer.send(socketIORequest);
         return socketIORequest;
     }
     
-    public <T extends SocketIORequest<T>> T write(T request, Port<T> replyTo, long timeout) throws ClosedChannelException {
+    public <T extends SocketIORequest<T>>
+            T write(T request, Port<T> replyTo, long timeout)
+                    throws ClosedChannelException
+        {
         checkState();
-        request.prepare(this, false, replyTo, timeout);
+        request.prepare(false, replyTo, timeout);
         writer.send(request);
         return request;
     }
     
-    public <T extends SocketIORequest<T>> T read(T request, Port<T> replyTo) throws ClosedChannelException {
+    public <T extends SocketIORequest<T>>
+      T read(T request, Port<T> replyTo) throws ClosedChannelException
+    {
         checkState();
-        request.prepare(this, true, (Port<T>) replyTo);
+        request.prepare(true, (Port<T>) replyTo);
         reader.send(request);
         return request;
     }
     
-    public <T extends SocketIORequest<T>> T read(T request, Port<T> replyTo, long timeout) throws ClosedChannelException {
+    public <T extends SocketIORequest<T>>
+        T read(T request, Port<T> replyTo, long timeout)
+                throws ClosedChannelException
+    {
         checkState();
-        request.prepare(this, true, replyTo, timeout);
+        request.prepare(true, replyTo, timeout);
         reader.send(request);
         return request;
     }
@@ -157,7 +176,7 @@ public class AsyncSocketChannel extends Link
         return closed;
     }
 
-    abstract class RequestQueue extends Actor<SocketIORequest<?>>
+    class RequestQueue extends Actor<SocketIORequest<?>>
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
         protected Switch channelAcc=new Switch(); // channel accessible
@@ -170,21 +189,35 @@ public class AsyncSocketChannel extends Link
         @Override
         protected void act(SocketIORequest<?> request) throws Exception {
         	if (AsyncSocketChannel.this.closed) {
-        		request.failed(new AsynchronousCloseException(), AsyncSocketChannel.this);
+        		request.failed(new AsynchronousCloseException());
         		return;
         	}
         	currentRequest=request;
             channelAcc.off(); // block channel
-            act2(request);
+            if (request.isReadOp()) {
+//              System.out.println("channel read started id="+request.id);
+                if (request.timed) {
+                    channel.read(request.buffer,
+                            request.timeout, TimeUnit.MILLISECONDS, request, this);
+                } else {
+                    channel.read(request.buffer, request, this);
+                }
+            } else {
+//              System.out.println("channel write started id="+request.id);
+                if (request.timed) {
+                    channel.write(request.buffer, request.timeout, TimeUnit.MILLISECONDS,
+                            request, this);
+                } else {
+                    channel.write(request.buffer, request, this);
+                }
+            }
         }
         
-        protected abstract void act2(SocketIORequest<?> request) throws Exception;
-
 		@Override
         public void completed(Integer result, SocketIORequest<?> request) {
 		    currentRequest=null;
             channelAcc.on();
-            request.completed(result, AsyncSocketChannel.this);
+            request.completed(result);
         }
 
         @Override
@@ -198,34 +231,8 @@ public class AsyncSocketChannel extends Link
                     e.printStackTrace();
                 }
             }
-            request.failed(exc, AsyncSocketChannel.this);
+            request.failed(exc);
         }
-    }
-    
-    public final class Reader extends RequestQueue {
-        @Override
-        protected void act2(SocketIORequest<?> request) throws Exception {
-//          System.out.println("channel read started id="+request.id);
-            if (request.timed) {
-                channel.read(request.buffer, request.timeout, TimeUnit.MILLISECONDS, request, this);
-            } else {
-                channel.read(request.buffer, request, this);
-            }
-        }
-        
-    }
-    
-    public final class Writer extends RequestQueue {
-        @Override
-        protected void act2(SocketIORequest<?> request) throws Exception {
-//          System.out.println("channel read started id="+request.id);
-            if (request.timed) {
-                channel.write(request.buffer, request.timeout, TimeUnit.MILLISECONDS, request, this);
-            } else {
-                channel.write(request.buffer, request, this);
-            }
-        }
-        
     }
     
 }

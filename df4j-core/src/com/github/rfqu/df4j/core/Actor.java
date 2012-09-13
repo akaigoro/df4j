@@ -12,12 +12,12 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Executor;
 
 /**
- * A dataflow node with one stream port.
+ * A dataflow node with one stream input port.
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor<M extends Link> extends BaseActor implements StreamPort<M> {
 	protected final StreamInput<M> input=new StreamInput<M>();
-	/** true if closing signal has been processed */
+	/** true when the closing signal has been processed */
 	protected boolean completed;
     protected long actCounter=0; // DEBUG
     protected long failureCounter=0; // DEBUG
@@ -41,14 +41,37 @@ public abstract class Actor<M extends Link> extends BaseActor implements StreamP
 		input.close();
 	}
 
-	@Override
-    protected void retrieveTokens() {
-	    input.retrieve();
+    /** loops while all pins are ready
+     */
+    @Override
+    public void run() {
+        for (;;) {
+            synchronized (this) {
+                if (!isReady()) {
+                    fired=false; // allow firing
+                    return;
+                }
+                consumeTokens();
+            }
+            act();
+        }
+    }
+    
+    /** 
+     * Removes tokens from pins.
+     * Removed tokens are expected to be used used in the act() method.
+     * Should remove at least 1 token to avoid infinite loop.
+     * Should return quickly, as is called from synchronized block.
+     */
+    protected void consumeTokens() {
+	    input.consume();
     }
 
-    @Override
+    /** 
+     * process the retrieved tokens.
+     */
     protected void act() {
-        M message=input.token;
+        M message=input.value;
         try {
             if (message == null) {
                 complete();

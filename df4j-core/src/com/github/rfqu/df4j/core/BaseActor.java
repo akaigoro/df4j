@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 
 /**
@@ -36,48 +35,19 @@ public abstract class BaseActor extends Task {
     /**
      * @return true if the actor has all its pins on and so is ready for execution
      */
-    private final boolean isReady() {
+    protected final boolean isReady() {
 		return readyPins==pinMask;
 	}
 
-    /** 
-     * Removes tokens from pins.
-     * Removed tokens are expected to be used used in the act() method.
-     * Should remove at least 1 token to avoid infinite loop.
-     * Should return quickly, as is called from synchronized block.
-     */
-    protected abstract void retrieveTokens();
-
-    /** 
-     * process the retrieved tokens.
-     */
-    protected abstract void act();
-
-    /** loops while all pins are ready
-     */
-    @Override
-    public void run() {
-        for (;;) {
-            synchronized (this) {
-                if (!isReady()) {
-                    fired=false; // allow firing
-                    return;
-                }
-                retrieveTokens();
-            }
-            act();
-        }
-    }
-    
     /**
      * Stores input messages.
      * Can be turned on or off. 
      * Initial state should be off, to prevent premature firing.
      */
     protected abstract class Pin {
-    	private final int pinBit; // distinct for all pins of a node 
+    	private final int pinBit; // distinct for all other pins of the node 
 
-    	Pin(){
+    	protected Pin(){
         	synchronized (BaseActor.this) {
             	int count = pinCount;
                 if (count==32) {
@@ -109,28 +79,28 @@ public abstract class BaseActor extends Task {
             readyPins &= ~pinBit;
         }
 
+        protected boolean isOn() {
+            return (readyPins&pinBit)!=0;
+        }
+
+        protected boolean isOff() {
+            return (readyPins&pinBit)==0;
+        }
     }
 
     /**
      *  Stops/allows actor execution
      */
     protected class Switch extends Pin {
-    	private boolean on=false;
     	
         public Switch() { }
-        public Switch(boolean on) {
-            if (on) {
-                on();
-            }
-        }
 
         public void on() {
         	boolean doFire;
             synchronized (BaseActor.this) {
-            	if (on) {
+            	if (isOn()) {
     				throw new IllegalStateException("turned on already"); 
             	}
-            	on=true;
             	doFire=turnOn();
             }
             if (doFire) {
@@ -140,17 +110,12 @@ public abstract class BaseActor extends Task {
 
         public void off() {
             synchronized (BaseActor.this) {
-            	if (!on) {
+                if (isOff()) {
     				throw new IllegalStateException("turned off already"); 
             	}
-            	on=false;
             	turnOff();
             }
         }
-
-		protected boolean isEmpty() {
-			return !on;
-		}
     }
 
     /** 
@@ -194,7 +159,7 @@ public abstract class BaseActor extends Task {
      * @param <T> type of accepted tokens.
      */
     protected abstract class BasePort<T> extends Pin implements Port<T> {
-        public T token=null;
+        public T value=null;
 
         @Override
         public void send(T token) {
@@ -208,13 +173,16 @@ public abstract class BaseActor extends Task {
             }
         }
 
-        public T retrieve() {
+        public T consume() {
             synchronized (BaseActor.this) {
-                token =_remove();
+                if (isEmpty() ) {
+                    throw new IllegalStateException("no tokens");
+                }
+                value = remove();
             	if (isEmpty()) {
                 	turnOff();
             	}
-            	return token;
+            	return value;
             }
         }
 
@@ -232,46 +200,7 @@ public abstract class BaseActor extends Task {
 		 * removes token from the storage
 		 * @return removed token
 		 */
-		protected abstract T _remove();
-    }
-
-    /** A place for single token loaded with a reference of type <T>
-     * @param <T> 
-     */
-    public class ScalarInput<T> extends BasePort<T> {
-        protected T operand=null;
-
-        public ScalarInput() { }
-
-		@Override
-		protected void add(T newToken) {
-			if (newToken==null) {
-				throw new IllegalArgumentException("operand may not be null"); 
-			}
-			if (operand!=null) {
-				throw new IllegalStateException("place is occupied already"); 
-			}
-			operand=newToken;
-		}
-
-		@Override
-		protected boolean isEmpty() {
-			return operand==null;
-		}
-
-		@Override
-		protected T _remove() {
-	        if (isEmpty() ) {
-	            throw new NoSuchElementException();
-	        }
-	        T res=operand;
-			operand=null;
-			return res;
-		}
-		
-		public T get() {
-		    return operand;
-		}
+		protected abstract T remove();
     }
 
     /** A Queue of tokens of type <T>
@@ -301,7 +230,7 @@ public abstract class BaseActor extends Task {
 		}
 
 		@Override
-		protected T _remove() {
+		protected T remove() {
 			T res = queue.poll();
 			if (res!=null) {
 				return res;
@@ -341,13 +270,15 @@ public abstract class BaseActor extends Task {
      * the result should be sent. 
      * @param <R>  type of result
      */
-    public class Demand<R> extends Pin implements Port<R>{
+    public class Demand<R> extends Pin implements DataSource<R>, Callback<R> {
         private Promise<R> listeners=new Promise<R>();
 
         /** indicates a demand
          * @param sink Port to send the result
+         * @return 
          */
-        public void addListener(Port<R> sink) {
+        @Override
+        public DataSource<R> addListener(Callback<R> sink) {
         	boolean doFire;
             synchronized (BaseActor.this) {
             	listeners.addListener(sink);
@@ -356,17 +287,7 @@ public abstract class BaseActor extends Task {
             if (doFire) {
             	fire();
             }
-    	}
-
-    	public void addListeners(Port<R>... sinks) {
-        	boolean doFire;
-            synchronized (BaseActor.this) {
-            	listeners.addListeners(sinks);
-            	doFire=turnOn();
-            }
-            if (doFire) {
-            	fire();
-            }
+            return this;
     	}
 
     	/** satisfy demand(s)
@@ -375,5 +296,10 @@ public abstract class BaseActor extends Task {
 		public void send(R m) {
 			listeners.send(m);
 		}
+
+        @Override
+        public void sendFailure(Throwable exc) {
+            listeners.sendFailure(exc);
+        }
     }
 }

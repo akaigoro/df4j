@@ -19,15 +19,15 @@ import com.github.rfqu.df4j.core.Link;
  * @param M type of messages for actors
  * @param H type of delegate
  */
-public abstract class ConservativeDemux<Tag, M extends Link, H extends Delegate<M>>
+public abstract class ConservativeDemux<Tag, M extends Link, H extends Delegate<Tag, M>>
 	extends AbstractDemux<Tag, M, H>
 {
-    protected AbstractDelegator<M,H> createDelegator(Tag tag) {
-        return new AbstractDelegator<M,H>() {
+    protected AbstractDelegator<Tag, M,H> createDelegator(Tag tag) {
+        return new AbstractDelegator<Tag, M,H>(tag) {
 
             @Override
-            protected void act() {
-                handler.get().act(input.token);
+            protected void act(M message) throws Exception {
+                handler.token.act(tag, message);
             }
             
         };

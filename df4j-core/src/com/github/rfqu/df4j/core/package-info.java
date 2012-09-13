@@ -17,7 +17,7 @@
  * <p>
  * - nodes are subclasses of abstract class {@link com.github.rfqu.df4j.core.BaseActor}.
  *  User have to override  method to retrieve tokens from pins 
- *  {@link com.github.rfqu.df4j.core.BaseActor#retrieveTokens()} and method to
+ *  {@link com.github.rfqu.df4j.core.BaseActor#consumeTokens()} and method to
  *  handle tokens {@link com.github.rfqu.df4j.core.BaseActor#act()}
  * <p>
  * - pins may be of several predefined types, and user can create specific pin types

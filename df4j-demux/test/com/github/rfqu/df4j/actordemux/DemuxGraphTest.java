@@ -15,7 +15,6 @@ import java.util.Random;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.BaseActor.ScalarInput;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
@@ -38,9 +37,9 @@ static class Graph extends ConservativeDemux<String, IntValue, Graph.NodeActor> 
     /**
      * Intermediate passing node
      */
-    class NodeActor implements Delegate<IntValue> {
+    class NodeActor implements Delegate<String, IntValue> {
 		@Override
-		public void act(IntValue p) {
+		public void act(String tag, IntValue p) {
 	        int nextVal = p.value - 1;
 	        if (nextVal == 0) {
 	            sink.send(p);

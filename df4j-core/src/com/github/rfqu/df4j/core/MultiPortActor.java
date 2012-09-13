@@ -13,7 +13,8 @@ import java.util.concurrent.Executor;
 
 /**
  * An Actor with several input Ports, subclassed from MultiPortActor.PortHandler.
- * Each port has specific message handler PortHandler.act().
+ * Each port has specific message handler PortHandler.act(M m).
+ * The message type M need not to extend Link.
  * Messages for all ports are stored in the single message queue.
  */
 public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
@@ -35,21 +36,21 @@ public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
         message.act();
     }
 
-    public static class Message<M> extends Link {
-        PortHandler<M> handler;
+    static class Message<M> extends Link {
+        private PortHandler<M> handler;
         private M m;
         
-        public Message(PortHandler<M> handler, M m) {
+        Message(PortHandler<M> handler, M m) {
             this.handler=handler;
             this.m=m;
         }
 
-        private void act() {
+        void act() {
             handler.act(m);            
         }
     }
     
-    public abstract class PortHandler<M> implements Port <M>{
+    protected abstract class PortHandler<M> implements Port <M>{
 
         @Override
         public final void send(M m) {

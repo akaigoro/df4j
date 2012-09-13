@@ -9,6 +9,8 @@
  */
 package com.github.rfqu.df4j.ext;
 
+import java.util.concurrent.ExecutionException;
+
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Port;
@@ -40,7 +42,7 @@ public class TimerTest {
     }
     
     @Test
-    public void scheduleTest2() throws InterruptedException {        
+    public void scheduleTest2() throws InterruptedException, ExecutionException {        
         Timer timer= Timer.getCurrentTimer();
         timer.schedule(new Act(112), 112);
         timer.schedule(new Act(24), 24);
@@ -54,7 +56,7 @@ public class TimerTest {
     }
 
     @Test
-    public void scheduleTest3() throws InterruptedException {
+    public void scheduleTest3() throws InterruptedException, ExecutionException {
         Portik<Integer> portik=new Portik<Integer>();
         Timer timer= Timer.getCurrentTimer();
         timer.schedule(portik, 112, 112);
@@ -68,7 +70,7 @@ public class TimerTest {
         System.out.println("shut down");
     }
 
-    public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) throws InterruptedException, ExecutionException {
         TimerTest nt = new TimerTest();
         nt.scheduleTest2();
         nt.scheduleTest3();

@@ -8,35 +8,50 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.ext;
-import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.ext.PrivateExecutor;
-import com.github.rfqu.df4j.ext.SwingSupport;
-
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeoutException;
+
+import org.junit.After;
 import org.junit.Test;
+
+import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.util.DoubleValue;
 
+/** An actor run by different executors
+ */
 public class ActorVariantsTest {
     private static final double delta = 1E-14;
 
+    @After
+    public void cleanCurrentThread() {
+        Task.removeCurrentExecutor();
+    }
+    
     /**
      * computes sum and average of input values
+     * execution starts only after both demand pins are listened
      */
-	class Aggregator extends Actor<DoubleValue> {
-	    Aggregator(Executor executor) {
-	        super(executor);
-	    }
+    static class Aggregator extends Actor<DoubleValue> {
 
-	    Aggregator() {
-	    }
-
-	    double _sum=0.0;
-	    long counter=0;
-	    
         // outputs
         Demand<Double> sum=new Demand<Double>();
         Demand<Double> avg=new Demand<Double>();
+
+        double _sum=0.0;
+        long counter=0;
+
+        public Aggregator(Executor executor) {
+            super(executor);
+        }
+
+        public Aggregator() {
+        }
 
         @Override
         protected void act(DoubleValue message) throws Exception {
@@ -49,50 +64,61 @@ public class ActorVariantsTest {
             sum.send(_sum);
             avg.send(_sum/counter);
         }
-
+     
     }
-	
-    public void runTest(Executor executor) throws InterruptedException {
-        Aggregator node = new Aggregator(executor);
-        PortFuture<Double> sum=new PortFuture<Double>();
-        PortFuture<Double> avg=new PortFuture<Double>();
-        {
-            node.sum.addListener(sum);
-            node.avg.addListener(avg);
-        }
+   
+    public void test(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
+        CallbackFuture<Double> sumcf=new CallbackFuture<Double>();
+        CallbackFuture<Double> avgcf=new CallbackFuture<Double>(node.avg);
         double value=1.0;
-        int cnt=12456;
+        int cnt=12345;
         for (int k=0; k<cnt; k++) {
             value/=2;
             node.send(new DoubleValue(value));
         }
-        node.close(); // causes node.complete()
-        assertEquals(1.0, sum.get(), delta);
-        assertEquals(1.0/cnt, avg.get(), delta);
-    }
-    
-    // normal actor
-    @Test
-    public void t01() throws InterruptedException {
-    	runTest(ThreadFactoryTL.newSingleThreadExecutor());
-    }
-    
-    // eager actor
-    @Test
-    public void t02() throws InterruptedException {
-    	runTest(null);
-    }
-    
-    // fat actor
-    @Test
-    public void t03() throws InterruptedException {
-        runTest(new PrivateExecutor());
+        node.close();
+        Double sumValue;
+        try {
+            // sum not ready as not connected to data source
+            // and the node is not ready for execution  
+            sumValue= sumcf.get(100); 
+            fail("no TimeoutException");
+        } catch (TimeoutException e) {
+        }
+        // check that the node did not start execution
+        assertEquals(0, node.counter); 
+        // trigger execution
+        sumValue=sumcf.listenTo(node.sum).get(100);
+        assertEquals(1.0, sumValue, delta);
+        assertEquals(1.0/cnt, avgcf.get(), delta);
     }
 
-    // swing actor
+    /** normal actor - default executor
+     */
     @Test
-    public void t04() throws InterruptedException {
-        runTest(SwingSupport.getSwingExecutor());
+    public void t01() throws InterruptedException, ExecutionException, TimeoutException {
+    	test(new Aggregator());
+    }
+    
+    /** eager actor
+     */
+    @Test
+    public void t02() throws InterruptedException, ExecutionException, TimeoutException {
+        test(new Aggregator(null));
+    }
+    
+    /** fat actor
+     */
+    @Test
+    public void t03() throws InterruptedException, ExecutionException, TimeoutException {
+        test(new Aggregator(new PrivateExecutor()));
+    }
+
+    /** swing actor
+     */
+    @Test
+    public void t04() throws InterruptedException, ExecutionException, TimeoutException {
+        test(new Aggregator(SwingSupport.getSwingExecutor()));
     }
 }
 

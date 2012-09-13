@@ -1,10 +1,13 @@
 package com.github.rfqu.df4j.actordemux;
 
 import static org.junit.Assert.assertEquals;
+
+import java.util.concurrent.ExecutionException;
+
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 
 public class DemuxSmokeTest {
 
@@ -12,7 +15,7 @@ public class DemuxSmokeTest {
         long val;
     }
 
-    static class Add extends Action<Record> {
+    static class Add extends Action<Long, Record> {
         private long load;
 
         public Add(long load) {
@@ -20,25 +23,25 @@ public class DemuxSmokeTest {
         }
 
         @Override
-        public void act(Record record) {
+        public void act(Long tag, Record record) {
             record.val+=load;
         }
     }
 
-    static class Get extends Action<Record> {
-        PortFuture<Long> sink;
+    static class Get extends Action<Long, Record> {
+        CallbackFuture<Long> sink;
         
-        public Get(PortFuture<Long> sink) {
+        public Get(CallbackFuture<Long> sink) {
             this.sink = sink;
         }
         
         @Override
-        public void act(Record ship) {
+        public void act(Long tag, Record ship) {
             sink.send(ship.val);
         }
     }
 
-    static class Numbers extends LiberalDemux<Long, Action<Record>, Record> {
+    static class Numbers extends LiberalDemux<Long, Record> {
 
         @Override
         protected void requestHandler(Long tag, Port<Record> handler) {
@@ -47,10 +50,10 @@ public class DemuxSmokeTest {
     }
 
     @Test
-    public void test() throws InterruptedException {
+    public void test() throws InterruptedException, ExecutionException {
         Numbers numbers=new Numbers();
-        PortFuture<Long> sink1 = new PortFuture<Long>();
-        PortFuture<Long> sink2 = new PortFuture<Long>();
+        CallbackFuture<Long> sink1 = new CallbackFuture<Long>();
+        CallbackFuture<Long> sink2 = new CallbackFuture<Long>();
         numbers.send(1L, new Add(1));
         numbers.send(2L, new Add(1));
         numbers.send(1L, new Add(-11));
@@ -61,7 +64,7 @@ public class DemuxSmokeTest {
         assertEquals(Long.valueOf(12L), sink2.get());
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         DemuxSmokeTest smokeTest = new DemuxSmokeTest();
         smokeTest.test();
     }

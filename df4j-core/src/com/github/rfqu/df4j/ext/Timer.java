@@ -5,7 +5,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.PortFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.core.ThreadFactoryTL;
 
@@ -51,7 +51,7 @@ public class Timer {
         timerThread.schedule(task, timeToFire-System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
     
-    public PortFuture<Void> shutdown() {
+    public CallbackFuture<Void> shutdown() {
         synchronized(Timer.class) {
             if (this==currentTimerKey.get()) {
                 currentTimerKey.remove();
@@ -63,8 +63,8 @@ public class Timer {
 
     /** waits full timer termination after shutdown
      */
-    private PortFuture<Void> awaitTermination() {
-        return new PortFuture<Void>(){
+    private CallbackFuture<Void> awaitTermination() {
+        return new CallbackFuture<Void>(){
             @Override
             public synchronized Void get() throws InterruptedException {
                 timerThread.awaitTermination(1000, TimeUnit.DAYS);

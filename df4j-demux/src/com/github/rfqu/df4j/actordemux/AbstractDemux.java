@@ -9,8 +9,7 @@
  */
 package com.github.rfqu.df4j.actordemux;
 import com.github.rfqu.df4j.core.*;
-import com.github.rfqu.df4j.core.BaseActor.ScalarInput;
-import com.github.rfqu.df4j.core.BaseActor.StreamInput;
+import com.github.rfqu.df4j.ext.Function;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,13 +23,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractDemux<Tag, M extends Link, H>
 	implements TaggedPort <Tag, M>
 {
-    protected ConcurrentHashMap<Tag, AbstractDelegator<M, H>> cache
-    	= new ConcurrentHashMap<Tag, AbstractDelegator<M, H>>();
+    protected ConcurrentHashMap<Tag, AbstractDelegator<Tag, M, H>> cache
+    	= new ConcurrentHashMap<Tag, AbstractDelegator<Tag, M, H>>();
 
     @Override
     public void send(Tag tag, M message) {
         boolean dorequest=false;
-        AbstractDelegator<M, H> gate=cache.get(tag);
+        AbstractDelegator<Tag, M, H> gate=cache.get(tag);
         if (gate==null) {
             synchronized (this) {
                 gate=cache.get(tag);
@@ -44,19 +43,9 @@ public abstract class AbstractDemux<Tag, M extends Link, H>
         if (dorequest) {
             requestHandler(tag, gate.handler);
         }
-        gate.input.send(message);
+        gate.send(message);
     }
 
-    protected abstract AbstractDelegator<M,H> createDelegator(Tag tag);
+    protected abstract AbstractDelegator<Tag, M,H> createDelegator(Tag tag);
     protected abstract void requestHandler(Tag tag, Port<H> handler);
-
-    static abstract class AbstractDelegator<M extends Link, H> extends BaseActor {
-        protected final StreamInput<M> input=new StreamInput<M>();
-        protected final ScalarInput<H> handler=new ScalarInput<H>();
-
-        @Override
-        protected void retrieveTokens() {
-            input.retrieve();
-        }
-    }
 }

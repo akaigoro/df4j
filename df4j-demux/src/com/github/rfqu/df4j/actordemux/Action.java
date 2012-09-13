@@ -16,6 +16,6 @@ import com.github.rfqu.df4j.core.*;
  *
  * @param <Handler>
  */
-public abstract class Action<Handler> extends Link {
-    public abstract void act(Handler p);
+public abstract class Action<Tag, Handler> extends Link {
+    public abstract void act(Tag tag, Handler p);
 }
