@@ -33,7 +33,7 @@ public class WordCountTest {
         }
     }
 
-    static class Getter extends Action<Counter> {
+    static class Getter extends Action<String, Counter> {
         Dictionary sink;
         
         public Getter(Dictionary dictionary) {
@@ -41,20 +41,21 @@ public class WordCountTest {
         }
         
         @Override
-        public void act(Counter counter) {
+        public void act(String tag, Counter counter) {
             sink.send(counter.tag, counter);
         }
     }
 
-    static class Entry implements Delegate<Counter>{
+    static class Entry implements Delegate<String, Counter>{
         String tag;
         long counter=0;
         
         public Entry(String tag) {
             this.tag=tag;
         }
+        
         @Override
-        public void act(Counter message) {
+        public void act(String tag, Counter message) {
             counter+=message.counter;
         }
         
