@@ -23,19 +23,41 @@ import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.ext.BinaryOp;
 import com.github.rfqu.df4j.ext.UnaryOp;
 
+/**
+ * Demonstration of building dataflow networks.
+ * Sample networks realizing well-known mathematic formulae.
+ * All network nodes execute in parallel, as soon as input data are ready.
+ * Nodes communicate with each other using Port and Promise interfaces which have push semantics.
+ * To convert push mechanism to more convenient pull mechanism, CallbackFuture objects are used.
+ * Of course this examples have no practical meaning, as overheads for message passing 
+ * overwhelms all gains from parallel execution.
+ * For a dataflow network to have a sense, node execution should perform calculations
+ * large enough to exceed the message handling time (which is less than 1 microsecond). 
+ * 
+ * @author kaigorodov
+ *
+ */
 public class FormulaTest {
     private static final double delta = 1E-14;
     
     /**
      * computes a^2
-     * @throws InterruptedException 
-     * @throws ExecutionException 
      */
     @Test
     public void t01() throws InterruptedException, ExecutionException {
+        // typical scenario to run dataflow network is as follows.
+        // instantiate desired network class:
         Square sq=new Square(); 
-        sq.send(2.0);
-        assertEquals(4, CallbackFuture.getFrom(sq).intValue());
+        // push argument values to inputs:
+        sq.send(2.0); // network starts as soon as arguments are received
+        // create a future to pull the result from the network
+        CallbackFuture<Double> future = new CallbackFuture<Double>(sq);
+        // wait for the result
+        Double res = future.get();
+        // alternatively, use this shortcut:
+//      Double res = CallbackFuture.getFrom(sq);
+        // result is obtained 
+        assertEquals(4, res.intValue());
     }
 
     /**
@@ -44,8 +66,9 @@ public class FormulaTest {
     @Test
     public void t011() throws InterruptedException {
         Sqrt sq=new Sqrt(); 
-        sq.send(-2.0);
+        sq.send(-2.0); // square root from negative number would cause an error
         try {
+            // that error manifests itself when the result is pulled from the network
             CallbackFuture.getFrom(sq);
             fail("no ExecutionException");
         } catch (ExecutionException e) {
@@ -65,75 +88,78 @@ public class FormulaTest {
     }
 
     /**
-     * computes sqrt(a^2+b^2)
+     * Complex network construction.
+     * computes module of vector (a,b): sqrt(a^2+b^2)
      */
-    static class Module extends Sqrt {
-		Square sq1=new Square();	
-		Square sq2=new Square();	
-        Sum sum = new Sum();
-		Port<Double> p1=sq1;
-		Port<Double> p2=sq2;
-        {
-        	sq1.addListener(sum.p1);
-        	sq2.addListener(sum.p2);
-            sum.addListener(this);
-        }
-	}
-	
     @Test
     public void t03() throws InterruptedException, ExecutionException {
-    	Module node = new Module();
-    	node.p1.send(3.0);
-    	node.p2.send(4.0);
-        double res = CallbackFuture.getFrom(node);
+        // create nodes
+        Square a=new Square();  
+        Square b=new Square();  
+        Sum sum = new Sum();
+        Sqrt sq=new Sqrt(); 
+        // create vertices
+        a.addListener(sum.p1);        // a^2+b^2 -> sum
+        b.addListener(sum.p2);
+        sum.addListener(sq);         // sum -> sqrt
+        // send arguments
+        a.send(3.0);
+        b.send(4.0);
+        // wait for the result
+        double res = CallbackFuture.getFrom(sq);
         assertEquals(5, res, delta);
     }
 
     /**
+     * Demonstrates how complex network with single result
+     * can be encapsulated in a class which extends Promise.
+     * 
      * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
     static class Discr extends Promise<Double> {
-		Square sq=new Square();	
-		Mult mu1=new Mult();	
-		Mult mu2=new Mult();	
-		Diff diff = new Diff();
+        // internal nodes
+        private Mult mu2=new Mult();	
+        private Diff diff = new Diff();
         // inputs
-		Callback<Double> a=mu1.p2;
-		Callback<Double> b=sq;
-		Callback<Double> c=mu2.p2;
+        MulByConst a=new MulByConst(4.0);   
+        Square b=new Square();
+        Callback<Double> c=mu2.p2;
 		{
-            mu1.p1.send(4.0);
-            mu1.addListener(mu2.p1);
-            sq.addListener(diff.p1);
+            a.addListener(mu2.p1);
+            b.addListener(diff.p1);
             mu2.addListener(diff.p2);
             diff.addListener(this);
         }
 	}
 	
     /**
+     * Demonstrates how complex network with 2 results
+     * can be encapsulated in a class with 2 Promise members.
+     * 
      * compute roots of a quadratic equation
+     *     D  = b^2-4*a*c 
      *     x1 = (-b + sqrt(D))/(2*a) 
      *     x2 = (-b - sqrt(D))/(2*a) 
      */
 	static class QuadEq {
         // internal nodes
-        UnaryMinus mb=new UnaryMinus();
-        Discr d =new Discr();
-        Sqrt sqrt = new Sqrt();
-        Mult mul=new Mult();    
-        Sum sum = new Sum();
-        Diff diff=new Diff();
+	    private UnaryMinus mb=new UnaryMinus();
+	    private Discr d =new Discr();
+	    private Sqrt sqrt = new Sqrt();
+	    private MulByConst mul=new MulByConst(2.0);    
+	    private Sum sum = new Sum();
+	    private Diff diff=new Diff();
         // inputs
-        Promise<Double> a=new Promise<Double>();
+        Promise<Double> a=new Promise<Double>(); // a and b used multiple times, require Promise
         Promise<Double> b=new Promise<Double>();
-		Port<Double> c=d.c;
+		Port<Double> c=d.c; // c is used only once
 		// outputs
 		Div x1 = new Div();
 		Div x2 = new Div();
 		// connections
         {
-            a.addListener(d.a).addListener(mul.p2);
+            a.addListener(d.a).addListener(mul);
             b.addListener(d.b).addListener(mb);
             d.addListener(sqrt);
             
@@ -143,7 +169,6 @@ public class FormulaTest {
             mul.addListener(x1.p2).addListener(x2.p2);
             
             diff.addListener(x2.p1);
-            mul.p1.send(2.0);
         }
 	}
 
@@ -183,6 +208,8 @@ public class FormulaTest {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
     }
+    
+    // functional computing nodes
 
     static class Square extends UnaryOp<Double> {
         public Double eval(Double v) {
@@ -212,6 +239,33 @@ public class FormulaTest {
         }
     }
 
+    static class MulByConst extends UnaryOp<Double> {
+        private Double c;
+        public MulByConst(Double c) {
+            this.c = c;
+        }
+        public Double eval(Double v) {
+            return c*v;
+        }
+    }
+    
+    /** another way to implement multiplication by a constant
+     */
+    static class MulByConst1 extends Mult implements Callback<Double>{
+        public MulByConst1(Double c) {
+            super.p1.send(c);
+        }
+        @Override
+        public void send(Double value) {
+            super.p2.send(value);
+        }
+
+        @Override
+        public void sendFailure(Throwable exc) {
+            super.p2.sendFailure(exc);
+        }
+    }
+    
     static class UnaryMinus extends UnaryOp<Double> {
         public Double eval(Double v) {
             return -v;

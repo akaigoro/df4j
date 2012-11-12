@@ -45,7 +45,7 @@ public abstract class BaseActor extends Task {
      * Initial state should be off, to prevent premature firing.
      */
     protected abstract class Pin {
-    	private final int pinBit; // distinct for all pins of a node 
+    	private final int pinBit; // distinct for all other pins of the node 
 
     	protected Pin(){
         	synchronized (BaseActor.this) {
