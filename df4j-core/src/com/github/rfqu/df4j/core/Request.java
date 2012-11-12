@@ -40,7 +40,7 @@ public class Request<T extends Request<T, R>, R> extends Link {
      * sends itself to the destination
      */
     @SuppressWarnings("unchecked")
-    public void forward() {
+    public void reply() {
         if (replyTo == null) {
             return;
         }
@@ -52,7 +52,7 @@ public class Request<T extends Request<T, R>, R> extends Link {
      */
     public void reply(R result) {
         this.result=result;
-        forward();
+        reply();
     }
 
     /** sets the error and forwards to the destination
@@ -60,7 +60,7 @@ public class Request<T extends Request<T, R>, R> extends Link {
      */
     public void replyFailure(Throwable exc) {
         this.exc=exc;
-        forward();
+        reply();
     }
 
     public Port<T> getReplyTo() {

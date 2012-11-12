@@ -21,9 +21,7 @@ import com.github.rfqu.df4j.core.Request;
  * Request for an I/O operation.
  * @param <R> actual type of the request, after subclassing.
  */
-public class IORequest<R extends IORequest<R>>
-  extends Request<R, Integer> //implements Runnable
-{
+public class IORequest<R extends IORequest<R>> extends Request<R, Integer> {
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
 
     public int rid=ids.addAndGet(1);
@@ -58,7 +56,7 @@ public class IORequest<R extends IORequest<R>>
     /** for timer */
 //    @Override
     public synchronized void run() {
-        forward();
+        reply();
     }
 
     private void checkInTrans() {
@@ -86,7 +84,7 @@ public class IORequest<R extends IORequest<R>>
         checkInTrans();
         this.exc=exc;
         inTrans=false;
-        forward();
+        reply();
     }
 
     public void setBuffer(ByteBuffer buf) {
