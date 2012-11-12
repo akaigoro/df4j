@@ -19,6 +19,7 @@ testfile*
 *.gif
 *.css
 */doc/*
+*/test-output/*
 
 # Packages #
 ############
