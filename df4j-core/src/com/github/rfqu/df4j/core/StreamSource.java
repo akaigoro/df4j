@@ -10,6 +10,6 @@
 
 package com.github.rfqu.df4j.core;
 
-public interface DataSource<T> {
-    public DataSource<T> addListener(Callback<T> sink);
+public interface StreamSource<T> {
+    public StreamSource<T> addListener(StreamPort<T> sink);
 }

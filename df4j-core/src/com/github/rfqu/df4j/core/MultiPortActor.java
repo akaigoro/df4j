@@ -14,6 +14,7 @@ import java.util.concurrent.Executor;
 /**
  * An Actor with several input Ports, subclassed from MultiPortActor.PortHandler.
  * Each port has specific message handler PortHandler.act(M m).
+ * Handlers are determined by the exact type of Message, subclassed from MultiPortActor.Message.
  * The message type M need not to extend Link.
  * Messages for all ports are stored in the single message queue.
  */

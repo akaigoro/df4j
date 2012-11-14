@@ -12,19 +12,18 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Executor;
 
 /**
- * A dataflow node with one stream input port.
- * This is classic Actor type.
+ * A dataflow node with one scalar input port.
+ * Unlike classic Actor, PullingActor can choose message source on its own discretion.
  * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M extends Link> extends StreamActor<M> {
-	{
+public abstract class PullingActor<M extends Link> extends StreamActor<M> {
+    {
         input=new StreamInput<M>();
     }
-	
-    public Actor(Executor executor) {
+    
+    public PullingActor(Executor executor) {
     	super(executor);
     }
 
-    public Actor() {}
-
+    public PullingActor() {}
 }

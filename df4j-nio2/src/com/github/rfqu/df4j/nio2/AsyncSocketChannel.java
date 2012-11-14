@@ -193,7 +193,6 @@ public class AsyncSocketChannel extends Link
         		return;
         	}
         	currentRequest=request;
-            channelAcc.off(); // block channel
             if (request.isReadOp()) {
 //              System.out.println("channel read started id="+request.id);
                 if (request.timed) {

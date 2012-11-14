@@ -7,24 +7,9 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.Executor;
-
-/**
- * A dataflow node with one stream input port.
- * This is classic Actor type.
- * @param <M> the type of accepted messages.
- */
-public abstract class Actor<M extends Link> extends StreamActor<M> {
-	{
-        input=new StreamInput<M>();
-    }
-	
-    public Actor(Executor executor) {
-    	super(executor);
-    }
-
-    public Actor() {}
-
+public interface EventSource<T> {
+    public EventSource<T> addListener(StreamPort<T> sink);
 }

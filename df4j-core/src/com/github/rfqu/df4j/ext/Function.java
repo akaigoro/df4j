@@ -10,16 +10,16 @@
 //package com.github.rfqu.df4j.util;
 package com.github.rfqu.df4j.ext;
 
-import com.github.rfqu.df4j.core.BaseActor;
+import com.github.rfqu.df4j.core.AbstractActor;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DataSource;
+import com.github.rfqu.df4j.core.ResultSource;
 
 /**
  * abstract node with multiple inputs, single output and exception handling
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends BaseActor implements DataSource<R> {
+public abstract class Function<R> extends AbstractActor implements ResultSource<R> {
     protected Throwable exc=null;
 	protected final Demand<R> res=new Demand<R>();
     protected boolean shot=false;
@@ -38,7 +38,7 @@ public abstract class Function<R> extends BaseActor implements DataSource<R> {
         return this;
     }
     
-    public void run() {
+    public void act() {
        if (exc==null) {
            try {
                res.send(eval());
@@ -62,9 +62,10 @@ public abstract class Function<R> extends BaseActor implements DataSource<R> {
 
     /** A place for single token loaded with a reference of type <T>
      * @param <T> 
+     * TODO base on ScalarInput
      */
     public class CallbackInput<T> extends Pin implements Callback<T> {
-        public T value=null;
+        protected T value=null;
         protected boolean filled=false;
 
         @Override
@@ -100,6 +101,11 @@ public abstract class Function<R> extends BaseActor implements DataSource<R> {
                 turnOn();
             }
             fire();
+        }
+
+        @Override
+        protected void consume() {
+            filled=false;
         }
     }
 }

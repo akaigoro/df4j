@@ -17,14 +17,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * 
  * @param <T>  type of result
  */
-public class Promise<T> implements Callback<T>, DataSource<T> {
+public class Promise<T> implements Callback<T>, ResultSource<T> {
 	protected volatile boolean _hasValue;
     protected T value;
     protected Throwable exc;
     protected Callback<T> listener;
     
     @Override
-	public DataSource<T> addListener(Callback<T> sink) {
+	public ResultSource<T> addListener(Callback<T> sink) {
 	    checkReady:
 		synchronized (this) {
 		    if (_hasValue) {

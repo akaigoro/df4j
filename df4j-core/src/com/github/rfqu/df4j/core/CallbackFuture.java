@@ -30,11 +30,11 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
     public CallbackFuture(){
     }
     
-    public CallbackFuture(DataSource<T> source){
+    public CallbackFuture(ResultSource<T> source){
         source.addListener(this);
     }
     
-    public CallbackFuture<T> listenTo(DataSource<T> source){
+    public CallbackFuture<T> listenTo(ResultSource<T> source){
         source.addListener(this);
         return this;        
     }
@@ -122,7 +122,7 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
         return false;
     }
 
-    public static <R> R getFrom(DataSource<R> source) throws InterruptedException, ExecutionException {
+    public static <R> R getFrom(ResultSource<R> source) throws InterruptedException, ExecutionException {
         return new CallbackFuture<R>(source).get();
     }
 
