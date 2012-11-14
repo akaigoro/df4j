@@ -16,7 +16,6 @@ import java.util.concurrent.Executor;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.AbstractActor;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ContextThreadFactory;
 import com.github.rfqu.df4j.core.Port;
@@ -59,6 +58,39 @@ public class DemuxPingPongTest {
             runPingPong();
         }
 	}
+
+
+    /**
+     * the core of the test
+     */
+    float runPingPong() throws InterruptedException {
+        long startTime = System.currentTimeMillis();
+
+        MessageSink<Token> sink = new MessageSink<Token>(NUM_TOKENS);
+        Ping[] pings = new Ping[NUM_ACTORS];
+        Random rand = new Random(1);
+
+        // create Pong actor
+        Pong pong = new Pong();
+        // create Ping actors
+        for (int i = 0; i < pings.length; i++) {
+            pings[i] = new Ping(pong);
+        }
+        // create tokens, send them to randomly chosen Ping actors
+        for (int i = 0; i < NUM_TOKENS; i++) {
+            pings[rand.nextInt(pings.length)].send(new Token(TIME_TO_LIVE, sink));
+        }
+
+        // wait for all packets to die.
+        sink.await();
+
+        // report timings
+        long etime = (System.currentTimeMillis() - startTime);
+        float switchnum = NUM_TOKENS * ((long) TIME_TO_LIVE);
+        float delay = etime * 1000 * nThreads / switchnum;
+        out.println("Elapsed=" + etime / 1000f + " sec; rate=" + (1 / delay) + " messages/mks/core; mean hop time=" + (delay * 1000) + " ns");
+        return delay;
+    }
 
     /**
      * the type of messages floating between nodes
@@ -110,8 +142,12 @@ public class DemuxPingPongTest {
         }
     }
 
-
     static class Pong extends Demux<Token> {
+        { 
+            for (int k=0; k<3; k++) {
+                new PongWorker();
+            }
+        }
         
         /**
          * The ponging actor
@@ -121,50 +157,18 @@ public class DemuxPingPongTest {
             {
                 actors.send(this);
             }
-
+/*
             @Override
             protected void initInput() {
                 input=new AbstractActor.ScalarInput<Token>();
             }
-
+*/
             @Override
             protected void act(Token token) throws Exception {
                 token.sendTo(token.getReplyTo());
                 actors.send(this);
             }
         }
-    }
-
-    /**
-     * the core of the test
-     */
-    float runPingPong() throws InterruptedException {
-        long startTime = System.currentTimeMillis();
-
-        MessageSink<Token> sink = new MessageSink<Token>(NUM_TOKENS);
-        Ping[] pings = new Ping[NUM_ACTORS];
-        Random rand = new Random(1);
-
-        // create Pong actor
-        Pong pong = new Pong();
-        // create Ping actors
-        for (int i = 0; i < pings.length; i++) {
-            pings[i] = new Ping(pong);
-        }
-        // create tokens, send them to randomly chosen Ping actors
-        for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].send(new Token(TIME_TO_LIVE, sink));
-        }
-
-        // wait for all packets to die.
-        sink.await();
-
-        // report timings
-        long etime = (System.currentTimeMillis() - startTime);
-        float switchnum = NUM_TOKENS * ((long) TIME_TO_LIVE);
-        float delay = etime * 1000 * nThreads / switchnum;
-        out.println("Elapsed=" + etime / 1000f + " sec; rate=" + (1 / delay) + " messages/mks/core; mean hop time=" + (delay * 1000) + " ns");
-        return delay;
     }
 
     public static void main(String args[]) throws InterruptedException {

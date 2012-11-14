@@ -1,6 +1,6 @@
 # eclipse files
-*/.settings
-*/..classpath
+*/.settings/*
+*/.classpath
 */.project
 
 # test results
