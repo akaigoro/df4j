@@ -49,9 +49,10 @@ public class FormulaTest {
         // instantiate desired network class:
         Square sq=new Square(); 
         // push argument values to inputs:
-        sq.send(2.0); // network starts as soon as arguments are received
+        sq.send(2.0); 
         // create a future to pull the result from the network
         CallbackFuture<Double> future = new CallbackFuture<Double>(sq);
+       // network starts after both arguments and result consumers are defined
         // wait for the result
         Double res = future.get();
         // alternatively, use this shortcut:

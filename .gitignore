@@ -1,7 +1,7 @@
 # eclipse files
-.settings
-.classpath
-.project
+*/.settings
+*/..classpath
+*/.project
 
 # test results
 tmpfile*
@@ -19,7 +19,6 @@ testfile*
 *.gif
 *.css
 */doc/*
-*/test-output/*
 
 # Packages #
 ############
