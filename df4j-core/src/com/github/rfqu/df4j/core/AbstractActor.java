@@ -18,19 +18,21 @@ import java.util.concurrent.Executor;
  *  - create 1 or more pins for inputs and/or outputs
  *  - redefine abstract method act()
  */
-public abstract class AbstractActor extends Task {
+public abstract class AbstractActor extends Link {
 	static final int allOnes=0xFFFFFFFF;
     private Pin head; // the head of the list of Pins
     private int pinCount=0;
     private int pinMask=0; // mask with 1 for all existing pins
     private int readyPins=0;  // mask with 1 for all ready pins
+    private final Task task; 
     protected boolean fired=false; // true when this actor runs
     
     public AbstractActor(Executor executor) {
-    	super(executor);
+        task=new ActorTask(executor);
     }
 
     public AbstractActor() {
+        task=new ActorTask();
     }
 
     /**
@@ -39,6 +41,17 @@ public abstract class AbstractActor extends Task {
     protected final boolean isReady() {
 		return readyPins==pinMask;
 	}
+    
+    protected final void fire() {
+        task.fire();
+    }
+    
+    //======================== backend
+    
+    /**
+     * reads extracted tokens from places and performs specific calculations 
+     */
+    protected abstract void act();
     
     /** 
      * Extracts tokens from pins.
@@ -52,24 +65,45 @@ public abstract class AbstractActor extends Task {
     
     /** loops while all pins are ready
      */
-    @Override
-    public void run() {
-        for (;;) {
-            synchronized (this) {
-                if (!isReady()) {
-                    fired=false; // allow firing
-                    return;
+    protected void run() {
+        try {
+            for (;;) {
+                synchronized (this) {
+                    if (!isReady()) {
+                        fired = false; // allow firing
+                        return;
+                    }
+                    consumeTokens();
                 }
-                consumeTokens();
+                act();
             }
-            act();
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
     }
 
-    /**
-     * reads extracted tokens from places and performs specific calculations 
+    //====================== inner classes
+    
+    /** We could extend AbstractActor from Task, but define separate class to 
+     * minimize Actor's class hierarchy
      */
-    protected abstract void act();
+    private class ActorTask extends Task {
+        
+        public ActorTask() {
+        }
+
+        public ActorTask(Executor executor) {
+            super(executor);
+        }
+
+        /** loops while all pins are ready
+         */
+        @Override
+        public void run() {
+            AbstractActor.this.run();
+        }
+
+    }
 
     /**
      * Basic place for input tokens.
@@ -149,7 +183,7 @@ public abstract class AbstractActor extends Task {
             	doFire=turnOn();
             }
             if (doFire) {
-            	fire();
+            	task.fire();
             }
         }
 
@@ -199,56 +233,12 @@ public abstract class AbstractActor extends Task {
     }
 
     /**
-     * Token storage with standard Port interface.
+     * Token storage with standard Port<T> interface.
      * @param <T> type of accepted tokens.
      */
-    protected abstract class BasePort<T> extends Pin implements Port<T> {
+    protected abstract class Input<T> extends Pin implements StreamPort<T>{
         /** extracted token */
         public T value=null;
-
-        @Override
-        public void send(T token) {
-        	boolean doFire;
-            synchronized (AbstractActor.this) {
-            	add(token);
-            	doFire=turnOn();
-            }
-            if (doFire) {
-            	fire();
-            }
-        }
-
-        protected void consume() {
-            if (isEmpty() ) {
-                throw new IllegalStateException("no tokens");
-            }
-            value = remove();
-            if (isEmpty()) {
-                turnOff();
-            }
-        }
-
-        /**
-         * saves passed token
-         * @param newToken
-         */
-		protected abstract void add(T newToken);
-		/**
-		 * 
-		 * @return true if the pin is not ready
-		 */
-		protected abstract boolean isEmpty();
-		/**
-		 * removes token from the storage
-		 * @return removed token
-		 */
-		protected abstract T remove();
-    }
-
-    /** A place for single token of type <T>
-     * @param <T> 
-     */
-    protected abstract class Input<T extends Link> extends BasePort<T> implements StreamPort<T>{
         protected boolean closeRequested=false;
         protected boolean closeHandled=false;
 
@@ -267,16 +257,54 @@ public abstract class AbstractActor extends Task {
                 fire();
             }
         }
-        
+
         public boolean isClosed() {
             return closeRequested;
         }
+
+        @Override
+        public void send(T token) {
+            boolean doFire;
+            synchronized (AbstractActor.this) {
+                add(token);
+                doFire=turnOn();
+            }
+            if (doFire) {
+                fire();
+            }
+        }
+
+        protected void consume() {
+            if (isEmpty() ) {
+                throw new IllegalStateException("no tokens");
+            }
+            value = remove();
+            if (isEmpty()) {
+                turnOff();
+            }
+        }
+
+        /**
+         * saves passed token
+         * @param newToken
+         */
+        protected abstract void add(T newToken);
+        /**
+         * 
+         * @return true if the pin is not ready
+         */
+        abstract boolean isEmpty();
+        /**
+         * removes token from the storage
+         * @return removed token
+         */
+        protected abstract T remove();
     }
 
     /** A place for single token of type <T>
      * @param <T> 
      */
-    public class ScalarInput<T extends Link> extends Input<T> {
+    public class ScalarInput<T> extends Input<T> {
         protected boolean filled=false;
 
         @Override
@@ -284,11 +312,12 @@ public abstract class AbstractActor extends Task {
             if (token==null) {
                 throw new IllegalArgumentException("operand may not be null"); 
             }
+            filled=true;
             value=token;
         }
 
         @Override
-        public boolean isEmpty() {
+        boolean isEmpty() {
             if (filled) {
                 return false;
             }
@@ -352,7 +381,7 @@ public abstract class AbstractActor extends Task {
      * the result should be sent. 
      * @param <R>  type of result
      */
-    public class Demand<R> extends Pin implements ResultSource<R>, Callback<R> {
+    public class Demand<R> extends Pin implements EventSource<R, Callback<R>>, Callback<R> {
         private Promise<R> listeners=new Promise<R>();
 
         /** indicates a demand
@@ -360,14 +389,14 @@ public abstract class AbstractActor extends Task {
          * @return 
          */
         @Override
-        public ResultSource<R> addListener(Callback<R> sink) {
+        public EventSource<R, Callback<R>> addListener(Callback<R> sink) {
         	boolean doFire;
             synchronized (AbstractActor.this) {
             	listeners.addListener(sink);
             	doFire=turnOn();
             }
             if (doFire) {
-            	fire();
+                task.fire();
             }
             return this;
     	}
@@ -384,6 +413,9 @@ public abstract class AbstractActor extends Task {
             listeners.sendFailure(exc);
         }
 
+        /**
+         * demands are not arguments, need not to be extracted
+         */
         @Override
         protected void consume() {}
     }

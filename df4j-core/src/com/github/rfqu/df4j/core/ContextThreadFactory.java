@@ -22,18 +22,18 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @author rfq
  *
  */
-public class ThreadFactoryTL extends ThreadGroup implements ThreadFactory {
+public class ContextThreadFactory extends ThreadGroup implements ThreadFactory {
     static String dfprefix = " DF ";
     String prefix;
     Executor executor;
 
-	public ThreadFactoryTL(String prefix, Executor executor) {
+	public ContextThreadFactory(String prefix, Executor executor) {
 	    super(dfprefix);
         this.executor=executor;
         this.prefix=prefix;
     }
 
-    public ThreadFactoryTL(String prefix) {
+    public ContextThreadFactory(String prefix) {
         this(prefix, null);
     }
 
@@ -59,21 +59,21 @@ public class ThreadFactoryTL extends ThreadGroup implements ThreadFactory {
     }
 
     public static Executor newSingleThreadExecutor() {
-		ThreadFactoryTL tf = new ThreadFactoryTL(dfprefix);
+		ContextThreadFactory tf = new ContextThreadFactory(dfprefix);
 	    Executor executor = Executors.newSingleThreadExecutor(tf);
 	    tf.setExecutor(executor);
 		return executor;
 	}
     
     public static ThreadPoolExecutor newFixedThreadPool(int nThreads) {
-		ThreadFactoryTL tf = new ThreadFactoryTL(dfprefix);
+		ContextThreadFactory tf = new ContextThreadFactory(dfprefix);
 		ThreadPoolExecutor executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(nThreads, tf);
 	    tf.setExecutor(executor);
 		return executor;
 	}
     
     public static ThreadPoolExecutor newCachedThreadPool() {
-        ThreadFactoryTL tf = new ThreadFactoryTL(dfprefix);
+        ContextThreadFactory tf = new ContextThreadFactory(dfprefix);
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool(tf);
         tf.setExecutor(executor);
         return executor;
@@ -82,7 +82,7 @@ public class ThreadFactoryTL extends ThreadGroup implements ThreadFactory {
     class ThreadTL extends Thread {
 	    
         public ThreadTL(Runnable r) {
-            super(ThreadFactoryTL.this, r);
+            super(ContextThreadFactory.this, r);
             setName(getName()+prefix+executor.getClass().getSimpleName());
             setDaemon(true);
         }

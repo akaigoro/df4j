@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
+import com.github.rfqu.df4j.core.ContextThreadFactory;
 
 public class Timer {
 	private  ScheduledThreadPoolExecutor timerThread;
@@ -17,7 +17,7 @@ public class Timer {
     }
 
     public Timer() {
-        this(new ThreadFactoryTL(" DF Timer ", Task.getCurrentExecutor()));
+        this(new ContextThreadFactory(" DF Timer ", Task.getCurrentExecutor()));
     }
 
     private static final ThreadLocal <Timer> currentTimerKey = new ThreadLocal<Timer> () {

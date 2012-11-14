@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.ext;
 
 import java.util.Random;
 
@@ -16,7 +16,7 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.SerialExecutor;
+import com.github.rfqu.df4j.ext.SerialExecutor;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 

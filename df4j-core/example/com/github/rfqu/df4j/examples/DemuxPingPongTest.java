@@ -11,51 +11,21 @@ package com.github.rfqu.df4j.examples;
 
 import java.io.PrintStream;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.rfqu.df4j.core.AbstractActor;
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.Link;
+import com.github.rfqu.df4j.core.ContextThreadFactory;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
+import com.github.rfqu.df4j.ext.Demux;
+import com.github.rfqu.df4j.util.MessageSink;
 
-
-/**
- * A set of identical Ping Actors, passing tokens to a single Pong actor, which
- * returns tokens back to sender. A tokens dies after predefined number of hops.
- * 
- */
-public class SovereignActorTest {
-    
-    static class Demux<M extends Link> extends Actor<M> {
-        protected StreamInput<Actor<M>> actors=new StreamInput<Actor<M>>();
-
-        public Demux() {
-            super(null);
-        }
-
-        /** adds for one time */
-        public void addListener(Actor<M> actor) {
-            actors.send(actor);
-        }
-        
-        @Override
-        protected void consumeTokens() {
-            super.consumeTokens();
-            actors.consume();
-        }
-
-        @Override
-        protected void act(M message) throws Exception {
-            actors.value.send(message);
-        }
-        
-    }
+public class DemuxPingPongTest {
     
     final static int NUM_ACTORS = 1000; // number of Ping nodes
     final static int NUM_TOKENS = NUM_ACTORS; // number of tokens
@@ -72,13 +42,13 @@ public class SovereignActorTest {
     @Test
     public void testSingle() throws InterruptedException {
         nThreads=1;
-        runTest(ThreadFactoryTL.newSingleThreadExecutor());
+        runTest(ContextThreadFactory.newSingleThreadExecutor());
     }
 
     @Test
     public void testFixed() throws InterruptedException {
         nThreads= Runtime.getRuntime().availableProcessors();
-        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
+        runTest(ContextThreadFactory.newFixedThreadPool(nThreads));
     }
 
     private void runTest(Executor executor) throws InterruptedException {
@@ -94,10 +64,27 @@ public class SovereignActorTest {
      * the type of messages floating between nodes
      */
     static class Token extends Request<Token, Void> {
-        int hops_remained;
+        private int hops_remained;
+        private final Port<Token> sink;
 
-        public Token(int hops_remained) {
+        public Token(int hops_remained, Port<Token> sink) {
             this.hops_remained = hops_remained;
+            this.sink = sink;
+        }
+        
+        /**
+         * the method to handle incoming messages for each received packet,
+         * decrease the number of remaining hops. If number of hops become zero,
+         * send it to sink, otherwise send it back to the Ping actor.
+         */
+        protected void sendTo(Port<Token> to) throws Exception {
+            int nextVal = hops_remained - 1;
+            if (nextVal == 0) {
+                sink.send(this);
+            } else {
+                hops_remained = nextVal;
+                to.send(this);
+            }
         }
     }
     
@@ -106,12 +93,10 @@ public class SovereignActorTest {
      * 
      */
     static class Ping extends Actor<Token> {
-        Pong pong;
-        Port<Token> sink;
+        Port<Token> pong;
 
-        public Ping(Pong pong, Port<Token> sink) {
+        public Ping(Port<Token> pong) {
             this.pong = pong;
-            this.sink = sink;
         }
 
         /**
@@ -120,82 +105,34 @@ public class SovereignActorTest {
          * sink, otherwise send to the Pong actor.
          */
         protected void act(Token token) throws Exception {
-            if (token.getReplyTo() == null) {
-                token.setReplyTo(this);
-                pong.send(token);
-            } else {
-                int nextVal = token.hops_remained - 1;
-                if (nextVal == 0) {
-                    sink.send(token);
-                } else {
-                    token.hops_remained = nextVal;
-                    pong.send(token);
-                }
-            }
+            token.setReplyTo(this);
+            token.sendTo(pong);
         }
     }
 
-    /**
-     * The ponging actor
-     * 
-     */
+
     static class Pong extends Demux<Token> {
-        private final Port<Token> sink;
-
-        public Pong(Port<Token> sink) {
-            this.sink = sink;
-            for (int i = 0; i < 10; i++) {
-                new PongWorker();
-            }
-        }
-
+        
+        /**
+         * The ponging actor
+         * 
+         */
         class PongWorker extends Actor<Token> {
-
-            public PongWorker() {
-                listen();
+            {
+                actors.send(this);
             }
 
-            protected void listen() {
-                Pong.this.addListener(this);
+            @Override
+            protected void initInput() {
+                input=new AbstractActor.ScalarInput<Token>();
             }
 
-            /**
-             * the method to handle incoming messages for each received packet,
-             * decrease the number of remaining hops. If number of hops become zero,
-             * send it to sink, otherwise send it back to the Ping actor.
-             */
             @Override
             protected void act(Token token) throws Exception {
-                int nextVal = token.hops_remained - 1;
-                if (nextVal == 0) {
-                    sink.send(token);
-                } else {
-                    token.hops_remained = nextVal;
-                    token.reply(null);
-                }
-                listen();
+                token.sendTo(token.getReplyTo());
+                actors.send(this);
             }
         }
-    }
-
-    /**
-     * The ending node. This is a Port rather than actor, to be accessed outside
-     * the actor world.
-     */
-    static class MessageSink extends CountDownLatch implements Port<Token> {
-        int remain;
-
-        public MessageSink(int count) {
-            super(count);
-            remain = count;
-        }
-
-        @Override
-        public void send(Token message) {
-            super.countDown();
-            remain--;
-        }
-
     }
 
     /**
@@ -204,19 +141,19 @@ public class SovereignActorTest {
     float runPingPong() throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
-        MessageSink sink = new MessageSink(NUM_TOKENS);
+        MessageSink<Token> sink = new MessageSink<Token>(NUM_TOKENS);
         Ping[] pings = new Ping[NUM_ACTORS];
         Random rand = new Random(1);
 
         // create Pong actor
-        Pong pong = new Pong(sink);
+        Pong pong = new Pong();
         // create Ping actors
         for (int i = 0; i < pings.length; i++) {
-            pings[i] = new Ping(pong, sink);
+            pings[i] = new Ping(pong);
         }
-        // create tokens, send them to randomly chosen actors
+        // create tokens, send them to randomly chosen Ping actors
         for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].send(new Token(TIME_TO_LIVE));
+            pings[rand.nextInt(pings.length)].send(new Token(TIME_TO_LIVE, sink));
         }
 
         // wait for all packets to die.
@@ -231,10 +168,9 @@ public class SovereignActorTest {
     }
 
     public static void main(String args[]) throws InterruptedException {
-        SovereignActorTest nt = new SovereignActorTest();
+        DemuxPingPongTest nt = new DemuxPingPongTest();
         nt.init();
         nt.testSingle();
     }
-
 
 }

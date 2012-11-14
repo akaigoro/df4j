@@ -18,7 +18,7 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
+import com.github.rfqu.df4j.core.ContextThreadFactory;
 import com.github.rfqu.df4j.util.IntValue;
 import com.github.rfqu.df4j.util.MessageSink;
 
@@ -39,13 +39,13 @@ public class GraphTest {
     @Test
     public void testSingle() throws InterruptedException {
         nThreads=1;
-        runTest(ThreadFactoryTL.newSingleThreadExecutor());
+        runTest(ContextThreadFactory.newSingleThreadExecutor());
     }
 
     @Test
     public void testFixed() throws InterruptedException {
         nThreads= Runtime.getRuntime().availableProcessors();
-        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
+        runTest(ContextThreadFactory.newFixedThreadPool(nThreads));
     }
 
 	private void runTest(Executor executor) throws InterruptedException {

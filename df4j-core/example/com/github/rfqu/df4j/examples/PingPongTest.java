@@ -21,7 +21,9 @@ import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ThreadFactoryTL;
+import com.github.rfqu.df4j.core.ContextThreadFactory;
+import com.github.rfqu.df4j.examples.PingPongTest.Token;
+import com.github.rfqu.df4j.util.MessageSink;
 
 
 /**
@@ -51,13 +53,13 @@ public class PingPongTest {
     @Test
     public void testSingle() throws InterruptedException {
         nThreads=1;
-        runTest(ThreadFactoryTL.newSingleThreadExecutor());
+        runTest(ContextThreadFactory.newSingleThreadExecutor());
     }
 
     @Test
     public void testFixed() throws InterruptedException {
         nThreads= Runtime.getRuntime().availableProcessors();
-        runTest(ThreadFactoryTL.newFixedThreadPool(nThreads));
+        runTest(ContextThreadFactory.newFixedThreadPool(nThreads));
     }
 
     private void runTest(Executor executor) throws InterruptedException {
@@ -143,32 +145,12 @@ public class PingPongTest {
     }
 
     /**
-     * The ending node. This is a Port rather than actor, to be accessed outside
-     * the actor world.
-     */
-    static class MessageSink extends CountDownLatch implements Port<Token> {
-        int remain;
-
-        public MessageSink(int count) {
-            super(count);
-            remain = count;
-        }
-
-        @Override
-        public void send(Token message) {
-            super.countDown();
-            remain--;
-        }
-
-    }
-
-    /**
      * the core of the test
      */
     float runPingPong() throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
-        MessageSink sink = new MessageSink(NUM_TOKENS);
+        MessageSink<Token> sink = new MessageSink<Token>(NUM_TOKENS);
         Ping[] pings = new Ping[NUM_ACTORS];
         Random rand = new Random(1);
 

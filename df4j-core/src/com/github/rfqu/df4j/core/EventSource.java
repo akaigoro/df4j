@@ -10,6 +10,6 @@
 
 package com.github.rfqu.df4j.core;
 
-public interface EventSource<T> {
-    public EventSource<T> addListener(StreamPort<T> sink);
+public interface EventSource<T, P extends Port<T>> {
+    public EventSource<T, P> addListener(P sink);
 }

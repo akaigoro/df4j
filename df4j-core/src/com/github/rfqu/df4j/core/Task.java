@@ -59,7 +59,7 @@ public abstract class Task extends Link implements Runnable {
 		@Override
 		protected Executor initialValue() {
 			int nThreads=Runtime.getRuntime().availableProcessors();
-			return ThreadFactoryTL.newFixedThreadPool(nThreads);
+			return ContextThreadFactory.newFixedThreadPool(nThreads);
 		}   	
     };
 

@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.examples;
+package com.github.rfqu.df4j.ext;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.*;
@@ -20,8 +20,8 @@ import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.ext.BinaryOp;
-import com.github.rfqu.df4j.ext.UnaryOp;
+import com.github.rfqu.df4j.ext.Function.BinaryOp;
+import com.github.rfqu.df4j.ext.Function.UnaryOp;
 
 /**
  * Demonstration of building dataflow networks.
@@ -62,7 +62,7 @@ public class FormulaTest {
     }
 
     /**
-     * checks that execution exception is propagated
+     * checks that execution exception is propagated to CallbackFuture
      */
     @Test
     public void t011() throws InterruptedException {
@@ -71,6 +71,27 @@ public class FormulaTest {
         try {
             // that error manifests itself when the result is pulled from the network
             CallbackFuture.getFrom(sq);
+            fail("no ExecutionException");
+        } catch (ExecutionException e) {
+            assertTrue( e.getCause() instanceof IllegalArgumentException);
+        }
+    }
+
+    /**
+     * checks that execution exception is propagated to between actors
+     */
+    @Test
+    public void t012() throws InterruptedException {
+        Sqrt sq=new Sqrt(); 
+        Sum sum=new Sum();
+        sq.addListener(sum.p1);
+
+        sq.send(-2.0); // square root from negative number would cause an error
+        //sum.p2.send(1.0);
+
+        try {
+            // that error manifests itself when the result is pulled from the network
+            CallbackFuture.getFrom(sum);
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -212,12 +233,6 @@ public class FormulaTest {
     
     // functional computing nodes
 
-    static class Square extends UnaryOp<Double> {
-        public Double eval(Double v) {
-            return v * v;
-        }
-    }
-
     static class Sqrt extends UnaryOp<Double> {
         public Double eval(Double v) {
             double val = Math.sqrt(v.doubleValue());
@@ -225,6 +240,12 @@ public class FormulaTest {
                 throw new IllegalArgumentException();
             }
             return val;
+        }
+    }
+
+    static class Square extends UnaryOp<Double> {
+        public Double eval(Double v) {
+            return v * v;
         }
     }
 

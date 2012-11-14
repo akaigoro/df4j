@@ -9,6 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -23,22 +24,28 @@ import java.util.concurrent.TimeoutException;
  * @param <T> the type of accepted messages
  */
 public class CallbackFuture<T> implements Callback<T>, Future<T> {
-	protected volatile boolean _hasValue;
+    protected volatile boolean _hasValue;
     protected volatile T value;
     protected volatile Throwable exc;
     
-    public CallbackFuture(){
+    public CallbackFuture() {
     }
     
-    public CallbackFuture(ResultSource<T> source){
+    public CallbackFuture(EventSource<T, Callback<T>> source) {
         source.addListener(this);
     }
     
-    public CallbackFuture<T> listenTo(ResultSource<T> source){
+    /** connects to an EventSource source.
+     * The source is supposed to invoke send(T message) on this instance.
+     * @param source
+     */
+    public CallbackFuture<T> listenTo(EventSource<T, Callback<T>> source) {
         source.addListener(this);
         return this;        
     }
     
+    /** sends a message to this instance and then to its listeners.
+     */
     @Override
     public synchronized void send(T message) {
         if (_hasValue) {
@@ -64,6 +71,9 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
         return _hasValue;
     }
 
+    /**
+     * @return null if was interrupted
+     */
     public Throwable getException() {
         return exc;
     }
@@ -72,57 +82,77 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
      * waits until a message arrive
      * @return received message
      * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws ExecutionException if failure was sent.
+     * @throws CancellationException if this Future was cancelled
      */
     @Override
     public synchronized T get() throws InterruptedException, ExecutionException {
         while (!_hasValue) {
             wait();
         }
-        if (exc==null) {
+        if (value!=null) {
             return value;
-        } else {
+        } else if (exc!=null){
             throw new ExecutionException(exc);
+        } else {
+            throw new CancellationException();
         }
     }
 
+    /** waits until a message arrive, with timeout.
+     * 
+     * @param timeout timeout in units
+     * @param unit units of time to measure timeout
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws TimeoutException if timeout occur
+     * @throws ExecutionException if failure was sent.
+     * @throws CancellationException if this Future was cancelled
+     */
     @Override
-    public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        if (value!=null) {
-            return value;
-        }
-        long duration = unit.toMillis(timeout);
-        long startTime=System.currentTimeMillis();
-        long endTime=startTime+duration;
-        for (;;) {
-            wait(duration);            
-            if (value!=null) {
-                return value;
-            }
-            long currentTime=System.currentTimeMillis();
-            duration=(endTime-currentTime);
+    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        return get(unit.toMillis(timeout));
+    }
+
+    /** waits until a message arrive, with timeout.
+     * 
+     * @param timeoutMillis timeout in milliseconds
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws TimeoutException if timeout occur
+     * @throws ExecutionException if failure was sent.
+     * @throws CancellationException if this Future was cancelled
+     */
+    public synchronized T get(long timeoutMillis) throws InterruptedException, ExecutionException, TimeoutException {
+        long endTime=System.currentTimeMillis()+timeoutMillis;
+        while (!_hasValue) {
+            long duration=(endTime-System.currentTimeMillis());
             if (duration<=0) {
                 throw new TimeoutException();
             }
+            wait(duration);            
         }
-    }
-
-    public T get(long timeoutMillis) throws InterruptedException, ExecutionException, TimeoutException {
-        return get(timeoutMillis, TimeUnit.MILLISECONDS);
+        return get();
     }
     
+    /**
+     * Since this Future does not represent any task, 
+     * this method is used to interrupt waiting threads.
+     */
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        // TODO Auto-generated method stub
-        return false;
+    public synchronized boolean cancel(boolean mayInterruptIfRunning) {
+        if (_hasValue) {
+            throw new IllegalStateException("has value already");
+        }
+        _hasValue=true;
+        notifyAll();
+        return true;
     }
 
     @Override
-    public boolean isCancelled() {
-        // TODO Auto-generated method stub
-        return false;
+    public synchronized boolean isCancelled() {
+        return _hasValue && value==null && exc==null;
     }
 
-    public static <R> R getFrom(ResultSource<R> source) throws InterruptedException, ExecutionException {
+    public static <R> R getFrom(EventSource<R, Callback<R>> source) throws InterruptedException, ExecutionException {
         return new CallbackFuture<R>(source).get();
     }
 

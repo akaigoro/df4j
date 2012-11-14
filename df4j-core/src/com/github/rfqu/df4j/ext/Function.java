@@ -10,19 +10,25 @@
 //package com.github.rfqu.df4j.util;
 package com.github.rfqu.df4j.ext;
 
-import com.github.rfqu.df4j.core.AbstractActor;
+import java.util.concurrent.Executor;
+
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ResultSource;
+import com.github.rfqu.df4j.core.EventSource;
 
 /**
  * abstract node with multiple inputs, single output and exception handling
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends AbstractActor implements ResultSource<R> {
-    protected Throwable exc=null;
-	protected final Demand<R> res=new Demand<R>();
-    protected boolean shot=false;
+public abstract class Function<R> extends CallbackActor implements EventSource<R, Callback<R>> {
+    protected final Demand<R> res=new Demand<R>();
+
+    public Function(Executor executor) {
+        super(executor);
+    }
+
+    public Function() {
+    }
 
     /**
      * Subscribes a consumer to which the result will be send.
@@ -38,74 +44,62 @@ public abstract class Function<R> extends AbstractActor implements ResultSource<
         return this;
     }
     
-    public void act() {
-       if (exc==null) {
-           try {
-               res.send(eval());
-           } catch (Exception e) {
-               handleException(e);
-           }
-       } else {
-           handleException(exc);
-       }
-    }
-
+    //========= backend
+    
     /**
      * evaluates the function's result
-     * @return
      */
     abstract protected R eval();
+    
+    protected void act() {
+        res.send(eval());
+    }
 
     protected void handleException(Throwable exc) {
         res.sendFailure(exc);
     }
+    
+   /**
+     * Unary operation
+    *
+    * @param <T> type of the operand and the result
+    */
+   public static abstract class UnaryOp<T> extends Function<T> implements Callback<T> {
+       protected CallbackInput<T> input=new CallbackInput<T>();
 
-    /** A place for single token loaded with a reference of type <T>
-     * @param <T> 
-     * TODO base on ScalarInput
-     */
-    public class CallbackInput<T> extends Pin implements Callback<T> {
-        protected T value=null;
-        protected boolean filled=false;
+       @Override
+       public void send(T value) {
+           input.send(value);
+       }
 
-        @Override
-        public void send(T newToken) {
-            boolean doFire;
-            synchronized (Function.this) {
-                if (filled) {
-                    throw new IllegalStateException("place is occupied already"); 
-                }
-                if (shot) {
-                    return;
-                }
-                value=newToken;
-                filled=true;
-                shot=doFire=turnOn();
-            }
-            if (doFire) {
-                fire();
-            }
-        }
+       @Override
+       protected T eval() {
+           return eval(input.value);
+       }
 
-        @Override
-        public void sendFailure(Throwable exc) {
-            synchronized (Function.this) {
-                if (filled) {
-                    throw new IllegalStateException("place is occupied already"); 
-                }
-                if (shot) {
-                    return;
-                }
-                Function.this.exc=exc;
-                fired=filled=true;
-                turnOn();
-            }
-            fire();
-        }
+       abstract protected T eval(T operand);
+
+   }
+   
+   /**
+    * Binary operation: classic dataflow object.
+    * Waits for both operands to arrive,
+    * computes the operation, and sends result to the Demand object,
+    * which routes the result to the interested parties.
+    *
+    * @param <T> the type of operands and the result
+    */
+    public static abstract class BinaryOp<T> extends Function<T> {
+        CallbackInput<T> p1 = new CallbackInput<T>();
+        CallbackInput<T> p2 = new CallbackInput<T>();
 
         @Override
-        protected void consume() {
-            filled=false;
+        protected T eval() {
+            return eval(p1.value, p2.value);
         }
+
+        abstract protected T eval(T opnd, T opnd2);
+
     }
+
 }

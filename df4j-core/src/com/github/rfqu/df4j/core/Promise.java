@@ -13,18 +13,21 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * 
  * A kind of dataflow variable: single input, multiple asynchronous outputs.
+ * Distributes received value among listeners.
+ * Value (or failure) can only be assigned once. It is then saved, and 
+ * listeners connected after the assignment still would receive it.
  * May connect actors.
  * 
  * @param <T>  type of result
  */
-public class Promise<T> implements Callback<T>, ResultSource<T> {
+public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
 	protected volatile boolean _hasValue;
     protected T value;
     protected Throwable exc;
     protected Callback<T> listener;
     
     @Override
-	public ResultSource<T> addListener(Callback<T> sink) {
+	public EventSource<T, Callback<T>> addListener(Callback<T> sink) {
 	    checkReady:
 		synchronized (this) {
 		    if (_hasValue) {
@@ -100,18 +103,14 @@ public class Promise<T> implements Callback<T>, ResultSource<T> {
 
 		@Override
 		public void send(T m) {
-			for (;;) {
-			    Port<T> out=listeners.poll();
-			    if (out==null) return;
+			for (Callback<T> out=listeners.poll(); out!=null; out=listeners.poll()) {
 				out.send(m);
 			}
 		}
 
         @Override
         public void sendFailure(Throwable exc) {
-            for (;;) {
-                Callback<T> out=listeners.poll();
-                if (out==null) return;
+            for (Callback<T> out=listeners.poll(); out!=null; out=listeners.poll()) {
                 out.sendFailure(exc);
             }
         }
