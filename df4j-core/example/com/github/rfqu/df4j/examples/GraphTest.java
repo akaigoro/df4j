@@ -97,7 +97,7 @@ public class GraphTest {
     float runNetwork() throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
-        MessageSink sink = new MessageSink(NR_REQUESTS);
+        MessageSink<Object> sink = new MessageSink<Object>(NR_REQUESTS);
         NodeActor[] nodes = new NodeActor[NUM_ACTORS];
         Random rand = new Random(1);
 

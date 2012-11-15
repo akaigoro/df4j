@@ -20,6 +20,7 @@ import java.util.concurrent.Executor;
  */
 public abstract class AbstractActor extends Link {
 	static final int allOnes=0xFFFFFFFF;
+	private Throwable exc=null;
     private Pin head; // the head of the list of Pins
     private int pinCount=0;
     private int pinMask=0; // mask with 1 for all existing pins
@@ -35,6 +36,24 @@ public abstract class AbstractActor extends Link {
         task=new ActorTask();
     }
 
+    public  void sendFailure(Throwable exc) {
+        boolean doFire;
+        synchronized(this) {
+            if (this.exc!=null) {
+                return; // only first failure is processed 
+            }
+            this.exc=exc;
+            if (fired) {
+                doFire=false;
+            } else {
+                doFire=fired=true;
+            }
+        }
+        if (doFire) {
+            fire();
+        }
+    }
+
     /**
      * @return true if the actor has all its pins on and so is ready for execution
      */
@@ -46,13 +65,42 @@ public abstract class AbstractActor extends Link {
         task.fire();
     }
     
-    //======================== backend
+    //========= backend
     
     /**
      * reads extracted tokens from places and performs specific calculations 
      */
     protected abstract void act();
-    
+
+    protected void handleException(Throwable exc) {}
+
+    /** loops while all pins are ready
+     */
+    protected void loopAct() {
+        try {
+            for (;;) {
+                synchronized (this) {
+                    if (exc!=null) {
+                        break; // fired remains true, preventing subsequent execution
+                    }
+                    if (!isReady()) {
+                        fired = false; // allow firing
+                        return;
+                    }
+                    consumeTokens();
+                }
+                act();
+            }
+        } catch (Throwable e) {
+            exc=e;
+        }
+        try {
+            handleException(exc);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
     /** 
      * Extracts tokens from pins.
      * Extracted tokens are expected to be used used in the act() method.
@@ -63,25 +111,6 @@ public abstract class AbstractActor extends Link {
         }
     }
     
-    /** loops while all pins are ready
-     */
-    protected void run() {
-        try {
-            for (;;) {
-                synchronized (this) {
-                    if (!isReady()) {
-                        fired = false; // allow firing
-                        return;
-                    }
-                    consumeTokens();
-                }
-                act();
-            }
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
-
     //====================== inner classes
     
     /** We could extend AbstractActor from Task, but define separate class to 
@@ -100,7 +129,7 @@ public abstract class AbstractActor extends Link {
          */
         @Override
         public void run() {
-            AbstractActor.this.run();
+            AbstractActor.this.loopAct();
         }
 
     }
@@ -337,6 +366,15 @@ public abstract class AbstractActor extends Link {
         }
     }
 
+    /** ScalarInput which also redirects failures 
+     */
+    public class CallbackInput<T> extends ScalarInput<T> implements Callback<T> {
+        @Override
+        public void sendFailure(Throwable exc) {
+            AbstractActor.this.sendFailure(exc);
+        }
+    }
+        
     /** A Queue of tokens of type <T>
      * @param <T> 
      */

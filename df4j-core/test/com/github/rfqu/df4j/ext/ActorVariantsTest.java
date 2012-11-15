@@ -88,7 +88,7 @@ public class ActorVariantsTest {
         // check that the node did not start execution
         assertEquals(0, node.counter); 
         // trigger execution
-        sumValue=sumcf.listenTo(node.sum).get(100);
+        sumValue=sumcf.listenTo(node.sum).get(500);
         assertEquals(1.0, sumValue, delta);
         assertEquals(1.0/cnt, avgcf.get(), delta);
     }
