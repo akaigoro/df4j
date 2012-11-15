@@ -9,6 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.Queue;
 import java.util.concurrent.Executor;
 
 /**
@@ -18,7 +19,7 @@ import java.util.concurrent.Executor;
  *  - create 1 or more pins for inputs and/or outputs
  *  - redefine abstract method act()
  */
-public abstract class AbstractActor extends Link {
+public abstract class DataflowNode extends Link {
 	static final int allOnes=0xFFFFFFFF;
 	private Throwable exc=null;
     private Pin head; // the head of the list of Pins
@@ -28,11 +29,11 @@ public abstract class AbstractActor extends Link {
     private final Task task; 
     protected boolean fired=false; // true when this actor runs
     
-    public AbstractActor(Executor executor) {
+    public DataflowNode(Executor executor) {
         task=new ActorTask(executor);
     }
 
-    public AbstractActor() {
+    public DataflowNode() {
         task=new ActorTask();
     }
 
@@ -129,7 +130,7 @@ public abstract class AbstractActor extends Link {
          */
         @Override
         public void run() {
-            AbstractActor.this.loopAct();
+            DataflowNode.this.loopAct();
         }
 
     }
@@ -143,7 +144,7 @@ public abstract class AbstractActor extends Link {
     	private final int pinBit; // distinct for all other pins of the node 
 
     	protected Pin(){
-        	synchronized (AbstractActor.this) {
+        	synchronized (DataflowNode.this) {
             	int count = pinCount;
                 if (count==32) {
               	  throw new IllegalStateException("only 32 pins could be created");
@@ -205,7 +206,7 @@ public abstract class AbstractActor extends Link {
 
         public void on() {
         	boolean doFire;
-            synchronized (AbstractActor.this) {
+            synchronized (DataflowNode.this) {
             	if (isOn()) {
     				throw new IllegalStateException("turned on already"); 
             	}
@@ -246,7 +247,7 @@ public abstract class AbstractActor extends Link {
         }
 
         public void up() {
-            synchronized (AbstractActor.this) {
+            synchronized (DataflowNode.this) {
                 count++;
                 if (count==1) {
                     turnOn();
@@ -255,7 +256,7 @@ public abstract class AbstractActor extends Link {
         }
 
         public void down() {
-            synchronized (AbstractActor.this) {
+            synchronized (DataflowNode.this) {
                 consume();
             }
         }
@@ -278,7 +279,7 @@ public abstract class AbstractActor extends Link {
         @Override
         public void close() {
             boolean doFire;
-            synchronized (AbstractActor.this) {
+            synchronized (DataflowNode.this) {
                 closeRequested=true;
                 doFire=turnOn();
             }
@@ -294,7 +295,7 @@ public abstract class AbstractActor extends Link {
         @Override
         public void send(T token) {
             boolean doFire;
-            synchronized (AbstractActor.this) {
+            synchronized (DataflowNode.this) {
                 add(token);
                 doFire=turnOn();
             }
@@ -371,15 +372,19 @@ public abstract class AbstractActor extends Link {
     public class CallbackInput<T> extends ScalarInput<T> implements Callback<T> {
         @Override
         public void sendFailure(Throwable exc) {
-            AbstractActor.this.sendFailure(exc);
+            DataflowNode.this.sendFailure(exc);
         }
     }
         
     /** A Queue of tokens of type <T>
      * @param <T> 
      */
-    public class StreamInput<T extends Link> extends Input<T> {
-        private LinkedQueue<T> queue=new LinkedQueue<T>();
+    public class StreamInput<T> extends Input<T> {
+        private Queue<T> queue;
+
+        public StreamInput(Queue<T> queue) {
+            this.queue = queue;
+        }
 
         @Override
         protected void add(T token) {
@@ -411,6 +416,7 @@ public abstract class AbstractActor extends Link {
 
     }
 
+
     /**
      * 
      * This pin carries demand(s) of the result.
@@ -429,7 +435,7 @@ public abstract class AbstractActor extends Link {
         @Override
         public EventSource<R, Callback<R>> addListener(Callback<R> sink) {
         	boolean doFire;
-            synchronized (AbstractActor.this) {
+            synchronized (DataflowNode.this) {
             	listeners.addListener(sink);
             	doFire=turnOn();
             }

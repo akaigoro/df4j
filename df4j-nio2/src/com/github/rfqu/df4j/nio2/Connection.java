@@ -18,7 +18,7 @@ import com.github.rfqu.df4j.core.MultiPortActor;
  * Handling procedures are executed from within
  * the {@link java.nio.channels.CompletionHandler}s.
  * Simultaneous {@link java.nio.channels.CompletionHandler} requests
- * to the handling procedures are queued, so no additional synchronisation is needed.
+ * to the handling procedures are queued, so no additional synchronization is needed.
  * @author Alexei Kaigorodov
  */
 public class Connection extends MultiPortActor {

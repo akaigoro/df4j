@@ -9,9 +9,10 @@
  */
 package com.github.rfqu.df4j.ext;
 
-import com.github.rfqu.df4j.core.AbstractActor;
+import java.util.ArrayDeque;
+
+import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.StreamPort;
 
 /**
@@ -22,9 +23,9 @@ import com.github.rfqu.df4j.core.StreamPort;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with Demux.listen(this).
  */
-public class Demux<M extends Link> extends AbstractActor implements StreamPort<M> {
-    protected final StreamInput<M> input=new StreamInput<M>();
-    protected final StreamInput<Actor<M>> actors=new StreamInput<Actor<M>>();
+public class Demux<M> extends DataflowNode implements StreamPort<M> {
+    protected final StreamInput<M> input=new StreamInput<M>(new ArrayDeque<M>());
+    protected final StreamInput<Actor<M>> actors=new StreamInput<Actor<M>>(new ArrayDeque<Actor<M>>());
     
     protected Demux() {
         super(null); // the act method executes synchronously, without an executor.

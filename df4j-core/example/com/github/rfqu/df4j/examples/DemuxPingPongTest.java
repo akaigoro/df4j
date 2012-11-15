@@ -21,6 +21,7 @@ import com.github.rfqu.df4j.core.ContextThreadFactory;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.Demux;
 import com.github.rfqu.df4j.util.MessageSink;
 
@@ -153,7 +154,7 @@ public class DemuxPingPongTest {
          * The ponging actor
          * 
          */
-        class PongWorker extends Actor<Token> {
+        class PongWorker extends ActorLQ<Token> {
             {
                 actors.send(this);
             }

@@ -14,20 +14,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.PrintStream;
-<<<<<<< HEAD
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.ext.Demux;
-=======
-import java.util.concurrent.LinkedBlockingQueue;
-
-import org.junit.Test;
-
-import com.github.rfqu.df4j.core.AbstractActor;
-import com.github.rfqu.df4j.core.Actor;
->>>>>>> github/work
 import com.github.rfqu.df4j.util.IntValue;
 
 /**
@@ -162,8 +154,8 @@ public class DemuxTest {
             }
 
             @Override
-            protected void initInput() {
-                input=new AbstractActor.ScalarInput<Token>();
+            protected Input<Token> createInput() {
+                return new ScalarInput<Token>();
             }
 
             @Override

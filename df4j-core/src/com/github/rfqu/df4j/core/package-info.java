@@ -15,13 +15,13 @@
  * Executor can be set directly as a constructor argument, or taken implicitly 
  * from thread context.  
  * <p>
- * - nodes are subclasses of abstract class {@link com.github.rfqu.df4j.core.AbstractActor}.
+ * - nodes are subclasses of abstract class {@link com.github.rfqu.df4j.core.DataflowNode}.
  *  User have to override  method to retrieve tokens from pins 
- *  {@link com.github.rfqu.df4j.core.AbstractActor#consumeTokens()} and method to
- *  handle tokens {@link com.github.rfqu.df4j.core.AbstractActor#act()}
+ *  {@link com.github.rfqu.df4j.core.DataflowNode#consumeTokens()} and method to
+ *  handle tokens {@link com.github.rfqu.df4j.core.DataflowNode#act()}
  * <p>
  * - pins may be of several predefined types, and user can create specific pin types
- * by subclassing class {@link com.github.rfqu.df4j.core.AbstractActor.Pin}
+ * by subclassing class {@link com.github.rfqu.df4j.core.DataflowNode.Pin}
  * <p>
  * - Unlike many other actor libraries, df4j treats actors not as the primary
  * construction blocks, but as a specific type of dataflow node, with a single pin

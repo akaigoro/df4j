@@ -12,7 +12,7 @@ package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
 
-import com.github.rfqu.df4j.core.AbstractActor;
+import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.EventSource;
 
@@ -21,7 +21,7 @@ import com.github.rfqu.df4j.core.EventSource;
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends AbstractActor implements EventSource<R, Callback<R>> {
+public abstract class Function<R> extends DataflowNode implements EventSource<R, Callback<R>> {
     protected final Demand<R> res=new Demand<R>();
 
     public Function(Executor executor) {

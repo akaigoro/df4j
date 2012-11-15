@@ -9,6 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.ArrayDeque;
 import java.util.concurrent.Executor;
 
 /**
@@ -16,26 +17,27 @@ import java.util.concurrent.Executor;
  * This is classic Actor type.
  * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M extends Link> extends AbstractActor implements StreamPort<M> {
+public abstract class Actor<M> extends DataflowNode implements StreamPort<M> {
     /** place for input token(s) */
-	protected Input<M> input;
+	protected final Input<M> input=createInput();
 	/** true when the closing signal has been processed */
 	protected boolean completed;
 	
     protected long actCounter=0; // DEBUG
     protected long failureCounter=0; // DEBUG
-	
+    
     public Actor(Executor executor) {
     	super(executor);
-    	initInput();
     }
 
     public Actor() {
-        initInput();
     }
     
-    protected void initInput() {
-        input=new StreamInput<M>();
+    /** Override this method if another type of input queue is desired. 
+     * @return storage for input tokens
+     */
+    protected Input<M> createInput() {
+        return new StreamInput<M>(new ArrayDeque<M>());
     }
 
     @Override

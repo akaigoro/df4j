@@ -21,6 +21,7 @@ import com.github.rfqu.df4j.core.ContextThreadFactory;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.util.MessageSink;
 
 
@@ -84,7 +85,7 @@ public class PingPongTest {
      * The pinging actor
      * 
      */
-    static class Ping extends Actor<Token> {
+    static class Ping extends ActorLQ<Token> {
         Pong pong;
         Port<Token> sink;
 

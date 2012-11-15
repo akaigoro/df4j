@@ -33,9 +33,9 @@ public class MultiPortActorTest {
             }
         };
         
-        final PortHandler<CallbackFuture<Integer>> get=new PortHandler<CallbackFuture<Integer>>() {
+        final PortHandler<Port<Integer>> get=new PortHandler<Port<Integer>>() {
             @Override
-            protected void act(CallbackFuture<Integer> m) {
+            protected void act(Port<Integer> m) {
                 m.send(sum);
             }
         };

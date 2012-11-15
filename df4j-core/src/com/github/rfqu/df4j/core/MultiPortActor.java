@@ -28,6 +28,11 @@ public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
 	}
 
 	@Override
+    protected Input<Message<?>> createInput() {
+        return new StreamInput<Message<?>>(new DoublyLinkedQueue<Message<?>>());
+    }
+
+    @Override
 	protected void complete() throws Exception {
 		super.close();
 	}
