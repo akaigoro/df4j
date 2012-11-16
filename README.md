@@ -1,5 +1,10 @@
 This package provides a simple framework for using Erlang Actors in Java.
 
+<<<<<<< HEAD
+=======
+[![Build Status](https://secure.travis-ci.org/jafl/java_actor.png?branch=master)](http://travis-ci.org/jafl/java_actor)
+
+>>>>>>> 1188866b67ad11c0a9cd12f517d1915e351275e9
 Installation
 ------------
 
