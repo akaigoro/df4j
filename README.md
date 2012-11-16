@@ -1,73 +1,103 @@
-df4j is a basic dataflow library. It can easily be extended for specific needs.
+This package provides a simple framework for using Erlang Actors in Java.
 
-Subprojects
------------
-df4j-core: contains core functionality. It requires java 1.5 or higher.
-df4j-demux (in progress): base for remote and/or persistent actors.
-df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. It requires java 1.7 or higher.
+Installation
+------------
 
-See examples and test directories for various custom-made dataflow objects and their usage.
+This package is built using Maven (http://maven.apache.org/).  Once you
+have installed Maven, run one of the following commands:
 
-If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
-or send email at alexei.kaigorodov($)gmail.com.
+  To include unit tests:
+    mvn clean install -Dmaven.surefire.debug="-Xmx512m"
 
-Hello World Example
--------------------
-<pre>
-    class Collector extends Actor<String> {
-        StringBuilder sb=new StringBuilder();
-        
-        @Override
-        protected void act(String message) throws Exception {
-            if (message.length()==0) {
-                out.println(sb.toString());
-                System.out.flush();
-            } else {
-                sb.append(message);
-                sb.append(" ");
-            }
-        }
-        
-    }
+  To skip unit tests:
+    mvn clean install -Dmaven.test.skip=true
 
-    public void test() throws InterruptedException {
-        Collector coll=new Collector();
-        coll.send("Hello");
-        coll.send("World");
-        coll.send("");
-    }
-</pre>
+Either command will install the jar into your local maven repository.  The
+artifact is com.nps.concurrent:actor.
 
-That's it. No additional object creation, like Properties and ActorSystem in Akka, or Fiber in JetLang.
-Well, that objects can be useful under some circumstances, but why force programmer to use them always?
-df4j is build around a few number of simple principles, and as long as programmer follows that principles,
-he can extend the library in any direction.
+Usage
+-----
 
+Each actor runs in a separate thread and must extend com.nps.concurrent.Actor.
 
-Version history
----------------
-v0.5 2012/11/17
-- core classes renamed:
-BaseActor => DataflowNode
-DataSource => EventSource
-ThreadFactoryTL => ConextThreadFactory
-LinkedQueue => DoublyLinkedQueue
-SerialExecutor moved to ext.
-- Actor input queue is now pluggable.
-- DataflowNode has its own run method. Now only new act() method should be overriden.
-  Tokens are consumed automatically when the node is fired.
-- DataflowNode has new method sendFailure, to create Callbacks easily.
-  It as acompanied with back-end method handleException(Throwable).
-- New ext class Demux created.
+Each actor must implement process() to handle messages.  To retrieve
+further messages within process(), call one of the versions of next().  To
+send a message to an actor, invoke recv() on that actor.  Ideally, all
+actors should have no public functions beyond what is required to
+initialize them before the messages start flying, because this eliminates
+the need for locks, but this is probably not realistic in a complex system.
 
-v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).
-Timer class created with interface similar to AsyncChannel. 
+Each actor must be configured with an agent:
 
-v0.3 2012/05/26 Core project simplified and minimized. Nio project deleted.
-Tagged dataflow extracted into a separate project (demux). 
-Classes partially documented.
+   * com.nps.concurrent.PersistentThreadAgent
+   * com.nps.concurrent.ThreadPoolAgent
+   * com.nps.concurrent.JITThreadAgent
 
-v0.2 2011/02/04 the project split in 3: core (universal), nio (for jdk1.6), nio2 (for jdk1.7)
+Every Actor requires a separate instance of Agent.  For convenience, you
+can pass the same Agent to multiple actors, and it will be duplicated for
+you.  Note that each actor is expected to install its own MessageFilter, so
+this is not copied.
 
-v0.1 2011/09/22 initial release
+Each ThreadPoolAgent requires that you provide an ActorThreadPool in which
+the actor will run.  You can have multiple ActorThreadPools, but each Actor
+runs in a single, specific pool.  Actors that are constantly busy should
+use PersistentThreadAgent to avoid monopolizing the threads in a pool.  The
+size of each ActorThreadPool should be tuned to avoid congestion.  If there
+are too few threads, actors may have to wait a long time before they get a
+time slice.  To ensure that all messages are eventually processed, actors
+must never block waiting for a message.  Instead, they should sleep after
+storing internal state describing what to do when the expected message
+eventually arrives.
 
+The test cases suggest that ThreadPoolAgent can be faster than
+PersistentThreadAgent.  The former may have additional latency since it can
+cause actors to wait for an available thread, but having fewer simultaneous
+threads appears to be faster, at least in the JVM that I used.
+JITThreadActor is significantly slower because thread creation is
+expensive, but if you're starved for memory, i.e., you can't use a
+persistent thread, and you don't want to wait in a thread pool queue, then
+this might be an option, especially if it doesn't receive messages very
+often.
+
+To log or monitor messages in the system, you can install MessageSpy
+objects.  Each spy gets to see every message that is sent, along with
+whether or not is is accepted by the recipient.
+
+Patterns
+--------
+
+In standard Java, a shared resource would be protected by a mutex.  Within
+the actor paradigm, however, a shared resource is just another actor.  It
+accepts messages to atomically modify the resource and return information
+about its state.  In this situation, atomic means that the actor will
+modify the resource and send a reply before processing any other messages.
+
+The simplest post office is a static function or an object that directly
+dispatches messages to a set of actors.  If the senders need to be extra
+fast, an actor can be used as the post office, so the dispatching logic is
+not executed in the sender's thread.
+
+To implement parallel processing within an actor, i.e., a load balanced
+cluster, use java.util.concurrent.ThreadPoolExecutor.
+
+Change Log
+----------
+
+1.2  John Lindal 2009-09-19
+
+   * Added MessageSpy to allow logging and monitoring of all messages.
+   * Added discussion of behavior patterns.
+
+1.1  John Lindal  2009-09-17
+
+   * Changed the groupId to com.nps.concurrent
+   * Refactored SimpleActor into Actor and PersistentThreadAgent.
+     Instead of using inheritance, an actor must be passed an agent.
+   * Renamed Actor.die() to Actor.retire().
+   * Renamed Actor.process() to Actor.act().
+   * Actor.act() no longer returns boolean.  Call retire() instead.
+   * Fixed appropriate classes to be public.
+   * Moved MessageFilter class out of ActorBase.
+   * Added get/setMessageFilter() to Agent.
+   * Created ThreadPoolAgent for actors that do not require dedicated threads.
+   * Created JITPoolAgent for actors that should create a thread on demand.
