@@ -18,31 +18,18 @@ import java.util.concurrent.Executor;
  * The message type M need not to extend Link.
  * Messages for all ports are stored in the single message queue.
  */
-public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
+public class MultiPortActor {
+    protected final Actor<Message<?>> execActor;
 
     public MultiPortActor() {
+        execActor=new ExecActor();
 	}
 
 	public MultiPortActor(Executor executor) {
-		super(executor);
+        execActor=new ExecActor(executor);
 	}
 
-	@Override
-    protected Input<Message<?>> createInput() {
-        return new StreamInput<Message<?>>(new DoublyLinkedQueue<Message<?>>());
-    }
-
-    @Override
-	protected void complete() throws Exception {
-		super.close();
-	}
-
-    @Override
-    protected final void act(Message<?> message) throws Exception {
-        message.act();
-    }
-
-    static class Message<M> extends Link {
+    private static final class Message<M> extends Link {
         private PortHandler<M> handler;
         private M m;
         
@@ -56,11 +43,34 @@ public class MultiPortActor extends Actor<MultiPortActor.Message<?>> {
         }
     }
     
-    protected abstract class PortHandler<M> implements Port <M>{
+    private static final class ExecActor extends Actor<Message<?>> {
+        public ExecActor() {
+        }
+
+        public ExecActor(Executor executor) {
+            super(executor);
+        }
+
+        @Override
+        protected Input<Message<?>> createInput() {
+            return new StreamInput<Message<?>>(new DoublyLinkedQueue<Message<?>>());
+        }
+
+        @Override
+        protected final void act(Message<?> message) throws Exception {
+            message.act();
+        }
+        
+        @Override
+        protected void complete() throws Exception {
+        }
+    }
+    
+    protected abstract class PortHandler<M> implements Port<M> {
 
         @Override
         public final void send(M m) {
-            MultiPortActor.this.send(new Message<M>(this, m));
+            execActor.send(new Message<M>(this, m));
         }
         
         protected abstract void act(M m);

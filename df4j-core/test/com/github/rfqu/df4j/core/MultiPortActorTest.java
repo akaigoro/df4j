@@ -17,7 +17,7 @@ import org.junit.Test;
 public class MultiPortActorTest {
 
     static class Accum extends MultiPortActor {
-        int sum;
+        int sum=0;
         
         final PortHandler<Integer> add=new PortHandler<Integer>() {
             @Override
