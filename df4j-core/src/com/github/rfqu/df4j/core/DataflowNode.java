@@ -27,7 +27,7 @@ public abstract class DataflowNode extends Link {
     private int pinMask=0; // mask with 1 for all existing pins
     private int readyPins=0;  // mask with 1 for all ready pins
     private final Task task; 
-    protected boolean fired=false; // true when this actor runs
+    private boolean fired=false; // true when this actor runs
     
     public DataflowNode(Executor executor) {
         task=new ActorTask(executor);
@@ -58,11 +58,12 @@ public abstract class DataflowNode extends Link {
     /**
      * @return true if the actor has all its pins on and so is ready for execution
      */
-    protected final boolean isReady() {
+    private final boolean allReady() {
 		return readyPins==pinMask;
 	}
     
-    protected final void fire() {
+    private final void fire() {
+        //System.out.println("fire()");
         task.fire();
     }
     
@@ -73,22 +74,25 @@ public abstract class DataflowNode extends Link {
      */
     protected abstract void act();
 
-    protected void handleException(Throwable exc) {}
+    protected void handleException(Throwable exc) {
+        System.err.println("DataflowNode.handleException:"+exc);
+        exc.printStackTrace();
+    }
 
     /** 
      * Extracts tokens from pins.
      * Extracted tokens are expected to be used used in the act() method.
      */
-    protected void consumeTokens() {
-        for (Pin pin=head; pin!=null; pin=pin.getNext()) {
+    private final void consumeTokens() {
+        for (Pin pin=head; pin!=null; pin=pin.next) {
             pin.consume();
         }
     }
     
     //====================== inner classes
     
-    /** We could extend AbstractActor from Task, but define separate class to 
-     * minimize Actor's class hierarchy
+    /** We could extend this class from Task, but define separate class to 
+     * minimize class hierarchy
      */
     private class ActorTask extends Task {
         
@@ -103,18 +107,32 @@ public abstract class DataflowNode extends Link {
          */
         @Override
         public void run() {
+            //System.out.println("ActorTask run");
+            execLoop:
             try {
+                // the loop slightly unrolled to have only one
+                // synchronized statement in the loop
+                synchronized (DataflowNode.this) {
+                    if (exc!=null) {
+                        break execLoop; // fired remains true, preventing subsequent execution
+                    }
+                }
+                //System.out.println("act0 before");
+                act();
                 for (;;) {
                     synchronized (DataflowNode.this) {
-                        if (exc!=null) {
-                            break; // fired remains true, preventing subsequent execution
-                        }
-                        if (!isReady()) {
+                        consumeTokens();
+                        if (!allReady()) {
                             fired = false; // allow firing
+                            //System.out.println("act !allReady fired = false");
                             return;
                         }
-                        consumeTokens();
+                        //System.out.println("act allReady");
+                        if (exc!=null) {
+                            break execLoop; // fired remains true, preventing subsequent execution
+                        }
                     }
+                    //System.out.println("act before");
                     act();
                 }
             } catch (Throwable e) {
@@ -151,20 +169,19 @@ public abstract class DataflowNode extends Link {
         	
         }
 
-    	public Pin getNext() {
-            return next;
-        }
-
-        /**
+    	/**
     	 * sets pin's bit on and fires task if all pins are on
     	 *  @return true if actor became ready and must be fired
     	 */
         protected boolean turnOn() {
             readyPins |= pinBit;
-            if (fired || !isReady()) {
+            //System.out.print("turnOn "+fired+" "+allReady());
+            if (fired || !allReady()) {
+                //System.out.println(" => false");
                 return false;
             }
             fired = true; // to prevent multiple concurrent firings
+            //System.out.println(" => true");
             return true;
         }
 
@@ -172,75 +189,26 @@ public abstract class DataflowNode extends Link {
          * sets pin's bit off
          */
         protected void turnOff() {
+            //System.out.println("turnOff");
             readyPins &= ~pinBit;
         }
 
-        protected boolean isOn() {
-            return (readyPins&pinBit)!=0;
-        }
-
-        protected boolean isOff() {
-            return (readyPins&pinBit)==0;
-        }
-        
-        /**
-         * Extracts token from the place and, if the token carries information,
-         * saves that information..
+        /** Executed after token processing (method act).
+         * Cleans reference to value, if any.
+         * Sets state to off if no more tokens are in the place.
          * Should return quickly, as is called from the actor's synchronized block.
          */
         protected abstract void consume();
+        
     }
 
     /**
-     *  Stops/allows actor execution. Functions as binary semaphore,
-     */
-    protected class Switch extends Pin {
-    	
-        public Switch() { }
-
-        public void on() {
-        	boolean doFire;
-            synchronized (DataflowNode.this) {
-            	if (isOn()) {
-    				throw new IllegalStateException("turned on already"); 
-            	}
-            	doFire=turnOn();
-            }
-            if (doFire) {
-            	task.fire();
-            }
-        }
-
-        protected void consume() {
-            if (isOff()) {
-                throw new IllegalStateException("turned off already"); 
-            }
-            turnOff();
-        }
-    }
-
-    /** 
      * holds tokens without data 
      */
-    protected class Semaphore extends Pin {
+    protected class Sema extends Pin {
         private int count=0;
         
-        public Semaphore() {
-        }
-
-        protected boolean isEmpty() {
-            return count==0;
-        }
-
-        @Override
-        protected void consume() {
-            if (count==0) {
-                throw new IllegalStateException("place is empty"); 
-            }
-            count--;
-            if (count==0) {
-                turnOff();
-            }
+        public Sema() {
         }
 
         public void up() {
@@ -272,17 +240,51 @@ public abstract class DataflowNode extends Link {
                 consume();
             }
         }
+
+        @Override
+        protected void consume() {
+            if (count==0) {
+                return;
+            }
+            count--;
+            if (count==0) {
+                turnOff();
+            }
+        }
     }
 
     /**
      * Token storage with standard Port<T> interface.
+     * By default, it has place for only one token.
      * @param <T> type of accepted tokens.
      */
-    protected abstract class Input<T> extends Pin implements StreamPort<T>{
+    public class Input<T> extends Pin implements StreamPort<T>{
         /** extracted token */
-        public T value=null;
-        protected boolean closeRequested=false;
-        protected boolean closeHandled=false;
+        private T value=null;
+        private boolean closeRequested=false;
+
+        @Override
+        public void send(T token) {
+            if (token==null) {
+                throw new NullPointerException();
+            }
+            boolean doFire;
+            synchronized (DataflowNode.this) {
+                if (closeRequested) {
+                    throw new IllegalStateException("closed already");
+                }
+                if (value==null) {
+                    value=token;
+                    doFire=turnOn();
+                } else {
+                    add(token);
+                    return; // is On already
+                }
+            }
+            if (doFire) {
+                fire();
+            }
+        }
 
         /** Signals the end of the stream. 
          * Turns this pin on. Removed value is null 
@@ -292,7 +294,11 @@ public abstract class DataflowNode extends Link {
         public void close() {
             boolean doFire;
             synchronized (DataflowNode.this) {
+                if (closeRequested) {
+                    return;
+                }
                 closeRequested=true;
+                //System.out.println("close()");
                 doFire=turnOn();
             }
             if (doFire) {
@@ -301,28 +307,8 @@ public abstract class DataflowNode extends Link {
         }
 
         public boolean isClosed() {
-            return closeRequested;
-        }
-
-        @Override
-        public void send(T token) {
-            boolean doFire;
             synchronized (DataflowNode.this) {
-                add(token);
-                doFire=turnOn();
-            }
-            if (doFire) {
-                fire();
-            }
-        }
-
-        protected void consume() {
-            if (isEmpty() ) {
-                throw new IllegalStateException("no tokens");
-            }
-            value = remove();
-            if (isEmpty()) {
-                turnOff();
+                return closeRequested;
             }
         }
 
@@ -330,69 +316,60 @@ public abstract class DataflowNode extends Link {
          * saves passed token
          * @param newToken
          */
-        protected abstract void add(T newToken);
-        /**
-         * 
-         * @return true if the pin is not ready
-         */
-        abstract boolean isEmpty();
+        protected void add(T newToken) {
+            throw new IllegalStateException();
+        }
+                
+
+        public T get() {
+            return value;
+        }
+
+        //===================== backend
+        
         /**
          * removes token from the storage
          * @return removed token
          */
-        protected abstract T remove();
+        protected T poll() {
+            return null;
+        }
+
+        @Override
+        protected void consume() {
+            boolean wasNull=(value==null);
+            value = poll();
+            if (value!=null) {
+                return; // continue processing
+            }
+            // no more tokens; check closing
+            if (wasNull) {
+                turnOff(); // closing processed already
+            }
+            if (!closeRequested) {
+                turnOff(); // closing not requested
+            }
+            // else make one more round with message==null
+        }
     }
 
     /** A place for single unremovable token of type <T>
      * @param <T> 
      */
-    public class ScalarConstInput<T> extends Input<T> {
-        protected boolean filled=false;
+    public class ConstInput<T> extends Input<T> {
 
+        /** restores value
+         */
         @Override
-        protected void add(T token) {
-            if (token==null) {
-                throw new IllegalArgumentException("operand may not be null"); 
-            }
-            filled=true;
-            value=token;
-        }
-
-        @Override
-        boolean isEmpty() {
-            if (filled) {
-                return false;
-            }
-            return closeRequested==closeHandled;
-        }
-
-        @Override
-        protected T remove() {
+        protected T poll() {
             // TODO do we need handle closeRequested and closeHandled?
-            return value;
+            return get();
         }
     }
 
-    /** A place for single token of type <T>
-     * @param <T> 
+    /** Scalar Input which also redirects failures 
      */
-    public class ScalarInput<T> extends ScalarConstInput<T> {
-        @Override
-        protected T remove() {
-            filled=false;
-            if (value!=null) {
-                return value;
-            }
-            if (closeRequested) {
-                closeHandled=true;
-            }
-            return null;
-        }
-    }
-
-    /** ScalarInput which also redirects failures 
-     */
-    public class CallbackInput<T> extends ScalarInput<T> implements Callback<T> {
+    public class CallbackInput<T> extends Input<T> implements Callback<T> {
         @Override
         public void sendFailure(Throwable exc) {
             DataflowNode.this.sendFailure(exc);
@@ -411,34 +388,14 @@ public abstract class DataflowNode extends Link {
 
         @Override
         protected void add(T token) {
-            if (token==null) {
-                throw new IllegalArgumentException("operand may not be null"); 
-            }
             queue.add(token);
         }
 
         @Override
-        public boolean isEmpty() {
-            if (!queue.isEmpty()) {
-                return false;
-            }
-            return closeRequested==closeHandled;
+        protected T poll() {
+            return queue.poll();
         }
-
-        @Override
-        protected T remove() {
-            T res = queue.poll();
-            if (res!=null) {
-                return res;
-            }
-            if (closeRequested) {
-                closeHandled=true;
-            }
-            return null;
-        }
-
     }
-
 
     /**
      * 

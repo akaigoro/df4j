@@ -9,22 +9,21 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.ArrayDeque;
-
-
 /**
  * In multithreaded programming, often several identical worker threads are fed with
  * a single input queue. If we want to replace threads with actors, this cannot be done
  * directly, as actors may not be blocked (which happens when the queue is empty). 
  * This sample code shows how to build a demultiplexer to feed several actors with single queue.
  * Actors work in parallel. 
- * The actor wanting to be fed sends itself to the actors port with Demux.listen(this).
+ * The actor wanting to be fed sends itself to the actors port with MessageQueue.listen(this).
  */
-public class MessageQueue<M> extends ActorVariable<M> implements EventSource<M, StreamPort<M>>{
-    protected final StreamInput<StreamPort<M>> actors=createActorQueue();
+public class MessageQueue<M> extends ActorVariable<M>
+    implements EventSource<M, Actor<M>>
+{
+    private final StreamInput<Actor<M>> actors=createActorQueue();
     
-    protected StreamInput<StreamPort<M>> createActorQueue() {
-        return new StreamInput<StreamPort<M>>(new ArrayDeque<StreamPort<M>>());
+    protected StreamInput<Actor<M>> createActorQueue() {
+        return new StreamInput<Actor<M>>(new DoublyLinkedQueue<Actor<M>>());
     }
 
     /** Accepts request from the actor for the next message.
@@ -32,22 +31,39 @@ public class MessageQueue<M> extends ActorVariable<M> implements EventSource<M, 
      * The request is served once, so after the message is processed by the actor,
      * the actor has to issue the request again. This way the actor can request messages
      * from different sources. 
+     * The close signal is passed to all actors.
      * @param actor
      */
     @Override
-    public EventSource<M, StreamPort<M>> addListener(StreamPort<M> actor) {
-        actors.send(actor);
+    public EventSource<M, Actor<M>> addListener(Actor<M> actor) {
+        if (isClosed()) {
+            actor.close();
+        } else {
+            actors.send(actor);
+        }
         return this;
     }
 
     @Override
     protected void act(M message) throws Exception {
-        StreamPort<M> actor = actors.value;
         if (message==null) {
-            // input closed
+            throw new NullPointerException();
+        }
+        if (actors.get()==null) {
+            throw new NullPointerException();
+        }
+        actors.get().send(message);
+    }
+
+    @Override
+    protected void complete() throws Exception {
+        actors.get().close();
+        for (;;) {
+            Actor<M> actor=actors.poll();
+            if (actor==null) {
+                return;
+            }
             actor.close();
-        } else {
-            actor.send(message);
         }
     }
 

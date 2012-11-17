@@ -75,7 +75,7 @@ public abstract class Function<R> extends DataflowNode implements EventSource<R,
 
        @Override
        protected T eval() {
-           return eval(input.value);
+           return eval(input.get());
        }
 
        abstract protected T eval(T operand);
@@ -96,7 +96,7 @@ public abstract class Function<R> extends DataflowNode implements EventSource<R,
 
         @Override
         protected T eval() {
-            return eval(p1.value, p2.value);
+            return eval(p1.get(), p2.get());
         }
 
         abstract protected T eval(T opnd, T opnd2);

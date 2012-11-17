@@ -9,9 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.PrintStream;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,19 +35,42 @@ public class MessageQueueTest {
 
     @Test
     public void test1() throws InterruptedException {
-        Pong1 pong=new Pong1();
-        for (int k=0; k<10; k++) {
-            pong.send(new IntValue(k));
-        }
+        LinkedBlockingQueue<Token> q=new LinkedBlockingQueue<Token>();
+        Pong pong=new Pong(1, q, true);
+        pong.send(new Token(0));
+    }
+
+    /* no tokens */
+    @Test
+    public void test01() throws InterruptedException {
+        testN(0, 1, true);
+    }
+
+    /* no tokens */
+    @Test
+    public void test02() throws InterruptedException {
+        testN(0, 2, true);
     }
 
     /** checks that all sent tokens are processed
      */
     @Test
-    public void test2() throws InterruptedException {
-        for (int k=1; k<6; k++) {
-            testN(10*k*k, k);
-        }
+    public void test11() throws InterruptedException {
+        testN(1, 1, true);
+    }
+
+    /** checks that all sent tokens are processed
+     */
+    @Test
+    public void test23() throws InterruptedException {
+        testN(2, 3, true);
+    }
+
+    /** checks that all sent tokens are processed
+     */
+    @Test
+    public void testMany() throws InterruptedException {
+        testN(1000, 100, false);
     }
 
     /**
@@ -58,9 +79,9 @@ public class MessageQueueTest {
      * @param nw number of workers
      * @throws InterruptedException
      */
-    public void testN(int nt, int nw) throws InterruptedException {
+    public void testN(int nt, int nw, boolean print) throws InterruptedException {
         LinkedBlockingQueue<Token> q=new LinkedBlockingQueue<Token>();
-        Pong2 pong=new Pong2(nw,q);
+        Pong pong=new Pong(nw, q, print);
         Token[] tokens=new Token[nt];
         for (int k=0; k<nt; k++) {
             final Token token = new Token(k);
@@ -69,76 +90,41 @@ public class MessageQueueTest {
         }
         for (int k=0; k<nt; k++) {
             final Token token = q.take();
+            if (!token.touched) {
+                System.out.println(token);
+            }
             assertTrue(token.touched);
             assertNotNull(tokens[token.value]);
             tokens[token.value]=null;
         }
+        Thread.sleep(100);
         assertNull(q.poll());
         for (int k=0; k<nt; k++) {
             assertNull(tokens[k]);
         }
+        pong.close();
+        for (int k=0; k<nw; k++) {
+            final Token token = q.take();
+            assertEquals(-1, token.value);
+        }
+        Thread.sleep(100);
+        assertNull(q.poll());
     }
 
-    static class Pong1 extends MessageQueue<IntValue> {
-        { 
-            for (int k=0; k<3; k++) {
-                new PongWorker(k);
-            }
-        }
-        
-        @Override
-        protected Input<IntValue> createInput() {
-            return new StreamInput<IntValue>(new DoublyLinkedQueue<IntValue>());
-        }
-        
-        @Override
-        protected void act() {
-            PongWorker actor = (PongWorker)actors.value;
-            IntValue message = input.value;
-            if (message==null) {
-                // input closed
-                actor.close();
-            } else {
-                System.out.println("send:"+actor.id+" m:"+message.value);
-                System.out.flush();
-                actor.send(message);
-            }
-        }
-        
-        /**
-         * The ponging actor
-         * 
-         */
-        class PongWorker extends Actor<IntValue> {
-            int id;
-
-            public PongWorker(int id) {
-                this.id=id;
-                addListener(this);
-            }
-
-            @Override
-            protected void act(IntValue message) throws Exception {
-                System.out.println("  act:"+id+" m:"+message.value);
-                System.out.flush();
-                addListener(this);
-            }
-        }
-    }
-    
     static class Token extends IntValue {
         boolean touched;
         public Token(int value) {
             super(value);
         }
-        
     }
 
-    static class Pong2 extends MessageQueue<Token> {
+    static class Pong extends MessageQueue<Token> {
         LinkedBlockingQueue<Token> q;
-
-        Pong2(int nw, LinkedBlockingQueue<Token> q){ 
+        boolean print;
+        
+        Pong(int nw, LinkedBlockingQueue<Token> q, boolean print){ 
             this.q=q;
+            this.print=print;
             for (int k=0; k<nw; k++) {
                 new PongWorker(k);
             }
@@ -159,24 +145,33 @@ public class MessageQueueTest {
                 this.id=id;
                 addListener(this);
             }
-
+/*
             @Override
             protected Input<Token> createInput() {
                 return new ScalarInput<Token>();
             }
-
+*/
             @Override
             protected void act(Token message) throws Exception {
+                if (print) {
+                    System.out.println("  act:"+id+" m:"+message.value+" id="+message);
+                    System.out.flush();
+                }
                 message.touched=true;
                 q.add(message);
                 addListener(this);
+            }
+
+            @Override
+            protected void complete() throws Exception {
+                q.add(new Token(-1));
             }
         }
     }
 
     public static void main(String args[]) throws InterruptedException {
         MessageQueueTest nt = new MessageQueueTest();
-        nt.test1();
+        nt.test02();
     }
 
 }

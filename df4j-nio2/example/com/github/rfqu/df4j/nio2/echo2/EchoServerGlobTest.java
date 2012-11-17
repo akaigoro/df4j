@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.nio2.echo;
+package com.github.rfqu.df4j.nio2.echo2;
 
 import java.io.BufferedReader;
 import java.io.IOException;

@@ -22,7 +22,7 @@ Hello World Example
         StringBuilder sb=new StringBuilder();
         
         @Override
-        protected void act(String message) throws Exception {
+        protected void act(String message) {
             if (message.length()==0) {
                 System.out.println(sb.toString());
             } else {
@@ -32,7 +32,7 @@ Hello World Example
         }
     }
 
-    public void test() throws InterruptedException {
+    public void test() {
         Collector coll=new Collector();
         coll.send("Hello");
         coll.send("World");
@@ -44,6 +44,68 @@ That's it. No additional object creation, like Properties and ActorSystem in Akk
 Well, that objects can be useful under some circumstances, but why force programmer to use them always?
 df4j is build around a few number of simple principles, and as long as programmer follows that principles,
 he can extend the library in any direction.
+
+Very often actor have to do some action when input stream of messages ended. In the above example,
+the end of stream is coded as empty string. This is not convenient: the act method have to check each messsage,
+and using a "poison pill" value may not be feasible. So the Actor class has methods close and complete for this cases: 
+
+<pre>
+    class Collector extends Actor<String> {
+        StringBuilder sb=new StringBuilder();
+        
+        @Override
+        protected void act(String message) {
+            sb.append(message);
+            sb.append(" ");
+        }
+        @Override
+        protected void complete(){
+            System.out.println(sb.toString());
+        }
+    }
+
+    public void test() {
+        Collector coll=new Collector();
+        coll.send("Hello");
+        coll.send("World");
+        coll.close();
+    }
+</pre>
+
+We started with Actor example, as actor model is widely known. However, df4j treats actors as a special case of a node in
+dataflow graph, namely, a node with one explicit input arc (there is also an implicit arc which
+makes a loop and holds one token - the state of the node instance). Below is an implementation based on DataflowNode:
+
+<pre>
+    class Collector extends DataflowNode {
+        Input<String> input=new StreamInput<String>(new ArrayDeque<String>());
+        StringBuilder sb=new StringBuilder();
+        
+        @Override
+        // since dataflow node can have different number of inputs,
+        // the act method have no parameters, values from inputs
+        // has to be extracted manually.
+        protected void act() {
+            String message=input.value;
+            if (message==null) {
+                // StreamInput does not accept null values,
+                // and null value signals that input is closed
+                System.out.println(sb.toString());
+            } else {
+               sb.append(message);
+               sb.append(" ");
+            }
+        }
+    }
+
+    public void test() {
+        Collector coll=new Collector();
+        coll.input.send("Hello");
+        coll.input.send("World");
+        coll.input.close();
+    }
+</pre>
+
 
 
 Version history

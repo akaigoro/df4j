@@ -29,8 +29,8 @@ import com.github.rfqu.df4j.core.DataflowVariable;
 public class AsyncServerSocketChannel extends DataflowVariable
   implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
-    private Switch pending=new Switch();
-    private Semaphore maxConnLimit=new Semaphore();
+    private Sema pending=new Sema();
+    private Sema maxConnLimit=new Sema();
     private AsynchronousServerSocketChannel channel;
     private Callback<AsynchronousSocketChannel> consumer;
     
@@ -48,7 +48,7 @@ public class AsyncServerSocketChannel extends DataflowVariable
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
         maxConnLimit.up(maxConn);
-        pending.on(); // allow accept
+        pending.up(); // allow accept
     }
     
     public void upConnNumber() {
@@ -81,12 +81,16 @@ public class AsyncServerSocketChannel extends DataflowVariable
     @Override
     protected void act() {
         channel.accept(null, this);
+        // pending.off() and maxConnLimit.down() automatically by Pin' logic
     }
     
     /** new client connected */
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachment) {
         consumer.send(result);
+        synchronized (this) {
+            pending.up();
+        }
     }
 
     /** new client connection failed */
@@ -94,6 +98,7 @@ public class AsyncServerSocketChannel extends DataflowVariable
     public void failed(Throwable exc, Void attachment) {
         Callback<AsynchronousSocketChannel> consumerLoc;
         synchronized (this) {
+            pending.up();
             if (consumer==null) {
                 return;
             }

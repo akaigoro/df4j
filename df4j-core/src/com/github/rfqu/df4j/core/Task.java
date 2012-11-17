@@ -96,6 +96,27 @@ public abstract class Task extends Link implements Runnable {
         return service;
     }
 
+    /**
+     * Waits for currently started tasks to finish.
+     * Invoke before exiting main thread, or otherwise
+     * thread pool with daemon threads would break execution
+     * of the not finished tasks.
+     */
+    public static void completeCurrentExecutorService() {
+        Executor executor=getCurrentExecutor();
+        ExecutorService service;
+        if (!(executor instanceof ExecutorService)) {
+            throw new IllegalStateException("current Executor is not a ExecutorService.");
+        }
+        service=(ExecutorService)executor;
+        service.shutdown();
+        try {
+            service.awaitTermination(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+        }
+        service.shutdownNow();
+    }
+
     static class PrimitiveExecutorService implements ExecutorService {
         static final String message = "PrimitiveExecutor not a service";
         protected final Executor executor;

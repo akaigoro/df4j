@@ -67,7 +67,29 @@ public class ActorVariantsTest {
      
     }
    
-    public void test(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
+    public void testA(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
+        CallbackFuture<Double> sumcf=new CallbackFuture<Double>();
+        CallbackFuture<Double> avgcf=new CallbackFuture<Double>(node.avg);
+        node.send(new DoubleValue(1.0));
+        node.send(new DoubleValue(2.0));
+        node.close();
+        Double sumValue;
+        try {
+            // sumcf not ready as not connected to data source
+            // and the node is not ready for execution  
+            sumValue= sumcf.get(100); 
+            fail("no TimeoutException");
+        } catch (TimeoutException e) {
+        }
+        // check that the node did not start execution
+        assertEquals(0, node.counter); 
+        // trigger execution
+        sumValue=sumcf.listenTo(node.sum).get(500000);
+        assertEquals(3.0, sumValue, delta);
+        assertEquals(1.5, avgcf.get(), delta);
+    }
+
+    public void testB(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
         CallbackFuture<Double> sumcf=new CallbackFuture<Double>();
         CallbackFuture<Double> avgcf=new CallbackFuture<Double>(node.avg);
         double value=1.0;
@@ -79,7 +101,7 @@ public class ActorVariantsTest {
         node.close();
         Double sumValue;
         try {
-            // sum not ready as not connected to data source
+            // sumcf not ready as not connected to data source
             // and the node is not ready for execution  
             sumValue= sumcf.get(100); 
             fail("no TimeoutException");
@@ -88,7 +110,7 @@ public class ActorVariantsTest {
         // check that the node did not start execution
         assertEquals(0, node.counter); 
         // trigger execution
-        sumValue=sumcf.listenTo(node.sum).get(500);
+        sumValue=sumcf.listenTo(node.sum).get(500000);
         assertEquals(1.0, sumValue, delta);
         assertEquals(1.0/cnt, avgcf.get(), delta);
     }
@@ -97,28 +119,33 @@ public class ActorVariantsTest {
      */
     @Test
     public void t01() throws InterruptedException, ExecutionException, TimeoutException {
-    	test(new Aggregator());
+    	testB(new Aggregator());
     }
     
     /** eager actor
      */
     @Test
     public void t02() throws InterruptedException, ExecutionException, TimeoutException {
-        test(new Aggregator(null));
+        testA(new Aggregator(null));
     }
     
     /** fat actor
      */
     @Test
     public void t03() throws InterruptedException, ExecutionException, TimeoutException {
-        test(new Aggregator(new PrivateExecutor()));
+        testB(new Aggregator(new PrivateExecutor()));
     }
 
     /** swing actor
      */
     @Test
     public void t04() throws InterruptedException, ExecutionException, TimeoutException {
-        test(new Aggregator(SwingSupport.getSwingExecutor()));
+        testB(new Aggregator(SwingSupport.getSwingExecutor()));
+    }
+
+    public static void main(String args[]) throws TimeoutException, InterruptedException, ExecutionException {
+        ActorVariantsTest qt = new ActorVariantsTest();
+        qt.t02();
     }
 }
 

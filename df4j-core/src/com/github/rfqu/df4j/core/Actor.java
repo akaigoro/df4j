@@ -19,14 +19,10 @@ import java.util.concurrent.Executor;
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor<M> extends DataflowNode
-    implements StreamPort<M>,
-    Callback<M>,
-    Closeable
+    implements StreamPort<M>, Callback<M>, Closeable
 {
     /** place for input token(s) */
 	protected final Input<M> input=createInput();
-	/** true when the closing signal has been processed */
-	protected boolean completed;
 	
     protected long actCounter=0; // DEBUG
     protected long failureCounter=0; // DEBUG
@@ -58,13 +54,20 @@ public abstract class Actor<M> extends DataflowNode
 		input.close();
 	}
 
+    public boolean isClosed() {
+        return input.isClosed();
+    }
+
+    //====================== backend
+    
     /** 
      * process the retrieved tokens.
      */
+    @Override
     protected void act() {
-        M message=input.value;
+        M message=input.get();
         try {
-            if (message == null) {
+            if (message==null) {
                 complete();
             } else {
                 actCounter++;
@@ -73,29 +76,10 @@ public abstract class Actor<M> extends DataflowNode
         } catch (Exception e) {
             failureCounter++;
             failure(message, e);
-        } finally {
-            if (message == null) {
-                completed=true;
-            }
         }
     }
 
-    public boolean isClosed() {
-		return input.isClosed();
-	}
-
-    /**
-     * @return true when the method complete() has finished
-     */
-	public boolean isCompleted() {
-		return completed;
-	}
-/*	
-	protected void listen(StreamSource<M> source) {
-	    source.addListener(this);
-	}
-*/
-	/** handles failures
+    /** handles failures
      * 
      * @param message
      * @param e
