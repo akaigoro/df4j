@@ -101,7 +101,7 @@ public class RandomFileAccess {
     private void testW_NIO(boolean direct) throws IOException, Exception {
         out.println("testW_NIO: NIO with futuires; direct="+direct);
         AsynchronousFileChannel af 
-            = new AsyncFileChannel(testfilePath, WRITE).getChannel();
+            = new AsyncFileChannel<Request>(testfilePath, WRITE).getChannel();
         af.truncate(blockSize*numBlocks);
         for (int nb = maxBufNo*2; nb >0; nb=nb/2) {
             long startTime = System.currentTimeMillis();
@@ -163,7 +163,7 @@ public class RandomFileAccess {
     public void testW_dffwS() throws Exception {
         boolean direct=false;
         out.println("testW_dffw: NIO2; direct="+direct);
-        AsyncFileChannel af = new AsyncFileChannel(testfilePath, WRITE);
+        AsyncFileChannel<Request> af = new AsyncFileChannel<Request>(testfilePath, WRITE);
         testW_dffw(af,direct);
     }
 
@@ -175,7 +175,7 @@ public class RandomFileAccess {
     public void testW_dffwSD() throws Exception {
         boolean direct=true;
         out.println("testW_dffwSD: NIO2; direct="+direct);
-        AsyncFileChannel af = new AsyncFileChannel(testfilePath, WRITE);
+        AsyncFileChannel<Request> af = new AsyncFileChannel<Request>(testfilePath, WRITE);
         testW_dffw(af,direct);
     }
 
@@ -184,7 +184,7 @@ public class RandomFileAccess {
      * @param direct if true, use direct buffers
      * @throws Exception
      */
-    public void testW_dffw(AsyncFileChannel af, boolean direct) throws Exception {
+    public void testW_dffw(AsyncFileChannel<Request> af, boolean direct) throws Exception {
         af.truncate(blockSize*numBlocks);
         for (int nb = maxBufNo; nb >0; nb=nb/2) {
             long startTime = System.currentTimeMillis();
@@ -206,7 +206,7 @@ public class RandomFileAccess {
      *
      */
     static class StarterW extends Actor<Request>{
-        AsyncFileChannel af;
+        AsyncFileChannel<Request> af;
         int nb;
         boolean direct;
         long started=0;
@@ -214,7 +214,7 @@ public class RandomFileAccess {
         AtomicLong accTime=new AtomicLong();
         CallbackFuture<Integer> sink = new CallbackFuture<Integer>();
 
-        public StarterW(AsyncFileChannel af, int nb, boolean direct) {
+        public StarterW(AsyncFileChannel<Request> af, int nb, boolean direct) {
             this.af = af;
             this.nb = nb;
             this.direct = direct;
@@ -235,7 +235,8 @@ public class RandomFileAccess {
                 long blockId = getBlockId(numBlocks, started);
                 fillBuf(req.getBuffer(), blockId);
                 Port<Request> port=this;
-				af.write(req, blockId * blockSize, port);
+				req.prepareWrite(blockId * blockSize, port);
+				af.send(req);
                 started++;
             }
         }
@@ -269,9 +270,14 @@ public class RandomFileAccess {
 		}
 
         @Override
-	    public void prepare(boolean read, long position, Port<Request> replyTo)
-	    {
-			super.prepare(read, position, replyTo);
+	    public void prepareRead(long position, Port<Request> replyTo) {
+			super.prepareRead(position, replyTo);
+			start=System.currentTimeMillis();
+		}
+    	
+        @Override
+	    public void prepareWrite(long position, Port<Request> replyTo) {
+			super.prepareWrite(position, replyTo);
 			start=System.currentTimeMillis();
 		}
     	

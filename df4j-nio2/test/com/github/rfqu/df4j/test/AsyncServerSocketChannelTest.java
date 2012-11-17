@@ -1,6 +1,5 @@
 package com.github.rfqu.df4j.test;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -15,9 +14,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.core.StreamPort;
 import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 
@@ -35,8 +33,13 @@ public class AsyncServerSocketChannelTest {
     }
 
     @After
-    public void after() throws IOException {
-        server.close();
+    public void after() {
+        try {
+            server.close();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -58,7 +61,7 @@ public class AsyncServerSocketChannelTest {
 
         // the rest opened
         for (int k=0; k<half; k++) {
-            server.assch.maxConnUp();
+            server.assch.upConnNumber();
         }
         Thread.sleep(100); // wait server to accept connections
         assertEquals(clConns, server.channelCounter);
@@ -66,34 +69,19 @@ public class AsyncServerSocketChannelTest {
     }
 
 
-    static class Server extends Actor<AsyncSocketChannel> {        
+    static class Server implements Callback<AsynchronousSocketChannel> {        
         AsyncServerSocketChannel assch;    
         ArrayList<AsyncSocketChannel>allConns=new ArrayList<AsyncSocketChannel>();
-        CallbackFuture<Boolean> unbounded=new CallbackFuture<Boolean>();
         int channelCounter=0;
         boolean allOpened=true;
             
         public Server(InetSocketAddress addr, int maxConn) throws IOException {
-            assch=new AsyncServerSocketChannel(addr);
-            assch.open(inport, maxConn);
+            assch=new AsyncServerSocketChannel(addr, this, maxConn);
         }
         
-		StreamPort<AsynchronousSocketChannel> inport=new StreamPort<AsynchronousSocketChannel>() {
-			@Override
-			public void send(AsynchronousSocketChannel m) {
-				Server.this.send(new AsyncSocketChannel(m));
-			}
-
-            @Override
-            public void close() {
-                // TODO Auto-generated method stub
-                
-            }			
-		};
-        
-
         @Override
-        protected void act(AsyncSocketChannel channel) throws Exception {
+        public void send(AsynchronousSocketChannel asch) {
+            AsyncSocketChannel channel = new AsyncSocketChannel(asch);
             channelCounter++;
             if (channel.isClosed()) {
                 allOpened=false;
@@ -102,10 +90,14 @@ public class AsyncServerSocketChannelTest {
         }
 
         /** closing requested */
-        @Override
-        protected void complete() throws Exception {
+        protected void close() throws Exception {
             assch.close();
-            unbounded.send(Boolean.TRUE);
+        }
+
+        @Override
+        public void sendFailure(Throwable exc) {
+            // TODO Auto-generated method stub
+            
         }
     }
 
@@ -115,7 +107,7 @@ public class AsyncServerSocketChannelTest {
         
         ClientConnection(InetSocketAddress addr) throws IOException {
             conn=new AsyncSocketChannel(addr);
-            conn.addConnectListener(listener);
+            conn.addListener(listener);
         }
 
         public void get() throws InterruptedException, ExecutionException {

@@ -32,18 +32,36 @@ import com.github.rfqu.df4j.core.Port;
  * Simplifies input-output, handling queues of I/O requests.
  */
 public class AsyncSocketChannel extends Link 
-   implements CompletionHandler<Void, AsynchronousSocketChannel>
+   implements Port<SocketIORequest<?>>,
+//     EventSource<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>,
+	 CompletionHandler<Void, AsynchronousSocketChannel>
 {
     protected AsynchronousSocketChannel channel;
-    protected volatile boolean connected=false;
-    protected volatile boolean closed=false;
-    protected Throwable connectionFailure=null;
-    /** read request queue */
+    /** for client-side socket: signals connection completion */
+    private Promise<AsynchronousSocketChannel> connEvent=new Promise<AsynchronousSocketChannel>();
+    /** read requests queue */
     protected final RequestQueue reader=new RequestQueue();
-    /** write request queue */
+    /** write requests queue */
     protected final RequestQueue writer=new RequestQueue();
-    protected Promise<AsynchronousSocketChannel> connectListeners;
+    protected volatile boolean closed=false;
 
+    /**
+     * for server-side socket
+     * @param assch
+     */
+    public AsyncSocketChannel(AsynchronousSocketChannel assch) {
+        init(assch);
+    }
+    
+    void init(AsynchronousSocketChannel attachement) {
+        synchronized(this) {
+            channel=attachement;
+        }
+        reader.resume();
+        writer.resume();
+        connEvent.send(attachement);
+    }
+    
     /**
      * for client-side socket
      * Starts connection to a server.
@@ -59,123 +77,65 @@ public class AsyncSocketChannel extends Link
         channel.connect(addr, channel, this);
     }
 
-    /**
-     * for server-side socket
-     * @param assch
-     */
-    public AsyncSocketChannel(AsynchronousSocketChannel assch) {
-        completed(null, assch);
-    }
+    // ================== I/O
     
-    /**
-     * callback method for successful connection in client-side mode
-     */
     @Override
-    public void completed(Void result, AsynchronousSocketChannel attachement) {
-        Promise<AsynchronousSocketChannel> listeners;
-        synchronized(this) {
-            channel=attachement;
-            connected=true;
-            listeners=connectListeners;
-        }
-        reader.resume();
-        writer.resume();
-        if (listeners!=null) {
-            listeners.send(attachement);
-            connectListeners=null; // not needed anymore
-        }           
-    }
-    
-    /** signals connection completion
-     * @param listener
-     */
-    public void addConnectListener(Callback<AsynchronousSocketChannel> listener) {
-        checkConnected:
-    	synchronized (this) {
-    	    if (connected) {
-    	        break checkConnected;
-    	    }
-            if (connectListeners == null) {
-                connectListeners = new Promise<AsynchronousSocketChannel>();
+	public void send(SocketIORequest<?> request) {
+		if (closed) {
+			request.failed(new ClosedChannelException());
+			return;
+		}
+		(request.isReadOp()?reader:writer).send(request);
+	}    
+
+    public void close() {
+        closed=true;
+        if (channel!=null) {
+            try {
+                channel.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
-            connectListeners.addListener(listener);
-            return;
         }
-        listener.send(channel);
     }
-    
-    /**
-     * callback method for failed connection
-     */
-    @Override
-    public void failed(Throwable exc, AsynchronousSocketChannel channel) {
-        connectionFailure=exc;
-        //exc.printStackTrace();
-    } 
+
+    public synchronized void addListener(Callback<AsynchronousSocketChannel> listener) {
+        connEvent.addListener(listener);
+    }
 
     public AsynchronousSocketChannel getChannel() {
         return channel;
     }
 
-    public void close() throws IOException {
-        closed=true;
-        if (channel!=null) {
-            channel.close();
-        }
-    }
-
-    protected void checkState() throws ClosedChannelException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-    }
-
-    public <T extends SocketIORequest<T>>
-        T write(T socketIORequest, Port<T> replyTo) throws ClosedChannelException
-    {
-        checkState();
-        socketIORequest.prepare(false, replyTo);
-        writer.send(socketIORequest);
-        return socketIORequest;
-    }
-    
-    public <T extends SocketIORequest<T>>
-            T write(T request, Port<T> replyTo, long timeout)
-                    throws ClosedChannelException
-        {
-        checkState();
-        request.prepare(false, replyTo, timeout);
-        writer.send(request);
-        return request;
-    }
-    
-    public <T extends SocketIORequest<T>>
-      T read(T request, Port<T> replyTo) throws ClosedChannelException
-    {
-        checkState();
-        request.prepare(true, (Port<T>) replyTo);
-        reader.send(request);
-        return request;
-    }
-    
-    public <T extends SocketIORequest<T>>
-        T read(T request, Port<T> replyTo, long timeout)
-                throws ClosedChannelException
-    {
-        checkState();
-        request.prepare(true, replyTo, timeout);
-        reader.send(request);
-        return request;
-    }
-    
     public boolean isConnected() {
-        return connected;
+        return channel!=null;
     }
 
     public boolean isClosed() {
         return closed;
     }
 
+	//========================= backend
+	
+	/**
+     * callback method for successful connection in client-side mode
+     */
+    @Override
+    public void completed(Void result, AsynchronousSocketChannel channel) {
+        init(channel);           
+    }
+
+    /**
+     * callback method for failed connection in client-side mode
+     */
+    @Override
+    public void failed(Throwable exc, AsynchronousSocketChannel channel) {
+        connEvent.sendFailure(exc);
+    } 
+
+    //===================== inner classes
+    
     class RequestQueue extends Actor<SocketIORequest<?>>
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
@@ -221,17 +181,13 @@ public class AsyncSocketChannel extends Link
 
         @Override
         public void failed(Throwable exc, SocketIORequest<?> request) {
-            channelAcc.on();
             if (exc instanceof AsynchronousCloseException) {
-                try {
-                    AsyncSocketChannel.this.close();
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+                AsyncSocketChannel.this.close();
             }
+		    currentRequest=null;
+            channelAcc.on();
             request.failed(exc);
         }
     }
-    
+
 }

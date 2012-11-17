@@ -7,13 +7,10 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.ext;
+package com.github.rfqu.df4j.core;
 
 import java.util.ArrayDeque;
 
-import com.github.rfqu.df4j.core.DataflowNode;
-import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.StreamPort;
 
 /**
  * In multithreaded programming, often several identical worker threads are fed with
@@ -23,12 +20,11 @@ import com.github.rfqu.df4j.core.StreamPort;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with Demux.listen(this).
  */
-public class Demux<M> extends DataflowNode implements StreamPort<M> {
-    protected final StreamInput<M> input=new StreamInput<M>(new ArrayDeque<M>());
-    protected final StreamInput<Actor<M>> actors=new StreamInput<Actor<M>>(new ArrayDeque<Actor<M>>());
+public class MessageQueue<M> extends ActorVariable<M> implements EventSource<M, StreamPort<M>>{
+    protected final StreamInput<StreamPort<M>> actors=createActorQueue();
     
-    protected Demux() {
-        super(null); // the act method executes synchronously, without an executor.
+    protected StreamInput<StreamPort<M>> createActorQueue() {
+        return new StreamInput<StreamPort<M>>(new ArrayDeque<StreamPort<M>>());
     }
 
     /** Accepts request from the actor for the next message.
@@ -38,29 +34,20 @@ public class Demux<M> extends DataflowNode implements StreamPort<M> {
      * from different sources. 
      * @param actor
      */
-    public void listen(Actor<M> actor) {
+    @Override
+    public EventSource<M, StreamPort<M>> addListener(StreamPort<M> actor) {
         actors.send(actor);
+        return this;
     }
 
     @Override
-    public void send(M token) {
-        input.send(token);
-    }
-
-    @Override
-    public void close() {
-        input.close();
-    }
-    
-    @Override
-    protected void act() {
-        Actor<M> actor = actors.value;
-        M value = input.value;
-        if (value==null) {
+    protected void act(M message) throws Exception {
+        StreamPort<M> actor = actors.value;
+        if (message==null) {
             // input closed
             actor.close();
         } else {
-            actor.send(value);
+            actor.send(message);
         }
     }
 

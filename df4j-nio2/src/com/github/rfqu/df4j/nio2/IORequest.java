@@ -19,9 +19,9 @@ import com.github.rfqu.df4j.core.Request;
 
 /**
  * Request for an I/O operation.
- * @param <R> actual type of the request, after subclassing.
+ * @param <T> actual type of the request, after subclassing.
  */
-public class IORequest<R extends IORequest<R>> extends Request<R, Integer> {
+public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
 
     public int rid=ids.addAndGet(1);
@@ -33,14 +33,19 @@ public class IORequest<R extends IORequest<R>> extends Request<R, Integer> {
 		this.buffer = buffer;
 	}
 
-    public void prepare(boolean read, Port<R> replyTo) {
+    public void prepareRead(Port<T> replyTo) {
         super.prepare(replyTo);
-        this.inRead=read;
-        if (read) {
-            buffer.clear();
-        } else {
-            buffer.flip();
+        this.inRead=true;
+        buffer.clear();
+        if (buffer.remaining()==0) {
+            throw new IllegalArgumentException("no free space in the buffer");
         }
+    }
+
+    public void prepareWrite(Port<T> replyTo) {
+        super.prepare(replyTo);
+        this.inRead=false;
+        buffer.flip();
         if (buffer.remaining()==0) {
             throw new IllegalArgumentException("no free space in the buffer");
         }
@@ -102,4 +107,5 @@ public class IORequest<R extends IORequest<R>> extends Request<R, Integer> {
 	public boolean isInTrans() {
         return inTrans;
 	}
+	
 }

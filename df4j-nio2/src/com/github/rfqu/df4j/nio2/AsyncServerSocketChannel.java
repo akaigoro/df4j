@@ -12,12 +12,13 @@ package com.github.rfqu.df4j.nio2;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 
-import com.github.rfqu.df4j.core.StreamPort;
+import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.DataflowVariable;
 
 /**
  * Wrapper over {@link java.nio.channels.AsynchronousServerSocketChannel}.
@@ -25,121 +26,46 @@ import com.github.rfqu.df4j.core.StreamPort;
  * @author rfqu
  *
  */
-public class AsyncServerSocketChannel 
+public class AsyncServerSocketChannel extends DataflowVariable
   implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
-    private StreamPort<AsynchronousSocketChannel> consumer;
-    /** max number of simultaneous connections */
-    private int maxConn;
-    /** an accept request is pending */
-    private boolean pending=false;
-    protected boolean opened=false;
+    private Switch pending=new Switch();
+    private Semaphore maxConnLimit=new Semaphore();
     private AsynchronousServerSocketChannel channel;
+    private Callback<AsynchronousSocketChannel> consumer;
     
-    public AsyncServerSocketChannel(InetSocketAddress addr) throws IOException {
+    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsynchronousSocketChannel> consumer, int maxConn)
+                throws IOException
+    {
+        if (maxConn<=0) {
+            throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
+        }
+        if (consumer==null) {
+            throw new NullPointerException();
+        }
+        this.consumer=consumer;
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
+        maxConnLimit.up(maxConn);
+        pending.on(); // allow accept
     }
     
-    public synchronized void open(StreamPort<AsynchronousSocketChannel> consumer, int maxConn) {
-        synchronized (this) {
-            if (opened) {
-                throw new IllegalStateException("opened already");
-            }
-            opened=true;
-        }
-        this.consumer=consumer;
-        this.maxConn=maxConn;
-        acceptIfPossible();
+    public void upConnNumber() {
+        maxConnLimit.up();
     }
 
-    private void acceptIfPossible() {
+    public void close() throws IOException {
+        AsynchronousServerSocketChannel channelLoc;
         synchronized (this) {
-            if (!opened) {
-                throw new IllegalStateException("not opened");
-            }
-            if (pending) {
-//                System.out.println("acceptIfPossible: not (pending)");
+            if (channel==null) {
                 return;
             }
-            if (maxConn==0) {
-//                System.out.println("acceptIfPossible: not (maxConn==0)");
-                return;
-            }
-            maxConn--;
-            pending=true;
+            channelLoc=channel;
+            channel = null;
         }
-//        System.out.println("acceptIfPossible: yes");
-        accept();
-    }
-
-    public void maxConnUp() {
-        synchronized (this) {
-            if (!opened) {
-                throw new IllegalStateException("not opened");
-            }
-            if (pending) {
-//                System.out.println("maxConnUp: not (pending)");
-                maxConn++;
-                return;
-            }
-            pending=true;
-        }
-//        System.out.println("maxConnUp: yes");
-        accept();
-    }
-    
-    private void accept() {
-        try {
-            channel.accept(null, this);
-//        } catch (ClosedChannelException e) {
-        } catch (Exception e) {
-            e.printStackTrace();
-            close();
-        }
-    }
-
-    /** new client connected */
-    @Override
-    public void completed(AsynchronousSocketChannel result, Void attachment) {
-//        System.out.println("accepted");
-        synchronized (this) {
-            pending=false;
-        }
-        consumer.send(result);
-        acceptIfPossible();
-    }
-
-    /** new client connection failed */
-    @Override
-    public void failed(Throwable exc, Void attachment) {
-        if (exc instanceof AsynchronousCloseException) {
-            try {
-                close();
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            return;
-        }
-        exc.printStackTrace();
-        maxConnUp(); // TODO log and set max attempt counter 
-        acceptIfPossible();
-    }
-
-    public void close() {
-        synchronized (this) {
-            if (!opened) {
-                return;
-            }
-            opened=false;
-        }
-        try {
-            channel.close();
-        } catch (IOException e) {
-        }
-        consumer.close();
+        channelLoc.close();
+        consumer.sendFailure(new ClosedChannelException());
     }
     
     public AsynchronousServerSocketChannel getChannel() {
@@ -147,7 +73,33 @@ public class AsyncServerSocketChannel
     }
 
     public boolean isOpened() {
-        return opened;
+        return channel!=null;
+    }
+
+    //======================= backend
+
+    @Override
+    protected void act() {
+        channel.accept(null, this);
+    }
+    
+    /** new client connected */
+    @Override
+    public void completed(AsynchronousSocketChannel result, Void attachment) {
+        consumer.send(result);
+    }
+
+    /** new client connection failed */
+    @Override
+    public void failed(Throwable exc, Void attachment) {
+        Callback<AsynchronousSocketChannel> consumerLoc;
+        synchronized (this) {
+            if (consumer==null) {
+                return;
+            }
+            consumerLoc = consumer;
+        }
+        consumerLoc.sendFailure(exc);
     }
 
 }

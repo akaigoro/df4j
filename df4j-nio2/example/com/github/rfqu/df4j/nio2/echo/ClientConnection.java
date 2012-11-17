@@ -4,19 +4,21 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.ClosedChannelException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.EventSource;
 import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.Connection;
+import com.github.rfqu.df4j.nio2.IOHandler;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 import com.github.rfqu.df4j.util.DoubleValue;
 
-class ClientConnection extends Connection implements Comparable<ClientConnection> {
+class ClientConnection
+   implements EventSource<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>
+{
     static final long timeout=1000;// ms
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
 
@@ -44,53 +46,47 @@ class ClientConnection extends Connection implements Comparable<ClientConnection
         startWrite.send(request);
     }
 
-	public void addConnectListener(Callback<AsynchronousSocketChannel> listener) {
-		channel.addConnectListener(listener);
+    @Override
+	public ClientConnection addListener(Callback<AsynchronousSocketChannel> listener) {
+		channel.addListener(listener);
+		return this;
 	}
 
     /** starts write operation
      */
-    SocketIOHandler<CliRequest> startWrite = new SocketIOHandler<CliRequest>() {
+	IOHandler<CliRequest> startWrite = new IOHandler<CliRequest>() {
         @Override
-        protected void completed(int result, CliRequest request) {// throws Exception {
+		public void completed(int result, CliRequest request) {// throws Exception {
             counterRun++;
             request.start = System.currentTimeMillis();
             request.data = rand.nextInt();
             ByteBuffer buffer = request.getBuffer();
             buffer.clear();
             buffer.putInt(request.data);
-            try {
-                channel.write(request, endWrite, timeout);
-            } catch (ClosedChannelException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+			request.prepareWrite(endWrite, timeout);
+            channel.send(request);
         }
     };
 
-    SocketIOHandler<CliRequest> endWrite = new SocketIOHandler<CliRequest>() {
+    IOHandler<CliRequest> endWrite = new IOHandler<CliRequest>() {
         @Override
-        protected void completed(int result, CliRequest request) {//throws ClosedChannelException {
+        public void completed(int result, CliRequest request) {//throws ClosedChannelException {
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
-            try {
-                channel.read(request, endRead, timeout);
-            } catch (ClosedChannelException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+			request.prepareRead(endRead, timeout);
+            channel.send(request);
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
         }
 
         @Override
-        protected void timedOut(CliRequest request) {
+        public void timedOut(CliRequest request) {
             System.err.println("endWrite.timedOut!");
             Thread.dumpStack();
         }       
     };
     
-    SocketIOHandler<CliRequest> endRead = new SocketIOHandler<CliRequest>() {
+    IOHandler<CliRequest> endRead = new IOHandler<CliRequest>() {
         @Override
-        protected void completed(int result, CliRequest request) {
+        public void completed(int result, CliRequest request) {
 //            System.err.println("  client Request read ended; id="+id+" rid="+request.rid+" count="+count);
             // read client's message
             request.checkData();
@@ -100,12 +96,7 @@ class ClientConnection extends Connection implements Comparable<ClientConnection
             rounds.decrementAndGet();
             if (rounds.get()==0) {
 //                System.out.println("SocketIORequest finished id="+id);
-                try {
-                    channel.close();
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+                channel.close();
                 DoubleValue avg = new DoubleValue(((double)sum)/count);
                 echoServerTest.clientFinished(ClientConnection.this, avg);
 //                System.out.println("clients="+echoServerTest.clients.size());
@@ -122,7 +113,7 @@ class ClientConnection extends Connection implements Comparable<ClientConnection
         }
 
         @Override
-        protected void timedOut(CliRequest request) {
+        public void timedOut(CliRequest request) {
             System.err.println("endRead.timedOut!");
             Thread.dumpStack();
         }
@@ -150,10 +141,5 @@ class ClientConnection extends Connection implements Comparable<ClientConnection
                 return;
             }
         }
-    }
-
-    @Override
-    public int compareTo(ClientConnection o) {
-        return id-o.id;
     }
 }

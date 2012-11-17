@@ -28,8 +28,13 @@ public class FileIORequest<R extends FileIORequest<R>>
         super(buf);
     }
 
-    public void prepare(boolean read, long position, Port<R> replyTo){
-        super.prepare(read, replyTo);
+    public void prepareRead(long position, Port<R> replyTo){
+        super.prepareRead(replyTo);
+        this.position = position;
+    }
+
+    public void prepareWrite(long position, Port<R> replyTo){
+        super.prepareWrite(replyTo);
         this.position = position;
     }
 

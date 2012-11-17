@@ -1,9 +1,9 @@
 package com.github.rfqu.df4j.nio2.echo;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -12,11 +12,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Promise;
-import com.github.rfqu.df4j.core.StreamPort;
 import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 
-public class EchoServer implements StreamPort<AsynchronousSocketChannel>
+public class EchoServer
+    implements Callback<AsynchronousSocketChannel>,
+    Closeable
 {
 	public static final int defaultPort = 9998;
     public static final int numconnections=100; // max simultaneous server connections
@@ -28,26 +28,27 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
     /** active connections */
     HashMap<Integer, ServerConnection> connections=new HashMap<Integer, ServerConnection>();
     /** listeners to the closing event */
-    protected Promise<InetSocketAddress> closeListeners=new Promise<InetSocketAddress>();
+    protected Promise<InetSocketAddress> closeEvent=new Promise<InetSocketAddress>();
         
     public EchoServer(InetSocketAddress addr, int maxConn) throws IOException {
-        assch=new AsyncServerSocketChannel(addr);
-        assch.open(this, maxConn);
         this.addr=addr;
+        assch=new AsyncServerSocketChannel(addr, this, maxConn);
     }
 
-    @Override
-    public void send(AsynchronousSocketChannel m) {
-        AsyncSocketChannel channel=new AsyncSocketChannel(m);
-        try {
-            ServerConnection connection = new ServerConnection(this, channel);
-            synchronized(this) {
-                connections.put(connection.id, connection);
+    public <R extends Callback<InetSocketAddress>> R addCloseListener(R listener) {
+        closeEvent.addListener(listener);
+        return listener;
+    }
+
+    protected void connClosed(ServerConnection connection) {
+        synchronized(this) {
+            connections.remove(connection.id);
+            if (!assch.isOpened()) {
+                return;
             }
-        } catch (ClosedChannelException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         }
+        //            System.out.println("connections="+connections.size());
+        assch.upConnNumber(); // allow accept
     }
 
     @Override
@@ -57,7 +58,12 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
                 return;
             }
         }
-        assch.close();
+        try {
+            assch.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         for (;;) {
             synchronized (this) {
                 Set<Integer> keys = connections.keySet();
@@ -70,25 +76,27 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
                 connections.remove(firstKey);
             }
         }
-        closeListeners.send(addr);
+        closeEvent.send(addr);
     }
 
-    protected void conncClosed(ServerConnection connection) {
+    //======================= backend
+    
+    /** AsyncServerSocketChannel sends new connection
+     */
+    @Override
+    public void send(AsynchronousSocketChannel channel) {
+        ServerConnection connection = new ServerConnection(this, channel);
         synchronized(this) {
-            connections.remove(connection.id);
-            if (!assch.isOpened()) {
-                return;
-            }
+            connections.put(connection.id, connection);
         }
-        //            System.out.println("connections="+connections.size());
-        assch.maxConnUp(); // allow another connection
     }
 
-    public <R extends Callback<InetSocketAddress>> R addCloseListener(R listener) {
-        closeListeners.addListener(listener);
-        return listener;
+    /** AsyncServerSocketChannel sends failure
+     */
+    @Override
+    public void sendFailure(Throwable exc) {
     }
-
+    
     public static void main(String[] args) throws Exception {
     	Integer port;
     	if (args.length<1) {
@@ -109,5 +117,5 @@ public class EchoServer implements StreamPort<AsynchronousSocketChannel>
         es.addCloseListener(new CallbackFuture<InetSocketAddress>()).get(); // inet addr is free now
         System.out.println("EchoServer started");
     }
-    
+
 }

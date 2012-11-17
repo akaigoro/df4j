@@ -18,7 +18,11 @@ import java.util.concurrent.Executor;
  * This is classic Actor type.
  * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M> extends DataflowNode implements StreamPort<M>, Closeable {
+public abstract class Actor<M> extends DataflowNode
+    implements StreamPort<M>,
+    Callback<M>,
+    Closeable
+{
     /** place for input token(s) */
 	protected final Input<M> input=createInput();
 	/** true when the closing signal has been processed */

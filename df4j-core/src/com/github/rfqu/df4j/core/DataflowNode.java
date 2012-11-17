@@ -75,33 +75,6 @@ public abstract class DataflowNode extends Link {
 
     protected void handleException(Throwable exc) {}
 
-    /** loops while all pins are ready
-     */
-    protected void loopAct() {
-        try {
-            for (;;) {
-                synchronized (this) {
-                    if (exc!=null) {
-                        break; // fired remains true, preventing subsequent execution
-                    }
-                    if (!isReady()) {
-                        fired = false; // allow firing
-                        return;
-                    }
-                    consumeTokens();
-                }
-                act();
-            }
-        } catch (Throwable e) {
-            exc=e;
-        }
-        try {
-            handleException(exc);
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
-
     /** 
      * Extracts tokens from pins.
      * Extracted tokens are expected to be used used in the act() method.
@@ -130,7 +103,28 @@ public abstract class DataflowNode extends Link {
          */
         @Override
         public void run() {
-            DataflowNode.this.loopAct();
+            try {
+                for (;;) {
+                    synchronized (DataflowNode.this) {
+                        if (exc!=null) {
+                            break; // fired remains true, preventing subsequent execution
+                        }
+                        if (!isReady()) {
+                            fired = false; // allow firing
+                            return;
+                        }
+                        consumeTokens();
+                    }
+                    act();
+                }
+            } catch (Throwable e) {
+                exc=e;
+            }
+            try {
+                handleException(exc);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -231,6 +225,9 @@ public abstract class DataflowNode extends Link {
     protected class Semaphore extends Pin {
         private int count=0;
         
+        public Semaphore() {
+        }
+
         protected boolean isEmpty() {
             return count==0;
         }
@@ -247,9 +244,24 @@ public abstract class DataflowNode extends Link {
         }
 
         public void up() {
+            boolean doFire;
             synchronized (DataflowNode.this) {
                 count++;
-                if (count==1) {
+                if (count!=1) {
+                    return;
+                }
+                doFire=turnOn();
+            }
+            if (doFire) {
+                task.fire();
+            }
+        }
+
+        public void up(int delta) {
+            synchronized (DataflowNode.this) {
+                boolean wasOff=(count==0);
+                count+=delta;
+                if (wasOff && count>0) {
                     turnOn();
                 }
             }
@@ -331,10 +343,10 @@ public abstract class DataflowNode extends Link {
         protected abstract T remove();
     }
 
-    /** A place for single token of type <T>
+    /** A place for single unremovable token of type <T>
      * @param <T> 
      */
-    public class ScalarInput<T> extends Input<T> {
+    public class ScalarConstInput<T> extends Input<T> {
         protected boolean filled=false;
 
         @Override
@@ -354,6 +366,17 @@ public abstract class DataflowNode extends Link {
             return closeRequested==closeHandled;
         }
 
+        @Override
+        protected T remove() {
+            // TODO do we need handle closeRequested and closeHandled?
+            return value;
+        }
+    }
+
+    /** A place for single token of type <T>
+     * @param <T> 
+     */
+    public class ScalarInput<T> extends ScalarConstInput<T> {
         @Override
         protected T remove() {
             filled=false;

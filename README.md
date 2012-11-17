@@ -4,13 +4,15 @@ Subprojects
 -----------
 
 df4j-core: contains core functionality. It requires java 1.5 or higher.
+
 df4j-demux (in progress): base for remote and/or persistent actors.
+
 df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. It requires java 1.7 or higher.
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
 If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
-or send email at alexei.kaigorodov($)gmail.com.
+or send email to alexei.kaigorodov($)gmail.com.
 
 Hello World Example
 -------------------
@@ -22,14 +24,12 @@ Hello World Example
         @Override
         protected void act(String message) throws Exception {
             if (message.length()==0) {
-                out.println(sb.toString());
-                System.out.flush();
+                System.out.println(sb.toString());
             } else {
                 sb.append(message);
                 sb.append(" ");
             }
         }
-        
     }
 
     public void test() throws InterruptedException {

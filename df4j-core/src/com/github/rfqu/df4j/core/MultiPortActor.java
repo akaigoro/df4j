@@ -23,11 +23,11 @@ public class MultiPortActor {
 
     public MultiPortActor() {
         execActor=new ExecActor();
-	}
+    }
 
-	public MultiPortActor(Executor executor) {
+    public MultiPortActor(Executor executor) {
         execActor=new ExecActor(executor);
-	}
+    }
 
     private static final class Message<M> extends Link {
         private PortHandler<M> handler;

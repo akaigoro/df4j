@@ -8,6 +8,7 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -26,27 +27,31 @@ public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
     protected Throwable exc;
     protected Callback<T> listener;
     
+    public Promise() {
+    }
+
+    public Promise(Callback<T> firstListener) {
+        this.listener = firstListener;
+    }
+
     @Override
 	public EventSource<T, Callback<T>> addListener(Callback<T> sink) {
-	    checkReady:
 		synchronized (this) {
-		    if (_hasValue) {
-		        break checkReady;
+		    if (!_hasValue) {
+	            if (listener == null) {
+	                listener = sink;
+	                return this;
+	            }
+	            if (listener instanceof Promise.Listeners) {
+	                ((Listeners) listener).addListener(sink);
+	            } else {
+	                Listeners listeners = new Listeners();
+	                listeners.addListener(listener);
+	                listeners.addListener(sink);
+	                listener=listeners;
+	            }
+	            return this;
 		    }
-            if (listener == null) {
-                listener = sink;
-                return this;
-            }
-            Listeners proxy;
-            if (listener instanceof Promise.Listeners) {
-                proxy = (Listeners) listener;
-            } else {
-                proxy = new Listeners();
-                proxy.addListener(listener);
-                listener = proxy;
-            }
-            proxy.addListener(sink);
-            return this;
         }
 	    if (exc!=null) {
 	        sink.sendFailure(exc);
@@ -58,12 +63,12 @@ public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
 
 	@Override
 	public void send(T m) {
-        if (_hasValue) {
-            Object v=this.exc!=null?this.exc:value;
-            throw new IllegalStateException("value set already: "+v);
-        }
         Callback<T> listenerLoc;
 		synchronized (this) {
+	        if (_hasValue) {
+	            Object v=this.exc!=null?this.exc:value;
+	            throw new IllegalStateException("value set already: "+v);
+	        }
 		    _hasValue=true;
 		    value=m;
             if (listener == null) {
@@ -77,12 +82,12 @@ public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
 
     @Override
     public void sendFailure(Throwable exc) {
-        if (_hasValue) {
-            Object v=this.exc!=null?this.exc:value;
-            throw new IllegalStateException("value set already: "+v);
-        }
         Callback<T> listenerLoc;
         synchronized (this) {
+            if (_hasValue) {
+                Object v=this.exc!=null?this.exc:value;
+                throw new IllegalStateException("value set already: "+v);
+            }
             _hasValue=true;
             this.exc=exc;
             if (listener == null) {
@@ -95,7 +100,7 @@ public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
     }
 
 	private class Listeners implements Callback<T>{
-	    private ConcurrentLinkedQueue<Callback<T>> listeners = new ConcurrentLinkedQueue<Callback<T>>();
+	    private ArrayList<Callback<T>> listeners = new ArrayList<Callback<T>>();
 
 		void addListener(Callback<T> listener) {
 			listeners.add(listener);
@@ -103,15 +108,15 @@ public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
 
 		@Override
 		public void send(T m) {
-			for (Callback<T> out=listeners.poll(); out!=null; out=listeners.poll()) {
-				out.send(m);
+			for (int k=0; k<listeners.size(); k++) {
+			    listeners.get(k).send(m);
 			}
 		}
 
         @Override
         public void sendFailure(Throwable exc) {
-            for (Callback<T> out=listeners.poll(); out!=null; out=listeners.poll()) {
-                out.sendFailure(exc);
+            for (int k=0; k<listeners.size(); k++) {
+                listeners.get(k).sendFailure(exc);
             }
         }
 	}

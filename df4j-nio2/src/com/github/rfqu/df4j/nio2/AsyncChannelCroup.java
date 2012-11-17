@@ -41,7 +41,6 @@ public class AsyncChannelCroup {
 
     private static final ThreadLocal <AsynchronousChannelGroup> currentACGroup 
         = new ThreadLocal <AsynchronousChannelGroup> () {
-
             @Override
             protected AsynchronousChannelGroup initialValue() {
                 ExecutorService service = Task.getCurrentExecutorService();
@@ -51,7 +50,6 @@ public class AsyncChannelCroup {
                     return null;
                 }
             }
-
-    };
+    	};
 
 }

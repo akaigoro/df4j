@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.ext;
+package com.github.rfqu.df4j.core;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -19,7 +19,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.ext.Demux;
+import com.github.rfqu.df4j.core.DoublyLinkedQueue;
+import com.github.rfqu.df4j.core.MessageQueue;
 import com.github.rfqu.df4j.util.IntValue;
 
 /**
@@ -30,7 +31,7 @@ import com.github.rfqu.df4j.util.IntValue;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with Demux.listen(this).
  */
-public class DemuxTest {
+public class MessageQueueTest {
     int nThreads;
     PrintStream out = System.out;
 
@@ -78,11 +79,16 @@ public class DemuxTest {
         }
     }
 
-    static class Pong1 extends Demux<IntValue> {
+    static class Pong1 extends MessageQueue<IntValue> {
         { 
             for (int k=0; k<3; k++) {
                 new PongWorker(k);
             }
+        }
+        
+        @Override
+        protected Input<IntValue> createInput() {
+            return new StreamInput<IntValue>(new DoublyLinkedQueue<IntValue>());
         }
         
         @Override
@@ -105,19 +111,17 @@ public class DemuxTest {
          */
         class PongWorker extends Actor<IntValue> {
             int id;
-            {
-                actors.send(this);
-            }
 
             public PongWorker(int id) {
                 this.id=id;
+                addListener(this);
             }
 
             @Override
             protected void act(IntValue message) throws Exception {
                 System.out.println("  act:"+id+" m:"+message.value);
                 System.out.flush();
-                actors.send(this);
+                addListener(this);
             }
         }
     }
@@ -130,8 +134,9 @@ public class DemuxTest {
         
     }
 
-    static class Pong2 extends Demux<Token> {
+    static class Pong2 extends MessageQueue<Token> {
         LinkedBlockingQueue<Token> q;
+
         Pong2(int nw, LinkedBlockingQueue<Token> q){ 
             this.q=q;
             for (int k=0; k<nw; k++) {
@@ -139,18 +144,20 @@ public class DemuxTest {
             }
         }
 
+        @Override
+        protected Input<Token> createInput() {
+            return new StreamInput<Token>(new DoublyLinkedQueue<Token>());
+        }
         /**
          * The ponging actor
          * 
          */
         class PongWorker extends Actor<Token> {
             int id;
-            {
-                actors.send(this);
-            }
 
             public PongWorker(int id) {
                 this.id=id;
+                addListener(this);
             }
 
             @Override
@@ -162,13 +169,13 @@ public class DemuxTest {
             protected void act(Token message) throws Exception {
                 message.touched=true;
                 q.add(message);
-                actors.send(this);
+                addListener(this);
             }
         }
     }
 
     public static void main(String args[]) throws InterruptedException {
-        DemuxTest nt = new DemuxTest();
+        MessageQueueTest nt = new MessageQueueTest();
         nt.test1();
     }
 

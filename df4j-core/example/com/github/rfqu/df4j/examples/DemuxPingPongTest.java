@@ -18,11 +18,11 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ContextThreadFactory;
+import com.github.rfqu.df4j.core.MessageQueue;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.ext.ActorLQ;
-import com.github.rfqu.df4j.ext.Demux;
 import com.github.rfqu.df4j.util.MessageSink;
 
 public class DemuxPingPongTest {
@@ -143,7 +143,7 @@ public class DemuxPingPongTest {
         }
     }
 
-    static class Pong extends Demux<Token> {
+    static class Pong extends MessageQueue<Token> {
         { 
             for (int k=0; k<3; k++) {
                 new PongWorker();

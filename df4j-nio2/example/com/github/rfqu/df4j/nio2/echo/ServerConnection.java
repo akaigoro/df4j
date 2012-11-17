@@ -1,13 +1,13 @@
 package com.github.rfqu.df4j.nio2.echo;
 
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
+import java.nio.channels.AsynchronousSocketChannel;
 
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.Connection;
+import com.github.rfqu.df4j.nio2.IOHandler;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 
-class ServerConnection extends Connection {
+class ServerConnection {
     private final EchoServer echoServer;
     AsyncSocketChannel channel;
     public int id;
@@ -15,13 +15,16 @@ class ServerConnection extends Connection {
     SerRequest request;
     boolean closed = false;
 
-    public ServerConnection(EchoServer echoServer, AsyncSocketChannel channel) throws ClosedChannelException {
+    public ServerConnection(EchoServer echoServer, AsynchronousSocketChannel channel2)
+    //        throws ClosedChannelException
+    {
         this.echoServer = echoServer;
-        this.channel = channel;
+        this.channel=new AsyncSocketChannel(channel2);
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);
-        channel.read(request, endRead);
+        request.prepareRead(endRead);
+        channel.send(request);
     }
 
     public void close() {
@@ -36,43 +39,37 @@ class ServerConnection extends Connection {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			echoServer.conncClosed(this);
+			echoServer.connClosed(this);
 		}
     }
 
-    SocketIOHandler<SerRequest> endRead = new SocketIOHandler<SerRequest>() {
+    IOHandler<SerRequest> endRead = new IOHandler<SerRequest>() {
         @Override
-        protected void completed(int result, SerRequest request) {
+		public void completed(int result, SerRequest request) {
             // System.out.println("  ServerRequest readCompleted id="+id);
             // read client's message as if all the data have been read
             buffer.position(buffer.limit());
             // write it back
-            try {
-                channel.write(request, endWrite);
-            } catch (ClosedChannelException e) {
-            }
+            request.prepareWrite(endWrite);
+            channel.send(request);
         }
 
         @Override
-        protected void closed(SerRequest request) {//throws IOException {
+		public void closed(SerRequest request) {//throws IOException {
             ServerConnection.this.close();
         }
     };
 
-    SocketIOHandler<SerRequest> endWrite = new SocketIOHandler<SerRequest>() {
+    IOHandler<SerRequest> endWrite = new IOHandler<SerRequest>() {
         @Override
-        protected void completed(int result, SerRequest request) {//throws IOException {
+		public void completed(int result, SerRequest request) {//throws IOException {
             // System.out.println("  ServerRequest writeCompleted id="+id);
-            try {
-                // System.out.println("  ServerRequest read started id="+id);
-                channel.read(request, endRead);
-            } catch (ClosedChannelException e) {
-            	closed(request);
-            }
+        	request.prepareRead(endRead);
+            channel.send(request);
         }
 
         @Override
-        protected void closed(SerRequest request) {//throws IOException {
+		public void closed(SerRequest request) {//throws IOException {
             ServerConnection.this.close();
         }
     };

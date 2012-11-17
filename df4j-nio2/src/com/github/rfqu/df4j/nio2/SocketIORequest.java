@@ -29,15 +29,29 @@ public class SocketIORequest<R extends SocketIORequest<R>>
     }
 
     @Override
-    public void prepare(boolean read, Port<R> replyTo) {
-        super.prepare(read, replyTo);
+    public void prepareRead(Port<R> replyTo) {
+        super.prepareRead(replyTo);
         timed=false;
         this.timeout=0;
     }
 
-    public void prepare(boolean read, Port<R> replyTo, long timeout)
+    @Override
+    public void prepareWrite(Port<R> replyTo) {
+        super.prepareWrite(replyTo);
+        timed=false;
+        this.timeout=0;
+    }
+
+    public void prepareRead(Port<R> replyTo, long timeout)
     {
-        super.prepare(read, replyTo);
+        super.prepareRead(replyTo);
+        timed=false;
+        this.timeout=timeout;
+    }
+
+    public void prepareWrite(Port<R> replyTo, long timeout)
+    {
+        super.prepareWrite(replyTo);
         timed=false;
         this.timeout=timeout;
     }

@@ -30,7 +30,7 @@ public class Request<T extends Request<T, R>, R> extends Link {
     /** initialize
      * @param replyTo destination
      */
-    public void prepare(Port<T> replyTo) {
+    protected void prepare(Port<T> replyTo) {
         this.replyTo = replyTo;
         result = null;
         exc = null;

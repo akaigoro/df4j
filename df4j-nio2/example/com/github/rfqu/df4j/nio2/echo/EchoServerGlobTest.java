@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -57,9 +56,7 @@ public class EchoServerGlobTest {
         for (int i = 0; i < numclients; i++) {
             ClientConnection cconn = new ClientConnection(this, iaddr, rounds);
 			clients.put(cconn.id, cconn);
-			CallbackFuture<AsynchronousSocketChannel> listener=new CallbackFuture<AsynchronousSocketChannel>();
-			cconn.addConnectListener(listener);
-			listener.get(); // wait connection to connect
+			CallbackFuture.getFrom(cconn); // wait connection to connect
 //            Thread.sleep(2);
         }
         out.println("Started clients:"+numclients);

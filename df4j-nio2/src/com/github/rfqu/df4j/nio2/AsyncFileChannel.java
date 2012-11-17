@@ -31,8 +31,9 @@ import com.github.rfqu.df4j.core.Task;
  * @author rfqu
  *
  */
-public class AsyncFileChannel
-  implements CompletionHandler<Integer, FileIORequest<?>>
+public class AsyncFileChannel<T extends FileIORequest<T>> 
+  implements Port<T>,
+     CompletionHandler<Integer, T>
 {    
     AsynchronousFileChannel channel=null;
     boolean closed=false;
@@ -45,26 +46,19 @@ public class AsyncFileChannel
         this(file, new HashSet<OpenOption>(Arrays.<OpenOption>asList(options)), new FileAttribute<?>[0]);
     }
 
-    public <R extends FileIORequest<R>> R read(R request, long position, Port<R> replyTo) throws Exception { 
-        checkState();
-        request.prepare(true, position, replyTo);
-        channel.read(request.buffer, request.getPosition(), request, this);
-        return request;
-    }
-    
-    public <R extends FileIORequest<R>> R write(R request, long position, Port<R> replyTo) throws Exception { 
-        checkState();
-        request.prepare(false, position, replyTo);
-        channel.write(request.buffer, request.getPosition(), request, this);
-        return request;
-    }
-
-    protected void checkState() throws ClosedChannelException {
-        if (closed) {
-            throw new ClosedChannelException();
+    @Override
+    public void send(T request) { 
+		if (closed) {
+			request.failed(new ClosedChannelException());
+			return;
+		}
+        if (request.isReadOp()) {
+        	channel.read(request.buffer, request.getPosition(), request, this);
+        } else {
+            channel.write(request.buffer, request.getPosition(), request, this);
         }
     }
-
+    
     public void close() throws IOException {
         closed=true;
         if (channel!=null) {
@@ -87,12 +81,12 @@ public class AsyncFileChannel
     }
 
     @Override
-    public void completed(Integer result, FileIORequest<?> attachment) {
+    public void completed(Integer result, T attachment) {
         attachment.completed(result);
     }
 
     @Override
-    public void failed(Throwable exc, FileIORequest<?> attachment) {
+    public void failed(Throwable exc, T attachment) {
         attachment.failed(exc);
     }
 }
