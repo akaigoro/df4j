@@ -156,7 +156,7 @@ public class DemuxPingPongTest {
          */
         class PongWorker extends ActorLQ<Token> {
             {
-                actors.send(this);
+                addListener(this);
             }
 /*
             @Override
@@ -167,7 +167,7 @@ public class DemuxPingPongTest {
             @Override
             protected void act(Token token) throws Exception {
                 token.sendTo(token.getReplyTo());
-                actors.send(this);
+                addListener(this);
             }
         }
     }

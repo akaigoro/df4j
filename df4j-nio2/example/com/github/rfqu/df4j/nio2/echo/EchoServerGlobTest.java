@@ -56,7 +56,12 @@ public class EchoServerGlobTest {
         for (int i = 0; i < numclients; i++) {
             ClientConnection cconn = new ClientConnection(this, iaddr, rounds);
 			clients.put(cconn.id, cconn);
-			CallbackFuture.getFrom(cconn); // wait connection to connect
+			try {
+                CallbackFuture.getFrom(cconn); // wait connection to connect
+            } catch (Exception e) {
+                System.err.println("conn "+i+" failed:"+e);
+                return;
+            }
 //            Thread.sleep(2);
         }
         out.println("Started clients:"+numclients);
@@ -118,17 +123,17 @@ public class EchoServerGlobTest {
 
     @Test
     public void mediumTest() throws Exception, IOException, InterruptedException {
-    	testThroughput(100,200);
+    	testThroughput(100,20);
    }
 
     @Test
     public void heavyTest() throws Exception, IOException, InterruptedException {
-    	testThroughput(1000,100);
+    	testThroughput(1000,10);
    }
 
 //    @Test
     public void veryHeavyTest() throws Exception, IOException, InterruptedException {
-    	testThroughput(10000,1000);
+    	testThroughput(10000,10);
    }
 
    static  class StreamPrinter extends Thread {

@@ -139,11 +139,11 @@ public class AsyncSocketChannel extends Link
     class RequestQueue extends Actor<SocketIORequest<?>>
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
-        protected Switch channelAcc=new Switch(); // channel accessible
+        protected Sema channelAcc=new Sema(); // channel accessible
         protected SocketIORequest<?> currentRequest;
         
         protected void resume() {
-            channelAcc.on();
+            channelAcc.up();
         }
         
         @Override
@@ -175,7 +175,7 @@ public class AsyncSocketChannel extends Link
 		@Override
         public void completed(Integer result, SocketIORequest<?> request) {
 		    currentRequest=null;
-            channelAcc.on();
+            channelAcc.up();
             request.completed(result);
         }
 
@@ -185,7 +185,7 @@ public class AsyncSocketChannel extends Link
                 AsyncSocketChannel.this.close();
             }
 		    currentRequest=null;
-            channelAcc.on();
+            channelAcc.up();
             request.failed(exc);
         }
     }

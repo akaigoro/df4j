@@ -41,12 +41,12 @@ public class EchoServerLocTest {
 
     @Test
     public void heavyTest() throws Exception, IOException, InterruptedException {
-    	localTest(1000, 2000,10);
+    	localTest(500, 1000, 10);
    }
 
     @Test
     public void veryHeavyTest() throws Exception, IOException, InterruptedException {
-    	localTest(1000, 10000,1000);
+    	localTest(3000, 5000, 10);
    }
 
     public static void main(String[] args) throws Exception {
