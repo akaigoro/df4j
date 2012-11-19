@@ -1,9 +1,6 @@
 package com.github.rfqu.df4j.nio2.echo;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -15,9 +12,12 @@ import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.ext.Timer;
 import com.github.rfqu.df4j.util.DoubleValue;
+import com.github.rfqu.df4j.util.JavaAppLauncher;
 
 /**
- * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched as an application
+ * When launched as a Junit test suite, requires com.github.rfqu.df4j.ioexample.EchoServer
+ *   to be launched as an application.
+ * When launched as a java application, it tries to run EchoServer itself.   
  */
 public class EchoServerGlobTest {
 	static final long PERIOD = 0;//5; // ms between subsequent requests for given client
@@ -59,7 +59,8 @@ public class EchoServerGlobTest {
 			try {
                 CallbackFuture.getFrom(cconn); // wait connection to connect
             } catch (Exception e) {
-                System.err.println("conn "+i+" failed:"+e);
+                System.err.println("conn "+i+" failed:");
+                e.printStackTrace();
                 return;
             }
 //            Thread.sleep(2);
@@ -136,32 +137,6 @@ public class EchoServerGlobTest {
     	testThroughput(10000,10);
    }
 
-   static  class StreamPrinter extends Thread {
-        BufferedReader in;
-        PrintStream out;
-
-        public StreamPrinter(InputStream in, PrintStream out) {
-            this.in=new BufferedReader(new InputStreamReader(in));
-            this.out=out;
-            super.setName("StreamPrinter");
-            super.setDaemon(true);
-        }
-        
-        public void run() {
-            for (;;) {
-                try {
-                    String line=in.readLine();
-                    if (line==null) {
-                        out.println("StreamPrinter exit");
-                        return;
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-    
     public static void main(String[] args) throws Exception {
     	String host;
     	if (args.length<1) {
@@ -177,15 +152,17 @@ public class EchoServerGlobTest {
     	} else {
     	    port = Integer.valueOf(args[1]);
     	}
-    	ProcessBuilder pb=new ProcessBuilder();
-    	pb.command("java", "-cp", "bin", "com.github.rfqu.df4j.nio2.echo.EchoServer",
-    	        Integer.toString(port));
-    	Process pr=pb.start();
-        new StreamPrinter(pr.getErrorStream(), System.err).start();
-        new StreamPrinter(pr.getInputStream(), System.out).start();
+    	final int maxConn = 1000; // max simultaneous connections on server side
+		Process pr = JavaAppLauncher.startJavaApp(
+    			"com.github.rfqu.df4j.nio2.echo.EchoServer",
+    			Integer.toString(port),
+    			Integer.toString(maxConn));
+        Thread.sleep(200);
     	EchoServerGlobTest t=new EchoServerGlobTest();
 		t.iaddr = new InetSocketAddress(host, port);
+		t.smokeTest();
         t.mediumTest();
+        t.veryHeavyTest();
         pr.destroy();
     }
 

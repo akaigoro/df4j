@@ -12,6 +12,7 @@ package com.github.rfqu.df4j.nio2;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
@@ -96,6 +97,11 @@ public class AsyncServerSocketChannel extends DataflowVariable
     /** new client connection failed */
     @Override
     public void failed(Throwable exc, Void attachment) {
+    	if (exc instanceof AsynchronousCloseException) {
+    		// this is a standard situation
+    		return;
+    	}
+        System.err.println("AsyncServerSocketChannel.failed:"+exc);
         Callback<AsynchronousSocketChannel> consumerLoc;
         synchronized (this) {
             pending.up();

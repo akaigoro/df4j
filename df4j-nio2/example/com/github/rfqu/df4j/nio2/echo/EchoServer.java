@@ -98,6 +98,8 @@ public class EchoServer
     }
     
     public static void main(String[] args) throws Exception {
+    	System.out.println("classPath="+System.getProperty("java.class.path"));
+    	
     	Integer port;
     	if (args.length<1) {
 //    		System.out.println("Usage: EchoServer port maxConn");

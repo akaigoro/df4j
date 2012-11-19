@@ -1,5 +1,4 @@
 /**
- * Echo server, server-side connection represented as a pair of
- * ActorVariables, able to serve multiple buffer simultaneously. 
+ * Echo server, server-side connection represented as pair of IOHandlers. 
  */
 package com.github.rfqu.df4j.nio2.echo;

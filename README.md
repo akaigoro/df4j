@@ -111,19 +111,19 @@ makes a loop and holds one token - the state of the node instance). Below is an 
 Version history
 ---------------
 
-v0.5 2012/11/17
+v0.5 2012/11/19
 - core classes renamed:
-BaseActor => DataflowNode
-DataSource => EventSource
-ThreadFactoryTL => ConextThreadFactory
-LinkedQueue => DoublyLinkedQueue
+BaseActor => DataflowNode; 
+DataSource => EventSource; 
+ThreadFactoryTL => ConextThreadFactory; 
+LinkedQueue => DoublyLinkedQueue; 
 SerialExecutor moved to ext.
 - Actor input queue is now pluggable.
 - DataflowNode has its own run method. Now only new act() method should be overriden.
   Tokens are consumed automatically when the node is fired.
 - DataflowNode has new method sendFailure, to create Callbacks easily.
   It as acompanied with back-end method handleException(Throwable).
-- New ext class Demux created.
+- New core class MessageQueue created (suggest a better name).
 
 v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).
 Timer class created with interface similar to AsyncChannel. 

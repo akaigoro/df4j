@@ -10,7 +10,6 @@
 package com.github.rfqu.df4j.tutorial;
 
 import java.util.ArrayDeque;
-import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.Task;
