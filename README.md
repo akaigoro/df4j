@@ -235,11 +235,19 @@ DataSource => EventSource
 ThreadFactoryTL => ConextThreadFactory
 LinkedQueue => DoublyLinkedQueue
 SerialExecutor moved to the package com.github.rfqu.df4j.ext.
+=======
+v0.5 2012/11/19
+- core classes renamed:
+BaseActor => DataflowNode; 
+DataSource => EventSource; 
+ThreadFactoryTL => ConextThreadFactory; 
+LinkedQueue => DoublyLinkedQueue; 
+SerialExecutor moved to ext.
 - Actor input queue is now pluggable.
 - DataflowNode has its own run method, which consumes tokens. Now only new act() method should be overriden.
 - DataflowNode has new method sendFailure, to create Callbacks easily.
   It as accompanied with back-end method handleException(Throwable).
-- New core class MessageQueue created.
+- New core class MessageQueue created (suggest a better name).
 
 v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).
 Timer class created with interface similar to AsyncChannel. 

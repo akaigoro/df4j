@@ -8,11 +8,10 @@ import com.github.rfqu.df4j.nio2.SocketIORequest;
 import com.github.rfqu.df4j.nio2.echo.IOHandler;
 
 class ServerConnection {
+    static final int NBUFS=4;
     private final EchoServer echoServer;
     AsyncSocketChannel channel;
     public int id;
-    private ByteBuffer buffer;
-    SerRequest request;
     boolean closed = false;
 
     public ServerConnection(EchoServer echoServer, AsynchronousSocketChannel channel2)
@@ -21,10 +20,12 @@ class ServerConnection {
         this.echoServer = echoServer;
         this.channel=new AsyncSocketChannel(channel2);
         this.id=echoServer.ids.addAndGet(1);
-        buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
-        request = new SerRequest(buffer);
-        request.prepareRead(endRead);
-        channel.send(request);
+        for (int k=0; k<NBUFS; k++) {
+            ByteBuffer buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
+            SerRequest request = new SerRequest(buffer);
+            request.prepareRead(endRead);
+            channel.send(request);
+        }
     }
 
     public void close() {
@@ -48,7 +49,7 @@ class ServerConnection {
 		public void completed(int result, SerRequest request) {
             // System.out.println("  ServerRequest readCompleted id="+id);
             // read client's message as if all the data have been read
-            buffer.position(buffer.limit());
+            request.getBuffer().position(request.getBuffer().limit());
             // write it back
             request.prepareWrite(endWrite);
             channel.send(request);
