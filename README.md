@@ -78,7 +78,7 @@ makes a loop and holds one token - the state of the node instance). Below is an 
 
 <pre>
     class Collector extends DataflowNode {
-        Input<String> input=new StreamInput<String>(new ArrayDeque<String>());
+        Input<String> input=new StreamInput<String>();
         StringBuilder sb=new StringBuilder();
         
         @Override
@@ -86,7 +86,7 @@ makes a loop and holds one token - the state of the node instance). Below is an 
         // the act method have no parameters, values from inputs
         // has to be extracted manually.
         protected void act() {
-            String message=input.value;
+            String message=input.get();
             if (message==null) {
                 // StreamInput does not accept null values,
                 // and null value signals that input is closed
@@ -106,24 +106,140 @@ makes a loop and holds one token - the state of the node instance). Below is an 
     }
 </pre>
 
+Dataflow Programming
+--------------------
 
+DataflowNode can contain multiple inputs and so can solve many tasks
+which are difficult to solve with Actors. 
+
+Let we have several worker actors, for example, representing computational nodes in cluster.
+The actors accept messages with assignments. Cluster users would like to have a single port
+to send assignments, and the reactor of that port dispatches messages to worker actors.
+Simple and elegant dataflow solution is as follows: dispatcher has 2 port: one for assignments
+and one for worker actors. Each actor monitors its node and when it knows that the node is able
+to receive new assignments, the actor sends itself to the actor's port. Actors are just objects and can 
+be sent as messages (of course, references to actors). The dispatcher acts when both input ports
+are not empty:
+<pre>
+    class Dispatcher extends DataflowNode {
+        Input<Assignment> tasks=new StreamInput<Assignment>();
+        Input<Actor<Assignment>> actors=new StreamInput<<Actor<Assignment>>>();
+        
+        @Override
+        protected void act() {
+            Assignment task=tasks.get();
+            Actor<Assignment> actor=actor.get();
+            actor.send(task);
+        }
+    }
+</pre>
+In fact, Dispatcher can be build upon Actor:
+<pre>
+    class Dispatcher extends Actor<Assignment> {
+        Input<Actor<Assignment>> actors=new StreamInput<<Actor<Assignment>>>();
+        
+        @Override
+        protected void act(Assignment task) {
+        	Actor<Assignment> actor=actors.get();
+            actor.send(task);
+        }
+    }
+</pre>
+This is because Actor is a simple extension of DataflowNode with one declared StreamInput.
+Actor is convenient to use, as it is itself implements interface Port (shorted to the predefined input),
+and we can write actor.send(m) instead of actor.input.send(m).
+
+Now think how worker actor could know if its node can be given more assignments.
+Suppose we just decide that when connecting to the cluster node, it replies with a number of tasts
+it can execute simultaneously. Sending an assignment reduces this number by one. When the node
+finishes one task, it sends a message and the number is increased by one.
+
+In multithreaded environment, such a resource counter can be represented with a semaphore.
+In actor environment, actors are not allowed to block on semaphores. Instead, they can use 
+equivalent feature: class DataflowNode.Sema. It reminds DataflowNode.Input, but does not holds
+messages, but only a counter, allowing the dataflow node to execute only when the counter is greater than zero.
+Each execution of the DataflowNode.act() method reduces the counter by one.
+
+To imitate acquiring semaphore, we create an intermediate Actor with Sema instantiated. Working actor
+sends itself to that intermediate actor and, if semaphore is open, working actor is sent further to the dispatcher. 
+
+<pre>
+    class SemaActor extends Actor<Actor<Assignment>> {
+    	Sema counter=new Sema();
+    	Dispatcher dispatcher; // initialize by IOC or in constructor
+        
+        @Override
+        protected void act(Actor<Assignment> actor) {
+          	dispatcher.send(actor);
+        }
+
+		// called by network connection
+        Port<Request> handler = new Port<Request>() {
+            public void send(Request r) {
+            	counter.up();
+            }
+        }
+    }
+
+    class WorkerActor extends Actor<Assignment> {
+    	SemaActor semaActor=new SemaActor();
+        NetworkConnection conn=new NetworkConnection(clusterNodeAddress, semaActor);
+        
+        @Override
+        protected void act(Assignment task) {
+            // create new request for the network connection
+        	Request r=new Request(task, this);
+            conn.send(task);
+           	semaActor.send(this);
+        }        
+    }
+</pre>   
+In the above example, network connection only resends outgoing messages without any confirmation, and receives
+incoming messages of one type (permission to send one more assignment to the cluster node).
+In reality, network communication is much more complicated.
+
+Background Executor
+-------------------
+When a DataflowNode (including Actor) is created, it must be assigned an Executor to run on.
+This library allows two ways of assigning Executor to a DataflowNode: explicitly by a constructor
+or implicitly by a ThreadLocal variable.
+
+Via constructor, Executor may be null. In this case,
+the node will be executed on the caller's thread (which invokes the send method). This is safe and fast, but implies no parallelism.
+It is recommended for nodes which simply redirect incoming messages, like Dispatcher or WorkerActor in the
+examples above: add them a constructor with super(null). Equivalently, extend them from 
+DataflowVariable or ActorVariable, respectively.
+
+When a no-arg constructor is used, this makes DataflowNode to take Executor from thread context.
+If no executor in the thread context found, new Executor created with fixed number of threads
+equal to the number of available processors. If another kind of context executor wanted, create it before
+instantiating any DataflowNode and set in context by Task.setCurrentExecutor().
+Take care for executor's threads to have references to that executor.
+Class ContextThreadFactory can be used for this purpose - see ContextThreadFactory.newFixedThreadPool(nThreads)
+and other similar methods. See also the package df4j.ext for a number of specific executors. PrivateExecutor
+contains a separate thread to serve one actor - this allow that actor to block on monitors or input/outut operations.
+ImmediateExecutor, being set as a context executor, has effect of setting null executor for all nodes,
+and turns your program into sequential one, which can help in debugging.
 
 Version history
 ---------------
 
+v0.5.1 2012/11/17
+- class MessageQueue renamed to Dispatcher.
+- synchronization in DataflowNode made by j.u.c.ReentrantLock.
+ 
 v0.5 2012/11/17
 - core classes renamed:
 BaseActor => DataflowNode
 DataSource => EventSource
 ThreadFactoryTL => ConextThreadFactory
 LinkedQueue => DoublyLinkedQueue
-SerialExecutor moved to ext.
+SerialExecutor moved to the package com.github.rfqu.df4j.ext.
 - Actor input queue is now pluggable.
-- DataflowNode has its own run method. Now only new act() method should be overriden.
-  Tokens are consumed automatically when the node is fired.
+- DataflowNode has its own run method, which consumes tokens. Now only new act() method should be overriden.
 - DataflowNode has new method sendFailure, to create Callbacks easily.
-  It as acompanied with back-end method handleException(Throwable).
-- New ext class Demux created.
+  It as accompanied with back-end method handleException(Throwable).
+- New core class MessageQueue created.
 
 v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).
 Timer class created with interface similar to AsyncChannel. 

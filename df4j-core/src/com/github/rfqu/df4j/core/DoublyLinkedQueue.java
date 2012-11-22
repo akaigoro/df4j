@@ -9,20 +9,21 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.util.AbstractQueue;
 
 /** Simple doubly linked message queue
  * @param <M> the type of the enqueued messages
  */
-public class DoublyLinkedQueue<M extends Link> extends Link implements Queue<M> {
+public class DoublyLinkedQueue<M extends Link> extends AbstractQueue<M> {
+    private final Link head=new Link();
+    
     /**
      * @return true if this queue is empty, false otherwise
      */
     public boolean isEmpty() {
-        return !isLinked();
+        return !head.isLinked();
     }
 
     /**
@@ -32,15 +33,14 @@ public class DoublyLinkedQueue<M extends Link> extends Link implements Queue<M> 
      * @throws IllegalArgumentException when message is null or is already enqueued
      */
    @Override
-   public boolean add(M newLinkp) {
-        Link newLink=(Link)newLinkp;
+   public boolean add(M newLink) {
         if (newLink==null) {
             throw new IllegalArgumentException("link is null");
         }
         if (newLink.isLinked()) {
             throw new IllegalArgumentException("link is linked already");
         }
-        link(newLink);
+        head.link(newLink);
         return true;
     }
 
@@ -53,7 +53,7 @@ public class DoublyLinkedQueue<M extends Link> extends Link implements Queue<M> 
         if (isEmpty() ) {
             return null;
         }
-        Link res = previous;
+        Link res = head.previous;
         res.unlink();
         return (M) res;
       }
@@ -68,93 +68,68 @@ public class DoublyLinkedQueue<M extends Link> extends Link implements Queue<M> 
         if (isEmpty() ) {
             throw new NoSuchElementException();
         }
-        Link res = previous;
+        Link res = head.previous;
         res.unlink();
         return (M) res;
       }
 
     @Override
-    public int size() {
-        // TODO Auto-generated method stub
-        return 0;
+    public boolean offer(M newLink) {
+        if (newLink==null) {
+            throw new IllegalArgumentException("link is null");
+        }
+        if (newLink.isLinked()) {
+            throw new IllegalArgumentException("link is linked already");
+        }
+        head.link(newLink);
+        return true;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public boolean contains(Object o) {
-        // TODO Auto-generated method stub
-        return false;
+    public M peek() {
+        if (isEmpty() ) {
+            throw new NoSuchElementException();
+        }
+        Link res = head.previous;
+        return (M) res;
     }
 
     @Override
     public Iterator<M> iterator() {
-        // TODO Auto-generated method stub
-        return null;
+        return new Iterator<M>(){
+            Link cursor=head;
+            @Override
+            public boolean hasNext() {
+                return cursor.previous!=head;
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public M next() {
+                cursor=cursor.previous;
+                return (M) cursor;
+            }
+
+            @Override
+            public void remove() {
+                if (cursor==head) {
+                    throw new IllegalStateException();
+                }
+                Link elem=cursor;
+                cursor=cursor.previous;
+                elem.unlink();
+            }
+            
+        };
     }
 
     @Override
-    public Object[] toArray() {
-        // TODO Auto-generated method stub
-        return null;
+    public int size() {
+        int res=0;
+        for (Link link=head.next; link!=head; link=link.next) {
+            res++;
+        }
+        return res;
     }
-
-    @Override
-    public <T> T[] toArray(T[] a) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public boolean remove(Object o) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends M> c) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public void clear() {
-        // TODO Auto-generated method stub
-        
-    }
-
-    @Override
-    public boolean offer(M e) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public M element() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public M peek() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
 }

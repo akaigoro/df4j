@@ -21,7 +21,7 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.util.DoubleValue;
+import com.github.rfqu.df4j.testutil.DoubleValue;
 
 /** An actor run by different executors
  */
@@ -115,11 +115,18 @@ public class ActorVariantsTest {
         assertEquals(1.0/cnt, avgcf.get(), delta);
     }
 
+    /** eager actor - ImmediateExecutor
+     */
+    @Test
+    public void t00() throws InterruptedException, ExecutionException, TimeoutException {
+        testB(new Aggregator(new ImmediateExecutor()));
+    }
+    
     /** normal actor - default executor
      */
     @Test
     public void t01() throws InterruptedException, ExecutionException, TimeoutException {
-    	testB(new Aggregator());
+        testB(new Aggregator());
     }
     
     /** eager actor

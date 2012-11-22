@@ -12,8 +12,11 @@
 package com.github.rfqu.df4j.nio2;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.InterruptedByTimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 
@@ -57,19 +60,47 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
             buffer.clear();
         }
     }
-
-    /** for timer */
-//    @Override
-    public synchronized void run() {
-        reply();
-    }
-
-    private void checkInTrans() {
-        if (inTrans) {
-            throw new IllegalStateException("in transfer state already");
+    
+    public void toCallback(IOCallback<T> handler) {
+//      public void toCallback(IOCallback<IORequest<T>> handler) {
+//        IORequest<T> r =  this;
+        T r =  (T)this;
+        if (exc == null) {
+            if (result==-1) {
+                handler.closed(r);
+            } else {
+                handler.completed(result, r);
+            }
+        } else {
+            if (exc instanceof AsynchronousCloseException) {
+                // System.out.println("  ServerRequest conn closed id="+id);
+                handler.closed(r);
+            } else if (exc instanceof InterruptedByTimeoutException) {
+                handler.timedOut(r);
+            } else {
+                // System.out.println("  ServerRequest read failed id="+id+"; exc="+exc);
+                handler.failed(exc, r);
+            }
         }
-        inTrans=true;
+    }    
+
+    public void setBuffer(ByteBuffer buf) {
+        this.buffer = buf;
     }
+
+    public ByteBuffer getBuffer() {
+        return buffer;
+    }
+
+    public boolean isReadOp() {
+        return inRead;
+    }
+
+    public boolean isInTrans() {
+        return inTrans;
+    }
+    
+    //======================== backend methods - called from socket handler 
 
 	public synchronized void completed(Integer result) {
 //        System.err.println(" IORequest.completed "+state+" rid="+rid);
@@ -92,20 +123,17 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         reply();
     }
 
-    public void setBuffer(ByteBuffer buf) {
-        this.buffer = buf;
-    }
+    /** for timer */
+//  @Override
+  public synchronized void run() {
+      reply();
+  }
 
-    public ByteBuffer getBuffer() {
-        return buffer;
-    }
-
-	public boolean isReadOp() {
-		return inRead;
-	}
-
-	public boolean isInTrans() {
-        return inTrans;
-	}
-	
+  private void checkInTrans() {
+      if (inTrans) {
+          throw new IllegalStateException("in transfer state already");
+      }
+      inTrans=true;
+  }
+  
 }

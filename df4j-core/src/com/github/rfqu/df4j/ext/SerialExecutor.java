@@ -51,13 +51,6 @@ public class SerialExecutor extends Actor<Link> implements Executor {
 	}
 
 	@Override
-	protected void failure(Link message, Exception e) {
-		// TODO Auto-generated method stub
-		super.failure(message, e);
-		// thread.interrupt();
-	}
-
-	@Override
 	protected void complete() throws Exception {
 		super.close();
 	}

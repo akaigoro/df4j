@@ -20,8 +20,9 @@ import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.core.ContextThreadFactory;
 import com.github.rfqu.df4j.ext.ActorLQ;
-import com.github.rfqu.df4j.util.IntValue;
-import com.github.rfqu.df4j.util.MessageSink;
+import com.github.rfqu.df4j.ext.ImmediateExecutor;
+import com.github.rfqu.df4j.testutil.IntValue;
+import com.github.rfqu.df4j.testutil.MessageSink;
 
 /**
  * A set of identical Actors, passing packets to a randomly selected peer actor.
@@ -32,10 +33,16 @@ public class GraphTest {
     final static int NUM_ACTORS = 100; // number of nodes
     final static int NR_REQUESTS = NUM_ACTORS * 10; // 100; // number of tokens
     final static int TIME_TO_LIVE = 1000; // hops
-    final static int times = 10;
+    final static int times = 8;
     final static PrintStream out = System.out;
     
     int nThreads;
+
+    @Test
+    public void testImm() throws InterruptedException  {
+        nThreads=1;
+        runTest(new ImmediateExecutor());
+    }
 
     @Test
     public void testSingle() throws InterruptedException {
@@ -50,7 +57,10 @@ public class GraphTest {
     }
 
 	private void runTest(Executor executor) throws InterruptedException {
-        out.println("Graph with " + NUM_ACTORS + " nodes, " + NR_REQUESTS + " tokens, with " + TIME_TO_LIVE + " each, on " + nThreads + " threads");
+        out.println("Graph with " + NUM_ACTORS +
+                " nodes, " + NR_REQUESTS + 
+                " tokens, with " + TIME_TO_LIVE + 
+                " each, on " + nThreads + " threads");
         String workerName = executor.getClass().getCanonicalName();
         out.println("Using " + workerName);
 		Task.setCurrentExecutor(executor);
@@ -119,7 +129,10 @@ public class GraphTest {
         long etime = (System.currentTimeMillis() - startTime);
         float switchnum = NR_REQUESTS * ((long) TIME_TO_LIVE);
         float delay = etime * 1000 * nThreads / switchnum;
-        out.println("Elapsed=" + etime / 1000f + " sec; rate=" + (1 / delay) + " messages/mks/core; mean hop time=" + (delay * 1000) + " ns");
+        out.println("Elapsed=" + etime / 1000f + 
+                " sec; rate=" + (1 / delay) + 
+                " messages/mks/core/us; mean hop time=" + 
+                delay + " us");
         return delay;
     }
 

@@ -9,11 +9,8 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * General dataflow node with several inputs and outputs.
@@ -22,9 +19,8 @@ import java.util.concurrent.locks.ReentrantLock;
  *  - create 1 or more pins for inputs and/or outputs
  *  - redefine abstract method act()
  */
-public abstract class DataflowNode extends Link {
+public abstract class DataflowNodeSync extends Link {
 	static final int allOnes=0xFFFFFFFF;
-	private Lock lock = new ReentrantLock();
 	private Throwable exc=null;
     private Pin head; // the head of the list of Pins
     private int pinCount=0;
@@ -33,18 +29,17 @@ public abstract class DataflowNode extends Link {
     private final Task task; 
     private boolean fired=false; // true when this actor runs
     
-    public DataflowNode(Executor executor) {
+    public DataflowNodeSync(Executor executor) {
         task=new ActorTask(executor);
     }
 
-    public DataflowNode() {
+    public DataflowNodeSync() {
         task=new ActorTask();
     }
 
     public  void sendFailure(Throwable exc) {
-        boolean doFire;       
-        lock.lock();
-        try {
+        boolean doFire;
+        synchronized(this) {
             if (this.exc!=null) {
                 return; // only first failure is processed 
             }
@@ -54,8 +49,6 @@ public abstract class DataflowNode extends Link {
             } else {
                 doFire=fired=true;
             }
-        } finally {
-          lock.unlock();
         }
         if (doFire) {
             fire();
@@ -119,19 +112,15 @@ public abstract class DataflowNode extends Link {
             try {
                 // the loop slightly unrolled to have only one
                 // synchronized statement in the loop
-                lock.lock();
-                try {
+                synchronized (DataflowNodeSync.this) {
                     if (exc!=null) {
                         break execLoop; // fired remains true, preventing subsequent execution
                     }
-                } finally {
-                  lock.unlock();
                 }
                 //System.out.println("act0 before");
                 act();
                 for (;;) {
-                    lock.lock();
-                    try {
+                    synchronized (DataflowNodeSync.this) {
                         consumeTokens();
                         if (!allReady()) {
                             fired = false; // allow firing
@@ -142,9 +131,6 @@ public abstract class DataflowNode extends Link {
                         if (exc!=null) {
                             break execLoop; // fired remains true, preventing subsequent execution
                         }
-                    }
-                    finally {
-                      lock.unlock();
                     }
                     //System.out.println("act before");
                     act();
@@ -170,19 +156,17 @@ public abstract class DataflowNode extends Link {
     	private final int pinBit; // distinct for all other pins of the node 
 
     	protected Pin(){
-            lock.lock();
-            try {
-                int count = pinCount;
+        	synchronized (DataflowNodeSync.this) {
+            	int count = pinCount;
                 if (count==32) {
-                  throw new IllegalStateException("only 32 pins could be created");
+              	  throw new IllegalStateException("only 32 pins could be created");
                 }
                 next=head; head=this; // register itself in the pin list
                 pinBit = 1<<count;
-                pinMask=pinMask|pinBit;
+            	pinMask=pinMask|pinBit;
                 pinCount++;
-            } finally {
-              lock.unlock();
-            }
+			}
+        	
         }
 
     	/**
@@ -229,15 +213,12 @@ public abstract class DataflowNode extends Link {
 
         public void up() {
             boolean doFire;
-            lock.lock();
-            try {
+            synchronized (DataflowNodeSync.this) {
                 count++;
                 if (count!=1) {
                     return;
                 }
                 doFire=turnOn();
-            } finally {
-              lock.unlock();
             }
             if (doFire) {
                 task.fire();
@@ -245,25 +226,18 @@ public abstract class DataflowNode extends Link {
         }
 
         public void up(int delta) {
-            lock.lock();
-            try {
+            synchronized (DataflowNodeSync.this) {
                 boolean wasOff=(count==0);
                 count+=delta;
                 if (wasOff && count>0) {
                     turnOn();
                 }
-            } finally {
-              lock.unlock();
             }
         }
 
         public void down() {
-            lock.lock();
-            try {
+            synchronized (DataflowNodeSync.this) {
                 consume();
-            }
-            finally {
-              lock.unlock();
             }
         }
 
@@ -295,8 +269,7 @@ public abstract class DataflowNode extends Link {
                 throw new NullPointerException();
             }
             boolean doFire;
-            lock.lock();
-            try {
+            synchronized (DataflowNodeSync.this) {
                 if (closeRequested) {
                     throw new IllegalStateException("closed already");
                 }
@@ -307,8 +280,6 @@ public abstract class DataflowNode extends Link {
                     add(token);
                     return; // is On already
                 }
-            } finally {
-              lock.unlock();
             }
             if (doFire) {
                 fire();
@@ -322,16 +293,13 @@ public abstract class DataflowNode extends Link {
         @Override
         public void close() {
             boolean doFire;
-            lock.lock();
-            try {
+            synchronized (DataflowNodeSync.this) {
                 if (closeRequested) {
                     return;
                 }
                 closeRequested=true;
                 //System.out.println("close()");
                 doFire=turnOn();
-            } finally {
-              lock.unlock();
             }
             if (doFire) {
                 fire();
@@ -339,11 +307,8 @@ public abstract class DataflowNode extends Link {
         }
 
         public boolean isClosed() {
-            lock.lock();
-            try {
+            synchronized (DataflowNodeSync.this) {
                 return closeRequested;
-            } finally {
-              lock.unlock();
             }
         }
 
@@ -406,7 +371,7 @@ public abstract class DataflowNode extends Link {
     public class CallbackInput<T> extends Input<T> implements Callback<T> {
         @Override
         public void sendFailure(Throwable exc) {
-            DataflowNode.this.sendFailure(exc);
+            DataflowNodeSync.this.sendFailure(exc);
         }
     }
         
@@ -415,10 +380,6 @@ public abstract class DataflowNode extends Link {
      */
     public class StreamInput<T> extends Input<T> {
         private Queue<T> queue;
-
-        public StreamInput() {
-            this.queue = new LinkedList<T>();
-        }
 
         public StreamInput(Queue<T> queue) {
             this.queue = queue;
@@ -453,12 +414,9 @@ public abstract class DataflowNode extends Link {
         @Override
         public EventSource<R, Callback<R>> addListener(Callback<R> sink) {
         	boolean doFire;
-            lock.lock();
-            try {
-                listeners.addListener(sink);
-                doFire=turnOn();
-            } finally {
-              lock.unlock();
+            synchronized (DataflowNodeSync.this) {
+            	listeners.addListener(sink);
+            	doFire=turnOn();
             }
             if (doFire) {
                 task.fire();

@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.util;
+package com.github.rfqu.df4j.testutil;
 
 import java.util.concurrent.CountDownLatch;
 

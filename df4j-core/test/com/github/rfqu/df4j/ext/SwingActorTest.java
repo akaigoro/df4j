@@ -23,7 +23,7 @@ import javax.swing.border.LineBorder;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.ext.SwingSupport;
-import com.github.rfqu.df4j.util.StringMessage;
+import com.github.rfqu.df4j.testutil.StringMessage;
 
 /**
  * Interaction between GUI and Actors.

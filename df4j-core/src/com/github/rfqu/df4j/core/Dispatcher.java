@@ -17,7 +17,7 @@ package com.github.rfqu.df4j.core;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with MessageQueue.listen(this).
  */
-public class MessageQueue<M> extends ActorVariable<M>
+public class Dispatcher<M> extends ActorVariable<M>
     implements EventSource<M, Actor<M>>
 {
     private final StreamInput<Actor<M>> actors=createActorQueue();

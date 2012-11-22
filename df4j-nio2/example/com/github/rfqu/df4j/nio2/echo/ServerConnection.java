@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.IOHandler;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 
 class ServerConnection {

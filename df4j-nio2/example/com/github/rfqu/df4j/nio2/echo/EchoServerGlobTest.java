@@ -14,7 +14,7 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.ext.Timer;
-import com.github.rfqu.df4j.util.DoubleValue;
+import com.github.rfqu.df4j.testutil.DoubleValue;
 
 /**
  * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched as an application

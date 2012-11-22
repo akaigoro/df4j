@@ -11,6 +11,7 @@ package com.github.rfqu.df4j.examples;
 
 import java.io.PrintStream;
 import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 
 import org.junit.Before;
@@ -22,7 +23,7 @@ import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.ext.ActorLQ;
-import com.github.rfqu.df4j.util.MessageSink;
+import com.github.rfqu.df4j.testutil.MessageSink;
 
 
 /**
@@ -38,17 +39,6 @@ public class PingPongTest {
     int nThreads;
     PrintStream out = System.out;
 
-    @Before
-    public void init() {
-        out.println("Network with " + NUM_ACTORS + " nodes, " + NUM_TOKENS + " tokens, with " + TIME_TO_LIVE + " each, on " + nThreads + " threads");
-    }
-
-    public static void main(String args[]) throws InterruptedException {
-        PingPongTest nt = new PingPongTest();
-        nt.init();
-        nt.testSingle();
-    }
-
     @Test
     public void testSingle() throws InterruptedException {
         nThreads=1;
@@ -63,6 +53,7 @@ public class PingPongTest {
 
     private void runTest(Executor executor) throws InterruptedException {
         String workerName = executor.getClass().getCanonicalName();
+        out.println("Network with " + NUM_ACTORS + " nodes, " + NUM_TOKENS + " tokens, with " + TIME_TO_LIVE + " each, on " + nThreads + " threads");
         out.println("Using " + workerName);
         Task.setCurrentExecutor(executor);
 		for (int i = 0; i < times; i++) {
@@ -173,6 +164,12 @@ public class PingPongTest {
         float delay = etime * 1000 * nThreads / switchnum;
         out.println("Elapsed=" + etime / 1000f + " sec; rate=" + (1 / delay) + " messages/mks/core; mean hop time=" + (delay * 1000) + " ns");
         return delay;
+    }
+
+    public static void main(String args[]) throws InterruptedException {
+        ConcurrentLinkedQueue<?> q;
+        PingPongTest nt = new PingPongTest();
+        nt.testSingle();
     }
 
 }

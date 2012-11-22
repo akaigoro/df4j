@@ -17,8 +17,8 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.ext.SerialExecutor;
-import com.github.rfqu.df4j.util.IntValue;
-import com.github.rfqu.df4j.util.MessageSink;
+import com.github.rfqu.df4j.testutil.IntValue;
+import com.github.rfqu.df4j.testutil.MessageSink;
 
 /**
  * A set of identical Actors, passing packets to a randomly selected peer actor.

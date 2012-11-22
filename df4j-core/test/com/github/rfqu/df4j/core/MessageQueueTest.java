@@ -18,8 +18,8 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DoublyLinkedQueue;
-import com.github.rfqu.df4j.core.MessageQueue;
-import com.github.rfqu.df4j.util.IntValue;
+import com.github.rfqu.df4j.core.Dispatcher;
+import com.github.rfqu.df4j.testutil.IntValue;
 
 /**
  * In multithreaded programming, often several identical working threads are fed with
@@ -118,7 +118,7 @@ public class MessageQueueTest {
         }
     }
 
-    static class Pong extends MessageQueue<Token> {
+    static class Pong extends Dispatcher<Token> {
         LinkedBlockingQueue<Token> q;
         boolean print;
         

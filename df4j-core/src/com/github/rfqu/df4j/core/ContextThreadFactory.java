@@ -48,7 +48,6 @@ public class ContextThreadFactory extends ThreadGroup implements ThreadFactory {
     
     @Override
     public void uncaughtException(Thread t, Throwable e) {
-        // TODO Auto-generated method stub
         if (executor instanceof ExecutorService) {
             ExecutorService service;
             service=(ExecutorService)executor;
