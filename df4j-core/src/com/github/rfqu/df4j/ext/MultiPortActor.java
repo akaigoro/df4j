@@ -12,12 +12,9 @@ package com.github.rfqu.df4j.ext;
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.DoublyLinkedQueue;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.DataflowNode.Input;
-import com.github.rfqu.df4j.core.DataflowNode.StreamInput;
 
 /**
  * An Actor with several input Ports, subclassed from MultiPortActor.PortHandler.
@@ -37,6 +34,15 @@ public class MultiPortActor {
         execActor=new ExecActor(executor);
     }
 
+	public void close() {
+		execActor.close();
+	}
+
+	//======= backend
+	
+    protected void complete() throws Exception {
+    }
+
     private static final class Message<M> extends Link {
         private PortHandler<M> handler;
         private M m;
@@ -51,7 +57,7 @@ public class MultiPortActor {
         }
     }
     
-    private static final class ExecActor extends Actor<Message<?>> {
+    private final class ExecActor extends Actor<Message<?>> {
         public ExecActor() {
         }
 
@@ -71,6 +77,7 @@ public class MultiPortActor {
         
         @Override
         protected void complete() throws Exception {
+        	MultiPortActor.this.complete();
         }
     }
     

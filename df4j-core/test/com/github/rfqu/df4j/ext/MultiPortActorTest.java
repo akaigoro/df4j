@@ -21,6 +21,7 @@ public class MultiPortActorTest {
 
     static class Accum extends MultiPortActor {
         int sum=0;
+        CallbackFuture<Integer> res=new CallbackFuture<Integer>();
         
         final PortHandler<Integer> add=new PortHandler<Integer>() {
             @Override
@@ -42,6 +43,11 @@ public class MultiPortActorTest {
                 m.send(sum);
             }
         };
+
+		@Override
+		protected void complete() throws Exception {
+            res.send(sum);
+		}
         
     }
 
@@ -53,6 +59,19 @@ public class MultiPortActorTest {
         CallbackFuture<Integer> res=new CallbackFuture<Integer>();
         acc.get.send(res);
     	Assert.assertEquals(new Integer(2), res.get());
+    }
+
+    @Test
+    public void closeTest() throws InterruptedException, ExecutionException {
+        Accum acc=new Accum();
+        acc.add.send(11);
+        acc.sub.send(9);
+        acc.close();
+        try {
+			acc.sub.send(99);
+		} catch (IllegalStateException ok) {
+		}
+    	Assert.assertEquals(new Integer(2), acc.res.get());
     }
 
     public static void main(String args[]) throws InterruptedException, ExecutionException {
