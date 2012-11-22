@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-
 /**
  * A message that carries callback port.
  * @param <T> actual type of Request (subclassed)
@@ -63,6 +62,13 @@ public class Request<T extends Request<T, R>, R> extends Link {
         reply();
     }
 
+    public void toCallback(Callback<R> handler) {
+        if (exc == null) {
+            handler.send(result);
+        } else {
+            handler.sendFailure(exc);
+        }
+    }    
     public Port<T> getReplyTo() {
         return replyTo;
     }

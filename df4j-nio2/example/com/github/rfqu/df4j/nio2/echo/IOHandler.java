@@ -9,7 +9,7 @@ public abstract class IOHandler<T extends IORequest<T>>
 {
     @Override
     public final void send(T request) {
-        request.toCallback(this);
+        request.toIOCallback(this);
     }
 
 	@Override

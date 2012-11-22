@@ -61,7 +61,7 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         }
     }
     
-    public void toCallback(IOCallback<T> handler) {
+    public void toIOCallback(IOCallback<T> handler) {
 //      public void toCallback(IOCallback<IORequest<T>> handler) {
 //        IORequest<T> r =  this;
         T r =  (T)this;
