@@ -7,9 +7,17 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
+
+import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.DataflowNode;
+import com.github.rfqu.df4j.core.DoublyLinkedQueue;
+import com.github.rfqu.df4j.core.Link;
+import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.DataflowNode.Input;
+import com.github.rfqu.df4j.core.DataflowNode.StreamInput;
 
 /**
  * An Actor with several input Ports, subclassed from MultiPortActor.PortHandler.
@@ -66,7 +74,7 @@ public class MultiPortActor {
         }
     }
     
-    protected abstract class PortHandler<M> implements Port<M> {
+    public abstract class PortHandler<M> implements Port<M> {
 
         @Override
         public final void send(M m) {

@@ -24,9 +24,6 @@ public abstract class Actor<M> extends DataflowNode
     /** place for input token(s) */
 	protected final Input<M> input=createInput();
 	
-    protected long actCounter=0; // DEBUG
-    protected long failureCounter=0; // DEBUG
-    
     public Actor(Executor executor) {
     	super(executor);
     }
@@ -70,11 +67,9 @@ public abstract class Actor<M> extends DataflowNode
             if (message==null) {
                 complete();
             } else {
-                actCounter++;
                 act(message);
             }
         } catch (Exception e) {
-            failureCounter++;
             failure(message, e);
         }
     }

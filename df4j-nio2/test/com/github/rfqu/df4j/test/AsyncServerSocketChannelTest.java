@@ -21,7 +21,7 @@ import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 
 public class AsyncServerSocketChannelTest {
     static final int BUF_SIZE = 128;
-    static final InetSocketAddress local9999 = new InetSocketAddress("localhost", 9998);
+    static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 9990);
     static final AtomicInteger ids=new AtomicInteger(); // for DEBUG
 
     static final int maxConn=22;
@@ -29,7 +29,7 @@ public class AsyncServerSocketChannelTest {
     
     @Before
     public void before() throws IOException {
-        server=new Server(local9999, maxConn);
+        server=new Server(local9990, maxConn);
     }
 
     @After
@@ -51,7 +51,7 @@ public class AsyncServerSocketChannelTest {
         int half=maxConn/2;
         int clConns=maxConn+half;
         for (int k=0; k<clConns; k++) {
-            ClientConnection conn = new ClientConnection(local9999);
+            ClientConnection conn = new ClientConnection(local9990);
             allConns.add(conn);
             conn.get();
         }
@@ -69,7 +69,7 @@ public class AsyncServerSocketChannelTest {
     }
 
 
-    static class Server implements Callback<AsynchronousSocketChannel> {        
+    static class Server implements Callback<AsyncSocketChannel> {        
         AsyncServerSocketChannel assch;    
         ArrayList<AsyncSocketChannel>allConns=new ArrayList<AsyncSocketChannel>();
         int channelCounter=0;
@@ -80,8 +80,7 @@ public class AsyncServerSocketChannelTest {
         }
         
         @Override
-        public void send(AsynchronousSocketChannel asch) {
-            AsyncSocketChannel channel = new AsyncSocketChannel(asch);
+        public void send(AsyncSocketChannel channel) {
             channelCounter++;
             if (channel.isClosed()) {
                 allOpened=false;

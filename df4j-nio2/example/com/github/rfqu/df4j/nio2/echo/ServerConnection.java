@@ -1,7 +1,6 @@
 package com.github.rfqu.df4j.nio2.echo;
 
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
 
 import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
@@ -14,11 +13,11 @@ class ServerConnection {
     SerRequest request;
     boolean closed = false;
 
-    public ServerConnection(EchoServer echoServer, AsynchronousSocketChannel channel2)
+    public ServerConnection(EchoServer echoServer, AsyncSocketChannel channel)
     //        throws ClosedChannelException
     {
         this.echoServer = echoServer;
-        this.channel=new AsyncSocketChannel(channel2);
+        this.channel=channel;
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);

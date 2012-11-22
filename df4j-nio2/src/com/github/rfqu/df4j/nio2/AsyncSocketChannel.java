@@ -21,7 +21,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
 
-import com.github.rfqu.df4j.ext.ActorLQ;
+import com.github.rfqu.df4j.ext.ActorVariableLQ;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Link;
@@ -136,7 +136,7 @@ public class AsyncSocketChannel extends Link
 
     //===================== inner classes
     
-    class RequestQueue extends ActorLQ<SocketIORequest<?>>
+    class RequestQueue extends ActorVariableLQ<SocketIORequest<?>>
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
         protected Sema channelAcc=new Sema(); // channel accessible

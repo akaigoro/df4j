@@ -18,11 +18,11 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ContextThreadFactory;
-import com.github.rfqu.df4j.core.Dispatcher;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.ext.ActorLQ;
+import com.github.rfqu.df4j.ext.Dispatcher;
 import com.github.rfqu.df4j.testutil.MessageSink;
 
 public class DemuxPingPongTest {

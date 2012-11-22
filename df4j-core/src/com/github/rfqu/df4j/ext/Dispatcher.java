@@ -7,7 +7,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.ext;
+
+import com.github.rfqu.df4j.core.Actor;
+import com.github.rfqu.df4j.core.ActorVariable;
+import com.github.rfqu.df4j.core.DoublyLinkedQueue;
+import com.github.rfqu.df4j.core.EventSource;
 
 /**
  * In multithreaded programming, often several identical worker threads are fed with

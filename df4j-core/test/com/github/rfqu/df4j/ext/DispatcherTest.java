@@ -7,9 +7,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.core;
+package com.github.rfqu.df4j.ext;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.PrintStream;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -18,7 +21,6 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DoublyLinkedQueue;
-import com.github.rfqu.df4j.core.Dispatcher;
 import com.github.rfqu.df4j.testutil.IntValue;
 
 /**
@@ -29,7 +31,7 @@ import com.github.rfqu.df4j.testutil.IntValue;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with Demux.listen(this).
  */
-public class MessageQueueTest {
+public class DispatcherTest {
     int nThreads;
     PrintStream out = System.out;
 
@@ -170,7 +172,7 @@ public class MessageQueueTest {
     }
 
     public static void main(String args[]) throws InterruptedException {
-        MessageQueueTest nt = new MessageQueueTest();
+        DispatcherTest nt = new DispatcherTest();
         nt.test02();
     }
 

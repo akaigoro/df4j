@@ -3,7 +3,6 @@ package com.github.rfqu.df4j.nio2.echo;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -13,9 +12,10 @@ import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 
 public class EchoServer
-    implements Callback<AsynchronousSocketChannel>,
+    implements Callback<AsyncSocketChannel>,
     Closeable
 {
 	public static final int defaultPort = 9998;
@@ -84,7 +84,7 @@ public class EchoServer
     /** AsyncServerSocketChannel sends new connection
      */
     @Override
-    public void send(AsynchronousSocketChannel channel) {
+    public void send(AsyncSocketChannel channel) {
         ServerConnection connection = new ServerConnection(this, channel);
         synchronized(this) {
             connections.put(connection.id, connection);

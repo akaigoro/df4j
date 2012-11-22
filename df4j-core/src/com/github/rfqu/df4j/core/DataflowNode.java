@@ -430,7 +430,7 @@ public abstract class DataflowNode extends Link {
         }
 
         @Override
-        protected T poll() {
+		public T poll() {
             return queue.poll();
         }
     }

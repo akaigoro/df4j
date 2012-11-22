@@ -33,9 +33,9 @@ public class AsyncServerSocketChannel extends DataflowVariable
     private Sema pending=new Sema();
     private Sema maxConnLimit=new Sema();
     private AsynchronousServerSocketChannel channel;
-    private Callback<AsynchronousSocketChannel> consumer;
+    private Callback<AsyncSocketChannel> consumer;
     
-    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsynchronousSocketChannel> consumer, int maxConn)
+    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsyncSocketChannel> consumer, int maxConn)
                 throws IOException
     {
         if (maxConn<=0) {
@@ -88,7 +88,7 @@ public class AsyncServerSocketChannel extends DataflowVariable
     /** new client connected */
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachment) {
-        consumer.send(result);
+        consumer.send(new AsyncSocketChannel(result));
         synchronized (this) {
             pending.up();
         }
@@ -102,7 +102,7 @@ public class AsyncServerSocketChannel extends DataflowVariable
     		return;
     	}
         System.err.println("AsyncServerSocketChannel.failed:"+exc);
-        Callback<AsynchronousSocketChannel> consumerLoc;
+        Callback<AsyncSocketChannel> consumerLoc;
         synchronized (this) {
             pending.up();
             if (consumer==null) {
