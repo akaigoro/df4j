@@ -11,29 +11,21 @@ package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
 
-import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.DFContext;
 
 /**
  * An Executor without input queue.
  * Intended to serve a single Task (or Actor) or a set of coordinated Tasks.
  */
 public class PrivateExecutor extends Thread implements Executor {
-	Executor defaultExecutor;
+	DFContext context;
     Runnable command;
     private boolean completed=false;
     
-    /**
-     * @param defaultExecutor - default executor for actors
-     * created when this thread runs
-     */
-    public PrivateExecutor(Executor defaultExecutor) {
-        this.defaultExecutor=defaultExecutor;
-        setDaemon(true);
-        start();
-    }
-
     public PrivateExecutor() {
-        this(Task.getCurrentExecutor());
+        this.context=DFContext.getCurrentContext();
+		setDaemon(true);
+		start();
     }
 
     @Override
@@ -52,7 +44,7 @@ public class PrivateExecutor extends Thread implements Executor {
 
     @Override
     public void run() {
-        Task.setCurrentExecutor(defaultExecutor);
+    	DFContext.setCurrentContext(context);
         for (;;) {
             Runnable command=null;
             synchronized (this) {

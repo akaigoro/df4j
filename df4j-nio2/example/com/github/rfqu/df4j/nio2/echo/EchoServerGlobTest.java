@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.ext.Timer;
+import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 import com.github.rfqu.df4j.testutil.JavaAppLauncher;
 
@@ -109,7 +109,7 @@ public class EchoServerGlobTest {
 
     }
 
-    @Test
+//    @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
     	testThroughput(1,1);
    }

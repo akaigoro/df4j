@@ -10,16 +10,11 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.github.rfqu.df4j.nio2;
+package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.CompletionHandler;
-import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.ext.ActorVariableLQ;
 import com.github.rfqu.df4j.core.Callback;
@@ -34,9 +29,7 @@ import com.github.rfqu.df4j.core.Port;
 public class AsyncSocketChannel extends Link 
    implements Port<SocketIORequest<?>>,
 //     EventSource<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>,
-	 CompletionHandler<Void, AsynchronousSocketChannel>
 {
-    protected AsynchronousSocketChannel channel;
     /** for client-side socket: signals connection completion */
     private Promise<AsynchronousSocketChannel> connEvent=new Promise<AsynchronousSocketChannel>();
     /** read requests queue */

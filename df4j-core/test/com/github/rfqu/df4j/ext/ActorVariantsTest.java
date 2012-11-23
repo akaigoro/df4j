@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
@@ -30,7 +31,7 @@ public class ActorVariantsTest {
 
     @After
     public void cleanCurrentThread() {
-        Task.removeCurrentExecutor();
+    	DFContext.removeCurrentContext();
     }
     
     /**

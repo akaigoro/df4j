@@ -22,7 +22,8 @@ import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.ext.SwingSupport;
+import com.github.rfqu.df4j.core.DFContext;
+import com.github.rfqu.df4j.ext.SwingSupport.EDTActor;
 import com.github.rfqu.df4j.testutil.StringMessage;
 
 /**
@@ -33,25 +34,31 @@ import com.github.rfqu.df4j.testutil.StringMessage;
 public class SwingActorTest extends JFrame {
     JTextField jTextField = new javax.swing.JTextField();
     JTextArea jlist = new javax.swing.JTextArea();
+    JLabel jLabel2 = new javax.swing.JLabel();
+    int workCount;
 
     ComputingActor ca = new ComputingActor();
     PrintingActor pa = new PrintingActor();
 
-    public SwingActorTest() {
-        this.setTitle("SwingActor Test");
+    public SwingActorTest(DFContext context) {
+    	boolean ok=(context == DFContext.getCurrentContext());
+        this.setTitle("SwingActor Test: "+(ok?"ok":"bad"));
         this.setSize(360, 300);
         this.getContentPane().setLayout(null);
 
         JLabel jLabel = new javax.swing.JLabel();
-        jLabel.setBounds(34, 40, 80, 18);
+        jLabel.setBounds(24, 40, 120, 18);
         jLabel.setText("Enter number:");
         this.add(jLabel, null);
 
-        jTextField.setBounds(120, 40, 120, 20);
+        jTextField.setBounds(162, 40, 120, 20);
         jTextField.addActionListener(ca);
         this.add(jTextField, null);
 
-        jlist.setBounds(34, 90, 280, 120);
+        jLabel2.setBounds(34, 80, 80, 20);
+        this.add(jLabel2, null);
+
+        jlist.setBounds(34, 120, 200, 120);
         jlist.setBorder(new LineBorder(Color.BLACK));
         this.add(jlist, null);
 
@@ -67,6 +74,8 @@ public class SwingActorTest extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
             // GUI (JTextField) -> computing actor 
+        	workCount++;
+            jLabel2.setText("working...");
             send(new StringMessage(jTextField.getText()));
         }
 
@@ -75,7 +84,7 @@ public class SwingActorTest extends JFrame {
          */
         @Override
         protected void act(StringMessage m) throws Exception {
-            Thread.sleep(1000); // imitate working hard
+            Thread.sleep(2000); // imitate working hard
             String str = m.getStr();
             try {
                 Number num = Integer.valueOf(str);
@@ -97,21 +106,24 @@ public class SwingActorTest extends JFrame {
     /**
      * Processes messages on EDT.
      */
-    class PrintingActor extends Actor<StringMessage> {
-    	PrintingActor(){
-    		super(SwingSupport.getSwingExecutor());
-    	}
-
+    class PrintingActor extends EDTActor<StringMessage> {
         @Override
         protected void act(StringMessage m) throws Exception {
             jlist.append(m.getStr());
+            workCount--;
+            if (workCount==0) {
+            	jLabel2.setText("");
+            }
         }
     }
 
     public static void main(String[] args) throws Exception {
-        EventQueue.invokeLater(new Runnable() {
+		DFContext.setSingleThreadExecutor(); // for example
+		final DFContext currentContext = DFContext.getCurrentContext();
+		SwingSupport.setEDTDefaultContext(currentContext);
+    	EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new SwingActorTest().setVisible(true);
+                new SwingActorTest(currentContext).setVisible(true);
             }
         });
     }

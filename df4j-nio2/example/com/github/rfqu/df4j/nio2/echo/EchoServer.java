@@ -11,14 +11,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Promise;
-import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
+import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
 public class EchoServer
     implements Callback<AsyncSocketChannel>,
     Closeable
 {
-	public static final int defaultPort = 9998;
+	public static final int defaultPort = 9993;
     public static final int numconnections=100; // max simultaneous server connections
     public static final int BUF_SIZE = 128;
 

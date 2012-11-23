@@ -1,37 +1,28 @@
-package com.github.rfqu.df4j.ext;
+package com.github.rfqu.df4j.core;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.core.ContextThreadFactory;
+import com.github.rfqu.df4j.core.DFContext.ThFactory;
+
 
 public class Timer {
 	private  ScheduledThreadPoolExecutor timerThread;
     
-    public Timer(ThreadFactory threadFactory) {
-        timerThread=new ScheduledThreadPoolExecutor(1, threadFactory);
+	private Timer(DFContext context) {
+		ThFactory tf = context.new ThFactory(" DF Timer ");
+        timerThread=new ScheduledThreadPoolExecutor(1, tf);
     }
 
-    public Timer() {
-        this(new ContextThreadFactory(" DF Timer ", Task.getCurrentExecutor()));
-    }
-
-    private static final ThreadLocal <Timer> currentTimerKey = new ThreadLocal<Timer> () {
-        @Override
-        protected Timer initialValue() {
-            return new Timer();
-        }       
-    };
+	public static Timer getCurrentTimer() {
+		return DFContext.getCurrentTimer();
+	}
 
     /**
      * @return current executor stored in thread-local variable
      */
-    public static Timer getCurrentTimer() {
-        return currentTimerKey.get();
+    public static Timer newTimer(DFContext context) {
+        return new Timer(context);
     }
 
     public  <T> void scheduleAt(Port<T> port, T message, long timeToFire) {
@@ -52,27 +43,18 @@ public class Timer {
     }
     
     public CallbackFuture<Void> shutdown() {
-        synchronized(Timer.class) {
-            if (this==currentTimerKey.get()) {
-                currentTimerKey.remove();
-            }
-        }
+    	DFContext.removeTimer(this);
         timerThread.shutdown();
-        return awaitTermination();
+        // wait full timer termination after shutdown
+        return new CallbackFuture<Void>(){
+		    @Override
+		    public synchronized Void get() throws InterruptedException {
+		        timerThread.awaitTermination(1000, TimeUnit.DAYS);
+		        return null;
+		    }
+		};
    }
 
-    /** waits full timer termination after shutdown
-     */
-    private CallbackFuture<Void> awaitTermination() {
-        return new CallbackFuture<Void>(){
-            @Override
-            public synchronized Void get() throws InterruptedException {
-                timerThread.awaitTermination(1000, TimeUnit.DAYS);
-                return null;
-            }
-        };
-    }
-    
 	public void cancel() {
 		timerThread.shutdownNow();
 	}

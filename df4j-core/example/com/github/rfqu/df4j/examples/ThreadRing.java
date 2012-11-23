@@ -9,14 +9,12 @@
  */
 package com.github.rfqu.df4j.examples;
 import java.io.PrintStream;
-import java.util.concurrent.Executor;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.ContextThreadFactory;
+import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
-import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
@@ -36,26 +34,30 @@ public class ThreadRing {
     @Test
     public void testImm() throws InterruptedException  {
         nThreads=1;
-        runTest(new ImmediateExecutor());
+        final ImmediateExecutor immediateExecutor = new ImmediateExecutor();
+        DFContext c=DFContext.getCurrentContext();
+        c.setCurrentExecutor(immediateExecutor);
+		runTest();
     }
 
     @Test
-    public void testSingle() throws InterruptedException  {
+    public void testSingle() throws InterruptedException {
         nThreads=1;
-        runTest(ContextThreadFactory.newSingleThreadExecutor());
+        DFContext.setSingleThreadExecutor();
+        runTest();
     }
 
     @Test
     public void testFixed() throws InterruptedException {
         nThreads= Runtime.getRuntime().availableProcessors();
-        runTest(ContextThreadFactory.newFixedThreadPool(nThreads));
+        DFContext.setFixedThreadPool(nThreads);
+        runTest();
     }
 
-    private void runTest(Executor executor) throws InterruptedException {
+    private void runTest() throws InterruptedException {
+        String workerName = DFContext.getCurrentExecutor().getClass().getCanonicalName();
         out.println("Ring with " + NUM_ACTORS + " nodes, with " + TIME_TO_LIVE + " each, on " + nThreads + " threads");
-        String workerName = executor.getClass().getCanonicalName();
         out.println("Using " + workerName);
-        Task.setCurrentExecutor(executor);
         for (int i = 0; i < times; i++) {
             runNetwork();
         }

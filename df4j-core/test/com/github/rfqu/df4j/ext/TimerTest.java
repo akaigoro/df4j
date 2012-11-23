@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.ext.Timer;
+import com.github.rfqu.df4j.core.Timer;
 
 public class TimerTest {
 	long start=System.currentTimeMillis();

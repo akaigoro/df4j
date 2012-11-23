@@ -55,36 +55,13 @@ public abstract class Task extends Link implements Runnable {
         }
     }
 
-    private static final ThreadLocal <Executor> currentExecutorKey = new ThreadLocal <Executor> () {
-		@Override
-		protected Executor initialValue() {
-			int nThreads=Runtime.getRuntime().availableProcessors();
-			return ContextThreadFactory.newFixedThreadPool(nThreads);
-		}   	
-    };
-
-	/**
-     * sets current executor as a thread-local variable
-     * @param executor
-     */
-    public static void setCurrentExecutor(Executor executor) {
-    	currentExecutorKey.set(executor);
-    }
-
     /**
      * @return current executor stored in thread-local variable
      */
     public static Executor getCurrentExecutor() {
-        return currentExecutorKey.get();
+        return DFContext.getCurrentExecutor();
     }
 
-    /**
-     * removes current executor
-     */
-    public static void removeCurrentExecutor() {
-        currentExecutorKey.remove();
-    }
-    
     public static ExecutorService getCurrentExecutorService() {
         Executor executor=getCurrentExecutor();
         ExecutorService service;

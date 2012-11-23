@@ -1,4 +1,4 @@
-package com.github.rfqu.df4j.nio2;
+package com.github.rfqu.df4j.nio;
 
 public interface IOCallback<T extends IORequest<T>> {
 	public void completed(int result, T request);// throws Exception;

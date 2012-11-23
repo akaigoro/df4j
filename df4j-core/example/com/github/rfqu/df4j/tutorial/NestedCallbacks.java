@@ -11,7 +11,7 @@ import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
-import com.github.rfqu.df4j.ext.Timer;
+import com.github.rfqu.df4j.core.Timer;
 
 /** Demonstrates solution to the StackOverflow question 
  * http://stackoverflow.com/questions/10695152/java-pattern-for-nested-callbacks/10695933

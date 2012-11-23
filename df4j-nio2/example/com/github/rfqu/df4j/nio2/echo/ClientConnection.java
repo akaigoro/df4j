@@ -10,9 +10,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.EventSource;
-import com.github.rfqu.df4j.ext.Timer;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.SocketIORequest;
+import com.github.rfqu.df4j.core.Timer;
+import com.github.rfqu.df4j.nio.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio.SocketIORequest;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
 class ClientConnection
