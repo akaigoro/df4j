@@ -1,8 +1,8 @@
 package com.github.rfqu.df4j.nio2.echo;
 
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.nio.IOCallback;
-import com.github.rfqu.df4j.nio.IORequest;
+import com.github.rfqu.df4j.nio2.IOCallback;
+import com.github.rfqu.df4j.nio2.IORequest;
 
 public abstract class IOHandler<T extends IORequest<T>>
   implements Port<T>, IOCallback<T>

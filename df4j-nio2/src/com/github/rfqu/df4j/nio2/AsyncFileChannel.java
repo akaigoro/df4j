@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.github.rfqu.df4j.nio;
+package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousFileChannel;
@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.DFContext;
 
 /**
  * Wrapper over {@link java.nio.channels.AsynchronousFileChannel}.
@@ -39,7 +39,7 @@ public class AsyncFileChannel<T extends FileIORequest<T>>
     boolean closed=false;
 
     public AsyncFileChannel(Path file, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        channel=AsynchronousFileChannel.open(file, options, Task.getCurrentExecutorService(), attrs);
+        channel=AsynchronousFileChannel.open(file, options, DFContext.getCurrentExecutorService(), attrs);
     }
 
     public AsyncFileChannel(Path file, OpenOption... options) throws IOException {

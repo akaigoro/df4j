@@ -221,10 +221,10 @@ public abstract class DataflowNode extends Link {
     /**
      * holds tokens without data 
      */
-    protected class Sema extends Pin {
+    protected class Semafor extends Pin {
         private int count=0;
         
-        public Sema() {
+        public Semafor() {
         }
 
         public void up() {

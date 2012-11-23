@@ -10,7 +10,7 @@
 package com.github.rfqu.df4j.tutorial;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.DFContext;
 
 public class HelloWorld2 {
     static class Collector extends Actor<String> {
@@ -32,6 +32,6 @@ public class HelloWorld2 {
         coll.send("Hello");
         coll.send("World 2");
         coll.close();
-        Task.completeCurrentExecutorService();
+        DFContext.completeCurrentExecutorService();
     }
 }

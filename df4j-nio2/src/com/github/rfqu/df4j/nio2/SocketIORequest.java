@@ -9,7 +9,7 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.github.rfqu.df4j.nio;
+package com.github.rfqu.df4j.nio2;
 
 import java.nio.ByteBuffer;
 

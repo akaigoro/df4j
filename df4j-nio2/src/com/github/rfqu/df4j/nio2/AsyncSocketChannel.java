@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.github.rfqu.df4j.nio;
+package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.ext.ActorVariableLQ;
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
@@ -72,7 +73,7 @@ public class AsyncSocketChannel extends Link
      * @throws IOException
      */
     public AsyncSocketChannel(SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
+        AsynchronousChannelGroup acg=DFContext.getCurrentACGroup();
         channel=AsynchronousSocketChannel.open(acg);
         channel.connect(addr, channel, this);
     }
@@ -139,7 +140,7 @@ public class AsyncSocketChannel extends Link
     class RequestQueue extends ActorVariableLQ<SocketIORequest<?>>
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
-        protected Sema channelAcc=new Sema(); // channel accessible
+        protected Semafor channelAcc=new Semafor(); // channel accessible
         protected SocketIORequest<?> currentRequest;
         
         protected void resume() {

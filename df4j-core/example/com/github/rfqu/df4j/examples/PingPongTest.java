@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.examples;
 
 import java.io.PrintStream;
 import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.junit.Test;
 
@@ -22,7 +21,6 @@ import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
-
 
 /**
  * A set of identical Ping Actors, passing tokens to a single Pong actor, which
@@ -170,12 +168,14 @@ public class PingPongTest {
         long etime = (System.currentTimeMillis() - startTime);
         float switchnum = NUM_TOKENS * ((long) TIME_TO_LIVE);
         float delay = etime * 1000 * nThreads / switchnum;
-        out.println("Elapsed=" + etime / 1000f + " sec; rate=" + (1 / delay) + " messages/mks/core; mean hop time=" + (delay * 1000) + " ns");
+        out.println("Elapsed=" + etime / 1000f
+                + " sec; rate=" + (1 / delay)
+                + " messages/mks/core; mean hop time="
+                + (delay * 1000) + " ns");
         return delay;
     }
 
     public static void main(String args[]) throws InterruptedException {
-        ConcurrentLinkedQueue<?> q;
         PingPongTest nt = new PingPongTest();
         nt.testSingle();
     }

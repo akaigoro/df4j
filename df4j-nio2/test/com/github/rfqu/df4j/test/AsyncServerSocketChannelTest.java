@@ -16,8 +16,8 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
 
 public class AsyncServerSocketChannelTest {
     static final int BUF_SIZE = 128;

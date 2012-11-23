@@ -12,7 +12,7 @@ package com.github.rfqu.df4j.tutorial;
 import java.util.ArrayDeque;
 
 import com.github.rfqu.df4j.core.DataflowNode;
-import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.DFContext;
 
 public class HelloWorld3 {
     static  class Collector extends DataflowNode {
@@ -40,6 +40,6 @@ public class HelloWorld3 {
         coll.input.send("Hello");
         coll.input.send("World 3");
         coll.input.close();
-        Task.completeCurrentExecutorService();
+        DFContext.completeCurrentExecutorService();
     }
 }

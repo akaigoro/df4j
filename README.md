@@ -156,16 +156,16 @@ finishes one task, it sends a message and the number is increased by one.
 
 In multithreaded environment, such a resource counter can be represented with a semaphore.
 In actor environment, actors are not allowed to block on semaphores. Instead, they can use 
-equivalent feature: class DataflowNode.Sema. It reminds DataflowNode.Input, but does not holds
+equivalent feature: class DataflowNode.Semafor. It reminds DataflowNode.Input, but does not holds
 messages, but only a counter, allowing the dataflow node to execute only when the counter is greater than zero.
 Each execution of the DataflowNode.act() method reduces the counter by one.
 
-To imitate acquiring semaphore, we create an intermediate Actor with Sema instantiated. Working actor
+To imitate acquiring semaphore, we create an intermediate Actor with Semafor instantiated. Working actor
 sends itself to that intermediate actor and, if semaphore is open, working actor is sent further to the dispatcher. 
 
 <pre>
     class SemaActor extends Actor<Actor<Assignment>> {
-    	Sema counter=new Sema();
+    	Semafor counter=new Semafor();
     	Dispatcher dispatcher; // initialize by IOC or in constructor
         
         @Override
@@ -198,6 +198,9 @@ In the above example, network connection only resends outgoing messages without 
 incoming messages of one type (permission to send one more assignment to the cluster node).
 In reality, network communication is much more complicated.
 
+DataflowNode with an Input and Semafor (or an Actor with Semafor inside) 
+is a powerful facility to represent nested non-blocking services. See program NestedCallbacks in the tutorial package.  
+
 Background Executor
 -------------------
 When a DataflowNode (including Actor) is created, it must be assigned an Executor to run on.
@@ -213,13 +216,19 @@ DataflowVariable or ActorVariable, respectively.
 When a no-arg constructor is used, this makes DataflowNode to take Executor from thread context.
 If no executor in the thread context found, new Executor created with fixed number of threads
 equal to the number of available processors. If another kind of context executor wanted, create it before
-instantiating any DataflowNode and set in context by Task.setCurrentExecutor().
+instantiating any DataflowNode and set in context by DFContex.setCurrentExecutor().
 Take care for executor's threads to have references to that executor.
-Class ContextThreadFactory can be used for this purpose - see ContextThreadFactory.newFixedThreadPool(nThreads)
+Class ContextThreadFactory can be used for this purpose - see DFContext6.ContextThreadFactory.newFixedThreadPool(nThreads)
 and other similar methods. See also the package df4j.ext for a number of specific executors. PrivateExecutor
 contains a separate thread to serve one actor - this allow that actor to block on monitors or input/outut operations.
 ImmediateExecutor, being set as a context executor, has effect of setting null executor for all nodes,
 and turns your program into sequential one, which can help in debugging.
+
+Thread context is an instance of class DFContext and is stored as a local variable. Pecularity of
+this class is that it is present both in df4j-core and df4j-nio2 projects in different version. This is because df4j-nio2
+requires context extended with java7 features, and including this context in df4j-core would break compatibility with java6.
+So when using df4j-nio2, be careful to keep its classes before df4j-core classes in class path.
+ 
 
 Version history
 ---------------

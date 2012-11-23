@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.nio;
+package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -19,6 +19,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DataflowVariable;
 
 /**
@@ -30,8 +31,8 @@ import com.github.rfqu.df4j.core.DataflowVariable;
 public class AsyncServerSocketChannel extends DataflowVariable
   implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
-    private Sema pending=new Sema();
-    private Sema maxConnLimit=new Sema();
+    private Semafor pending=new Semafor();
+    private Semafor maxConnLimit=new Semafor();
     private AsynchronousServerSocketChannel channel;
     private Callback<AsyncSocketChannel> consumer;
     
@@ -45,7 +46,7 @@ public class AsyncServerSocketChannel extends DataflowVariable
             throw new NullPointerException();
         }
         this.consumer=consumer;
-        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
+        AsynchronousChannelGroup acg=DFContext.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
         maxConnLimit.up(maxConn);

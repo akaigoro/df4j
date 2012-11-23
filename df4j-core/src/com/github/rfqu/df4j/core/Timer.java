@@ -3,14 +3,14 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.github.rfqu.df4j.core.DFContext.ThFactory;
+import com.github.rfqu.df4j.core.DFContext6.ContextThreadFactory;
 
 
 public class Timer {
 	private  ScheduledThreadPoolExecutor timerThread;
     
-	private Timer(DFContext context) {
-		ThFactory tf = context.new ThFactory(" DF Timer ");
+	private Timer(DFContext6 context) {
+		ContextThreadFactory tf = context.new ContextThreadFactory(" DF Timer ");
         timerThread=new ScheduledThreadPoolExecutor(1, tf);
     }
 
@@ -21,7 +21,7 @@ public class Timer {
     /**
      * @return current executor stored in thread-local variable
      */
-    public static Timer newTimer(DFContext context) {
+    public static Timer newTimer(DFContext6 context) {
         return new Timer(context);
     }
 

@@ -2,8 +2,8 @@ package com.github.rfqu.df4j.nio2.echo;
 
 import java.nio.ByteBuffer;
 
-import com.github.rfqu.df4j.nio.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio.SocketIORequest;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio2.SocketIORequest;
 
 class ServerConnection {
     private final EchoServer echoServer;

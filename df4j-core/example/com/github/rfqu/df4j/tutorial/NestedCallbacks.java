@@ -72,7 +72,7 @@ public class NestedCallbacks {
      * a message over given period of time.
      */
     class LongService extends Actor<RequestB> {
-        Sema running = new Sema(); // closed when long request is executed
+        Semafor running = new Semafor(); // closed when long request is executed
         private int id;
 
         public LongService(int id) {
@@ -101,7 +101,7 @@ public class NestedCallbacks {
     }
 
     class Service extends Actor<RequestA> {
-        Sema running = new Sema(); // closed when long request is executed
+        Semafor running = new Semafor(); // closed when long request is executed
         private int id;
         RequestA requestA;
 
