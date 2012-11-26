@@ -13,10 +13,8 @@ package com.github.rfqu.df4j.nio;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.InterruptedByTimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 
@@ -75,8 +73,9 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
             if (exc instanceof AsynchronousCloseException) {
                 // System.out.println("  ServerRequest conn closed id="+id);
                 handler.closed(r);
-            } else if (exc instanceof InterruptedByTimeoutException) {
-                handler.timedOut(r);
+// TODO                
+//            } else if (exc instanceof InterruptedByTimeoutException) {
+//                handler.timedOut(r);
             } else {
                 // System.out.println("  ServerRequest read failed id="+id+"; exc="+exc);
                 handler.failed(exc, r);

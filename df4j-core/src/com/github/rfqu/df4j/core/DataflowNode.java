@@ -208,7 +208,7 @@ public abstract class DataflowNode extends Link {
             //System.out.println("turnOff");
             readyPins &= ~pinBit;
         }
-
+        
         /** Executed after token processing (method act).
          * Cleans reference to value, if any.
          * Sets state to off if no more tokens are in the place.
@@ -287,6 +287,7 @@ public abstract class DataflowNode extends Link {
     public class Input<T> extends Pin implements StreamPort<T>{
         /** extracted token */
         private T value=null;
+        boolean pushback=false; // if true, do not consume
         private boolean closeRequested=false;
 
         @Override
@@ -370,8 +371,21 @@ public abstract class DataflowNode extends Link {
             return null;
         }
 
+        protected void pushback() {
+            pushback=true;
+        }
+
+        protected void pushback(T value) {
+            pushback=true;
+            this.value=value;
+        }
+
         @Override
         protected void consume() {
+            if (pushback) {
+                pushback=false;
+                return;
+            }
             boolean wasNull=(value==null);
             value = poll();
             if (value!=null) {

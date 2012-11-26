@@ -3,27 +3,18 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.github.rfqu.df4j.core.DFContext6.ContextThreadFactory;
+import com.github.rfqu.df4j.core.DFContext.ContextThreadFactory;
+import com.github.rfqu.df4j.core.DFContext.ItemKey;
 
 
 public class Timer {
 	private  ScheduledThreadPoolExecutor timerThread;
     
-	private Timer(DFContext6 context) {
+	private Timer(DFContext context) {
 		ContextThreadFactory tf = context.new ContextThreadFactory(" DF Timer ");
         timerThread=new ScheduledThreadPoolExecutor(1, tf);
     }
 
-	public static Timer getCurrentTimer() {
-		return DFContext.getCurrentTimer();
-	}
-
-    /**
-     * @return current executor stored in thread-local variable
-     */
-    public static Timer newTimer(DFContext6 context) {
-        return new Timer(context);
-    }
 
     public  <T> void scheduleAt(Port<T> port, T message, long timeToFire) {
         schedule(port, message, timeToFire-System.currentTimeMillis());
@@ -43,7 +34,7 @@ public class Timer {
     }
     
     public CallbackFuture<Void> shutdown() {
-    	DFContext.removeTimer(this);
+        timerKey.remove();
         timerThread.shutdown();
         // wait full timer termination after shutdown
         return new CallbackFuture<Void>(){
@@ -81,4 +72,19 @@ public class Timer {
 			return 0;
 		}
 	}
+
+	//--------------------- context
+	
+	private static ItemKey<Timer> timerKey=DFContext.getCurrentContext().new ItemKey<Timer>() {
+
+        @Override
+        protected Timer initialValue(DFContext context) {
+            return new Timer(context);
+        }
+	    
+	};
+    
+    public static Timer getCurrentTimer() {
+        return timerKey.get();
+    }
 }

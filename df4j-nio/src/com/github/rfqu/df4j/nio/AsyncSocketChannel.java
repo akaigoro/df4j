@@ -14,45 +14,52 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 
-import com.github.rfqu.df4j.ext.ActorVariableLQ;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Promise;
+import com.github.rfqu.df4j.ext.ActorVariableLQ;
 
 /**
- * Wrapper over {@link java.nio.channels.AsynchronousSocketChannel}.
- * Simplifies input-output, handling queues of I/O requests.
+ * Asynchronously executes I/O socket requests
+ * using {@link java.nio.channels.Selector}.
  */
 public class AsyncSocketChannel extends Link 
-   implements Port<SocketIORequest<?>>,
-//     EventSource<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>,
+   implements Port<SocketIORequest<?>>
 {
+    private SocketChannel socketChannel;
     /** for client-side socket: signals connection completion */
-    private Promise<AsynchronousSocketChannel> connEvent=new Promise<AsynchronousSocketChannel>();
+    private Promise<SocketChannel> connEvent=new Promise<SocketChannel>();
     /** read requests queue */
-    protected final RequestQueue reader=new RequestQueue();
+    protected final ReadRequestQueue reader=new ReadRequestQueue();
     /** write requests queue */
-    protected final RequestQueue writer=new RequestQueue();
+    protected final WriteRequestQueue writer=new WriteRequestQueue();
     protected volatile boolean closed=false;
+    private MyListener selectorListener=new MyListener();
+    private SelectorThread currentSelectorThread;
 
     /**
      * for server-side socket
      * @param assch
+     * @throws IOException 
      */
-    public AsyncSocketChannel(AsynchronousSocketChannel assch) {
-        init(assch);
-    }
-    
-    void init(AsynchronousSocketChannel attachement) {
+    public AsyncSocketChannel(SocketChannel assch) throws IOException {
+        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
+
+        assch.configureBlocking(false);
+        currentSelectorThread
+            .register(assch, SelectionKey.OP_READ|SelectionKey.OP_READ, selectorListener);
+        
         synchronized(this) {
-            channel=attachement;
+            socketChannel=assch;
         }
-        reader.resume();
-        writer.resume();
-        connEvent.send(attachement);
+        connEvent.send(assch);
     }
     
     /**
@@ -65,9 +72,15 @@ public class AsyncSocketChannel extends Link
      * @throws IOException
      */
     public AsyncSocketChannel(SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
-        channel=AsynchronousSocketChannel.open(acg);
-        channel.connect(addr, channel, this);
+        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
+ 
+        // Create a non-blocking socket channel
+        SocketChannel channel = SocketChannel.open();
+        channel.configureBlocking(false);
+    
+        // Kick off connection establishment
+        currentSelectorThread.register(channel, SelectionKey.OP_CONNECT, selectorListener);
+        channel.connect(addr);    
     }
 
     // ================== I/O
@@ -83,103 +96,168 @@ public class AsyncSocketChannel extends Link
 
     public void close() {
         closed=true;
-        if (channel!=null) {
+        if (socketChannel!=null) {
+            currentSelectorThread.deregister(socketChannel);
             try {
-                channel.close();
+                socketChannel.close();
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
+            } finally {
+                socketChannel=null;
             }
         }
+        currentSelectorThread=null;
     }
 
-    public synchronized void addListener(Callback<AsynchronousSocketChannel> listener) {
+    public synchronized void addListener(Callback<SocketChannel> listener) {
         connEvent.addListener(listener);
     }
 
-    public AsynchronousSocketChannel getChannel() {
-        return channel;
+    public SocketChannel getChannel() {
+        return socketChannel;
     }
 
     public boolean isConnected() {
-        return channel!=null;
+        return socketChannel!=null;
     }
 
     public boolean isClosed() {
         return closed;
     }
 
-	//========================= backend
-	
-	/**
-     * callback method for successful connection in client-side mode
-     */
-    @Override
-    public void completed(Void result, AsynchronousSocketChannel channel) {
-        init(channel);           
-    }
-
-    /**
-     * callback method for failed connection in client-side mode
-     */
-    @Override
-    public void failed(Throwable exc, AsynchronousSocketChannel channel) {
-        connEvent.sendFailure(exc);
-    } 
-
-    //===================== inner classes
+	//========================= backend inner classes
     
-    class RequestQueue extends ActorVariableLQ<SocketIORequest<?>>
-       implements CompletionHandler<Integer, SocketIORequest<?>>
-    {
-        protected Sema channelAcc=new Sema(); // channel accessible
-        protected SocketIORequest<?> currentRequest;
-        
-        protected void resume() {
-            channelAcc.up();
-        }
-        
+    /** wrapped in a separate class in order not to expose
+     * callback methods
+     */
+    class MyListener implements SocketEventListener{
+        /**
+         * callback method for successful connection in client-side mode
+         */
         @Override
-        protected void act(SocketIORequest<?> request) throws Exception {
-        	if (AsyncSocketChannel.this.closed) {
-        		request.failed(new AsynchronousCloseException());
-        		return;
-        	}
-        	currentRequest=request;
-            if (request.isReadOp()) {
-//              System.out.println("channel read started id="+request.id);
-                if (request.timed) {
-                    channel.read(request.buffer,
-                            request.timeout, TimeUnit.MILLISECONDS, request, this);
-                } else {
-                    channel.read(request.buffer, request, this);
+        public void connect(SelectionKey key) {
+            try {
+                synchronized(this) {
+                    socketChannel=(SocketChannel) key.channel();
                 }
-            } else {
-//              System.out.println("channel write started id="+request.id);
-                if (request.timed) {
-                    channel.write(request.buffer, request.timeout, TimeUnit.MILLISECONDS,
-                            request, this);
-                } else {
-                    channel.write(request.buffer, request, this);
-                }
-            }
-        }
-        
-		@Override
-        public void completed(Integer result, SocketIORequest<?> request) {
-		    currentRequest=null;
-            channelAcc.up();
-            request.completed(result);
-        }
-
-        @Override
-        public void failed(Throwable exc, SocketIORequest<?> request) {
-            if (exc instanceof AsynchronousCloseException) {
+                socketChannel.finishConnect();
+//                selectorKey.interestOps(SelectionKey.OP_READ|SelectionKey.OP_READ);
+                currentSelectorThread.register(socketChannel, SelectionKey.OP_CONNECT);
+                connEvent.send(socketChannel);           
+            } catch (IOException e) {
+                e.printStackTrace();
                 AsyncSocketChannel.this.close();
             }
-		    currentRequest=null;
+        }
+
+        @Override
+        public void read(SelectionKey key) {
+            reader.resume();
+        }
+
+        @Override
+        public void write(SelectionKey key) {
+            writer.resume();
+        }
+
+        @Override
+        public void accept(SelectionKey key) {}
+
+        @Override
+        public void close() {
+            AsyncSocketChannel.this.close();
+        }
+    }
+    
+    class ReadRequestQueue extends ActorVariableLQ<SocketIORequest<?>> {
+        protected Semafor channelAcc=new Semafor(); // channel accessible for reading
+
+        public void resume() {
             channelAcc.up();
-            request.failed(exc);
+        }
+
+        /**
+         * Both the request and channel are ready
+         */
+        @Override
+        protected void act(SocketIORequest<?> request) throws Exception {
+            if (AsyncSocketChannel.this.closed) {
+                request.failed(new AsynchronousCloseException());
+                return;
+            }
+            ByteBuffer readBuffer=request.getBuffer();
+
+            // Attempt to read off the channel
+            int numRead;
+            try {
+                numRead = socketChannel.read(readBuffer);
+            } catch (IOException exc) {
+                request.replyFailure(exc);
+                AsyncSocketChannel.this.close();
+                return;
+            }
+
+            if (numRead == -1) {
+                // Remote entity shut the socket down cleanly. Do the
+                // same from our end and cancel the channel.
+                request.reply(-1); // TODO define how to signal end of stream
+                AsyncSocketChannel.this.close();
+            } else if (numRead == 0) {
+                pushback(); // and wait next signal from selector
+            } else {
+//                if (readBuffer.hasRemaining())
+                request.reply(numRead);
+            }
+
+        }
+    }
+
+    class WriteRequestQueue extends ActorVariableLQ<SocketIORequest<?>> {
+        protected Semafor channelAcc=new Semafor(); // channel accessible for writing
+
+        public void resume() {
+            channelAcc.up();
+        }
+
+        /**
+         * Both the request and channel are ready
+         */
+        @Override
+        protected void act(SocketIORequest<?> request) throws Exception {
+            if (AsyncSocketChannel.this.closed) {
+                request.failed(new AsynchronousCloseException());
+                return;
+            }
+            ByteBuffer writeBuffer=request.getBuffer();
+
+            int totalWrit=0;
+            while (writeBuffer.hasRemaining()) {
+                int numWrit;
+                try {
+                    numWrit = socketChannel.write(writeBuffer);
+                } catch (IOException exc) {
+                    request.replyFailure(exc);
+                    AsyncSocketChannel.this.close();
+                    return;
+                }
+                if (numWrit == -1) {
+                    // Remote entity shut the socket down cleanly. Do the
+                    // same from our end and cancel the channel.
+                    request.reply(-1); // TODO define how to signal end of stream
+                    AsyncSocketChannel.this.close();
+                    return;
+                }
+                if (numWrit == 0) {
+                    pushback();
+                    // and wait next signal from selector
+                    return;
+                }
+                totalWrit+=numWrit;
+            }
+            request.reply(totalWrit);
+            // keep signal
+            channelAcc.up();
         }
     }
 

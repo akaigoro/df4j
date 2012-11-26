@@ -19,7 +19,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DataflowVariable;
 
 /**
@@ -46,7 +45,7 @@ public class AsyncServerSocketChannel extends DataflowVariable
             throw new NullPointerException();
         }
         this.consumer=consumer;
-        AsynchronousChannelGroup acg=DFContext.getCurrentACGroup();
+        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
         maxConnLimit.up(maxConn);

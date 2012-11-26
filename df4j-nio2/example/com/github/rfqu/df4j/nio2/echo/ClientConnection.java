@@ -62,8 +62,7 @@ class ClientConnection
             ByteBuffer buffer = request.getBuffer();
             buffer.clear();
             buffer.putInt(request.data);
-			request.prepareWrite(endWrite, timeout);
-            channel.send(request);
+            channel.write(request, endWrite, timeout);
         }
     };
 
@@ -71,8 +70,7 @@ class ClientConnection
         @Override
         public void completed(int result, CliRequest request) {//throws ClosedChannelException {
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
-			request.prepareRead(endRead, timeout);
-            channel.send(request);
+            channel.read(request, endRead, timeout);
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
         }
 

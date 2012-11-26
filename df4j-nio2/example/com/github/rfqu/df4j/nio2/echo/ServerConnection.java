@@ -21,8 +21,7 @@ class ServerConnection {
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);
-        request.prepareRead(endRead);
-        channel.send(request);
+        channel.read(request, endRead);
     }
 
     public void close() {
@@ -48,8 +47,7 @@ class ServerConnection {
             // read client's message as if all the data have been read
             buffer.position(buffer.limit());
             // write it back
-            request.prepareWrite(endWrite);
-            channel.send(request);
+            channel.write(request, endWrite);
         }
 
         @Override
@@ -62,8 +60,7 @@ class ServerConnection {
         @Override
 		public void completed(int result, SerRequest request) {//throws IOException {
             // System.out.println("  ServerRequest writeCompleted id="+id);
-        	request.prepareRead(endRead);
-            channel.send(request);
+            channel.read(request, endRead);
         }
 
         @Override

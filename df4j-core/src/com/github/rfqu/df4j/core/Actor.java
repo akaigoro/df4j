@@ -74,6 +74,11 @@ public abstract class Actor<M> extends DataflowNode
         }
     }
 
+    /** only have sense when called from act(M message) */
+    public void pushback() {
+        input.pushback();
+    }
+
     /** handles failures
      * 
      * @param message

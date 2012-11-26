@@ -10,7 +10,6 @@
 package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
-
 import com.github.rfqu.df4j.core.DFContext;
 
 /**

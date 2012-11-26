@@ -22,8 +22,8 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.ext.ActorVariableLQ;
+import com.github.rfqu.df4j.nio2.echo.IOHandler;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
@@ -73,7 +73,7 @@ public class AsyncSocketChannel extends Link
      * @throws IOException
      */
     public AsyncSocketChannel(SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup acg=DFContext.getCurrentACGroup();
+        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousSocketChannel.open(acg);
         channel.connect(addr, channel, this);
     }
@@ -88,6 +88,26 @@ public class AsyncSocketChannel extends Link
 		}
 		(request.isReadOp()?reader:writer).send(request);
 	}    
+
+    public <R extends SocketIORequest<R>>void write(R request, Port<R> replyTo) {
+        request.prepareWrite(replyTo);
+        send(request);
+    }
+
+    public <R extends SocketIORequest<R>>void write(R request, Port<R> replyTo, long timeout) {
+        request.prepareWrite(replyTo, timeout);
+        send(request);
+    }
+
+    public <R extends SocketIORequest<R>>void read(R request, Port<R> replyTo) {
+        request.prepareRead(replyTo);
+        send(request);
+    }
+
+    public <R extends SocketIORequest<R>>void read(R request, Port<R> replyTo, long timeout) {
+        request.prepareRead(replyTo, timeout);
+        send(request);
+    }
 
     public void close() {
         closed=true;

@@ -21,7 +21,6 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.DFContext;
-import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
 /** An actor run by different executors
