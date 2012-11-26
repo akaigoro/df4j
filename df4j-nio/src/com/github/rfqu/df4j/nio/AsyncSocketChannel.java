@@ -49,8 +49,8 @@ public class AsyncSocketChannel extends Link
      * @param assch
      * @throws IOException 
      */
-    public AsyncSocketChannel(SocketChannel assch) throws IOException {
-        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
+    public AsyncSocketChannel(SelectorThread currentSelectorThread, SocketChannel assch) throws IOException {
+        this.currentSelectorThread=currentSelectorThread;
 
         assch.configureBlocking(false);
         currentSelectorThread
@@ -78,9 +78,11 @@ public class AsyncSocketChannel extends Link
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
     
-        // Kick off connection establishment
-        currentSelectorThread.register(channel, SelectionKey.OP_CONNECT, selectorListener);
-        channel.connect(addr);    
+        boolean connected = channel.connect(addr);    
+        if (!connected){
+        	// Kick off connection establishment
+        	currentSelectorThread.register(channel, SelectionKey.OP_CONNECT, selectorListener);
+        }
     }
 
     // ================== I/O
@@ -143,7 +145,7 @@ public class AsyncSocketChannel extends Link
                 }
                 socketChannel.finishConnect();
 //                selectorKey.interestOps(SelectionKey.OP_READ|SelectionKey.OP_READ);
-                currentSelectorThread.register(socketChannel, SelectionKey.OP_CONNECT);
+                currentSelectorThread.setInterest(socketChannel, SelectionKey.OP_CONNECT);
                 connEvent.send(socketChannel);           
             } catch (IOException e) {
                 e.printStackTrace();

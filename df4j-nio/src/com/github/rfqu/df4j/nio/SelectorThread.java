@@ -26,14 +26,14 @@ public class SelectorThread implements Runnable {
     }
 
     void register(final SelectableChannel socket, final int ops, final SocketEventListener att){
-        final Throwable thr=new Throwable();
+        final ClosedChannelException thr=new ClosedChannelException();
         tasks.add(new Runnable() {
             @Override
             public void run() {
                 try {
                     socket.register(selector, ops, att);
                 } catch (ClosedChannelException e) {
-                    System.err.println("ClosedChannelException:");
+                    System.err.println("register:");
                     thr.printStackTrace();
                 }
             }
@@ -41,22 +41,22 @@ public class SelectorThread implements Runnable {
         selector.wakeup();
     }
 
-
-    public void register(final SelectableChannel socket, final int ops) {
-        final Throwable thr=new Throwable();
+    public void setInterest(final SelectableChannel socket, final int ops) {
+        final Exception thr=new Exception();
         tasks.add(new Runnable() {
             @Override
             public void run() {
-                try {
-                    socket.register(selector, ops);
-                } catch (ClosedChannelException e) {
-                    System.err.println("ClosedChannelException:");
-                    thr.printStackTrace();
-                }
+            	SelectionKey key=socket.keyFor(selector);
+            	if (key==null) {
+            		thr.printStackTrace();
+            		return;
+            	}
+            	key.interestOps(ops);
             }
         });
         selector.wakeup();
     }
+    
     public void deregister(final SelectableChannel socket) {
         tasks.add(new Runnable() {
             @Override

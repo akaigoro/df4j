@@ -8,10 +8,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Callback;
@@ -22,38 +19,22 @@ import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 public class AsyncServerSocketChannelTest {
     static final int BUF_SIZE = 128;
     static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 9990);
-    static final AtomicInteger ids=new AtomicInteger(); // for DEBUG
-
-    static final int maxConn=2;
-    Server server;
-    
-    @Before
-    public void before() throws IOException {
-        server=new Server(local9990, maxConn);
-    }
-
-    @After
-    public void after() {
-        try {
-            server.close();
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
 
     /**
      * tests that overall connection count can be more than maxConn
      */
     @Test
     public void maxConnTest() throws Exception {
+        final int maxConn=2;
+        Server server=new Server(local9990, maxConn);
+        
         ArrayList<ClientConnection>allConns=new ArrayList<ClientConnection>();
-        int half=1;//maxConn/2;
+        int half=maxConn/2;
         int clConns=maxConn+half;
         for (int k=0; k<clConns; k++) {
             ClientConnection conn = new ClientConnection(local9990);
             allConns.add(conn);
-            conn.get();
+//            conn.get();
         }
         Thread.sleep(100); // wait server to accept connections
         // only maxConn opened
@@ -66,6 +47,8 @@ public class AsyncServerSocketChannelTest {
         Thread.sleep(100); // wait server to accept connections
         assertEquals(clConns, server.channelCounter);
         assertTrue(server.allOpened);
+        server.close();
+        Thread.sleep(100); // wait server to accept connections
     }
 
 

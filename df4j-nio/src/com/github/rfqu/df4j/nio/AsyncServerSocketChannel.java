@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -19,14 +18,14 @@ import java.nio.channels.SocketChannel;
 import com.github.rfqu.df4j.core.Callback;
 
 /**
- * Wrapper over {@link java.nio.channels.AsynchronousServerSocketChannel}.
+ * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
  * Simplifies input-output, handling queues of accept requests.
+ * 
  * @author rfqu
- *
  */
 public class AsyncServerSocketChannel {
- //    private Semafor pending=new Semafor();
     private int maxConn;
+    protected volatile boolean interestOn=false;
     private ServerSocketChannel ssc;
     private SelectorThread currentSelectorThread ;
     private Callback<AsyncSocketChannel> consumer;
@@ -45,35 +44,22 @@ public class AsyncServerSocketChannel {
         this.maxConn=maxConn;
         ssc = ServerSocketChannel.open();
         ssc.configureBlocking(false);
-        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
-/*
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        */
-        System.out.println("AsyncServerSocketChannel: register");
-        currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT, selectorListener);
-        System.out.println("AsyncServerSocketChannel: end register");
-
         ssc.socket().bind(addr);
+        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
+        currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT, selectorListener);
+        interestOn=true;
         this.consumer=consumer;
-//        pending.up(); // allow accept
     }
     
     public synchronized void upConnNumber() {
         maxConn++;
-        if (maxConn==1) { 
-            // was 0, probably interest is switched off
-            currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT);
+        if (!interestOn) { 
+            // interest was switched off
+            currentSelectorThread.setInterest(ssc, SelectionKey.OP_ACCEPT);
         }
     }
 
     public void close() {
-        System.err.println("AsyncServerSocketChannel:close "+closed);
-        if (!closed) throw new  RuntimeException();
         closed=true;
         if (ssc!=null) {
             currentSelectorThread.deregister(ssc);
@@ -87,7 +73,6 @@ public class AsyncServerSocketChannel {
             }
         }
         currentSelectorThread=null;
-        consumer.sendFailure(new ClosedChannelException()); // TODO check
     }
     
     public boolean isOpened() {
@@ -105,15 +90,16 @@ public class AsyncServerSocketChannel {
         @Override
         public void accept(SelectionKey key) {
             synchronized (AsyncServerSocketChannel.this) {
-                if (maxConn==0) {
-                    currentSelectorThread.register(ssc, 0);
-                    return;
+                if (maxConn>0) {
+                    maxConn--;
+                } else if (interestOn) {
+                    currentSelectorThread.setInterest(ssc, 0);
+                    interestOn=false;
                 }
-                maxConn--;
             }
             try {
                 SocketChannel sch = ssc.accept();
-                AsyncSocketChannel res=new AsyncSocketChannel(sch);
+                AsyncSocketChannel res=new AsyncSocketChannel(currentSelectorThread, sch);
                 consumer.send(res);
             } catch (IOException exc) {
                 consumer.sendFailure(exc);
