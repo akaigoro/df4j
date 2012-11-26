@@ -5,7 +5,7 @@ Subprojects
 
 df4j-core: contains core functionality. It requires java 1.5 or higher.
 
-df4j-demux (in progress): base for remote and/or persistent actors.
+df4j-nio (in progress): a wrapper to nio asyncronous input-output functionality (Baset on Selector).
 
 df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. It requires java 1.7 or higher.
 
