@@ -42,24 +42,22 @@ public class AsyncSocketChannel extends Link
     protected final WriteRequestQueue writer=new WriteRequestQueue();
     protected volatile boolean closed=false;
     private MyListener selectorListener=new MyListener();
-    private SelectorThread currentSelectorThread;
+    private SelectorThread currentSelectorThread=SelectorThread.getCurrentSelectorThread();
 
     /**
      * for server-side socket
-     * @param assch
+     * @param sch
      * @throws IOException 
      */
-    public AsyncSocketChannel(SelectorThread currentSelectorThread, SocketChannel assch) throws IOException {
-        this.currentSelectorThread=currentSelectorThread;
-
-        assch.configureBlocking(false);
+    public AsyncSocketChannel(SocketChannel sch) throws IOException {
+        sch.configureBlocking(false);
         currentSelectorThread
-            .register(assch, SelectionKey.OP_READ|SelectionKey.OP_READ, selectorListener);
+            .register(sch, SelectionKey.OP_READ|SelectionKey.OP_READ, selectorListener);
         
         synchronized(this) {
-            socketChannel=assch;
+            socketChannel=sch;
         }
-        connEvent.send(assch);
+        connEvent.send(sch);
     }
     
     /**
@@ -72,8 +70,6 @@ public class AsyncSocketChannel extends Link
      * @throws IOException
      */
     public AsyncSocketChannel(SocketAddress addr) throws IOException {
-        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
- 
         // Create a non-blocking socket channel
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
@@ -95,6 +91,26 @@ public class AsyncSocketChannel extends Link
 		}
 		(request.isReadOp()?reader:writer).send(request);
 	}    
+
+    public <R extends SocketIORequest<R>>void write(R request, Port<R> replyTo) {
+        request.prepareWrite(replyTo);
+        send(request);
+    }
+
+    public <R extends SocketIORequest<R>>void write(R request, Port<R> replyTo, long timeout) {
+        request.prepareWrite(replyTo, timeout);
+        send(request);
+    }
+
+    public <R extends SocketIORequest<R>>void read(R request, Port<R> replyTo) {
+        request.prepareRead(replyTo);
+        send(request);
+    }
+
+    public <R extends SocketIORequest<R>>void read(R request, Port<R> replyTo, long timeout) {
+        request.prepareRead(replyTo, timeout);
+        send(request);
+    }
 
     public void close() {
         closed=true;

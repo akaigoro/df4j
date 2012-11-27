@@ -22,7 +22,6 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.ext.ActorVariableLQ;
-import com.github.rfqu.df4j.nio2.echo.IOHandler;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Link;

@@ -9,6 +9,7 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -70,7 +71,6 @@ public abstract class DataflowNode extends Link {
 	}
     
     private final void fire() {
-        //System.out.println("fire()");
         task.fire();
     }
     
@@ -98,8 +98,8 @@ public abstract class DataflowNode extends Link {
     
     //====================== inner classes
     
-    /** We could extend this class from Task, but define separate class to 
-     * minimize class hierarchy
+    /** We could extend DataflowNode class from Task, but define separate class to 
+     *  minimize class hierarchy
      */
     private class ActorTask extends Task {
         
@@ -127,7 +127,6 @@ public abstract class DataflowNode extends Link {
                 } finally {
                   lock.unlock();
                 }
-                //System.out.println("act0 before");
                 act();
                 for (;;) {
                     lock.lock();
@@ -135,10 +134,8 @@ public abstract class DataflowNode extends Link {
                         consumeTokens();
                         if (!allReady()) {
                             fired = false; // allow firing
-                            //System.out.println("act !allReady fired = false");
                             return;
                         }
-                        //System.out.println("act allReady");
                         if (exc!=null) {
                             break execLoop; // fired remains true, preventing subsequent execution
                         }
@@ -146,7 +143,6 @@ public abstract class DataflowNode extends Link {
                     finally {
                       lock.unlock();
                     }
-                    //System.out.println("act before");
                     act();
                 }
             } catch (Throwable e) {
@@ -221,7 +217,7 @@ public abstract class DataflowNode extends Link {
     /**
      * holds tokens without data 
      */
-    protected class Semafor extends Pin {
+    public class Semafor extends Pin {
         private int count=0;
         
         public Semafor() {
@@ -240,7 +236,7 @@ public abstract class DataflowNode extends Link {
               lock.unlock();
             }
             if (doFire) {
-                task.fire();
+                fire();
             }
         }
 
@@ -284,7 +280,7 @@ public abstract class DataflowNode extends Link {
      * By default, it has place for only one token.
      * @param <T> type of accepted tokens.
      */
-    public class Input<T> extends Pin implements StreamPort<T>{
+    public class Input<T> extends Pin implements StreamPort<T>, Iterable<T>{
         /** extracted token */
         private T value=null;
         boolean pushback=false; // if true, do not consume
@@ -361,6 +357,30 @@ public abstract class DataflowNode extends Link {
             return value;
         }
 
+        /**
+         * iterates over and removes all input tokens.   
+         */
+		@Override
+		public Iterator<T> iterator() {
+			return new Iterator<T>(){
+				@Override
+				public boolean hasNext() {
+					return value!=null;
+				}
+
+				@Override
+				public T next() {
+					T res=value;
+					value=poll();
+					return res;
+				}
+
+				@Override
+				public void remove() {
+				}
+			};
+		}
+
         //===================== backend
         
         /**
@@ -371,7 +391,7 @@ public abstract class DataflowNode extends Link {
             return null;
         }
 
-        protected void pushback() {
+        public void pushback() {
             pushback=true;
         }
 
@@ -475,7 +495,7 @@ public abstract class DataflowNode extends Link {
               lock.unlock();
             }
             if (doFire) {
-                task.fire();
+                fire();
             }
             return this;
     	}

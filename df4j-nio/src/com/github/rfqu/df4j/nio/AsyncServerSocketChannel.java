@@ -16,6 +16,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.DataflowVariable;
 
 /**
  * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
@@ -23,22 +24,23 @@ import com.github.rfqu.df4j.core.Callback;
  * 
  * @author rfqu
  */
-public class AsyncServerSocketChannel {
+public class AsyncServerSocketChannel extends DataflowVariable {
+    private Input<Callback<SocketChannel>> acceptors=new StreamInput<Callback<SocketChannel>>();
+    private Semafor requestors=new Semafor();
     private int maxConn;
     protected volatile boolean interestOn=false;
     private ServerSocketChannel ssc;
     private SelectorThread currentSelectorThread ;
-    private Callback<AsyncSocketChannel> consumer;
     private MyListener selectorListener=new MyListener();
     protected volatile boolean closed=false;
     
-    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsyncSocketChannel> consumer, int maxConn)
+    public AsyncServerSocketChannel(InetSocketAddress addr, int maxConn)
                 throws IOException
     {
         if (maxConn<=0) {
             throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
         }
-        if (consumer==null) {
+        if (acceptors==null) {
             throw new NullPointerException();
         }
         this.maxConn=maxConn;
@@ -48,10 +50,13 @@ public class AsyncServerSocketChannel {
         currentSelectorThread=SelectorThread.getCurrentSelectorThread();
         currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT, selectorListener);
         interestOn=true;
-        this.consumer=consumer;
     }
     
-    public synchronized void upConnNumber() {
+	public void accept(Callback<SocketChannel> acceptor) {
+		acceptors.send(acceptor);
+	}
+
+	public synchronized void upConnNumber() {
         maxConn++;
         if (!interestOn) { 
             // interest was switched off
@@ -79,9 +84,35 @@ public class AsyncServerSocketChannel {
         return ssc!=null;
     }
 
-    //========================= backend inner classes
+    //========================= backend
     
-    /** wrapped in a separate class in order not to expose
+
+	@Override
+	protected void act() {
+        synchronized (AsyncServerSocketChannel.this) {
+            if (maxConn>0) {
+                maxConn--;
+            } else if (interestOn) {
+                currentSelectorThread.setInterest(ssc, 0);
+                interestOn=false;
+            }
+        }
+        Callback<SocketChannel> acceptor = acceptors.get();
+        try {
+            SocketChannel sch = ssc.accept();
+            if (sch==null) {
+            	acceptors.pushback();
+            	return;
+            }
+            acceptor.send(sch);
+        } catch (IOException exc) {
+            acceptor.sendFailure(exc);
+        }
+	}
+
+    //========================= inner classes
+
+	/** wrapped in a separate class in order not to expose
      * callback methods
      */
     class MyListener implements SocketEventListener{
@@ -89,21 +120,7 @@ public class AsyncServerSocketChannel {
         /** new client wants to connect */
         @Override
         public void accept(SelectionKey key) {
-            synchronized (AsyncServerSocketChannel.this) {
-                if (maxConn>0) {
-                    maxConn--;
-                } else if (interestOn) {
-                    currentSelectorThread.setInterest(ssc, 0);
-                    interestOn=false;
-                }
-            }
-            try {
-                SocketChannel sch = ssc.accept();
-                AsyncSocketChannel res=new AsyncSocketChannel(currentSelectorThread, sch);
-                consumer.send(res);
-            } catch (IOException exc) {
-                consumer.sendFailure(exc);
-            }
+        	requestors.up();
         }
 
         @Override

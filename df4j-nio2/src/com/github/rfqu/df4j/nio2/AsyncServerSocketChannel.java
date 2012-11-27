@@ -28,23 +28,18 @@ import com.github.rfqu.df4j.core.DataflowVariable;
  *
  */
 public class AsyncServerSocketChannel extends DataflowVariable
-  implements CompletionHandler<AsynchronousSocketChannel,Void>
 {
+    private Input<Callback<AsynchronousSocketChannel>> acceptors=new StreamInput<Callback<AsynchronousSocketChannel>>();
     private Semafor pending=new Semafor();
     private Semafor maxConnLimit=new Semafor();
     private AsynchronousServerSocketChannel channel;
-    private Callback<AsyncSocketChannel> consumer;
     
-    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsyncSocketChannel> consumer, int maxConn)
+    public AsyncServerSocketChannel(InetSocketAddress addr, int maxConn)
                 throws IOException
     {
         if (maxConn<=0) {
             throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
         }
-        if (consumer==null) {
-            throw new NullPointerException();
-        }
-        this.consumer=consumer;
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
@@ -52,11 +47,16 @@ public class AsyncServerSocketChannel extends DataflowVariable
         pending.up(); // allow accept
     }
     
+	public void accept(Callback<AsynchronousSocketChannel> acceptor) {
+		acceptors.send(acceptor);
+	}
+
     public void upConnNumber() {
         maxConnLimit.up();
     }
 
-    public void close() throws IOException {
+    @Override
+	protected void handleException(Throwable exc) {
         AsynchronousServerSocketChannel channelLoc;
         synchronized (this) {
             if (channel==null) {
@@ -64,9 +64,15 @@ public class AsyncServerSocketChannel extends DataflowVariable
             }
             channelLoc=channel;
             channel = null;
+            for (Callback<?> acceptor: acceptors) {
+            	acceptor.sendFailure(exc);
+            }
         }
-        channelLoc.close();
-        consumer.sendFailure(new ClosedChannelException());
+        try {
+			channelLoc.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
     
     public AsynchronousServerSocketChannel getChannel() {
@@ -78,39 +84,34 @@ public class AsyncServerSocketChannel extends DataflowVariable
     }
 
     //======================= backend
+    AcceptHandler acceptHandler=new AcceptHandler();
+    Callback<AsynchronousSocketChannel> consumer;
 
     @Override
     protected void act() {
-        channel.accept(null, this);
+    	consumer=acceptors.get();
+        channel.accept(null, acceptHandler);
         // pending.off() and maxConnLimit.down() automatically by Pin' logic
     }
-    
-    /** new client connected */
-    @Override
-    public void completed(AsynchronousSocketChannel result, Void attachment) {
-        consumer.send(new AsyncSocketChannel(result));
-        synchronized (this) {
-            pending.up();
-        }
-    }
+ 
+	class AcceptHandler implements CompletionHandler<AsynchronousSocketChannel, Void> {
+		/** new client connected */
+		@Override
+		public void completed(AsynchronousSocketChannel result, Void attachment) {
+			consumer.send(result);
+			pending.up();
+		}
 
-    /** new client connection failed */
-    @Override
-    public void failed(Throwable exc, Void attachment) {
-    	if (exc instanceof AsynchronousCloseException) {
-    		// this is a standard situation
-    		return;
-    	}
-        System.err.println("AsyncServerSocketChannel.failed:"+exc);
-        Callback<AsyncSocketChannel> consumerLoc;
-        synchronized (this) {
-            pending.up();
-            if (consumer==null) {
-                return;
-            }
-            consumerLoc = consumer;
-        }
-        consumerLoc.sendFailure(exc);
-    }
-
+		/** new client connection failed */
+		@Override
+		public void failed(Throwable exc, Void attachment) {
+			consumer.sendFailure(exc);
+			if (exc instanceof AsynchronousCloseException) {
+				// channel closed. sendFailure to all acceptors
+				sendFailure(exc);
+			} else {
+				pending.up(); // continue accepting
+			}
+		}
+	}
 }

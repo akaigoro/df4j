@@ -76,7 +76,7 @@ public class AsyncServerSocketChannelTest {
         boolean allOpened=true;
             
         public Server(InetSocketAddress addr, int maxConn) throws IOException {
-            assch=new AsyncServerSocketChannel(addr, this, maxConn);
+            assch=new AsyncServerSocketChannel(addr, maxConn);
         }
         
         @Override
@@ -95,8 +95,7 @@ public class AsyncServerSocketChannelTest {
 
         @Override
         public void sendFailure(Throwable exc) {
-            // TODO Auto-generated method stub
-            
+            exc.printStackTrace();
         }
     }
 

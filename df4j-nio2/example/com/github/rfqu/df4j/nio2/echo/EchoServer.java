@@ -32,7 +32,7 @@ public class EchoServer
         
     public EchoServer(InetSocketAddress addr, int maxConn) throws IOException {
         this.addr=addr;
-        assch=new AsyncServerSocketChannel(addr, this, maxConn);
+        assch=new AsyncServerSocketChannel(addr, maxConn);
     }
 
     public <R extends Callback<InetSocketAddress>> R addCloseListener(R listener) {

@@ -3,6 +3,7 @@ package com.github.rfqu.df4j.nio2.echo;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -11,11 +12,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Promise;
-import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 
 public class EchoServer
-    implements Callback<AsyncSocketChannel>,
+    implements Callback<SocketChannel>,
     Closeable
 {
 	public static final int defaultPort = 9993;
@@ -32,7 +32,8 @@ public class EchoServer
         
     public EchoServer(InetSocketAddress addr, int maxConn) throws IOException {
         this.addr=addr;
-        assch=new AsyncServerSocketChannel(addr, this, maxConn);
+        assch=new AsyncServerSocketChannel(addr, maxConn);
+        assch.accept(this);
     }
 
     public <R extends Callback<InetSocketAddress>> R addCloseListener(R listener) {
@@ -58,12 +59,7 @@ public class EchoServer
                 return;
             }
         }
-        try {
-            assch.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        assch.close();
         for (;;) {
             synchronized (this) {
                 Set<Integer> keys = connections.keySet();
@@ -84,17 +80,24 @@ public class EchoServer
     /** AsyncServerSocketChannel sends new connection
      */
     @Override
-    public void send(AsyncSocketChannel channel) {
-        ServerConnection connection = new ServerConnection(this, channel);
-        synchronized(this) {
-            connections.put(connection.id, connection);
-        }
+    public void send(SocketChannel channel) {
+        assch.accept(this);
+		try {
+	        ServerConnection connection = new ServerConnection(this, channel);
+	        synchronized(this) {
+	            connections.put(connection.id, connection);
+	        }
+		} catch (IOException e) {
+			sendFailure(e);
+		}
     }
 
     /** AsyncServerSocketChannel sends failure
      */
     @Override
     public void sendFailure(Throwable exc) {
+        assch.accept(this);
+    	exc.printStackTrace();
     }
     
     public static void main(String[] args) throws Exception {
