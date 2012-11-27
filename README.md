@@ -5,7 +5,7 @@ Subprojects
 
 df4j-core: contains core functionality. It requires java 1.5 or higher.
 
-df4j-demux (in progress): base for remote and/or persistent actors.
+df4j-nio (in progress): a wrapper to nio asyncronous input-output functionality (based on Selector).
 
 df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. It requires java 1.7 or higher.
 
@@ -100,8 +100,8 @@ makes a loop and holds one token - the state of the node instance). Below is an 
 
     public void test() {
         Collector coll=new Collector();
-        coll.input.send("Hello");
-        coll.input.send("World");
+        coll.input.send("Hello");  // there is no predifined input,
+        coll.input.send("World");  // input has to be named explicetly
         coll.input.close();
     }
 </pre>
@@ -187,10 +187,10 @@ sends itself to that intermediate actor and, if semaphore is open, working actor
         
         @Override
         protected void act(Assignment task) {
-            // create new request for the network connection
+           // create new request for the network connection
         	Request r=new Request(task, this);
-            conn.send(task);
-           	semaActor.send(this);
+        	conn.send(task);
+        	semaActor.send(this);
         }        
     }
 </pre>   
@@ -232,6 +232,10 @@ So when using df4j-nio2, be careful to keep its classes before df4j-core classes
 
 Version history
 ---------------
+
+v0.5.2 2012/11/27
+DFContext class created - a collection of all context resources, including current executor.
+
 
 v0.5.1 2012/11/17
 - class MessageQueue renamed to Dispatcher.

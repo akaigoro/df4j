@@ -71,7 +71,7 @@ public class SelectorThread implements Runnable {
     }
 
 	public void run() {
-		while (true) {
+		while (selector.isOpen() && !Thread.interrupted()) {
 			try {
                 // dances with tambourine
 			    synchronized(selector) {
