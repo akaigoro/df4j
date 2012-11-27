@@ -2,6 +2,8 @@
 */.settings/*
 */.classpath
 */.project
+.classpath
+.project
 
 # test results
 tmpfile*
