@@ -52,23 +52,32 @@ public class AsyncServerSocketChannelTest {
     }
 
 
-    static class Server implements Callback<AsyncSocketChannel> {        
+    static class Server implements Callback<SocketChannel> {        
         AsyncServerSocketChannel assch;    
         ArrayList<AsyncSocketChannel>allConns=new ArrayList<AsyncSocketChannel>();
         int channelCounter=0;
         boolean allOpened=true;
             
         public Server(InetSocketAddress addr, int maxConn) throws IOException {
-            assch=new AsyncServerSocketChannel(addr, this, maxConn);
+            assch=new AsyncServerSocketChannel(addr, maxConn);
+            assch.accept(this);
         }
         
         @Override
-        public void send(AsyncSocketChannel channel) {
-            channelCounter++;
-            if (channel.isClosed()) {
-                allOpened=false;
+        public void send(SocketChannel sch) {
+            AsyncSocketChannel channel;
+            try {
+                channel = new AsyncSocketChannel(sch);
+                channelCounter++;
+                if (channel.isClosed()) {
+                    allOpened=false;
+                }
+                allConns.add(channel);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
-            allConns.add(channel);
+            assch.accept(this);
         }
 
         /** closing requested */
