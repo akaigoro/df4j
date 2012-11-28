@@ -3,6 +3,7 @@ package com.github.rfqu.df4j.nio2.echo;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import org.junit.Test;
 
@@ -20,7 +21,7 @@ public class EchoServerLocTest {
         Thread.sleep(100);
         t.testThroughput(numclients, rounds);
         es.close(); // start closing process
-        es.addCloseListener(new CallbackFuture<InetSocketAddress>()).get(); // inet addr is free now
+        es.addCloseListener(new CallbackFuture<SocketAddress>()).get(); // inet addr is free now
         out.println("all closed");
     }
 

@@ -18,7 +18,7 @@ import com.github.rfqu.df4j.core.Link;
  * when a message is enqueued. Is able to accept messages of type M extends Link only. 
  * Used in tests for performance measurement.
  */
-public abstract class ActorVariableLQ<M extends Link> extends ActorVariable<M> {
+public abstract class ActorVariableDLQ<M extends Link> extends ActorVariable<M> {
 
 	@Override
     protected Input<M> createInput() {

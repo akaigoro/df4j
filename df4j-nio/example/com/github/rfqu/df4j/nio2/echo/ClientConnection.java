@@ -47,7 +47,7 @@ class ClientConnection
 
     @Override
 	public ClientConnection addListener(Callback<SocketChannel> listener) {
-		channel.addListener(listener);
+    	channel.addConnListener(listener);
 		return this;
 	}
 

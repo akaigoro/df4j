@@ -15,15 +15,15 @@ class ServerConnection {
     SerRequest request;
     boolean closed = false;
 
-    public ServerConnection(EchoServer echoServer, SocketChannel sch) throws IOException
+    public ServerConnection(EchoServer echoServer, AsyncSocketChannel channel)
     //        throws ClosedChannelException
     {
         this.echoServer = echoServer;
-        this.channel=new AsyncSocketChannel(sch);
+        this.channel=channel;
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);
-        this.channel.read(request, endRead);
+        channel.read(request, endRead);
     }
 
     public void close() {

@@ -11,130 +11,103 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowVariable;
+import com.github.rfqu.df4j.core.Promise;
+import com.github.rfqu.df4j.core.DataflowNode.Semafor;
 
 /**
  * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
  * Simplifies input-output, handling queues of accept requests.
- * 
- * @author rfqu
  */
-public class AsyncServerSocketChannel extends DataflowVariable {
-    private Input<Callback<SocketChannel>> acceptors=new StreamInput<Callback<SocketChannel>>();
-    private Semafor requestors=new Semafor();
-    private int maxConn;
-    protected volatile boolean interestOn=false;
-    private ServerSocketChannel ssc;
-    private SelectorThread currentSelectorThread ;
-    private MyListener selectorListener=new MyListener();
-    protected volatile boolean closed=false;
-    
-    public AsyncServerSocketChannel(InetSocketAddress addr, int maxConn)
-                throws IOException
-    {
-        if (maxConn<=0) {
-            throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
-        }
-        if (acceptors==null) {
-            throw new NullPointerException();
-        }
-        this.maxConn=maxConn;
-        ssc = ServerSocketChannel.open();
-        ssc.configureBlocking(false);
-        ssc.socket().bind(addr);
-        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
-        currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT, selectorListener);
-        interestOn=true;
-    }
-    
+public class AsyncServerSocketChannel extends ActorVariable<Callback<SocketChannel>>
+	implements ServerSocketEventListener
+{
+  private final Semafor pending=new Semafor();
+
+  private SocketAddress addr;
+  private ServerSocketChannel channel;
+  private SelectorThread currentSelectorThread ;
+  protected volatile boolean interestOn=false;
+  private Promise<SocketAddress> closeEvent=new Promise<SocketAddress>();
+  
+  public AsyncServerSocketChannel(SocketAddress addr) throws IOException {
+	  this.addr=addr;
+      channel = ServerSocketChannel.open();
+      channel.configureBlocking(false);
+      channel.socket().bind(addr);
+      currentSelectorThread=SelectorThread.getCurrentSelectorThread();
+      currentSelectorThread.register(channel, SelectionKey.OP_ACCEPT, this);
+      interestOn=true;
+      pending.up(); // allow accept
+  }
+  
+  /** initiates acceptance process when the channel is free
+   * @param acceptor
+   */
 	public void accept(Callback<SocketChannel> acceptor) {
-		acceptors.send(acceptor);
+		input.send(acceptor);
 	}
+	
+  public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
+  	closeEvent.addListener(listener);
+      return listener;
+  }
+  
+  public ServerSocketChannel getChannel() {
+      return channel;
+  }
 
-	public synchronized void upConnNumber() {
-        maxConn++;
-        if (!interestOn) { 
-            // interest was switched off
-            currentSelectorThread.setInterest(ssc, SelectionKey.OP_ACCEPT);
-        }
-    }
+	//======================== Dataflow backend
 
-    public void close() {
-        closed=true;
-        if (ssc!=null) {
-            currentSelectorThread.deregister(ssc);
-            try {
-                ssc.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } finally {
-                ssc=null;
-            }
-        }
-        currentSelectorThread=null;
-    }
-    
-    public boolean isOpened() {
-        return ssc!=null;
-    }
-
-    //========================= backend
-    
+  @Override
+	protected void act(Callback<SocketChannel> acceptor) {
+      try {
+          SocketChannel sch = channel.accept();
+          if (sch==null) {
+          	pushback();
+          	return;
+          }
+          acceptor.send(sch);
+      } catch (IOException exc) {
+          acceptor.sendFailure(exc);
+      }
+      // pending.down() made automatically by Pin's logic
+	}
 
 	@Override
-	protected void act() {
-        synchronized (AsyncServerSocketChannel.this) {
-            if (maxConn>0) {
-                maxConn--;
-            } else if (interestOn) {
-                currentSelectorThread.setInterest(ssc, 0);
-                interestOn=false;
-            }
-        }
-        Callback<SocketChannel> acceptor = acceptors.get();
-        try {
-            SocketChannel sch = ssc.accept();
-            if (sch==null) {
-            	acceptors.pushback();
-            	return;
-            }
-            acceptor.send(sch);
-        } catch (IOException exc) {
-            acceptor.sendFailure(exc);
-        }
+	protected void complete() throws Exception {
+      try {
+
+			channel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+      channel = null;
+		closeEvent.send(addr);
 	}
 
-    //========================= inner classes
+	@Override
+	protected void handleException(Throwable exc) {
+		close();  // eventually leads to complete() => channel.close();
+      for (Callback<?> acceptor: super.input) {
+      	acceptor.sendFailure(exc);
+      }
+  }
+  
+    //========================= ServerSocketEventListener backend
 
-	/** wrapped in a separate class in order not to expose
-     * callback methods
-     */
-    class MyListener implements SocketEventListener{
-        
-        /** new client wants to connect */
-        @Override
-        public void accept(SelectionKey key) {
-        	requestors.up();
-        }
-
-        @Override
-        public void connect(SelectionKey key) {}
-
-        @Override
-        public void read(SelectionKey key) {}
-
-        @Override
-        public void write(SelectionKey key) {}
-
-        @Override
-        public void close() {
-            AsyncServerSocketChannel.this.close();
-        }
+    /** new client wants to connect */
+    @Override
+    public void accept(SelectionKey key) {
+    	pending.up();
     }
+
 }

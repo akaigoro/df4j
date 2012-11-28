@@ -25,7 +25,7 @@ public class SelectorThread implements Runnable {
 		thrd.start(); // TODO kill suicide when not used
     }
 
-    void register(final SelectableChannel socket, final int ops, final SocketEventListener att){
+    void register(final SelectableChannel socket, final int ops, final Object att) {
         final ClosedChannelException thr=new ClosedChannelException();
         tasks.add(new Runnable() {
             @Override
@@ -94,7 +94,7 @@ public class SelectorThread implements Runnable {
 						continue;
 					}
 
-					SocketEventListener listener=(SocketEventListener) key.attachment();
+					Object listener=key.attachment();
 					if (listener==null) {
 				        System.err.println("listener=null for "+key);
 				        Thread.sleep(100);
@@ -102,16 +102,18 @@ public class SelectorThread implements Runnable {
 					}
 					// Check what event is available and deal with it
 					if (key.isAcceptable()) {
-					    listener.accept(key);
+						ServerSocketEventListener sselistener=(ServerSocketEventListener) listener;
+						sselistener.accept(key);
 					} else {
+						SocketEventListener selistener=(SocketEventListener) listener;
 					    if (key.isConnectable()) {
-	                        listener.connect(key);
+					    	selistener.connect(key);
 					    }
 					    if (key.isReadable()) {
-	                        listener.read(key);
+					    	selistener.read(key);
 					    }
 					    if (key.isWritable()) {
-					        listener.write(key);
+					    	selistener.write(key);
 					    }
 					}
 				}

@@ -10,108 +10,122 @@
 package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 
+import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DataflowVariable;
+import com.github.rfqu.df4j.core.Promise;
 
 /**
- * Wrapper over {@link java.nio.channels.AsynchronousServerSocketChannel}.
+ * Wrapper over {@link AsynchronousServerSocketChannel}.
  * Simplifies input-output, handling queues of accept requests.
- * @author rfqu
- *
+ * 
+ * Actual connection request acception occur only when both following conditions are met in any order:
+ * <br>- client wants to connect  
+ * <br>- server invokes {@link #accept(Callback<AsynchronousSocketChannel>) accept} </br> 
+ * To allow more client connection, subsequent calls to  {link #accept(Callback<AsynchronousSocketChannel>) accept}
+ * required. This way server can limit the number of accepted connections.   
+ *  
+ * <pre><code>AsyncServerSocketChannel assch=new AsyncServerSocketChannel(addr);
+ * assch.accept(new Actor<AsynchronousSocketChannel>() {
+ *    @Override
+ *    public void act(AsynchronousSocketChannel achannel) {
+ *    	AsyncSocketChannel channel=new AsyncSocketChannel(achannel);
+ *      ....
+ *      assch.accept(this); // allow one more client to connect
+ *    }
+ *  });
+ * 
+ * </code></pre>
  */
-public class AsyncServerSocketChannel extends DataflowVariable
+public class AsyncServerSocketChannel extends ActorVariable<Callback<AsynchronousSocketChannel>>
+  implements CompletionHandler<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>
 {
-    private Input<Callback<AsynchronousSocketChannel>> acceptors=new StreamInput<Callback<AsynchronousSocketChannel>>();
-    private Semafor pending=new Semafor();
-    private Semafor maxConnLimit=new Semafor();
+    private final Semafor pending=new Semafor();
     private AsynchronousServerSocketChannel channel;
+    private Promise<SocketAddress> closeEvent=new Promise<SocketAddress>();
     
-    public AsyncServerSocketChannel(InetSocketAddress addr, int maxConn)
+    public AsyncServerSocketChannel(SocketAddress addr)
                 throws IOException
     {
-        if (maxConn<=0) {
-            throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
+        if (addr==null) {
+            throw new NullPointerException();
         }
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
-        maxConnLimit.up(maxConn);
         pending.up(); // allow accept
     }
     
+    /** initiates acceptance process when the channel is free
+     * @param acceptor
+     */
 	public void accept(Callback<AsynchronousSocketChannel> acceptor) {
-		acceptors.send(acceptor);
+		input.send(acceptor);
 	}
-
-    public void upConnNumber() {
-        maxConnLimit.up();
-    }
-
-    @Override
-	protected void handleException(Throwable exc) {
-        AsynchronousServerSocketChannel channelLoc;
-        synchronized (this) {
-            if (channel==null) {
-                return;
-            }
-            channelLoc=channel;
-            channel = null;
-            for (Callback<?> acceptor: acceptors) {
-            	acceptor.sendFailure(exc);
-            }
-        }
-        try {
-			channelLoc.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	
+    public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
+    	closeEvent.addListener(listener);
+        return listener;
     }
     
     public AsynchronousServerSocketChannel getChannel() {
         return channel;
     }
 
-    public boolean isOpened() {
-        return channel!=null;
-    }
-
-    //======================= backend
-    AcceptHandler acceptHandler=new AcceptHandler();
-    Callback<AsynchronousSocketChannel> consumer;
+	//======================== Dataflow backend
 
     @Override
-    protected void act() {
-    	consumer=acceptors.get();
-        channel.accept(null, acceptHandler);
-        // pending.off() and maxConnLimit.down() automatically by Pin' logic
-    }
- 
-	class AcceptHandler implements CompletionHandler<AsynchronousSocketChannel, Void> {
-		/** new client connected */
-		@Override
-		public void completed(AsynchronousSocketChannel result, Void attachment) {
-			consumer.send(result);
-			pending.up();
-		}
+	protected void act(Callback<AsynchronousSocketChannel> consumer) {
+        channel.accept(consumer, this);
+        // pending.down() made automatically by Pin's logic
+	}
 
-		/** new client connection failed */
-		@Override
-		public void failed(Throwable exc, Void attachment) {
-			consumer.sendFailure(exc);
-			if (exc instanceof AsynchronousCloseException) {
-				// channel closed. sendFailure to all acceptors
-				sendFailure(exc);
-			} else {
-				pending.up(); // continue accepting
-			}
+	@Override
+	protected void complete() throws Exception {
+        SocketAddress addr = channel.getLocalAddress();
+        try {
+			channel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+        channel = null;
+		closeEvent.send(addr);
+	}
+
+	@Override
+	protected void handleException(Throwable exc) {
+		close();  // eventually leads to complete() => channel.close();
+        for (Callback<?> acceptor: super.input) {
+        	acceptor.sendFailure(exc);
+        }
+    }
+    
+    //====================== CompletionHandler's backend
+    
+	/** new client connected */
+	@Override
+	public void completed(AsynchronousSocketChannel result, Callback<AsynchronousSocketChannel> consumer) {
+		consumer.send(result);
+		pending.up();
+	}
+
+	/** new client connection failed */
+	@Override
+	public void failed(Throwable exc, Callback<AsynchronousSocketChannel> consumer) {
+		consumer.sendFailure(exc);
+		if (exc instanceof AsynchronousCloseException) {
+			// channel closed.
+			// Call sendFailure to this channel and so to all acceptors
+			sendFailure(exc);
+		} else {
+			 // only current acceptor receives this failure, continue accepting
+			pending.up();
 		}
 	}
 }

@@ -34,7 +34,7 @@ public class AsyncServerSocketChannelTest {
         for (int k=0; k<clConns; k++) {
             ClientConnection conn = new ClientConnection(local9990);
             allConns.add(conn);
-//            conn.get();
+            conn.get();
         }
         Thread.sleep(100); // wait server to accept connections
         // only maxConn opened

@@ -2,11 +2,8 @@ package com.github.rfqu.df4j.nio;
 
 import java.nio.channels.SelectionKey;
 
-public interface SocketEventListener {
-    void connect(SelectionKey key);
-    void read(SelectionKey key);
-    void write(SelectionKey key);
-    
+public interface ServerSocketEventListener {
+    void accept(SelectionKey key);
     /** invoked by selector service when attemping to register on closed channel */
     void close();
 }
