@@ -53,16 +53,16 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
     }
 
     public void clear() {
-//        checkInTrans();
         if (buffer!=null) {
             buffer.clear();
         }
     }
     
+    @SuppressWarnings("unchecked")
     public void toIOCallback(IOCallback<T> handler) {
 //      public void toCallback(IOCallback<IORequest<T>> handler) {
 //        IORequest<T> r =  this;
-        T r =  (T)this;
+		T r =  (T)this;
         if (exc == null) {
             if (result==-1) {
                 handler.closed(r);
@@ -71,13 +71,11 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
             }
         } else {
             if (exc instanceof AsynchronousCloseException) {
-                // System.out.println("  ServerRequest conn closed id="+id);
                 handler.closed(r);
 // TODO                
 //            } else if (exc instanceof InterruptedByTimeoutException) {
 //                handler.timedOut(r);
             } else {
-                // System.out.println("  ServerRequest read failed id="+id+"; exc="+exc);
                 handler.failed(exc, r);
             }
         }

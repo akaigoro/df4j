@@ -74,6 +74,10 @@ public abstract class DataflowNode extends Link {
         task.fire();
     }
     
+    public Executor getExecutor() {
+        return task.executor;
+    }
+    
     //========= backend
     
     /**
@@ -89,11 +93,13 @@ public abstract class DataflowNode extends Link {
     /** 
      * Extracts tokens from pins.
      * Extracted tokens are expected to be used used in the act() method.
+     * @return 
      */
-    private final void consumeTokens() {
+    protected boolean consumeTokens() {
         for (Pin pin=head; pin!=null; pin=pin.next) {
             pin.consume();
         }
+        return allReady();
     }
     
     //====================== inner classes
@@ -131,8 +137,8 @@ public abstract class DataflowNode extends Link {
                 for (;;) {
                     lock.lock();
                     try {
-                        consumeTokens();
-                        if (!allReady()) {
+                        boolean allReady=consumeTokens();
+                        if (!allReady) {
                             fired = false; // allow firing
                             return;
                         }
@@ -220,9 +226,7 @@ public abstract class DataflowNode extends Link {
     public class Semafor extends Pin {
         private int count=0;
         
-        public Semafor() {
-        }
-
+        /** increments resource counter */
         public void up() {
             boolean doFire;
             lock.lock();
@@ -240,6 +244,7 @@ public abstract class DataflowNode extends Link {
             }
         }
 
+        /** increments resource counter by delta */
         public void up(int delta) {
             lock.lock();
             try {
@@ -253,12 +258,24 @@ public abstract class DataflowNode extends Link {
             }
         }
 
+        /** decrements resource counter */
         public void down() {
             lock.lock();
             try {
                 consume();
             }
             finally {
+              lock.unlock();
+            }
+        }
+
+        /** sets resource counter to 0 */
+        public void clear() {
+            lock.lock();
+            try {
+                count=0;
+                turnOff();
+            } finally {
               lock.unlock();
             }
         }
@@ -404,7 +421,8 @@ public abstract class DataflowNode extends Link {
         protected void consume() {
             if (pushback) {
                 pushback=false;
-                return;
+                // value remains the same, the pin remains turned on
+                return; 
             }
             boolean wasNull=(value==null);
             value = poll();

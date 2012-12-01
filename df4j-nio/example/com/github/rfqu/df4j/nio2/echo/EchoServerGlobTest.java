@@ -33,13 +33,9 @@ public class EchoServerGlobTest {
 	HashMap<Integer, ClientConnection> clients=new HashMap<Integer, ClientConnection>();
     Aggregator sink;
 	
-    public synchronized void removeClientConnection(ClientConnection clientConnection) {
-        clients.remove(clientConnection.id);
-    }
-
-	public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
+    public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
 		sink.send(avg);
-		removeClientConnection(clientConnection);
+		clients.remove(clientConnection.id);
 	}
 
     public void testThroughput(int numclients, int rounds)

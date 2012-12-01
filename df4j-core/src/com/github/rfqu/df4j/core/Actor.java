@@ -40,9 +40,6 @@ public abstract class Actor<M> extends DataflowNode
 
     @Override
 	public void send(M m) {
-		if (isClosed()) {
-			throw new IllegalStateException();
-		}
 		input.send(m);
 	}
 

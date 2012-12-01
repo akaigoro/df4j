@@ -5,16 +5,21 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.LinkedList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DFContext.ItemKey;
 
-public class SelectorThread implements Runnable {
+public class SelectorThread implements Runnable, Executor {
     private Thread thrd;
 	// The selector we'll be monitoring
 	private Selector selector;
-	private LinkedBlockingQueue<Runnable> tasks=new LinkedBlockingQueue<Runnable>();
+    private Lock lock = new ReentrantLock();
+    private boolean fired=false;
+	private LinkedList<Runnable> tasks=new LinkedList<Runnable>();
 
     public SelectorThread(DFContext context) throws IOException {
         // Create a new selector
@@ -25,51 +30,64 @@ public class SelectorThread implements Runnable {
 		thrd.start(); // TODO kill suicide when not used
     }
 
+
+    @Override
+    public void execute(Runnable command) {
+        boolean doFire;
+        lock.lock();
+        try {
+            tasks.add(command);
+            if (fired) {
+                doFire=false;
+            } else {
+                doFire=fired=true;
+            }
+        } finally {
+          lock.unlock();
+        }
+        if (doFire) {
+            selector.wakeup();
+        }
+    }
+
+    void registerNow(SelectableChannel socket, int ops, Object att) throws ClosedChannelException {
+        SelectionKey key = socket.keyFor(selector);
+        if (key==null) {
+            socket.register(selector, ops, att);
+        } else {
+            key.interestOps(ops|key.interestOps());
+        }
+    }
+
     void register(final SelectableChannel socket, final int ops, final Object att) {
         final ClosedChannelException thr=new ClosedChannelException();
-        tasks.add(new Runnable() {
+        execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    socket.register(selector, ops, att);
+                    registerNow(socket, ops, att);
                 } catch (ClosedChannelException e) {
                     System.err.println("register:");
                     thr.printStackTrace();
                 }
             }
         });
-        selector.wakeup();
-    }
-
-    public void setInterest(final SelectableChannel socket, final int ops) {
-        final Exception thr=new Exception();
-        tasks.add(new Runnable() {
-            @Override
-            public void run() {
-            	SelectionKey key=socket.keyFor(selector);
-            	if (key==null) {
-            		thr.printStackTrace();
-            		return;
-            	}
-            	key.interestOps(ops);
-            }
-        });
-        selector.wakeup();
     }
     
-    public void deregister(final SelectableChannel socket) {
-        tasks.add(new Runnable() {
-            @Override
-            public void run() {
-                SelectionKey key = socket.keyFor(selector);
-                if (key!=null) {
-                    key.cancel();
-                }
-            }
-        });
-        selector.wakeup();
+    void interestOff(SelectableChannel socket, int noInterestOps) {
+        SelectionKey key = socket.keyFor(selector);
+        if (key==null) {
+            return;
+        }
+        int interestOps = key.interestOps();
+        if (interestOps==noInterestOps) {
+            key.cancel();
+        } else {
+            key.interestOps(interestOps & ~noInterestOps);
+        }
     }
 
+    
 	public void run() {
 		while (selector.isOpen() && !Thread.interrupted()) {
 			try {
@@ -77,7 +95,18 @@ public class SelectorThread implements Runnable {
 			    synchronized(selector) {
 			    }
 			    
-			    for (Runnable task: tasks) {
+			    for (;;) {
+                    Runnable task;
+			        lock.lock();
+			        try {
+			            task=tasks.poll();
+			            if (task==null) {
+			                fired=false;
+			                break;
+			            }
+			        } finally {
+			          lock.unlock();
+			        }
 			        task.run();
 			    }
 				selector.select();
@@ -96,26 +125,20 @@ public class SelectorThread implements Runnable {
 
 					Object listener=key.attachment();
 					if (listener==null) {
-				        System.err.println("listener=null for "+key);
-				        Thread.sleep(100);
+				        System.err.println("SelectorThread: listener=null for "+key);
 				        continue;
 					}
-					// Check what event is available and deal with it
-					if (key.isAcceptable()) {
-						ServerSocketEventListener sselistener=(ServerSocketEventListener) listener;
-						sselistener.accept(key);
-					} else {
-						SocketEventListener selistener=(SocketEventListener) listener;
-					    if (key.isConnectable()) {
-					    	selistener.connect(key);
-					    }
-					    if (key.isReadable()) {
-					    	selistener.read(key);
-					    }
-					    if (key.isWritable()) {
-					    	selistener.write(key);
-					    }
-					}
+					// Pass event to the listener
+                    SelectorEventListener sselistener=(SelectorEventListener) listener;
+                    if (!key.isValid()) {
+                        System.err.println("key spoiled");
+                    }
+                    try {
+                        sselistener.onSelectorEvent(key);
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

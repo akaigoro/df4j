@@ -48,7 +48,7 @@ public class SwingSupport {
      * Processes messages on EDT.
      */
 	public static abstract class EDTActor<T> extends Actor<T> {
-    	EDTActor(){
+    	public EDTActor(){
     		super(SwingSupport.getSwingExecutor());
     	}
     }

@@ -6,59 +6,48 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.core.DataflowVariable;
-import com.github.rfqu.df4j.core.Promise;
-import com.github.rfqu.df4j.core.DataflowNode.Semafor;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
-public class EchoServer extends DataflowVariable {
+public class EchoServer extends ActorVariable<SocketChannel>
+    implements Closeable
+{
 	public static final int defaultPort = 9993;
-    public static final int numconnections=100; // max simultaneous server connections
     public static final int BUF_SIZE = 128;
 
-	Semafor maxConn=new Semafor();
-	Semafor pending=new Semafor();
-	
 	AtomicInteger ids=new AtomicInteger(); // for DEBUG    
     SocketAddress addr;
     AsyncServerSocketChannel assch;
-	AcceptHandler acceptHandler=new AcceptHandler();
     /** active connections */
     HashMap<Integer, ServerConnection> connections=new HashMap<Integer, ServerConnection>();
     /** listeners to the closing event */
         
     public EchoServer(SocketAddress addr, int maxConn) throws IOException {
         this.addr=addr;
-        assch=new AsyncServerSocketChannel(addr);
-        this.maxConn.up(maxConn);
-        pending.up();
+        assch=new AsyncServerSocketChannel(addr, this);
+        assch.up(maxConn);
     }
 
     public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
     	return assch.addCloseListener(listener);
     }
 
-    protected void connClosed(ServerConnection connection) {
-        synchronized(this) {
-            connections.remove(connection.id);
-            if (assch.isClosed()) {
-                return;
-            }
+    protected synchronized void connClosed(ServerConnection connection) {
+        connections.remove(connection.id);
+        if (assch.isClosed()) {
+            return;
         }
         //            System.out.println("connections="+connections.size());
-        maxConn.up(); // allow next accept
+        assch.up(); // allow next accept
     }
 
 //    @Override
-    public void close() {
+    public synchronized void close() {
         if (assch.isClosed()) {
             return;
         }
@@ -68,34 +57,24 @@ public class EchoServer extends DataflowVariable {
         }
     }
 
-    //======================= backend
-    
-	@Override
-	protected void act() {
-        assch.accept(acceptHandler);
-	}
-	
-    //==================== inner classes
-	
-    class AcceptHandler extends ActorVariable<SocketChannel> {
-        /** AsyncServerSocketChannel sends new connection
-         */
-    	@Override
-    	protected void act(SocketChannel message) throws Exception {
-        	AsyncSocketChannel channel=new AsyncSocketChannel(message);
-            ServerConnection connection = new ServerConnection(EchoServer.this, channel);
-            connections.put(connection.id, connection);
-            pending.up();
-        }
+    //==================== actor's backend
 
-        /** AsyncServerSocketChannel sends failure
-         */
-        @Override
-        public void sendFailure(Throwable exc) {
-        	exc.printStackTrace();
-        }
-        
+    /** AsyncServerSocketChannel sends new connection
+     */
+    @Override
+    protected synchronized void act(SocketChannel message) throws Exception {
+        AsyncSocketChannel channel=new AsyncSocketChannel(message);
+        ServerConnection connection = new ServerConnection(EchoServer.this, channel);
+        connections.put(connection.id, connection);
     }
+
+    /** AsyncServerSocketChannel sends failure
+     */
+    @Override
+    public void sendFailure(Throwable exc) {
+        exc.printStackTrace();
+    }
+
     //==================== main
     
     public static void main(String[] args) throws Exception {
@@ -111,7 +90,7 @@ public class EchoServer extends DataflowVariable {
     	}
     	int maxConn;
     	if (args.length<2) {
-    		maxConn=numconnections;
+    		maxConn=1000;
     	} else {
     		maxConn = Integer.valueOf(args[1]);
     	}

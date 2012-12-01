@@ -1,8 +1,6 @@
 package com.github.rfqu.df4j.nio2.echo;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
@@ -46,9 +44,9 @@ class ServerConnection {
         @Override
 		public void completed(int result, SerRequest request) {
             // System.out.println("  ServerRequest readCompleted id="+id);
-            // read client's message as if all the data have been read
+            // imitate reading client's message and writing it back
             buffer.position(buffer.limit());
-            // write it back
+            // write it to socket
             channel.write(request, endWrite);
         }
 
