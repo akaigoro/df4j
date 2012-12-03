@@ -10,107 +10,149 @@
 package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DataflowVariable;
+import com.github.rfqu.df4j.core.Promise;
 
 /**
- * Wrapper over {@link java.nio.channels.AsynchronousServerSocketChannel}.
+ * Wrapper over {@link AsynchronousServerSocketChannel}.
  * Simplifies input-output, handling queues of accept requests.
- * @author rfqu
- *
+ * 
+ * Actual connection request acception occur only when both following conditions are met in any order:
+ * <br>- client wants to connect  
+ * <br>- server invokes {@link #accept(Callback<AsynchronousSocketChannel>) accept} </br> 
+ * To allow more client connection, subsequent calls to  {link #accept(Callback<AsynchronousSocketChannel>) accept}
+ * required. This way server can limit the number of accepted connections.   
+ *  
+ * <pre><code>AsyncServerSocketChannel assch=new AsyncServerSocketChannel(addr);
+ * assch.accept(new Actor<AsynchronousSocketChannel>() {
+ *    @Override
+ *    public void act(AsynchronousSocketChannel achannel) {
+ *    	AsyncSocketChannel channel=new AsyncSocketChannel(achannel);
+ *      ....
+ *      assch.accept(this); // allow one more client to connect
+ *    }
+ *  });
+ * 
+ * </code></pre>
  */
-public class AsyncServerSocketChannel extends DataflowVariable
-  implements CompletionHandler<AsynchronousSocketChannel,Void>
+public class AsyncServerSocketChannel
+  implements CompletionHandler<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>
 {
-    private Semafor pending=new Semafor();
-    private Semafor maxConnLimit=new Semafor();
+    private SocketAddress addr;
+    private Callback<AsynchronousSocketChannel> acceptor;
+    /** how many connections may be accepted */
+    private int maxConn = 0;
     private AsynchronousServerSocketChannel channel;
-    private Callback<AsyncSocketChannel> consumer;
+    private Promise<SocketAddress> closeEvent=new Promise<SocketAddress>();
     
-    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsyncSocketChannel> consumer, int maxConn)
+    public AsyncServerSocketChannel(SocketAddress addr, Callback<AsynchronousSocketChannel> acceptor)
                 throws IOException
     {
-        if (maxConn<=0) {
-            throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
-        }
-        if (consumer==null) {
+        if (addr==null) {
             throw new NullPointerException();
         }
-        this.consumer=consumer;
+        this.addr=addr;
+        this.acceptor=acceptor;
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         channel=AsynchronousServerSocketChannel.open(acg);
         channel.bind(addr);
-        maxConnLimit.up(maxConn);
-        pending.up(); // allow accept
     }
     
-    public void upConnNumber() {
-        maxConnLimit.up();
+    /** initiates acceptance process. Beware of  when the channel is free
+     * @param acceptor
+     *        port to receive opened connection
+     * @throws AsynchronousCloseException 
+     * @throws  AcceptPendingException
+     *          If an accept operation is already in progress on this channel
+     * @throws  NotYetBoundException
+     *          If this channel's socket has not yet been bound
+     * @throws  ShutdownChannelGroupException
+     *          If the channel group has terminated
+     */
+    /**
+     * initiates acceptance process when the channel is free
+     * 
+     * @param acceptor
+     */
+    public synchronized void up(int delta) {
+        if (delta<0) {
+            throw new IllegalArgumentException();
+        }
+        if (isClosed()) {
+            throw new IllegalStateException();
+        }
+        if (maxConn>0) { // there is waiting server-side connection
+            maxConn+=delta;
+            // do nothing: already registered at selector
+            return;
+        }
+        maxConn=delta;
+        channel.accept(acceptor, this);
+    }
+	
+    public void up() {
+        up(1);
     }
 
-    public void close() throws IOException {
-        AsynchronousServerSocketChannel channelLoc;
-        synchronized (this) {
-            if (channel==null) {
-                return;
-            }
-            channelLoc=channel;
-            channel = null;
-        }
-        channelLoc.close();
-        consumer.sendFailure(new ClosedChannelException());
+    public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
+    	closeEvent.addListener(listener);
+        return listener;
     }
     
+    public void close() {
+        try {
+            channel.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        channel = null;
+        closeEvent.send(addr);
+    }
+
+    public boolean isClosed() {
+        return channel==null;
+    }
+
     public AsynchronousServerSocketChannel getChannel() {
         return channel;
     }
-
-    public boolean isOpened() {
-        return channel!=null;
-    }
-
-    //======================= backend
-
-    @Override
-    protected void act() {
-        channel.accept(null, this);
-        // pending.off() and maxConnLimit.down() automatically by Pin' logic
-    }
+ 
+    //====================== CompletionHandler's backend
     
-    /** new client connected */
-    @Override
-    public void completed(AsynchronousSocketChannel result, Void attachment) {
-        consumer.send(new AsyncSocketChannel(result));
-        synchronized (this) {
-            pending.up();
-        }
-    }
+	/** new client connected */
+	@Override
+	public void completed(AsynchronousSocketChannel result, Callback<AsynchronousSocketChannel> acceptor) {
+	    synchronized(this) {
+	        maxConn--;
+	        if (maxConn>0) { 
+	            channel.accept(acceptor, this);
+	        }        
+	    }
+	    acceptor.send(result);
+	}
 
-    /** new client connection failed */
-    @Override
-    public void failed(Throwable exc, Void attachment) {
-    	if (exc instanceof AsynchronousCloseException) {
-    		// this is a standard situation
-    		return;
-    	}
-        System.err.println("AsyncServerSocketChannel.failed:"+exc);
-        Callback<AsyncSocketChannel> consumerLoc;
-        synchronized (this) {
-            pending.up();
-            if (consumer==null) {
-                return;
-            }
-            consumerLoc = consumer;
-        }
-        consumerLoc.sendFailure(exc);
-    }
-
+	/** new client connection failed */
+	@Override
+	public void failed(Throwable exc, Callback<AsynchronousSocketChannel> acceptor) {
+	    acceptor.sendFailure(exc);
+		if (exc instanceof AsynchronousCloseException) {
+			// channel closed.
+			close();
+		} else {
+		    // continue
+	        synchronized(this) {
+	            maxConn--;
+	            if (maxConn>0) { 
+	                channel.accept(acceptor, this);
+	            }        
+	        }
+		}
+	}
 }

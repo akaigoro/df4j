@@ -12,7 +12,6 @@ package com.github.rfqu.df4j.core;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,10 +48,7 @@ public class LinkedQueueTest {
     @Test
     public void test2() throws InterruptedException, ExecutionException {
         DoublyLinkedQueue<Message> q=new DoublyLinkedQueue<Message>();
-        int count=0;
-        for (Message m: q) {
-            count++;
-        }
+        int count=q.size();
         Assert.assertEquals(0, count);
         Message[] mm=new Message[2];
         mm[0] = new Message();
@@ -71,10 +67,7 @@ public class LinkedQueueTest {
     @Test
     public void test21() throws InterruptedException, ExecutionException {
         LinkedList<Message> q=new LinkedList<Message>();
-        int count=0;
-        for (Message m: q) {
-            count++;
-        }
+        int count=q.size();
         Assert.assertEquals(0, count);
         Message[] mm=new Message[2];
         mm[0] = new Message();

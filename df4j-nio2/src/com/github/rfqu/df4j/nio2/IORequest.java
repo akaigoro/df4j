@@ -16,7 +16,6 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 
@@ -61,10 +60,11 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         }
     }
     
+    @SuppressWarnings("unchecked")
     public void toIOCallback(IOCallback<T> handler) {
 //      public void toCallback(IOCallback<IORequest<T>> handler) {
 //        IORequest<T> r =  this;
-        T r =  (T)this;
+		T r =  (T)this;
         if (exc == null) {
             if (result==-1) {
                 handler.closed(r);

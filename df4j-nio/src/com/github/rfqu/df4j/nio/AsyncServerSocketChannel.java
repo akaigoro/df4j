@@ -10,128 +10,140 @@
 package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.Promise;
 
 /**
- * Wrapper over {@link java.nio.channels.ServerSocketChannel}.
+ * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
  * Simplifies input-output, handling queues of accept requests.
- * @author rfqu
- *
  */
-public class AsyncServerSocketChannel {
- //    private Semafor pending=new Semafor();
-    private int maxConn;
-    private ServerSocketChannel ssc;
-    private SelectorThread currentSelectorThread ;
-    private Callback<AsyncSocketChannel> consumer;
-    private MyListener selectorListener=new MyListener();
-    protected volatile boolean closed=false;
-    
-    public AsyncServerSocketChannel(InetSocketAddress addr, Callback<AsyncSocketChannel> consumer, int maxConn)
-                throws IOException
-    {
-        if (maxConn<=0) {
-            throw new IllegalArgumentException("maxConn="+maxConn+"; should be positive");
+public class AsyncServerSocketChannel 
+	implements Runnable, SelectorEventListener
+ {
+    private Callback<SocketChannel> acceptor;
+    /** how many connections may be accepted */
+    private int maxConn = 0;
+
+    private SocketAddress addr;
+    private ServerSocketChannel channel;
+    private SelectorThread selectorThread;
+    private Promise<SocketAddress> closeEvent = new Promise<SocketAddress>();
+
+    public AsyncServerSocketChannel(SocketAddress addr, Callback<SocketChannel> acceptor) throws IOException {
+        this.addr = addr;
+        this.acceptor=acceptor;
+        selectorThread = SelectorThread.getCurrentSelectorThread();
+        channel = ServerSocketChannel.open();
+        channel.configureBlocking(false);
+        channel.socket().bind(addr);
+    }
+
+    /**
+     * initiates acceptance process when the channel is free
+     * 
+     * @param acceptor
+     */
+    public synchronized void up(int delta) {
+        if (delta<0) {
+            throw new IllegalArgumentException();
         }
-        if (consumer==null) {
-            throw new NullPointerException();
+        if (isClosed()) {
+            throw new IllegalStateException();
         }
-        this.maxConn=maxConn;
-        ssc = ServerSocketChannel.open();
-        ssc.configureBlocking(false);
-        currentSelectorThread=SelectorThread.getCurrentSelectorThread();
-/*
+        if (maxConn>0) { // there are waiting server-side connections
+            maxConn+=delta;
+            // do nothing: already registered at selector
+            return;
+        }
+        maxConn=delta;
+        boolean allAccepted=tryAccept();
+        if (allAccepted) {
+            return; // 
+        }
+        // switch to selector-helped mode
+        selectorThread.execute(this);
+    }
+
+    public void up() {
+        up(1);
+    }
+
+    /**
+     * Tries to accept max number of client connections
+     * @return true if maxConn limit is exhausted
+     */
+    boolean tryAccept() {
+        for (; maxConn>0; maxConn--) {
+            try {
+                SocketChannel sch = channel.accept();
+                if (sch==null) {
+                    break;
+                }
+                acceptor.send(sch);
+            } catch (IOException e) {
+                acceptor.sendFailure(e);
+            }
+        }
+        return maxConn==0;
+    }
+
+    @Override
+    public synchronized void run() {
+        // first repeat attempt to connect, as some time passed
+        // since previous attempt, and there was no registration
+        boolean allAccepted=tryAccept();
+        if (allAccepted) {
+            return; // 
+        }
+        // now register to listen accept requests
         try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
+            selectorThread.registerNow(channel, SelectionKey.OP_ACCEPT, this);
+        } catch (ClosedChannelException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        }
-        */
-        System.out.println("AsyncServerSocketChannel: register");
-        currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT, selectorListener);
-        System.out.println("AsyncServerSocketChannel: end register");
-
-        ssc.socket().bind(addr);
-        this.consumer=consumer;
-//        pending.up(); // allow accept
-    }
-    
-    public synchronized void upConnNumber() {
-        maxConn++;
-        if (maxConn==1) { 
-            // was 0, probably interest is switched off
-            currentSelectorThread.register(ssc, SelectionKey.OP_ACCEPT);
+            close();
         }
     }
 
-    public void close() {
-        System.err.println("AsyncServerSocketChannel:close "+closed);
-        if (!closed) throw new  RuntimeException();
-        closed=true;
-        if (ssc!=null) {
-            currentSelectorThread.deregister(ssc);
-            try {
-                ssc.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } finally {
-                ssc=null;
-            }
-        }
-        currentSelectorThread=null;
-        consumer.sendFailure(new ClosedChannelException()); // TODO check
-    }
-    
-    public boolean isOpened() {
-        return ssc!=null;
+    public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
+        closeEvent.addListener(listener);
+        return listener;
     }
 
-    //========================= backend inner classes
-    
-    /** wrapped in a separate class in order not to expose
-     * callback methods
-     */
-    class MyListener implements SocketEventListener{
-        
-        /** new client wants to connect */
-        @Override
-        public void accept(SelectionKey key) {
-            synchronized (AsyncServerSocketChannel.this) {
-                if (maxConn==0) {
-                    currentSelectorThread.register(ssc, 0);
-                    return;
-                }
-                maxConn--;
-            }
-            try {
-                SocketChannel sch = ssc.accept();
-                AsyncSocketChannel res=new AsyncSocketChannel(sch);
-                consumer.send(res);
-            } catch (IOException exc) {
-                consumer.sendFailure(exc);
-            }
+//    @Override
+    public synchronized void close() {
+        try {
+            channel.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        channel = null;
+        closeEvent.send(addr);
+    }
 
-        @Override
-        public void connect(SelectionKey key) {}
+    public boolean isClosed() {
+        return channel==null;
+    }
 
-        @Override
-        public void read(SelectionKey key) {}
+    public ServerSocketChannel getChannel() {
+        return channel;
+    }
 
-        @Override
-        public void write(SelectionKey key) {}
+    // ========================= ServerSocketEventListener backend
 
-        @Override
-        public void close() {
-            AsyncServerSocketChannel.this.close();
+    /** new client wants to connect */
+    @Override
+    public synchronized void onSelectorEvent(SelectionKey key) {
+        boolean allAccepted=tryAccept();
+        if (allAccepted) {
+            // return back to initial state, with no registration
+            key.cancel();
         }
     }
 }

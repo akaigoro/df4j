@@ -1,21 +1,23 @@
 package com.github.rfqu.df4j.nio2.echo;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
+import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
-public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
+public class EchoServer extends ActorVariable<SocketChannel>
+    implements Closeable
+{
 	public static final int defaultPort = 9993;
-    public static final int numconnections=100; // max simultaneous server connections
     public static final int BUF_SIZE = 128;
 
 	AtomicInteger ids=new AtomicInteger(); // for DEBUG    
@@ -37,14 +39,14 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
 
     protected synchronized void connClosed(ServerConnection connection) {
         connections.remove(connection.id);
-        //            System.out.println("connections="+connections.size());
         if (assch.isClosed()) {
             return;
         }
+        //            System.out.println("connections="+connections.size());
         assch.up(); // allow next accept
     }
 
-    @Override
+//    @Override
     public synchronized void close() {
         if (assch.isClosed()) {
             return;
@@ -53,15 +55,14 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
         for (ServerConnection connection: connections.values()) {
         	connection.close();
         }
-        connections=null;
     }
 
     //==================== actor's backend
-	
+
     /** AsyncServerSocketChannel sends new connection
      */
     @Override
-    protected synchronized void act(AsynchronousSocketChannel message) throws Exception {
+    protected synchronized void act(SocketChannel message) throws Exception {
         AsyncSocketChannel channel=new AsyncSocketChannel(message);
         ServerConnection connection = new ServerConnection(EchoServer.this, channel);
         connections.put(connection.id, connection);
@@ -73,7 +74,7 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
     public void sendFailure(Throwable exc) {
         exc.printStackTrace();
     }
-    
+
     //==================== main
     
     public static void main(String[] args) throws Exception {
@@ -89,7 +90,7 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
     	}
     	int maxConn;
     	if (args.length<2) {
-    		maxConn=numconnections;
+    		maxConn=1000;
     	} else {
     		maxConn = Integer.valueOf(args[1]);
     	}
