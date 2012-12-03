@@ -42,7 +42,7 @@ Hello World Example
 
 That's it. No additional object creation, like Properties and ActorSystem in Akka, or Fiber in JetLang.
 Well, that objects can be useful under some circumstances, but why force programmer to use them always?
-df4j is build around a few number of simple principles, and as long as programmer follows that principles,
+df4j is built around a few number of simple principles, and as long as programmer follows that principles,
 he can extend the library in any direction.
 
 Very often actor have to do some action when input stream of messages ended. In the above example,
@@ -106,11 +106,18 @@ makes a loop and holds one token - the state of the node instance). Below is an 
     }
 </pre>
 
+So, an Actor is a DataflowNode which:
+- has predefined variable StreamInput input
+- has Port interface shorted to that input
+- has act() method parameterized with the value extracted from that input
+
+All these features are convenient but do not give any radical improvements. Moreover, being an Actor does not prevent from adding more inputs, and indeed many Actors from the tests and examples are in fact DataflowNodes with several inputs and cannot be represented as JetLang or Akka actors.
+
 Dataflow Programming
 --------------------
 
 DataflowNode can contain multiple inputs and so can solve many tasks
-which are difficult to solve with Actors. 
+which are difficult to solve with classic Actors. 
 
 Let we have several worker actors, for example, representing computational nodes in cluster.
 The actors accept messages with assignments. Cluster users would like to have a single port
@@ -214,28 +221,27 @@ examples above: add them a constructor with super(null). Equivalently, extend th
 DataflowVariable or ActorVariable, respectively.
 
 When a no-arg constructor is used, this makes DataflowNode to take Executor from thread context.
-If no executor in the thread context found, new Executor created with fixed number of threads
-equal to the number of available processors. If another kind of context executor wanted, create it before
+If no executor in the thread context found, new default Executor is created (with fixed number of threads
+equal to the number of available processors). If another kind of context executor wanted, create it before
 instantiating any DataflowNode and set in context by DFContex.setCurrentExecutor().
 Take care for executor's threads to have references to that executor.
-Class ContextThreadFactory can be used for this purpose - see DFContext6.ContextThreadFactory.newFixedThreadPool(nThreads)
+Class ContextThreadFactory can be used for this purpose - see DFContext.newFixedThreadPool(nThreads)
 and other similar methods. See also the package df4j.ext for a number of specific executors. PrivateExecutor
 contains a separate thread to serve one actor - this allow that actor to block on monitors or input/outut operations.
 ImmediateExecutor, being set as a context executor, has effect of setting null executor for all nodes,
 and turns your program into sequential one, which can help in debugging.
 
-Thread context is an instance of class DFContext and is stored as a local variable. Pecularity of
-this class is that it is present both in df4j-core and df4j-nio2 projects in different version. This is because df4j-nio2
-requires context extended with java7 features, and including this context in df4j-core would break compatibility with java6.
-So when using df4j-nio2, be careful to keep its classes before df4j-core classes in class path.
+Thread context is an instance of class DFContext and is stored as a local variable. Besides it main purpose to store current executor, it can be used to keep any other values in a fasion similar to Threadlocal. Define and use static variables of type DFContext.ItemKey just as you used to use Threadlocals. The difference is that when spawning new Trhead, you should only care to pass DFContext, and all ItemKeys would be passed with it. 
  
 
 Version history
 ---------------
 
+v0.6 2012/12/03
+nio project basically finished
+
 v0.5.2 2012/11/27
 DFContext class created - a collection of all context resources, including current executor.
-
 
 v0.5.1 2012/11/17
 - class MessageQueue renamed to Dispatcher.
