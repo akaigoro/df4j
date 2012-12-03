@@ -59,7 +59,7 @@ public abstract class Actor<M> extends DataflowNode
      */
     @Override
     protected void act() {
-        M message=input.get();
+        M message=input.value;
         try {
             if (message==null) {
                 complete();

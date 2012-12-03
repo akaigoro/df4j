@@ -107,7 +107,15 @@ public class EchoServerGlobTest {
 
 //    @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
-    	testThroughput(1,1);
+        testThroughput(1,1);
+   }
+//    @Test
+    public void smokeTest1() throws Exception, IOException, InterruptedException {
+        testThroughput(1,2);
+   }
+//    @Test
+    public void smokeTest2() throws Exception, IOException, InterruptedException {
+        testThroughput(2,1);
    }
 
     @Test

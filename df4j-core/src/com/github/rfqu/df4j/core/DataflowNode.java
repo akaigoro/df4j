@@ -221,6 +221,40 @@ public abstract class DataflowNode extends Link {
     }
 
     /**
+     * A lock is turned on or off permanently 
+     */
+    public class Lockup extends Pin {
+        
+        public void on() {
+            boolean doFire;
+            lock.lock();
+            try {
+                doFire=turnOn();
+            } finally {
+                lock.unlock();
+            }
+            if (doFire) {
+                fire();
+            }
+        }
+
+        public void off() {
+            lock.lock();
+            try {
+               turnOff();
+            }
+            finally {
+              lock.unlock();
+            }
+        }
+        
+        @Override
+        protected void consume() {
+            // do nothing
+        }
+    }
+
+    /**
      * holds tokens without data 
      */
     public class Semafor extends Pin {
@@ -299,7 +333,7 @@ public abstract class DataflowNode extends Link {
      */
     public class Input<T> extends Pin implements StreamPort<T>, Iterable<T>{
         /** extracted token */
-        private T value=null;
+        T value=null;
         boolean pushback=false; // if true, do not consume
         private boolean closeRequested=false;
 
@@ -369,9 +403,13 @@ public abstract class DataflowNode extends Link {
             throw new IllegalStateException();
         }
                 
-
         public T get() {
             return value;
+        }
+
+        /** look ahead */
+        public T getNext() {
+            return value=poll();
         }
 
         /**

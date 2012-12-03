@@ -6,6 +6,4 @@ public interface SelectorEventListener {
     void onSelectorEvent(SelectionKey key);
     /** invoked by selector service when attemping to register on closed channel */
 //    void close();
-
-    void close();
 }

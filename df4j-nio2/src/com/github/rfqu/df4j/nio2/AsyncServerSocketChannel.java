@@ -11,15 +11,11 @@ package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.AcceptPendingException;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.nio.channels.NotYetBoundException;
-import java.nio.channels.ShutdownChannelGroupException;
-import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
