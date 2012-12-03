@@ -19,7 +19,7 @@ import java.nio.channels.SocketChannel;
 import com.github.rfqu.df4j.core.Callback;
 
 /**
- * Wrapper over {@link java.nio.channels.AsynchronousServerSocketChannel}.
+ * Wrapper over {@link java.nio.channels.ServerSocketChannel}.
  * Simplifies input-output, handling queues of accept requests.
  * @author rfqu
  *
