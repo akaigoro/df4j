@@ -7,21 +7,22 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DFContext.ItemKey;
+import com.github.rfqu.df4j.core.DoublyLinkedQueue;
+import com.github.rfqu.df4j.core.Task;
 
 public class SelectorThread implements Runnable, Executor {
+    DFContext context;
     private Thread thrd;
 	// The selector we'll be monitoring
 	private Selector selector;
-    private Lock lock = new ReentrantLock();
-    private boolean fired=false;
-	private LinkedList<Runnable> tasks=new LinkedList<Runnable>();
+    private boolean running=false;
+	private DoublyLinkedQueue<Task> tasks=new DoublyLinkedQueue<Task>();
 
     public SelectorThread(DFContext context) throws IOException {
+        this.context=context;
         // Create a new selector
         this.selector = Selector.open();
 		thrd=new Thread(this);
@@ -30,126 +31,93 @@ public class SelectorThread implements Runnable, Executor {
 		thrd.start(); // TODO kill suicide when not used
     }
 
-
     @Override
-    public void execute(Runnable command) {
-        boolean doFire;
-        lock.lock();
-        try {
-            tasks.add(command);
-            if (fired) {
-                doFire=false;
-            } else {
-                doFire=fired=true;
+    public void execute(final Runnable command) {
+        Task task = (command instanceof Task) ? ((Task) command):
+          new Task() {
+            @Override
+            public void run() {
+                command.run();
             }
-        } finally {
-          lock.unlock();
+        };
+        boolean doFire;
+        synchronized (this) {
+            tasks.add(task);
+            doFire = !running;
+            running = true;
         }
         if (doFire) {
             selector.wakeup();
         }
     }
 
-    void registerNow(SelectableChannel socket, int ops, Object att) throws ClosedChannelException {
+    synchronized Task nextTask() {
+        Task task=tasks.poll();
+        if (task==null) {
+            running=false;
+        }
+        return task;
+    }
+    
+    void registerNow(SelectableChannel socket, int ops, SelectorEventListener att) throws ClosedChannelException {
         SelectionKey key = socket.keyFor(selector);
-        if (key==null) {
+        if (key==null || !key.isValid()) {
             socket.register(selector, ops, att);
         } else {
-            key.interestOps(ops|key.interestOps());
+            int interestOps = key.interestOps();
+            key.interestOps(ops|interestOps);
         }
     }
 
-    void register(final SelectableChannel socket, final int ops, final Object att) {
-        final ClosedChannelException thr=new ClosedChannelException();
-        execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    registerNow(socket, ops, att);
-                } catch (ClosedChannelException e) {
-                    System.err.println("register:");
-                    thr.printStackTrace();
-                }
-            }
-        });
-    }
-    
     void interestOff(SelectableChannel socket, int noInterestOps) {
         SelectionKey key = socket.keyFor(selector);
         if (key==null) {
             return;
         }
         int interestOps = key.interestOps();
-        if (interestOps==noInterestOps) {
-            key.cancel();
-        } else {
-            key.interestOps(interestOps & ~noInterestOps);
-        }
+        key.interestOps(interestOps & ~noInterestOps);
     }
-
     
 	public void run() {
+	    DFContext.setCurrentContext(context);
 		while (selector.isOpen() && !Thread.interrupted()) {
-			try {
-                // dances with tambourine
-			    synchronized(selector) {
-			    }
-			    
-			    for (;;) {
-                    Runnable task;
-			        lock.lock();
-			        try {
-			            task=tasks.poll();
-			            if (task==null) {
-			                fired=false;
-			                break;
-			            }
-			        } finally {
-			          lock.unlock();
-			        }
-			        task.run();
-			    }
-				selector.select();
-                synchronized(selector) {
+            for (;;) {
+                Runnable task=nextTask();
+                if (task==null) {
+                    break;
+                }
+                task.run();
+            }
+
+            try {
+                if (selector.select()==0) {
+                    continue;
+                }
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            // Iterate over the set of keys for which events are available
+            Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+            while (selectedKeys.hasNext()) {
+                SelectionKey key = selectedKeys.next();
+                selectedKeys.remove();
+
+                if (!key.isValid()) {
+                    continue;
                 }
 
-				// Iterate over the set of keys for which events are available
-				Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
-				while (selectedKeys.hasNext()) {
-					SelectionKey key = selectedKeys.next();
-					selectedKeys.remove();
-
-					if (!key.isValid()) {
-						continue;
-					}
-
-					Object listener=key.attachment();
-					if (listener==null) {
-				        System.err.println("SelectorThread: listener=null for "+key);
-				        continue;
-					}
-					// Pass event to the listener
-                    SelectorEventListener sselistener=(SelectorEventListener) listener;
-                    if (!key.isValid()) {
-                        System.err.println("key spoiled");
-                    }
-                    try {
-                        sselistener.onSelectorEvent(key);
-                    } catch (Exception e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+                // Pass event to the listener
+                ((SelectorEventListener)key.attachment()).onSelectorEvent(key);
+            }
 		}
 	}
 	
     //--------------------- context
     
-    private static ItemKey<SelectorThread> selectorKey
-        =DFContext.getCurrentContext().new ItemKey<SelectorThread>()
+    private static ItemKey<SelectorThread> selectorThreadKey
+        = DFContext.getCurrentContext().new ItemKey<SelectorThread>()
     {
         @Override
         protected SelectorThread initialValue(DFContext context) {
@@ -165,6 +133,6 @@ public class SelectorThread implements Runnable, Executor {
     };
     
     public static SelectorThread getCurrentSelectorThread() {
-        return selectorKey.get();
+        return selectorThreadKey.get();
     }
 }

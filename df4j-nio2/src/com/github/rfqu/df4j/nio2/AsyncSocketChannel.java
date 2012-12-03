@@ -14,6 +14,7 @@ package com.github.rfqu.df4j.nio2;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -55,6 +56,7 @@ public class AsyncSocketChannel extends Link
     /**
      * for server-side socket
      * @param assch
+     * @throws IOException 
      */
     public AsyncSocketChannel(AsynchronousSocketChannel assch) {
         init(assch);
@@ -84,6 +86,10 @@ public class AsyncSocketChannel extends Link
         channel.connect(addr, channel, this);
     }
 
+    public void setTcpNoDelay(boolean on) throws IOException {
+        channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
+    }
+    
     public <R extends Callback<AsynchronousSocketChannel>> R addConnListener(R listener) {
     	connEvent.addListener(listener);
         return listener;
@@ -155,7 +161,7 @@ public class AsyncSocketChannel extends Link
      */
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        init(channel);           
+        init(channel);
     }
 
     /**

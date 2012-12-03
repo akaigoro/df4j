@@ -49,7 +49,7 @@ public class Request<T extends Request<T, R>, R> extends Link {
     /** sets the result and forwards to the destination
      * @param result
      */
-    protected void reply(R result) {
+    public void reply(R result) {
         this.result=result;
         reply();
     }

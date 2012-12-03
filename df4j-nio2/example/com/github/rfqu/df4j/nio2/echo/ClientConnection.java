@@ -30,8 +30,9 @@ class ClientConnection
     AtomicLong rounds;
     Random rand=new Random();
     long sum=0;
-    long count=0;
-    int counterRun=0;
+    int count1startWrite=0;
+    int count2endWrite=0;
+    int count2endRead=0;
 
     public ClientConnection(EchoServerGlobTest echoServerTest, InetSocketAddress addr, int rounds) throws IOException {
         this.echoServerTest = echoServerTest;
@@ -56,7 +57,7 @@ class ClientConnection
 	IOHandler<CliRequest> startWrite = new IOHandler<CliRequest>() {
         @Override
 		public void completed(int result, CliRequest request) {// throws Exception {
-            counterRun++;
+            count1startWrite++;
             request.start = System.currentTimeMillis();
             request.data = rand.nextInt();
             ByteBuffer buffer = request.getBuffer();
@@ -69,6 +70,7 @@ class ClientConnection
     IOHandler<CliRequest> endWrite = new IOHandler<CliRequest>() {
         @Override
         public void completed(int result, CliRequest request) {//throws ClosedChannelException {
+            count2endWrite++;
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
             channel.read(request, endRead, timeout);
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
@@ -84,17 +86,17 @@ class ClientConnection
     IOHandler<CliRequest> endRead = new IOHandler<CliRequest>() {
         @Override
         public void completed(int result, CliRequest request) {
+            count2endRead++;
 //            System.err.println("  client Request read ended; id="+id+" rid="+request.rid+" count="+count);
             // read client's message
             request.checkData();
             long currentTime = System.currentTimeMillis();
             sum+=(currentTime-request.start);
-            count++;
             rounds.decrementAndGet();
             if (rounds.get()==0) {
 //                System.out.println("SocketIORequest finished id="+id);
                 channel.close();
-                DoubleValue avg = new DoubleValue(((double)sum)/count);
+                DoubleValue avg = new DoubleValue(((double)sum)/count2endRead);
                 echoServerTest.clientFinished(ClientConnection.this, avg);
 //                System.out.println("clients="+echoServerTest.clients.size());
                 return;
