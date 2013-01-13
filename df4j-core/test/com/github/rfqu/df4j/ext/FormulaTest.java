@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.CallbackPromise;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.CallbackFuture;
@@ -49,7 +50,7 @@ public class FormulaTest {
         // instantiate desired network class:
         Square sq=new Square(); 
         // push argument values to inputs:
-        sq.send(2.0); 
+        sq.post(2.0); 
         // create a future to pull the result from the network
         CallbackFuture<Double> future = new CallbackFuture<Double>(sq);
        // network starts after both arguments and result consumers are defined
@@ -67,7 +68,7 @@ public class FormulaTest {
     @Test
     public void t011() throws InterruptedException {
         Sqrt sq=new Sqrt(); 
-        sq.send(-2.0); // square root from negative number would cause an error
+        sq.post(-2.0); // square root from negative number would cause an error
         try {
             // that error manifests itself when the result is pulled from the network
             CallbackFuture.getFrom(sq);
@@ -86,7 +87,7 @@ public class FormulaTest {
         Sum sum=new Sum();
         sq.addListener(sum.p1);
 
-        sq.send(-2.0); // square root from negative number would cause an error
+        sq.post(-2.0); // square root from negative number would cause an error
         //sum.p2.send(1.0);
 
         try {
@@ -104,8 +105,8 @@ public class FormulaTest {
     @Test
     public void t02() throws InterruptedException, ExecutionException {
 		Mult node=new Mult();	
-    	node.p1.send(2.0);
-    	node.p2.send(3.0);
+    	node.p1.post(2.0);
+    	node.p2.post(3.0);
         assertEquals(6, CallbackFuture.getFrom(node).intValue());
     }
 
@@ -125,8 +126,8 @@ public class FormulaTest {
         b.addListener(sum.p2);
         sum.addListener(sq);         // sum -> sqrt
         // send arguments
-        a.send(3.0);
-        b.send(4.0);
+        a.post(3.0);
+        b.post(4.0);
         // wait for the result
         double res = CallbackFuture.getFrom(sq);
         assertEquals(5, res, delta);
@@ -134,12 +135,12 @@ public class FormulaTest {
 
     /**
      * Demonstrates how complex network with single result
-     * can be encapsulated in a class which extends Promise.
+     * can be encapsulated in a class which extends {@link Promise}.
      * 
      * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
-    static class Discr extends Promise<Double> {
+    static class Discr extends CallbackPromise<Double> {
         // internal nodes
         private Mult mu2=new Mult();	
         private Diff diff = new Diff();
@@ -157,7 +158,7 @@ public class FormulaTest {
 	
     /**
      * Demonstrates how complex network with 2 results
-     * can be encapsulated in a class with 2 Promise members.
+     * can be encapsulated in a class with 2 {@link Promise} members.
      * 
      * compute roots of a quadratic equation
      *     D  = b^2-4*a*c 
@@ -173,10 +174,10 @@ public class FormulaTest {
 	    private Sum sum = new Sum();
 	    private Diff diff=new Diff();
         // inputs
-        Promise<Double> a=new Promise<Double>(); // a and b used multiple times, require Promise
-        Promise<Double> b=new Promise<Double>();
+	    CallbackPromise<Double> a=new CallbackPromise<Double>(); // a and b used multiple times, require Promise
+	    CallbackPromise<Double> b=new CallbackPromise<Double>();
 		Port<Double> c=d.c; // c is used only once
-		// outputs
+		// results
 		Div x1 = new Div();
 		Div x2 = new Div();
 		// connections
@@ -199,9 +200,9 @@ public class FormulaTest {
     @Test
     public void t04() throws InterruptedException, ExecutionException {
         QuadEq node = new QuadEq();
-        node.a.send(2.0);
-        node.b.send(3.0);
-        node.c.send(-14.0);
+        node.a.post(2.0);
+        node.b.post(3.0);
+        node.c.post(-14.0);
 
         assertEquals(2.0, CallbackFuture.getFrom(node.x1), delta);
         assertEquals(-3.5, CallbackFuture.getFrom(node.x2), delta);
@@ -213,9 +214,9 @@ public class FormulaTest {
     @Test
     public void t041() throws InterruptedException, ExecutionException {
         QuadEq node = new QuadEq();
-        node.a.send(2.0);
-        node.b.send(3.0);
-        node.c.send(14.0);
+        node.a.post(2.0);
+        node.b.post(3.0);
+        node.c.post(14.0);
 
         try {
             CallbackFuture.getFrom(node.x1).intValue();
@@ -275,16 +276,16 @@ public class FormulaTest {
      */
     static class MulByConst1 extends Mult implements Callback<Double>{
         public MulByConst1(Double c) {
-            super.p1.send(c);
+            super.p1.post(c);
         }
         @Override
-        public void send(Double value) {
-            super.p2.send(value);
+        public void post(Double value) {
+            super.p2.post(value);
         }
 
         @Override
-        public void sendFailure(Throwable exc) {
-            super.p2.sendFailure(exc);
+        public void postFailure(Throwable exc) {
+            super.p2.postFailure(exc);
         }
     }
     

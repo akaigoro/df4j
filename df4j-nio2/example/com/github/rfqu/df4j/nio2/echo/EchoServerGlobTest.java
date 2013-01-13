@@ -38,7 +38,7 @@ public class EchoServerGlobTest {
     }
 
 	public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
-		sink.send(avg);
+		sink.post(avg);
 		removeClientConnection(clientConnection);
 	}
 
@@ -104,7 +104,7 @@ public class EchoServerGlobTest {
         
         @Override
         protected void complete() throws Exception {
-            avg.send(sum/counter);
+            avg.post(sum/counter);
         }
 
     }

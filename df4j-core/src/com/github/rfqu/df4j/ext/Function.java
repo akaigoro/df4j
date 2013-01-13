@@ -14,14 +14,14 @@ import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.EventSource;
+import com.github.rfqu.df4j.core.Promise;
 
 /**
  * abstract node with multiple inputs, single output and exception handling
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends DataflowNode implements EventSource<R, Callback<R>> {
+public abstract class Function<R> extends DataflowNode implements Promise<R> {
     protected final Demand<R> res=new Demand<R>();
 
     public Function(Executor executor) {
@@ -53,11 +53,11 @@ public abstract class Function<R> extends DataflowNode implements EventSource<R,
     abstract protected R eval();
     
     protected void act() {
-        res.send(eval());
+        res.post(eval());
     }
 
     protected void handleException(Throwable exc) {
-        res.sendFailure(exc);
+        res.postFailure(exc);
     }
     
    /**
@@ -69,8 +69,8 @@ public abstract class Function<R> extends DataflowNode implements EventSource<R,
        protected CallbackInput<T> input=new CallbackInput<T>();
 
        @Override
-       public void send(T value) {
-           input.send(value);
+       public void post(T value) {
+           input.post(value);
        }
 
        @Override

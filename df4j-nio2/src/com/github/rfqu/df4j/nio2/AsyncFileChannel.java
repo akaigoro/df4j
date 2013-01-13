@@ -47,7 +47,7 @@ public class AsyncFileChannel<T extends FileIORequest<T>>
     }
 
     @Override
-    public void send(T request) { 
+    public void post(T request) { 
 		if (closed) {
 			request.failed(new ClosedChannelException());
 			return;

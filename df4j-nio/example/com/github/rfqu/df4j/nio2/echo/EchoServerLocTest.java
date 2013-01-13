@@ -13,11 +13,15 @@ public class EchoServerLocTest {
     static PrintStream out=System.out;
     static PrintStream err=System.err;
 
-    EchoServerGlobTest t=new EchoServerGlobTest();
-	EchoServer es;
-	
+    EchoServer es;
+    EchoServerGlobTest t;
+    
+    public EchoServerLocTest(EchoServerGlobTest gt) {
+        t=gt;
+    }
+
     public void localTest(int maxConn, int numclients, int rounds) throws Exception  {
-        es=new EchoServer(t.iaddr, maxConn);
+        es=new EchoServer(t.asyncChannelFactory, t.iaddr, maxConn);
         Thread.sleep(100);
         t.testThroughput(numclients, rounds);
         es.close(); // start closing process
@@ -50,24 +54,22 @@ public class EchoServerLocTest {
     	localTest(3000, 5000, 10);
    }
 
-    public static void main(String[] args) throws Exception {
-    	String host;
-    	if (args.length<1) {
-//    		System.out.println("Usage: EchoServerTest host port");
-//    		System.exit(-1);
-    		host="localhost";
-    	} else {
-    		host = args[0];
-    	}
-    	Integer port;
-    	if (args.length<2) {
-    		port=EchoServer.defaultPort;
-    	} else {
-    	    port = Integer.valueOf(args[1]);
-    	}
-    	EchoServerLocTest t=new EchoServerLocTest();
-		t.t.iaddr = new InetSocketAddress(host, port);
-        t.veryHeavyTest();
+    public void run(String[] args) throws Exception {
+        String host;
+        if (args.length<1) {
+//          System.out.println("Usage: EchoServerTest host port");
+//          System.exit(-1);
+            host="localhost";
+        } else {
+            host = args[0];
+        }
+        Integer port;
+        if (args.length<2) {
+            port=EchoServer.defaultPort;
+        } else {
+            port = Integer.valueOf(args[1]);
+        }
+        t.iaddr = new InetSocketAddress(host, port);
+        veryHeavyTest();
     }
-
 }

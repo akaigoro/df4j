@@ -15,7 +15,7 @@ public class MessageSink<T> extends CountDownLatch implements Port<T> {
     }
 
     @Override
-    public void send(T message) {
+    public void post(T message) {
         super.countDown();
     }
 

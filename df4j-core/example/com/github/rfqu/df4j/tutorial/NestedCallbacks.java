@@ -12,6 +12,7 @@ import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Timer;
+import com.github.rfqu.df4j.ext.ActorLQ;
 
 /** Demonstrates solution to the StackOverflow question 
  * http://stackoverflow.com/questions/10695152/java-pattern-for-nested-callbacks/10695933
@@ -19,7 +20,7 @@ import com.github.rfqu.df4j.core.Timer;
  *  - Request is a standard df4j class, not interface.
  *  - Response is not an interface, but a type parameter in Request, and 
  *    response itself id returned inside the original request
- *  - Callback is standard df4j class, so method names differ
+ *  - Callback is standard df4j interface, so method names differ
  *  - Callback is used in Client class only, services exchange with
  *    instances of class Response
  *    
@@ -52,104 +53,36 @@ public class NestedCallbacks {
 
     /** Requests carry some data and return address
      */
-    static class RequestA extends Request<RequestA, String> {
+    static class RequestS extends Request<RequestS, Integer> {
+        private StringBuilder log;
+        
+        public RequestS(String value) {
+            this.log = new StringBuilder(value);
+            log(value);
+        }
+        
+        public RequestS(StringBuilder log) {
+            this.log = log;
+        }
+        
+        public void addLog(String value) {
+            log.append(value);
+            log(log.toString());
+        }
 
-        public RequestA(Port<RequestA> callback, String value) {
-            super(callback);
-            this.result = value;
+        public StringBuilder getLog() {
+            return log;
         }
     }
 
-    static class RequestB extends Request<RequestB, String> {
-
-        public RequestB(Port<RequestB> callback, String value) {
-            super(callback);
-            this.result = value;
-        }
-    }
-
-    /** to imitate long work, class Timer is used, which echoes
-     * a message over given period of time.
+    /**
+     * demonstrates how to handle long computations asynchronously:
+     *  - extract the "tail" of long procedure into a post method
+     * of a separate object which implements Port
+     *  - set that port as listener in the request  
+     *  - send request to service. The service should just call request.post(result).
      */
-    class LongService extends Actor<RequestB> {
-        Semafor running = new Semafor(); // closed when long request is executed
-        private int id;
-
-        public LongService(int id) {
-            this.id = id;
-            running.up(); // allow reaction to one incoming message
-        }
-
-        @Override
-        protected void act(RequestB requestB) throws Exception {
-            Timer timer = Timer.getCurrentTimer();
-            requestB.setResult(requestB.getResult() + (", <LS:" + id));
-            log(requestB.getResult());
-            int delay = rand.nextInt(400) + 200; // milliseconds
-            timer.schedule(callbackB, requestB, delay);
-        }
-
-        Port<RequestB> callbackB = new Port<RequestB>() {
-            @Override
-            public void send(RequestB requestB) {
-                requestB.setResult(requestB.getResult() + ", LS:" + id + ">");
-                log(requestB.getResult());
-                requestB.reply();
-                running.up(); // allow reaction to another incoming message
-            }
-        };
-    }
-
-    class Service extends Actor<RequestA> {
-        Semafor running = new Semafor(); // closed when long request is executed
-        private int id;
-        RequestA requestA;
-
-        public Service(int id) {
-            this.id = id;
-            running.up();
-        }
-
-        @Override
-        protected void act(RequestA requestA) throws Exception {
-            this.requestA = requestA;
-            RequestB requestB = new RequestB(callbackB1, requestA.getResult() + ", <Service:" + id);
-            log(requestB.getResult());
-            randomLongService().send(requestB);
-        }
-
-        Port<RequestB> callbackB1 = new Port<RequestB>() {
-            @Override
-            public void send(RequestB requestB) {
-                requestB.setResult(requestB.getResult() + ", callbackB1");
-                log(requestB.getResult());
-                requestB.setReplyTo(callbackB2);
-                randomLongService().send(requestB);
-            }
-        };
-
-        Port<RequestB> callbackB2 = new Port<RequestB>() {
-            @Override
-            public void send(RequestB requestB) {
-                requestB.setResult(requestB.getResult() + ", callbackB2");
-                log(requestB.getResult());
-                requestB.setReplyTo(callbackB3);
-                randomLongService().send(requestB);
-            }
-        };
-
-        Port<RequestB> callbackB3 = new Port<RequestB>() {
-            @Override
-            public void send(RequestB requestB) {
-                requestA.setResult(requestB.getResult() + ", Service:" + id + ">");
-                log(requestA.getResult());
-                requestA.reply();
-                running.up(); // last callback opens the semaphore
-            }
-        };
-    }
-
-    class Client implements Callback<String> {
+    class Client implements Callback<Integer> {
         int id;
 
         public Client(int id) {
@@ -157,15 +90,16 @@ public class NestedCallbacks {
         }
 
         void start() {
-            RequestA requestA = new RequestA(callbackA, "<Client:" + id);
-            log(requestA.getResult());
-            randomService().send(requestA);
+            RequestS requestA = new RequestS("<Client:" + id);
+            requestA.setListener(finish);
+            randomService().post(requestA);
         }
 
-        Port<RequestA> callbackA = new Port<RequestA>() {
+        Port<RequestS> finish = new Port<RequestS>() {
 
             @Override
-            public void send(RequestA responseA) {
+            public void post(RequestS responseA) {
+                responseA.addLog(", Client:" + id+">");
                 responseA.toCallback(Client.this);
                 sink.countDown();
             }
@@ -175,14 +109,125 @@ public class NestedCallbacks {
         // implements Callback
         
         @Override
-        public void send(String m) {
-            log(m + ", Client:" + id + ">");
+        public void post(Integer m) {
+            log("Client:" + id+" time:"+m.toString());
         }
 
         @Override
-        public void sendFailure(Throwable exc) {
-            log("failed:" + exc + ", Client:" + id);
+        public void postFailure(Throwable exc) {
+            log("Client:" + id+" failed:" + exc);
         }
+    }
+
+    /** first layer service
+     * To process input request, it sends 2 sequential requests to LongService
+     */
+    class Service extends ActorLQ<RequestS> {
+        Semafor running = new Semafor(); // closed when long request is executed
+        private int id;
+        RequestS requestA;
+        long start;
+
+        public Service(int id) {
+            this.id = id;
+            running.up();
+        }
+
+        @Override
+        protected void act(RequestS requestA) throws Exception {
+            this.requestA = requestA;
+            requestA.addLog(", <Service:" + id);
+            RequestS requestB1 = new RequestS(requestA.getLog());
+            requestB1.setListener(callbackB1);
+            start=System.currentTimeMillis();
+            randomLongService().post(requestB1);
+        }
+
+        Port<RequestS> callbackB1 = new Port<RequestS>() {
+            @Override
+            public void post(RequestS requestB1) {
+                RequestS requestB2 = new RequestS(requestB1.getLog());
+                requestB2.addLog(", Service:" + id);
+                requestB2.setListener(callbackB2);
+                randomLongService().post(requestB2);
+            }
+        };
+
+        Port<RequestS> callbackB2 = new Port<RequestS>() {
+            @Override
+            public void post(RequestS requestB2) {
+                requestB2.addLog(", Service:" + id + ">");
+                requestA.post((int)(System.currentTimeMillis()-start));
+                running.up(); // last callback opens the semaphore
+            }
+        };
+    }
+
+    /** to imitate long work, class Timer is used, which echoes
+     * a message over given period of time.
+     */
+    class LongService extends Actor<RequestS> {
+        Semafor running = new Semafor(); // closed when long request is executed
+        private int id;
+        int delay;
+        
+        public LongService(int id) {
+            this.id = id;
+            running.up(); // allow reaction to one incoming message
+        }
+
+        @Override
+        protected void act(RequestS requestB) throws Exception {
+            requestB.addLog(", <LS:" + id);
+            Timer timer = Timer.getCurrentTimer();
+            delay = rand.nextInt(400) + 200; // milliseconds
+            timer.schedule(callbackB, requestB, delay);
+        }
+
+        Port<RequestS> callbackB = new Port<RequestS>() {
+            @Override
+            public void post(RequestS requestB) {
+                requestB.addLog(", LS:" + id + ">");
+                requestB.post(delay);
+                running.up(); // allow reaction to another incoming message
+            }
+        };
+    }
+
+//////////// tests
+    
+    @Test
+    public void lsTest() throws Exception, IOException, InterruptedException {
+        final CountDownLatch sink = new CountDownLatch(1);
+        Port<RequestS> callbackB1 = new Port<RequestS>() {
+            @Override
+            public void post(RequestS requestB) {
+                requestB.addLog(", lsTest>");
+                sink.countDown();
+            }
+        };
+        RequestS requestB = new RequestS("<lsTest ");
+        requestB.setListener(callbackB1);
+        randomLongService().post(requestB);
+        sink.await();
+        log("time="+requestB.getResult());
+    }
+    
+    @Test
+    public void sTest() throws Exception, IOException, InterruptedException {
+        final CountDownLatch sink = new CountDownLatch(1);
+        Port<RequestS> callbackB1 = new Port<RequestS>() {
+            @Override
+            public void post(RequestS requestB) {
+                requestB.addLog(", sTest>");
+                sink.countDown();
+            }
+        };
+        RequestS requestB = new RequestS("<sTest ");
+        requestB.setListener(callbackB1);
+        randomService().post(requestB);
+        sink.await();
+        log("time="+requestB.getResult());
     }
 
     @Test

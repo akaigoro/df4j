@@ -12,7 +12,6 @@ package com.github.rfqu.df4j.ext;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.DoublyLinkedQueue;
-import com.github.rfqu.df4j.core.EventSource;
 
 /**
  * In multithreaded programming, often several identical worker threads are fed with
@@ -20,10 +19,9 @@ import com.github.rfqu.df4j.core.EventSource;
  * directly, as actors may not be blocked (which happens when the queue is empty). 
  * This sample code shows how to build a demultiplexer to feed several actors with single queue.
  * Actors work in parallel. 
- * The actor wanting to be fed sends itself to the actors port with MessageQueue.listen(this).
+ * The actor wanting to be fed sends itself to the actors port with {@link #listen(Actor<M>)}.
  */
 public class Dispatcher<M> extends ActorVariable<M>
-    implements EventSource<M, Actor<M>>
 {
     private final StreamInput<Actor<M>> actors=createActorQueue();
     
@@ -39,14 +37,12 @@ public class Dispatcher<M> extends ActorVariable<M>
      * The close signal is passed to all actors.
      * @param actor
      */
-    @Override
-    public EventSource<M, Actor<M>> addListener(Actor<M> actor) {
+    public void listen(Actor<M> actor) {
         if (isClosed()) {
             actor.close();
         } else {
-            actors.send(actor);
+            actors.post(actor);
         }
-        return this;
     }
 
     @Override
@@ -57,7 +53,7 @@ public class Dispatcher<M> extends ActorVariable<M>
         if (actors.get()==null) {
             throw new NullPointerException();
         }
-        actors.get().send(message);
+        actors.get().post(message);
     }
 
     @Override

@@ -18,7 +18,8 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.Promise;
+import com.github.rfqu.df4j.core.CallbackPromise;
+import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 
 /**
  * Wrapper over {@link AsynchronousServerSocketChannel}.
@@ -42,7 +43,7 @@ import com.github.rfqu.df4j.core.Promise;
  * 
  * </code></pre>
  */
-public class AsyncServerSocketChannel
+public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
   implements CompletionHandler<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>
 {
     private SocketAddress addr;
@@ -50,9 +51,9 @@ public class AsyncServerSocketChannel
     /** how many connections may be accepted */
     private int maxConn = 0;
     private AsynchronousServerSocketChannel channel;
-    private Promise<SocketAddress> closeEvent=new Promise<SocketAddress>();
+    private CallbackPromise<SocketAddress> closeEvent=new CallbackPromise<SocketAddress>();
     
-    public AsyncServerSocketChannel(SocketAddress addr, Callback<AsynchronousSocketChannel> acceptor)
+    public AsyncServerSocketChannel2(SocketAddress addr, Callback<AsynchronousSocketChannel> acceptor)
                 throws IOException
     {
         if (addr==null) {
@@ -113,17 +114,13 @@ public class AsyncServerSocketChannel
             e.printStackTrace();
         }
         channel = null;
-        closeEvent.send(addr);
+        closeEvent.post(addr);
     }
 
     public boolean isClosed() {
         return channel==null;
     }
 
-    public AsynchronousServerSocketChannel getChannel() {
-        return channel;
-    }
- 
     //====================== CompletionHandler's backend
     
 	/** new client connected */
@@ -135,13 +132,13 @@ public class AsyncServerSocketChannel
 	            channel.accept(acceptor, this);
 	        }        
 	    }
-	    acceptor.send(result);
+	    acceptor.post(result);
 	}
 
 	/** new client connection failed */
 	@Override
 	public void failed(Throwable exc, Callback<AsynchronousSocketChannel> acceptor) {
-	    acceptor.sendFailure(exc);
+	    acceptor.postFailure(exc);
 		if (exc instanceof AsynchronousCloseException) {
 			// channel closed.
 			close();

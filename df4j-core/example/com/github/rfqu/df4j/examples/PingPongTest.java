@@ -98,15 +98,15 @@ public class PingPongTest {
          */
         protected void act(Token token) throws Exception {
             if (token.getReplyTo() == null) {
-                token.setReplyTo(this);
-                pong.send(token);
+                token.setListener(this);
+                pong.post(token);
             } else {
                 int nextVal = token.hops_remained - 1;
                 if (nextVal == 0) {
-                    sink.send(token);
+                    sink.post(token);
                 } else {
                     token.hops_remained = nextVal;
-                    pong.send(token);
+                    pong.post(token);
                 }
             }
         }
@@ -132,10 +132,10 @@ public class PingPongTest {
         protected void act(Token token) throws Exception {
             int nextVal = token.hops_remained - 1;
             if (nextVal == 0) {
-                sink.send(token);
+                sink.post(token);
             } else {
                 token.hops_remained = nextVal;
-                token.reply(null);
+                token.post(null);
             }
         }
     }
@@ -158,7 +158,7 @@ public class PingPongTest {
         }
         // create tokens, send them to randomly chosen actors
         for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].send(new Token(TIME_TO_LIVE));
+            pings[rand.nextInt(pings.length)].post(new Token(TIME_TO_LIVE));
         }
 
         // wait for all packets to die.

@@ -8,7 +8,7 @@ public abstract class IOHandler<T extends IORequest<T>>
   implements Port<T>, IOCallback<T>
 {
     @Override
-    public final void send(T request) {
+    public final void post(T request) {
         request.toIOCallback(this);
     }
 

@@ -10,8 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio2.AsyncServerSocketChannel2;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel2;
 
 public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
 	public static final int defaultPort = 9993;
@@ -20,14 +20,14 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
 
 	AtomicInteger ids=new AtomicInteger(); // for DEBUG    
     SocketAddress addr;
-    AsyncServerSocketChannel assch;
+    AsyncServerSocketChannel2 assch;
     /** active connections */
     HashMap<Integer, ServerConnection> connections=new HashMap<Integer, ServerConnection>();
     /** listeners to the closing event */
         
     public EchoServer(SocketAddress addr, int maxConn) throws IOException {
         this.addr=addr;
-        assch=new AsyncServerSocketChannel(addr, this);
+        assch=new AsyncServerSocketChannel2(addr, this);
         assch.up(maxConn);
     }
 
@@ -62,7 +62,7 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
      */
     @Override
     protected synchronized void act(AsynchronousSocketChannel message) throws Exception {
-        AsyncSocketChannel channel=new AsyncSocketChannel(message);
+        AsyncSocketChannel2 channel=new AsyncSocketChannel2(message);
         ServerConnection connection = new ServerConnection(EchoServer.this, channel);
         connections.put(connection.id, connection);
     }
@@ -70,7 +70,7 @@ public class EchoServer extends ActorVariable<AsynchronousSocketChannel>  {
     /** AsyncServerSocketChannel sends failure
      */
     @Override
-    public void sendFailure(Throwable exc) {
+    public void postFailure(Throwable exc) {
         exc.printStackTrace();
     }
     

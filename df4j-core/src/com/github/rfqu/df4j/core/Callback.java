@@ -18,5 +18,5 @@ public interface Callback<M> extends Port<M>{
     /**
      * signals failure 
      */
-    public void sendFailure(Throwable exc);
+    public void postFailure(Throwable exc);
 }

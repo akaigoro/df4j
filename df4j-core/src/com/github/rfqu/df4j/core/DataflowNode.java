@@ -42,7 +42,7 @@ public abstract class DataflowNode extends Link {
         task=new ActorTask();
     }
 
-    public  void sendFailure(Throwable exc) {
+    public  void postFailure(Throwable exc) {
         boolean doFire;       
         lock.lock();
         try {
@@ -338,7 +338,7 @@ public abstract class DataflowNode extends Link {
         private boolean closeRequested=false;
 
         @Override
-        public void send(T token) {
+        public void post(T token) {
             if (token==null) {
                 throw new NullPointerException();
             }
@@ -495,8 +495,8 @@ public abstract class DataflowNode extends Link {
      */
     public class CallbackInput<T> extends Input<T> implements Callback<T> {
         @Override
-        public void sendFailure(Throwable exc) {
-            DataflowNode.this.sendFailure(exc);
+        public void postFailure(Throwable exc) {
+            DataflowNode.this.postFailure(exc);
         }
     }
         
@@ -526,22 +526,21 @@ public abstract class DataflowNode extends Link {
     }
 
     /**
-     * 
      * This pin carries demand(s) of the result.
      * Demand is two-fold: it is a pin, so firing possible only if
      * someone demanded the execution, and it holds consumer's port where
      * the result should be sent. 
      * @param <R>  type of result
      */
-    public class Demand<R> extends Pin implements EventSource<R, Callback<R>>, Callback<R> {
-        private Promise<R> listeners=new Promise<R>();
+    public class Demand<R> extends Pin implements Promise<R>, Callback<R> {
+        private CallbackPromise<R> listeners=new CallbackPromise<R>();
 
         /** indicates a demand
          * @param sink Port to send the result
          * @return 
          */
         @Override
-        public EventSource<R, Callback<R>> addListener(Callback<R> sink) {
+        public Promise<R> addListener(Callback<R> sink) {
         	boolean doFire;
             lock.lock();
             try {
@@ -559,13 +558,13 @@ public abstract class DataflowNode extends Link {
     	/** satisfy demand(s)
     	 */
     	@Override
-		public void send(R m) {
-			listeners.send(m);
+		public void post(R m) {
+			listeners.post(m);
 		}
 
         @Override
-        public void sendFailure(Throwable exc) {
-            listeners.sendFailure(exc);
+        public void postFailure(Throwable exc) {
+            listeners.postFailure(exc);
         }
 
         /**

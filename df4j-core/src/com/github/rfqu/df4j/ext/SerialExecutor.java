@@ -39,9 +39,9 @@ public class SerialExecutor extends Actor<Link> implements Executor {
 	@Override
 	public void execute(Runnable command) {
 		if (command instanceof Task) {
-			send((Task) command);
+			post((Task) command);
 		} else {
-			send(new TaskWrapper(command));
+			post(new TaskWrapper(command));
 		}
 	}
 

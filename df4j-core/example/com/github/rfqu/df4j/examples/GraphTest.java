@@ -95,11 +95,11 @@ public class GraphTest {
         protected void act(IntValue token) throws Exception {
             int nextVal = token.value - 1;
             if (nextVal == 0) {
-                sink.send(token);
+                sink.post(token);
             } else {
                 token.value = nextVal;
                 NodeActor nextNode = nodes[rand.nextInt(nodes.length)];
-                nextNode.send(token);
+                nextNode.post(token);
             }
         }
     }
@@ -121,7 +121,7 @@ public class GraphTest {
         // send packets to random nodes
         for (int k = 0; k < NR_REQUESTS; k++) {
             Actor<IntValue> nextInbox = nodes[rand.nextInt(nodes.length)];
-            nextInbox.send(new IntValue(TIME_TO_LIVE));
+            nextInbox.post(new IntValue(TIME_TO_LIVE));
         }
 
         // wait for all packets to die.

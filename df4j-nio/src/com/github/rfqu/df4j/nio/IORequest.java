@@ -13,9 +13,7 @@ package com.github.rfqu.df4j.nio;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 
 /**
@@ -23,9 +21,6 @@ import com.github.rfqu.df4j.core.Request;
  * @param <T> actual type of the request, after subclassing.
  */
 public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
-    public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
-
-    public int rid=ids.addAndGet(1);
     protected ByteBuffer buffer;
     private boolean inRead;
     private boolean inTrans=false;
@@ -34,8 +29,8 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
 		this.buffer = buffer;
 	}
 
-    public void prepareRead(Port<T> replyTo) {
-        super.prepare(replyTo);
+    public void prepareRead() {
+        super.reset();
         this.inRead=true;
         buffer.clear();
         if (buffer.remaining()==0) {
@@ -43,8 +38,8 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         }
     }
 
-    public void prepareWrite(Port<T> replyTo) {
-        super.prepare(replyTo);
+    public void prepareWrite() {
+        super.reset();
         this.inRead=false;
         buffer.flip();
         if (buffer.remaining()==0) {
@@ -99,9 +94,8 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
     
     //======================== backend methods - called from socket handler 
 
-	public synchronized void completed(Integer result) {
+	public synchronized void post(Integer result) {
 //        System.err.println(" IORequest.completed "+state+" rid="+rid);
-        checkInTrans();
         if (inRead) {
             //System.out.println("channel read completed id="+id);
             buffer.flip();
@@ -110,27 +104,11 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
             buffer.clear();
         }
         inTrans=false;
-        reply(result);
+        super.post(result);
 	}
 
-    public synchronized void failed(Throwable exc) {
-        checkInTrans();
-        this.exc=exc;
+    public synchronized void postFailure(Throwable exc) {
         inTrans=false;
-        reply();
+        super.postFailure(exc);
     }
-
-    /** for timer */
-//  @Override
-  public synchronized void run() {
-      reply();
-  }
-
-  private void checkInTrans() {
-      if (inTrans) {
-          throw new IllegalStateException("in transfer state already");
-      }
-      inTrans=true;
-  }
-  
 }

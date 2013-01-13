@@ -61,8 +61,8 @@ public class ActorVariantsTest {
         
         @Override
         protected void complete() throws Exception {
-            sum.send(_sum);
-            avg.send(_sum/counter);
+            sum.post(_sum);
+            avg.post(_sum/counter);
         }
      
     }
@@ -70,8 +70,8 @@ public class ActorVariantsTest {
     public void testA(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
         CallbackFuture<Double> sumcf=new CallbackFuture<Double>();
         CallbackFuture<Double> avgcf=new CallbackFuture<Double>(node.avg);
-        node.send(new DoubleValue(1.0));
-        node.send(new DoubleValue(2.0));
+        node.post(new DoubleValue(1.0));
+        node.post(new DoubleValue(2.0));
         node.close();
         Double sumValue;
         try {
@@ -96,7 +96,7 @@ public class ActorVariantsTest {
         int cnt=12345;
         for (int k=0; k<cnt; k++) {
             value/=2;
-            node.send(new DoubleValue(value));
+            node.post(new DoubleValue(value));
         }
         node.close();
         Double sumValue;

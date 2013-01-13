@@ -88,7 +88,7 @@ public class DemuxPingPongTest {
         }
         // create tokens, send them to randomly chosen Ping actors
         for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].send(new Token(TIME_TO_LIVE, sink));
+            pings[rand.nextInt(pings.length)].post(new Token(TIME_TO_LIVE, sink));
         }
 
         // wait for all packets to die.
@@ -122,10 +122,10 @@ public class DemuxPingPongTest {
         protected void sendTo(Port<Token> to) throws Exception {
             int nextVal = hops_remained - 1;
             if (nextVal == 0) {
-                sink.send(this);
+                sink.post(this);
             } else {
                 hops_remained = nextVal;
-                to.send(this);
+                to.post(this);
             }
         }
     }
@@ -147,7 +147,7 @@ public class DemuxPingPongTest {
          * sink, otherwise send to the Pong actor.
          */
         protected void act(Token token) throws Exception {
-            token.setReplyTo(this);
+            token.setListener(this);
             token.sendTo(pong);
         }
     }
@@ -165,7 +165,7 @@ public class DemuxPingPongTest {
          */
         class PongWorker extends ActorLQ<Token> {
             {
-                addListener(this);
+                listen(this);
             }
 /*
             @Override
@@ -176,7 +176,7 @@ public class DemuxPingPongTest {
             @Override
             protected void act(Token token) throws Exception {
                 token.sendTo(token.getReplyTo());
-                addListener(this);
+                listen(this);
             }
         }
     }

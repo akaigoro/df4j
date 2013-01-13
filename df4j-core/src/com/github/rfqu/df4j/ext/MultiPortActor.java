@@ -84,8 +84,8 @@ public class MultiPortActor {
     public abstract class PortHandler<M> implements Port<M> {
 
         @Override
-        public final void send(M m) {
-            execActor.send(new Message<M>(this, m));
+        public final void post(M m) {
+            execActor.post(new Message<M>(this, m));
         }
         
         protected abstract void act(M m);

@@ -62,7 +62,7 @@ public class Timer {
 		}
 
 		public void run() {
-			port.send(message);
+			port.post(message);
 		}
 
 		@Override

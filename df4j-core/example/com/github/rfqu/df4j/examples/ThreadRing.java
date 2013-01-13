@@ -81,7 +81,7 @@ public class ThreadRing {
             nodes[i].setNext(nodes[(i+1)%nodes.length]);
         }
         // send packets to random nodes
-        nodes[0].send(new Token(TIME_TO_LIVE));
+        nodes[0].post(new Token(TIME_TO_LIVE));
 
         // wait for all packets to die.
         sink.await();
@@ -124,11 +124,11 @@ public class ThreadRing {
         protected void act(Token token) throws Exception {
             int nextVal = token.hops_remained - 1;
             if (nextVal == 0) {
-                sink.send(token);
+                sink.post(token);
                 System.out.println(""+id);
             } else {
                 token.hops_remained = nextVal;
-                next.send(token);
+                next.post(token);
             }
         }
     }

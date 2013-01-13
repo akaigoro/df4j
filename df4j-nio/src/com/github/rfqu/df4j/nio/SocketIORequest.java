@@ -13,47 +13,55 @@ package com.github.rfqu.df4j.nio;
 
 import java.nio.ByteBuffer;
 
-import com.github.rfqu.df4j.core.Port;
-
 /**
  * Request for a socket I/O operation.
  */
 public class SocketIORequest<R extends SocketIORequest<R>>
   extends IORequest<R>
 {
-	long timeout; // milliseconds
-	boolean timed;
+	private long timeout; // milliseconds
+	private boolean timed;
 
     public SocketIORequest(ByteBuffer buf) {
         super(buf);
     }
 
     @Override
-    public void prepareRead(Port<R> replyTo) {
-        super.prepareRead(replyTo);
-        timed=false;
-        this.timeout=0;
+    public void prepareRead() {
+        prepareRead(0);
     }
 
     @Override
-    public void prepareWrite(Port<R> replyTo) {
-        super.prepareWrite(replyTo);
-        timed=false;
-        this.timeout=0;
+    public void prepareWrite() {
+        prepareWrite(0);
     }
 
-    public void prepareRead(Port<R> replyTo, long timeout)
-    {
-        super.prepareRead(replyTo);
-        timed=false;
-        this.timeout=timeout;
+    public void prepareRead(long timeout) {
+        super.prepareRead();
+        setTimed(false);
+        this.setTimeout(timeout);
     }
 
-    public void prepareWrite(Port<R> replyTo, long timeout)
-    {
-        super.prepareWrite(replyTo);
-        timed=false;
-        this.timeout=timeout;
+    public void prepareWrite(long timeout) {
+        super.prepareWrite();
+        setTimed(false);
+        this.setTimeout(timeout);
+    }
+
+    public boolean isTimed() {
+        return timed;
+    }
+
+    public void setTimed(boolean timed) {
+        this.timed = timed;
+    }
+
+    public long getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
     }
 
 }

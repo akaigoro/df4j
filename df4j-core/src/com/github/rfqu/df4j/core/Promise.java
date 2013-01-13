@@ -8,7 +8,6 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.core;
-import java.util.ArrayList;
 
 /**
  * 
@@ -17,106 +16,12 @@ import java.util.ArrayList;
  * Value (or failure) can only be assigned once. It is then saved, and 
  * listeners connected after the assignment still would receive it.
  * May connect actors.
+ * <p>Promise plays the same role as {@link java.util.concurrent.Future},
+ * but the result is sent to callbacks, registered as listeners using {@link #addListener}.
+ * Registration can happen at any time, before or after the result is computed.
  * 
  * @param <T>  type of result
  */
-public class Promise<T> implements Callback<T>, EventSource<T, Callback<T>> {
-	protected volatile boolean _hasValue;
-    protected T value;
-    protected Throwable exc;
-    protected Callback<T> listener;
-    
-    public Promise() {
-    }
-
-    public Promise(Callback<T> firstListener) {
-        this.listener = firstListener;
-    }
-
-    @Override
-	public EventSource<T, Callback<T>> addListener(Callback<T> sink) {
-		synchronized (this) {
-		    if (!_hasValue) {
-	            if (listener == null) {
-	                listener = sink;
-	                return this;
-	            }
-	            if (listener instanceof Promise.Listeners) {
-	                ((Listeners) listener).addListener(sink);
-	            } else {
-	                Listeners listeners = new Listeners();
-	                listeners.addListener(listener);
-	                listeners.addListener(sink);
-	                listener=listeners;
-	            }
-	            return this;
-		    }
-        }
-	    if (exc!=null) {
-	        sink.sendFailure(exc);
-	    } else {
-	        sink.send(value);
-	    }
-        return this;
-	}
-
-	@Override
-	public void send(T m) {
-        Callback<T> listenerLoc;
-		synchronized (this) {
-	        if (_hasValue) {
-	            Object v=this.exc!=null?this.exc:value;
-	            throw new IllegalStateException("value set already: "+v);
-	        }
-		    _hasValue=true;
-		    value=m;
-            if (listener == null) {
-                return;
-            }
-            listenerLoc=listener;
-            listener=null;
-        }
-		listenerLoc.send(m);
-	}
-
-    @Override
-    public void sendFailure(Throwable exc) {
-        Callback<T> listenerLoc;
-        synchronized (this) {
-            if (_hasValue) {
-                Object v=this.exc!=null?this.exc:value;
-                throw new IllegalStateException("value set already: "+v);
-            }
-            _hasValue=true;
-            this.exc=exc;
-            if (listener == null) {
-                return;
-            }
-            listenerLoc=listener;
-            listener=null;
-        }
-        listenerLoc.sendFailure(exc);  
-    }
-
-	private class Listeners implements Callback<T>{
-	    private ArrayList<Callback<T>> listeners = new ArrayList<Callback<T>>();
-
-		void addListener(Callback<T> listener) {
-			listeners.add(listener);
-		}
-
-		@Override
-		public void send(T m) {
-			for (int k=0; k<listeners.size(); k++) {
-			    listeners.get(k).send(m);
-			}
-		}
-
-        @Override
-        public void sendFailure(Throwable exc) {
-            for (int k=0; k<listeners.size(); k++) {
-                listeners.get(k).sendFailure(exc);
-            }
-        }
-	}
+public interface Promise<T> {
+	public Promise<T> addListener(Callback<T> sink);
 }

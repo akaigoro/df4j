@@ -11,45 +11,48 @@ package com.github.rfqu.df4j.core;
 
 /**
  * A message that carries callback port.
+ * Similar to {@link CallbackPromise}, but callback port is of type {@link Port}<{@link T}>.
  * @param <T> actual type of Request (subclassed)
  * @param <R> type of result
  */
 public class Request<T extends Request<T, R>, R> extends Link {
-    protected Port<T> replyTo;
-    protected R result;
-    protected Throwable exc;
+    protected boolean _hasValue=false;
+    protected R result=null;
+    protected Throwable exc=null;
+    protected Port<T> replyTo=null;
 
     public Request() {
     }
 
-    public Request(Port<T> callback) {
-        this.replyTo = callback;
+    public Request(Port<T> replyTo) {
+        this.replyTo = replyTo;
     }
 
-    /** initialize
-     * @param replyTo destination
+    /** reinitialize
      */
-    protected void prepare(Port<T> replyTo) {
-        this.replyTo = replyTo;
+    public void reset() {
+        _hasValue=false;
         result = null;
         exc = null;
+        replyTo=null;
     }
 
     /** 
      * sends itself to the destination
      */
     @SuppressWarnings("unchecked")
-    public void reply() {
-        if (replyTo == null) {
-            return;
+    private void reply() {
+        _hasValue=true;
+        if (replyTo != null) {
+            replyTo.post((T) this);
+            replyTo=null; // avoid memory leak
         }
-        replyTo.send((T) this);
     }
 
     /** sets the result and forwards to the destination
      * @param result
      */
-    public void reply(R result) {
+    public synchronized void post(R result) {
         this.result=result;
         reply();
     }
@@ -57,39 +60,37 @@ public class Request<T extends Request<T, R>, R> extends Link {
     /** sets the error and forwards to the destination
      * @param result
      */
-    public void replyFailure(Throwable exc) {
+    public synchronized void postFailure(Throwable exc) {
         this.exc=exc;
         reply();
     }
 
-    public void toCallback(Callback<R> handler) {
-        if (exc == null) {
-            handler.send(result);
+    @SuppressWarnings("unchecked")
+    public synchronized void setListener(Port<T> replyTo) {
+        if (_hasValue) {
+            replyTo.post((T) this);
         } else {
-            handler.sendFailure(exc);
+            this.replyTo = replyTo;
         }
-    }    
-    public Port<T> getReplyTo() {
-        return replyTo;
     }
 
-    public void setReplyTo(Port<T> replyTo) {
-        this.replyTo = replyTo;
+    public void toCallback(Callback<R> handler) {
+        if (exc == null) {
+            handler.post(result);
+        } else {
+            handler.postFailure(exc);
+        }
+    }
+    
+    public Port<T> getReplyTo() {
+        return replyTo;
     }
 
     public R getResult() {
         return result;
     }
 
-    public void setResult(R result) {
-        this.result = result;
-    }
-
     public Throwable getExc() {
         return exc;
-    }
-
-    public void setExc(Throwable exc) {
-        this.exc = exc;
     }
 }

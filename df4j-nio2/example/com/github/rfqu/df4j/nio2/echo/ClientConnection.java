@@ -9,14 +9,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.EventSource;
+import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Timer;
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio2.SocketIORequest;
+import com.github.rfqu.df4j.nio.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel2;
+import com.github.rfqu.df4j.nio.SocketIORequest;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
 class ClientConnection
-   implements EventSource<AsynchronousSocketChannel, Callback<AsynchronousSocketChannel>>
+   implements Promise<AsynchronousSocketChannel>
 {
     static final long timeout=1000;// ms
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
@@ -38,12 +39,12 @@ class ClientConnection
         this.echoServerTest = echoServerTest;
         this.timer = echoServerTest.timer;
         this.rounds=new AtomicLong(rounds);
-        channel=new AsyncSocketChannel(addr);
+        channel=new AsyncSocketChannel2(addr);
         ByteBuffer buffer = ByteBuffer.allocate(EchoServerGlobTest.BUF_SIZE);
         request=new CliRequest(buffer);
 //        channel.read(request, endRead1, timeout);
         request.setResult(0);
-        startWrite.send(request);
+        startWrite.post(request);
     }
 
     @Override
@@ -107,7 +108,7 @@ class ClientConnection
                 timer.schedule(startWrite, request, EchoServerGlobTest.PERIOD);
             } else {
                 // write it back immediately
-                startWrite.send(request);
+                startWrite.post(request);
             }
         }
 

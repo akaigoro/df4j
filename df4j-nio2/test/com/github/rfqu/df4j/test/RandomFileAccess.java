@@ -225,7 +225,7 @@ public class RandomFileAccess {
                     write(req);
                 }
             } catch (Exception e) {
-                sink.send(1);
+                sink.post(1);
             }
         }
         
@@ -236,7 +236,7 @@ public class RandomFileAccess {
                 fillBuf(req.getBuffer(), blockId);
                 Port<Request> port=this;
 				req.prepareWrite(blockId * blockSize, port);
-				af.send(req);
+				af.post(req);
                 started++;
             }
         }
@@ -248,14 +248,14 @@ public class RandomFileAccess {
         	Throwable exc=request.getExc();
 			if (exc!=null) {
                 exc.printStackTrace();
-                sink.send(1); // signal the caller
+                sink.post(1); // signal the caller
 			} else {
                 accTime.addAndGet(System.currentTimeMillis()-request.start);
                 finished++;
                 if (finished < numBlocks) { // has the whole file been written?
                     write(request);
                 } else {                    
-                    sink.send(0); // signal the caller
+                    sink.post(0); // signal the caller
                 }
 			}
         }

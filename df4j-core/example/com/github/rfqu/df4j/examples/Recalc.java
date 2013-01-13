@@ -78,8 +78,8 @@ public class Recalc extends JFrame {
         NumInput input2=new NumInput();
         
         void print(String res1, String res2) {
-            pa1.send(res1);
-            pa2.send(res2);
+            pa1.post(res1);
+            pa2.post(res2);
         }
 
         void recalc() {
@@ -112,7 +112,7 @@ public class Recalc extends JFrame {
             
             @Override
             public void actionPerformed(ActionEvent e) {
-                send(e.getActionCommand());
+                post(e.getActionCommand());
             }
 
             /**

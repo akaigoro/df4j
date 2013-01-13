@@ -9,14 +9,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.EventSource;
+import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
 class ClientConnection
-   implements EventSource<SocketChannel, Callback<SocketChannel>>
+   implements Promise<SocketChannel>
 {
     static final long timeout=1000;// ms
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
@@ -38,12 +38,12 @@ class ClientConnection
         this.echoServerTest = echoServerTest;
         this.timer = echoServerTest.timer;
         this.rounds=new AtomicLong(rounds);
-        channel=new AsyncSocketChannel(addr);
+        channel=echoServerTest.asyncChannelFactory.newAsyncSocketChannel(addr);
         ByteBuffer buffer = ByteBuffer.allocate(EchoServerGlobTest.BUF_SIZE);
         request=new CliRequest(buffer);
 //        channel.read(request, endRead1, timeout);
-        request.setResult(0);
-        startWrite.send(request);
+        request.post(0);
+        request.setListener(startWrite);
     }
 
     @Override
@@ -63,7 +63,8 @@ class ClientConnection
             ByteBuffer buffer = request.getBuffer();
             buffer.clear();
             buffer.putInt(request.data);
-            channel.write(request, endWrite, timeout);
+            channel.write(request, timeout);
+            request.setListener(endWrite);
         }
     };
 
@@ -72,7 +73,8 @@ class ClientConnection
         public void completed(int result, CliRequest request) {//throws ClosedChannelException {
             count2endWrite++;
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
-            channel.read(request, endRead, timeout);
+            channel.read(request, timeout);
+            request.setListener(endRead);
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
         }
 
@@ -107,7 +109,7 @@ class ClientConnection
                 timer.schedule(startWrite, request, EchoServerGlobTest.PERIOD);
             } else {
                 // write it back immediately
-                startWrite.send(request);
+                startWrite.post(request);
             }
         }
 

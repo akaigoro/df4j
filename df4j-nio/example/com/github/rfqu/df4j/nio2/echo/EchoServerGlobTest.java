@@ -11,13 +11,14 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Timer;
+import com.github.rfqu.df4j.test.AsyncChannelFactory;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 import com.github.rfqu.df4j.testutil.JavaAppLauncher;
 
 /**
  * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched as an application
  */
-public class EchoServerGlobTest {
+public abstract class EchoServerGlobTest {
 	static final long PERIOD = 0;//5; // ms between subsequent requests for given client
     static final int BUF_SIZE = 128;
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
@@ -26,6 +27,7 @@ public class EchoServerGlobTest {
     static PrintStream out=System.out;
     static PrintStream err=System.err;
 
+    AsyncChannelFactory asyncChannelFactory;
 	InetSocketAddress iaddr = new InetSocketAddress("localhost", EchoServer.defaultPort);
 	int numclients;
     int rounds; // per client
@@ -33,8 +35,12 @@ public class EchoServerGlobTest {
 	HashMap<Integer, ClientConnection> clients=new HashMap<Integer, ClientConnection>();
     Aggregator sink;
 	
+    public EchoServerGlobTest(AsyncChannelFactory asyncChannelFactory) {
+        this.asyncChannelFactory=asyncChannelFactory;
+    }
+
     public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
-		sink.send(avg);
+		sink.post(avg);
 		clients.remove(clientConnection.id);
 	}
 
@@ -100,7 +106,7 @@ public class EchoServerGlobTest {
         
         @Override
         protected void complete() throws Exception {
-            avg.send(sum/counter);
+            avg.post(sum/counter);
         }
 
     }
@@ -138,7 +144,7 @@ public class EchoServerGlobTest {
     	testThroughput(10000,10);
    }
 
-    public static void main(String[] args) throws Exception {
+    public void run(String[] args) throws Exception {
     	String host;
     	if (args.length<1) {
 //    		System.out.println("Usage: EchoServerGlobTest host port");
@@ -155,10 +161,8 @@ public class EchoServerGlobTest {
     	}
     	Process pr=JavaAppLauncher.startJavaApp("com.github.rfqu.df4j.nio2.echo.EchoServer",
     	        Integer.toString(port));
-    	EchoServerGlobTest t=new EchoServerGlobTest();
-		t.iaddr = new InetSocketAddress(host, port);
-        t.mediumTest();
+		iaddr = new InetSocketAddress(host, port);
+        mediumTest();
         pr.destroy();
     }
-
 }

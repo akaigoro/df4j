@@ -39,8 +39,8 @@ public abstract class Actor<M> extends DataflowNode
     }
 
     @Override
-	public void send(M m) {
-		input.send(m);
+	public void post(M m) {
+		input.post(m);
 	}
 
 	@Override

@@ -21,7 +21,7 @@ public class TaskTest {
 
         @Override
         public void run() {
-            res.send(11);
+            res.post(11);
         }
     }
 

@@ -37,8 +37,8 @@ public class HelloWorld3 {
 
     public static void main(String args[]) throws InterruptedException {
         Collector coll=new Collector();
-        coll.input.send("Hello");
-        coll.input.send("World 3");
+        coll.input.post("Hello");
+        coll.input.post("World 3");
         coll.input.close();
         DFContext.completeCurrentExecutorService();
     }

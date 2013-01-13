@@ -14,7 +14,7 @@ package com.github.rfqu.df4j.nio2;
 
 import java.nio.ByteBuffer;
 
-import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.nio.IORequest;
 
 /**
  * Request for a file I/O operation.
@@ -28,13 +28,13 @@ public class FileIORequest<R extends FileIORequest<R>>
         super(buf);
     }
 
-    public void prepareRead(long position, Port<R> replyTo){
-        super.prepareRead(replyTo);
+    public void prepareRead(long position){
+        super.prepareRead();
         this.position = position;
     }
 
-    public void prepareWrite(long position, Port<R> replyTo){
-        super.prepareWrite(replyTo);
+    public void prepareWrite(long position){
+        super.prepareWrite();
         this.position = position;
     }
 

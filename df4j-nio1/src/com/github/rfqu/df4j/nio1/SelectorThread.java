@@ -1,11 +1,11 @@
-package com.github.rfqu.df4j.nio;
+package com.github.rfqu.df4j.nio1;
+
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DFContext;

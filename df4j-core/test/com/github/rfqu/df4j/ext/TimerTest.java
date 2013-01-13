@@ -21,7 +21,7 @@ public class TimerTest {
 
     class Portik<T> implements Port<T> {
 		@Override
-		public void send(T m) {
+		public void post(T m) {
 			long elapsed = System.currentTimeMillis()-start;
             System.out.println("received "+m.toString()+" at "+elapsed);
 		}

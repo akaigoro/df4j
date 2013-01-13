@@ -31,7 +31,7 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
     public CallbackFuture() {
     }
     
-    public CallbackFuture(EventSource<T, Callback<T>> source) {
+    public CallbackFuture(Promise<T> source) {
         source.addListener(this);
     }
     
@@ -39,7 +39,7 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
      * The source is supposed to invoke send(T message) on this instance.
      * @param source
      */
-    public CallbackFuture<T> listenTo(EventSource<T, Callback<T>> source) {
+    public CallbackFuture<T> listenTo(Promise<T> source) {
         source.addListener(this);
         return this;        
     }
@@ -47,7 +47,7 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
     /** sends a message to this instance and then to its listeners.
      */
     @Override
-    public synchronized void send(T message) {
+    public synchronized void post(T message) {
         if (_hasValue) {
             throw new IllegalStateException("has value already");
         }
@@ -57,7 +57,7 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
     }
 
     @Override
-    public synchronized void sendFailure(Throwable exc) {
+    public synchronized void postFailure(Throwable exc) {
         if (_hasValue) {
             throw new IllegalStateException("has value already");
         }
@@ -152,7 +152,7 @@ public class CallbackFuture<T> implements Callback<T>, Future<T> {
         return _hasValue && value==null && exc==null;
     }
 
-    public static <R> R getFrom(EventSource<R, Callback<R>> source) throws InterruptedException, ExecutionException {
+    public static <R> R getFrom(Promise<R> source) throws InterruptedException, ExecutionException {
         return new CallbackFuture<R>(source).get();
     }
 

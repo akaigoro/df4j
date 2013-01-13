@@ -39,7 +39,7 @@ public class DispatcherTest {
     public void test1() throws InterruptedException {
         LinkedBlockingQueue<Token> q=new LinkedBlockingQueue<Token>();
         Pong pong=new Pong(1, q, true);
-        pong.send(new Token(0));
+        pong.post(new Token(0));
     }
 
     /* no tokens */
@@ -87,7 +87,7 @@ public class DispatcherTest {
         Token[] tokens=new Token[nt];
         for (int k=0; k<nt; k++) {
             final Token token = new Token(k);
-            pong.send(token);
+            pong.post(token);
             tokens[k]=token;
         }
         for (int k=0; k<nt; k++) {
@@ -145,7 +145,7 @@ public class DispatcherTest {
 
             public PongWorker(int id) {
                 this.id=id;
-                addListener(this);
+                listen(this);
             }
 /*
             @Override
@@ -161,7 +161,7 @@ public class DispatcherTest {
                 }
                 message.touched=true;
                 q.add(message);
-                addListener(this);
+                listen(this);
             }
 
             @Override

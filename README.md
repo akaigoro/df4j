@@ -34,9 +34,9 @@ Hello World Example
 
     public void test() {
         Collector coll=new Collector();
-        coll.send("Hello");
-        coll.send("World");
-        coll.send("");
+        coll.post("Hello");
+        coll.post("World");
+        coll.post("");
     }
 </pre>
 
@@ -66,8 +66,8 @@ and using a "poison pill" value may not be feasible. So the Actor class has meth
 
     public void test() {
         Collector coll=new Collector();
-        coll.send("Hello");
-        coll.send("World");
+        coll.post("Hello");
+        coll.post("World");
         coll.close();
     }
 </pre>
@@ -100,8 +100,8 @@ makes a loop and holds one token - the state of the node instance). Below is an 
 
     public void test() {
         Collector coll=new Collector();
-        coll.input.send("Hello");  // there is no predifined input,
-        coll.input.send("World");  // input has to be named explicetly
+        coll.input.post("Hello");  // there is no predifined input,
+        coll.input.post("World");  // input has to be named explicetly
         coll.input.close();
     }
 </pre>
@@ -136,7 +136,7 @@ are not empty:
         protected void act() {
             Assignment task=tasks.get();
             Actor<Assignment> actor=actor.get();
-            actor.send(task);
+            actor.post(task);
         }
     }
 </pre>
@@ -148,13 +148,13 @@ In fact, Dispatcher can be build upon Actor:
         @Override
         protected void act(Assignment task) {
         	Actor<Assignment> actor=actors.get();
-            actor.send(task);
+            actor.post(task);
         }
     }
 </pre>
 This is because Actor is a simple extension of DataflowNode with one declared StreamInput.
 Actor is convenient to use, as it is itself implements interface Port (shorted to the predefined input),
-and we can write actor.send(m) instead of actor.input.send(m).
+and we can write actor.post(m) instead of actor.input.post(m).
 
 Now think how worker actor could know if its node can be given more assignments.
 Suppose we just decide that when connecting to the cluster node, it replies with a number of tasts
@@ -177,12 +177,12 @@ sends itself to that intermediate actor and, if semaphore is open, working actor
         
         @Override
         protected void act(Actor<Assignment> actor) {
-          	dispatcher.send(actor);
+          	dispatcher.post(actor);
         }
 
 		// called by network connection
         Port<Request> handler = new Port<Request>() {
-            public void send(Request r) {
+            public void post(Request r) {
             	counter.up();
             }
         }
@@ -196,8 +196,8 @@ sends itself to that intermediate actor and, if semaphore is open, working actor
         protected void act(Assignment task) {
            // create new request for the network connection
         	Request r=new Request(task, this);
-        	conn.send(task);
-        	semaActor.send(this);
+        	conn.post(task);
+        	semaActor.post(this);
         }        
     }
 </pre>   
@@ -215,7 +215,7 @@ This library allows two ways of assigning Executor to a DataflowNode: explicitly
 or implicitly by a ThreadLocal variable.
 
 Via constructor, Executor may be null. In this case,
-the node will be executed on the caller's thread (which invokes the send method). This is safe and fast, but implies no parallelism.
+the node will be executed on the caller's thread (which invokes the post method). This is safe and fast, but implies no parallelism.
 It is recommended for nodes which simply redirect incoming messages, like Dispatcher or WorkerActor in the
 examples above: add them a constructor with super(null). Equivalently, extend them from 
 DataflowVariable or ActorVariable, respectively.
@@ -236,26 +236,25 @@ Thread context is an instance of class DFContext and is stored as a local variab
 
 Version history
 ---------------
+v0.7 2013/01/13
+- important rename in core classes:
+Port.send => Port.post
+Callback.sendFailure => Callback.postFailure
+Promise -> CallbackPromise
+EventSource => Promise
 
+=======
 v0.6 2012/12/03
 nio project basically finished
-
+=======
 v0.5.2 2012/11/27
 DFContext class created - a collection of all context resources, including current executor.
 
-v0.5.1 2012/11/17
+v0.5.1 2012/11/19
 - class MessageQueue renamed to Dispatcher.
 - synchronization in DataflowNode made by j.u.c.ReentrantLock.
  
 v0.5 2012/11/17
-- core classes renamed:
-BaseActor => DataflowNode
-DataSource => EventSource
-ThreadFactoryTL => ConextThreadFactory
-LinkedQueue => DoublyLinkedQueue
-SerialExecutor moved to the package com.github.rfqu.df4j.ext.
-=======
-v0.5 2012/11/19
 - core classes renamed:
 BaseActor => DataflowNode; 
 DataSource => EventSource; 
@@ -267,7 +266,7 @@ SerialExecutor moved to ext.
 - DataflowNode has new method sendFailure, to create Callbacks easily.
   It as accompanied with back-end method handleException(Throwable).
 - New core class MessageQueue created (suggest a better name).
-
+=======
 v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).
 Timer class created with interface similar to AsyncChannel. 
 

@@ -2,18 +2,18 @@ package com.github.rfqu.df4j.nio2.echo;
 
 import java.nio.ByteBuffer;
 
-import com.github.rfqu.df4j.nio2.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio2.AsyncSocketChannel2;
 import com.github.rfqu.df4j.nio2.SocketIORequest;
 
 class ServerConnection {
     private final EchoServer echoServer;
-    AsyncSocketChannel channel;
+    AsyncSocketChannel2 channel;
     public int id;
     private ByteBuffer buffer;
     SerRequest request;
     boolean closed = false;
 
-    public ServerConnection(EchoServer echoServer, AsyncSocketChannel channel)
+    public ServerConnection(EchoServer echoServer, AsyncSocketChannel2 channel)
     //        throws ClosedChannelException
     {
         this.echoServer = echoServer;

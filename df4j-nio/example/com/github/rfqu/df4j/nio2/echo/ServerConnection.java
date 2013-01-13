@@ -21,7 +21,8 @@ class ServerConnection {
         this.id=echoServer.ids.addAndGet(1);
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);
-        channel.read(request, endRead);
+        channel.read(request);
+        request.setListener(endRead);
     }
 
     public void close() {
@@ -47,7 +48,8 @@ class ServerConnection {
             // imitate reading client's message and writing it back
             buffer.position(buffer.limit());
             // write it to socket
-            channel.write(request, endWrite);
+            channel.write(request);
+            request.setListener(endWrite);
         }
 
         @Override
@@ -60,7 +62,8 @@ class ServerConnection {
         @Override
 		public void completed(int result, SerRequest request) {//throws IOException {
             // System.out.println("  ServerRequest writeCompleted id="+id);
-            channel.read(request, endRead);
+            channel.read(request);
+            request.setListener(endRead);
         }
 
         @Override

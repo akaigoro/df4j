@@ -76,7 +76,7 @@ public class SwingActorTest extends JFrame {
             // GUI (JTextField) -> computing actor 
         	workCount++;
             jLabel2.setText("working...");
-            send(new StringMessage(jTextField.getText()));
+            post(new StringMessage(jTextField.getText()));
         }
 
         /**
@@ -99,7 +99,7 @@ public class SwingActorTest extends JFrame {
             }
             m.setStr(str);
             // computing actor -> GUI (printing actor)
-            pa.send(m); 
+            pa.post(m); 
         }
     }
 

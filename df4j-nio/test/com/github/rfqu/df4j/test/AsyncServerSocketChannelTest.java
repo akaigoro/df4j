@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -20,14 +19,21 @@ import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
-public class AsyncServerSocketChannelTest {
+public abstract class AsyncServerSocketChannelTest {
     static final int BUF_SIZE = 128;
     static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 9990);
+
+    AsyncChannelFactory asyncrSocketFactory;
+    
+    protected Connection newConnection(InetSocketAddress addr) throws IOException {
+        return new Connection(asyncrSocketFactory.newAsyncSocketChannel(addr));
+    }
+
 
     /**
      * tests that overall connection count can be more than maxConn
      */
- //   @Test
+    @Test
     public void maxConnTest() throws Exception {
         final int maxConn0=2;
         Server server=new Server(local9990);
@@ -37,7 +43,7 @@ public class AsyncServerSocketChannelTest {
         int delta=maxConn0/2;
         int clConns=maxConn0+delta;
         for (int k=0; k<clConns; k++) {
-            Connection conn = new Connection(local9990);
+            Connection conn = newConnection(local9990);
             allConns.add(conn);
             conn.get();
         }
@@ -62,7 +68,7 @@ public class AsyncServerSocketChannelTest {
         Server server=new Server(local9990);
         server.assch.up();
 
-        Connection clconn = new Connection(local9990);
+        Connection clconn = newConnection(local9990);
 //        clconn.get();
         Connection serconn = server.allConns.take();
         MyRequest clreq=new MyRequest();
@@ -91,21 +97,19 @@ public class AsyncServerSocketChannelTest {
     
     }
     
-    static class Server implements Callback<SocketChannel> {        
+    class Server implements Callback<AsyncSocketChannel> {        
         AsyncServerSocketChannel assch;    
         ArrayBlockingQueue<Connection> allConns=new ArrayBlockingQueue<Connection>(10);
         int channelCounter=0;
         boolean allOpened=true;
             
         public Server(InetSocketAddress addr) throws IOException {
-            assch=new AsyncServerSocketChannel(addr, this);
+            assch=asyncrSocketFactory.newAsyncServerSocketChannel(addr, this);
         }
         
         @Override
-        public void send(SocketChannel sch) {
-            AsyncSocketChannel channel;
+        public void post(AsyncSocketChannel channel) {
             try {
-                channel = new AsyncSocketChannel(sch);
                 channelCounter++;
                 if (channel.isClosed()) {
                     allOpened=false;
@@ -123,19 +127,15 @@ public class AsyncServerSocketChannelTest {
         }
 
         @Override
-        public void sendFailure(Throwable exc) {
+        public void postFailure(Throwable exc) {
             exc.printStackTrace();
         }
     }
 
     static class Connection implements Port<MyRequest> {
         AsyncSocketChannel conn;
-        CallbackFuture<SocketChannel> connListener=new CallbackFuture<SocketChannel>();
+        CallbackFuture<AsyncSocketChannel> connListener=new CallbackFuture<AsyncSocketChannel>();
         ArrayBlockingQueue<MyRequest> finishedRequests=new ArrayBlockingQueue<MyRequest>(10);
-
-        Connection(InetSocketAddress addr) throws IOException {
-            this(new AsyncSocketChannel(addr));
-        }
 
         Connection(AsyncSocketChannel conn) throws IOException {
             this.conn=conn;
@@ -143,20 +143,22 @@ public class AsyncServerSocketChannelTest {
         }
 
         public void read(MyRequest request) {
-            conn.read(request, this);
+            conn.read(request);
+            request.setListener(this);
         }
 
         public void write(MyRequest request) {
-            conn.write(request, this);
+            conn.write(request);
+            request.setListener(this);
         }
 
         public void get() throws InterruptedException, ExecutionException {
-        	connListener.get();
+            connListener.get();
         }
 
         /** called when io operation completed */
         @Override
-        public void send(MyRequest m) {
+        public void post(MyRequest m) {
             finishedRequests.add(m);
         }
     }

@@ -29,8 +29,8 @@ public class HelloWorld2 {
 
     public static void main(String args[]) {
         Collector coll=new Collector();
-        coll.send("Hello");
-        coll.send("World 2");
+        coll.post("Hello");
+        coll.post("World 2");
         coll.close();
         DFContext.completeCurrentExecutorService();
     }

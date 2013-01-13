@@ -65,9 +65,9 @@ public class MultiActorTest {
             if (nextVal > 0) {
                 token.value = nextVal;
                 NodeActor nextNode = nodes[rand.nextInt(nodes.length)];
-                nextNode.send(token);
+                nextNode.post(token);
             } else {
-                sink.send(token);
+                sink.post(token);
             }
             Thread.sleep(20);
         	if (activeNode!=this) {
@@ -94,7 +94,7 @@ public class MultiActorTest {
         // send packets to random nodes
         for (int k = 0; k < NR_REQUESTS; k++) {
             Actor<IntValue> nextInbox = nodes[rand.nextInt(nodes.length)];
-            nextInbox.send(new IntValue(TIME_TO_LIVE));
+            nextInbox.post(new IntValue(TIME_TO_LIVE));
         }
 
         // wait for all packets to die.
