@@ -11,13 +11,14 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.core.Timer;
+import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 import com.github.rfqu.df4j.testutil.JavaAppLauncher;
 
 /**
  * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched as an application
  */
-public class EchoServerGlobTest {
+public abstract class EchoServerTest {
 	static final long PERIOD = 0;//5; // ms between subsequent requests for given client
     static final int BUF_SIZE = 128;
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
@@ -26,6 +27,7 @@ public class EchoServerGlobTest {
     static PrintStream out=System.out;
     static PrintStream err=System.err;
 
+    AsyncChannelFactory asyncChannelFactory;
 	InetSocketAddress iaddr = new InetSocketAddress("localhost", EchoServer.defaultPort);
 	int numclients;
     int rounds; // per client
@@ -33,13 +35,13 @@ public class EchoServerGlobTest {
 	HashMap<Integer, ClientConnection> clients=new HashMap<Integer, ClientConnection>();
     Aggregator sink;
 	
-    public synchronized void removeClientConnection(ClientConnection clientConnection) {
-        clients.remove(clientConnection.id);
+    public EchoServerTest(AsyncChannelFactory asyncChannelFactory) {
+        this.asyncChannelFactory=asyncChannelFactory;
     }
 
-	public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
+    public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
 		sink.post(avg);
-		removeClientConnection(clientConnection);
+		clients.remove(clientConnection.id);
 	}
 
     public void testThroughput(int numclients, int rounds)
@@ -111,7 +113,15 @@ public class EchoServerGlobTest {
 
 //    @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
-    	testThroughput(1,1);
+        testThroughput(1,1);
+   }
+//    @Test
+    public void smokeTest1() throws Exception, IOException, InterruptedException {
+        testThroughput(1,2);
+   }
+//    @Test
+    public void smokeTest2() throws Exception, IOException, InterruptedException {
+        testThroughput(2,1);
    }
 
     @Test
@@ -134,7 +144,7 @@ public class EchoServerGlobTest {
     	testThroughput(10000,10);
    }
 
-    public static void main(String[] args) throws Exception {
+    public void run(String[] args) throws Exception {
     	String host;
     	if (args.length<1) {
 //    		System.out.println("Usage: EchoServerGlobTest host port");
@@ -151,10 +161,8 @@ public class EchoServerGlobTest {
     	}
     	Process pr=JavaAppLauncher.startJavaApp("com.github.rfqu.df4j.nio2.echo.EchoServer",
     	        Integer.toString(port));
-    	EchoServerGlobTest t=new EchoServerGlobTest();
-		t.iaddr = new InetSocketAddress(host, port);
-        t.mediumTest();
+		iaddr = new InetSocketAddress(host, port);
+        mediumTest();
         pr.destroy();
     }
-
 }

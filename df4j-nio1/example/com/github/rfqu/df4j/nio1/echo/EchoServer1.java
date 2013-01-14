@@ -1,27 +1,18 @@
-package com.github.rfqu.df4j.nio2.echo;
+package com.github.rfqu.df4j.nio1.echo;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.ActorVariable;
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackFuture;
-import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio.AsyncSocketChannel;
-import com.github.rfqu.df4j.test.AsyncChannelFactory;
+import com.github.rfqu.df4j.nio.AsyncChannelFactory;
+import com.github.rfqu.df4j.nio1.AsyncChannelFactory1;
+import com.github.rfqu.df4j.nio2.echo.EchoServer;
 
 public class EchoServer1 extends EchoServer {
         
     public EchoServer1(AsyncChannelFactory asyncChannelFactory, SocketAddress addr, int maxConn) throws IOException {
-        this.asyncChannelFactory=asyncChannelFactory;
-        this.addr=addr;
-        assch=asyncChannelFactory.newAsyncServerSocketChannel(addr, this);
-        assch.up(maxConn);
+        super(asyncChannelFactory, addr, maxConn);
     }
 
     public static void main(String[] args) throws Exception {
@@ -42,7 +33,7 @@ public class EchoServer1 extends EchoServer {
             maxConn = Integer.valueOf(args[1]);
         }
         SocketAddress addr=new InetSocketAddress("localhost", port);
-        EchoServer1 es=new EchoServer1(addr, maxConn);
+        EchoServer1 es=new EchoServer1(new AsyncChannelFactory1(), addr, maxConn);
         es.addCloseListener(new CallbackFuture<SocketAddress>()).get(); // inet addr is free now
         System.out.println("EchoServer started");
     }

@@ -235,7 +235,8 @@ public class RandomFileAccess {
                 long blockId = getBlockId(numBlocks, started);
                 fillBuf(req.getBuffer(), blockId);
                 Port<Request> port=this;
-				req.prepareWrite(blockId * blockSize, port);
+				req.prepareWrite(blockId * blockSize);
+				req.setListener(port);
 				af.post(req);
                 started++;
             }
@@ -270,14 +271,14 @@ public class RandomFileAccess {
 		}
 
         @Override
-	    public void prepareRead(long position, Port<Request> replyTo) {
-			super.prepareRead(position, replyTo);
+	    public void prepareRead(long position) {
+			super.prepareRead(position);
 			start=System.currentTimeMillis();
 		}
     	
         @Override
-	    public void prepareWrite(long position, Port<Request> replyTo) {
-			super.prepareWrite(position, replyTo);
+	    public void prepareWrite(long position) {
+			super.prepareWrite(position);
 			start=System.currentTimeMillis();
 		}
     	

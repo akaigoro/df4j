@@ -2,20 +2,17 @@ package com.github.rfqu.df4j.nio2.echo;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
-import com.github.rfqu.df4j.test.AsyncChannelFactory;
 
-public class EchoServer extends ActorVariable<SocketChannel>
+public class EchoServer extends ActorVariable<AsyncSocketChannel>
     implements Closeable
 {
 	public static final int defaultPort = 9993;
@@ -65,8 +62,7 @@ public class EchoServer extends ActorVariable<SocketChannel>
     /** AsyncServerSocketChannel sends new connection
      */
     @Override
-    protected synchronized void act(SocketChannel message) throws Exception {
-        AsyncSocketChannel channel=asyncChannelFactory.newAsyncSocketChannel(message);
+    protected synchronized void act(AsyncSocketChannel channel) throws Exception {
         ServerConnection connection = new ServerConnection(EchoServer.this, channel);
         connections.put(connection.id, connection);
     }
@@ -78,51 +74,4 @@ public class EchoServer extends ActorVariable<SocketChannel>
         exc.printStackTrace();
     }
 
-    //==================== main
-    
-    public void run(String[] args) throws Exception {
-        System.out.println("classPath="+System.getProperty("java.class.path"));
-        
-        Integer port;
-        if (args.length<1) {
-//          System.out.println("Usage: EchoServer port maxConn");
-//          System.exit(-1);
-            port=defaultPort;
-        } else {
-            port = Integer.valueOf(args[0]);
-        }
-        int maxConn;
-        if (args.length<2) {
-            maxConn=1000;
-        } else {
-            maxConn = Integer.valueOf(args[1]);
-        }
-        SocketAddress addr=new InetSocketAddress("localhost", port);
-        addCloseListener(new CallbackFuture<SocketAddress>()).get(); // inet addr is free now
-        System.out.println("EchoServer started");
-    }
-
-    public static void main(String[] args) throws Exception {
-        System.out.println("classPath="+System.getProperty("java.class.path"));
-        
-        Integer port;
-        if (args.length<1) {
-//          System.out.println("Usage: EchoServer port maxConn");
-//          System.exit(-1);
-            port=defaultPort;
-        } else {
-            port = Integer.valueOf(args[0]);
-        }
-        int maxConn;
-        if (args.length<2) {
-            maxConn=1000;
-        } else {
-            maxConn = Integer.valueOf(args[1]);
-        }
-        SocketAddress addr=new InetSocketAddress("localhost", port);
-        EchoServer es=new EchoServer(addr, maxConn);
-        es.addCloseListener(new CallbackFuture<SocketAddress>()).get(); // inet addr is free now
-        System.out.println("EchoServer started");
-    }
-
-}
+ }

@@ -18,19 +18,12 @@ import java.net.StandardSocketOptions;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
 
-import com.github.rfqu.df4j.ext.ActorLQ;
+import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
-import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DataflowVariable;
-import com.github.rfqu.df4j.core.CallbackPromise;
-import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.StreamPort;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -44,6 +37,10 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
    implements CompletionHandler<Void, AsynchronousSocketChannel>
 {
     protected volatile AsynchronousSocketChannel channel;
+    {
+        reader = new ReaderQueue();
+        writer = new WriterQueue();
+    }
 
     /**
      * for server-side socket
@@ -60,7 +57,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
         }
         reader.resume();
         writer.resume();
-        connEvent.post(attachement);
+        connEvent.post(new AsyncSocketChannel2(attachement));
     }
     
     /**
@@ -82,7 +79,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
     
-    public <R extends Callback<AsynchronousSocketChannel>> R addConnListener(R listener) {
+    public <R extends Callback<AsyncSocketChannel>> R addConnListener(R listener) {
     	connEvent.addListener(listener);
         return listener;
     }
@@ -142,16 +139,20 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
      protected Semafor channelAcc=new Semafor(); // channel accessible
      protected SocketIORequest<?> currentRequest;
      
-     protected void resume() {
+     public RequestQueue2() {
+        super(null); // immediate executor - act() method  
+    }
+
+     public void resume() {
          channelAcc.up();
      }
 		//------------- CompletionHandler's backend
 		
-		@Override
+	 @Override
      public void completed(Integer result, SocketIORequest<?> request) {
-		    currentRequest=null;
+		 currentRequest=null;
          channelAcc.up();
-         request.completed(result);
+         request.post(result);
      }
 
      @Override
@@ -161,7 +162,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
          }
 		 currentRequest=null;
          channelAcc.up();
-         request.failed(exc);
+         request.postFailure(exc);
      }
  }
 	
@@ -170,7 +171,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
         
         @Override
         protected void act(SocketIORequest<?> request) throws Exception {
-        	currentRequest=request;
+           currentRequest=request;
            if (request.isTimed()) {
                channel.read(request.getBuffer(),
                        request.getTimeout(), TimeUnit.MILLISECONDS, request, this);
