@@ -243,6 +243,11 @@ Callback.sendFailure => Callback.postFailure
 Promise -> CallbackPromise
 EventSource => Promise
 
+- refactoring of nio* projects:
+implementation based on NIO1 moved from df4j-nio to df4j-nio1;
+df4j-nio contains now only common parts of df4j-nio1 and df4j-nio2,
+so both df4j-nio1 and df4j-nio2 require project df4j-nio
+
 =======
 v0.6 2012/12/03
 nio project basically finished
