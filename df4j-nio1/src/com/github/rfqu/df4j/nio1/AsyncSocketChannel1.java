@@ -20,16 +20,10 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowVariable;
-import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.CallbackPromise;
-import com.github.rfqu.df4j.core.StreamPort;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio.AsyncSocketChannel.Completer;
-import com.github.rfqu.df4j.nio.AsyncSocketChannel.RequestQueue;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
 /**
@@ -45,7 +39,11 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 			.getCurrentSelectorThread();
 	protected volatile SocketChannel socketChannel;
 	private final SelectorListener selectorListener=new SelectorListener();
-    
+    {
+        reader = new ReaderQueue();
+        writer = new WriterQueue();
+    }
+   
     /**
 	 * for server-side socket
 	 * 
@@ -53,15 +51,13 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 	 * @throws IOException
 	 */
 	public AsyncSocketChannel1(SocketChannel channel) throws IOException {
-		channel.configureBlocking(false);
 		init(channel);
 	}
 
-	void init(SocketChannel channel) throws SocketException {
+	void init(SocketChannel channel) throws IOException {
+        channel.configureBlocking(false);
 	    channel.socket().setTcpNoDelay(true);
 	    socketChannel = channel;
-	    reader = new ReaderQueue();
-	    writer = new WriterQueue();
 		reader.resume();
 		writer.resume();
 		connEvent.post(this);

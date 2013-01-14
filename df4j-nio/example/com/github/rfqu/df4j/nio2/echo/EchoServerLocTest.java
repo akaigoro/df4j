@@ -13,7 +13,6 @@ public class EchoServerLocTest {
     static PrintStream out=System.out;
     static PrintStream err=System.err;
 
-    EchoServer es;
     EchoServerGlobTest t;
     
     public EchoServerLocTest(EchoServerGlobTest gt) {
@@ -21,11 +20,14 @@ public class EchoServerLocTest {
     }
 
     public void localTest(int maxConn, int numclients, int rounds) throws Exception  {
-        es=new EchoServer(t.asyncChannelFactory, t.iaddr, maxConn);
+        EchoServer es=new EchoServer(t.asyncChannelFactory, t.iaddr, maxConn);
         Thread.sleep(100);
-        t.testThroughput(numclients, rounds);
-        es.close(); // start closing process
-        es.addCloseListener(new CallbackFuture<SocketAddress>()).get(); // inet addr is free now
+        try {
+            t.testThroughput(numclients, rounds);
+        } finally {
+            es.close(); // start closing process
+            es.addCloseListener(new CallbackFuture<SocketAddress>()).get(); // inet addr is free now
+        }
         out.println("all closed");
     }
 

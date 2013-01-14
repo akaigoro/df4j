@@ -49,13 +49,13 @@ public class AsyncFileChannel<T extends FileIORequest<T>>
     @Override
     public void post(T request) { 
 		if (closed) {
-			request.failed(new ClosedChannelException());
+			request.postFailure(new ClosedChannelException());
 			return;
 		}
         if (request.isReadOp()) {
-        	channel.read(request.buffer, request.getPosition(), request, this);
+        	channel.read(request.getBuffer(), request.getPosition(), request, this);
         } else {
-            channel.write(request.buffer, request.getPosition(), request, this);
+            channel.write(request.getBuffer(), request.getPosition(), request, this);
         }
     }
     
@@ -82,11 +82,11 @@ public class AsyncFileChannel<T extends FileIORequest<T>>
 
     @Override
     public void completed(Integer result, T attachment) {
-        attachment.completed(result);
+        attachment.post(result);
     }
 
     @Override
     public void failed(Throwable exc, T attachment) {
-        attachment.failed(exc);
+        attachment.postFailure(exc);
     }
 }

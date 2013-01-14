@@ -3,7 +3,6 @@ package com.github.rfqu.df4j.nio2.echo;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,12 +15,12 @@ import com.github.rfqu.df4j.nio.SocketIORequest;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
 class ClientConnection
-   implements Promise<SocketChannel>
+   implements Promise<AsyncSocketChannel>
 {
     static final long timeout=1000;// ms
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
 
-    private EchoServerGlobTest echoServerTest;
+    private EchoServerTest echoServerTest;
     private final Timer timer;
     public int id=EchoServerGlobTest.ids.addAndGet(1);
     public int serverId;
@@ -34,7 +33,7 @@ class ClientConnection
     int count2endWrite=0;
     int count3endRead=0;
 
-    public ClientConnection(EchoServerGlobTest echoServerTest, InetSocketAddress addr, int rounds) throws IOException {
+    public ClientConnection(EchoServerTest echoServerTest, InetSocketAddress addr, int rounds) throws IOException {
         this.echoServerTest = echoServerTest;
         this.timer = echoServerTest.timer;
         this.rounds=new AtomicLong(rounds);
@@ -47,7 +46,7 @@ class ClientConnection
     }
 
     @Override
-	public ClientConnection addListener(Callback<SocketChannel> listener) {
+	public ClientConnection addListener(Callback<AsyncSocketChannel> listener) {
     	channel.addConnListener(listener);
 		return this;
 	}
