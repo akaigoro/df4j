@@ -39,13 +39,15 @@ public class Request<T extends Request<T, R>, R> extends Link {
 
     /** 
      * sends itself to the destination
+     * should be invoked from synchronized methods
      */
     @SuppressWarnings("unchecked")
     private void reply() {
         _hasValue=true;
-        if (replyTo != null) {
-            replyTo.post((T) this);
+        Port<T> replyToLoc = replyTo;
+        if (replyToLoc != null) {
             replyTo=null; // avoid memory leak
+            replyToLoc.post((T) this);
         }
     }
 
@@ -58,7 +60,7 @@ public class Request<T extends Request<T, R>, R> extends Link {
     }
 
     /** sets the error and forwards to the destination
-     * @param result
+     * @param exc
      */
     public synchronized void postFailure(Throwable exc) {
         this.exc=exc;
@@ -75,22 +77,22 @@ public class Request<T extends Request<T, R>, R> extends Link {
     }
 
     public void toCallback(Callback<R> handler) {
-        if (exc == null) {
+        if (exc == null) { // check exc, returned result may be null
             handler.post(result);
         } else {
             handler.postFailure(exc);
         }
     }
     
-    public Port<T> getReplyTo() {
-        return replyTo;
+    public synchronized boolean isDone() {
+        return _hasValue;
     }
 
-    public R getResult() {
+    public synchronized R getResult() {
         return result;
     }
 
-    public Throwable getExc() {
+    public synchronized Throwable getExc() {
         return exc;
     }
 }

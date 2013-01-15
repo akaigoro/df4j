@@ -16,8 +16,6 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
-import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
@@ -38,9 +36,7 @@ public class PingPongTest {
     @Test
     public void testImm() throws InterruptedException  {
         nThreads=1;
-        final ImmediateExecutor immediateExecutor = new ImmediateExecutor();
-        DFContext c=DFContext.getCurrentContext();
-        c.setCurrentExecutor(immediateExecutor);
+        DFContext.setCurrentExecutor(new ImmediateExecutor());
 		runTest();
     }
 
@@ -68,27 +64,14 @@ public class PingPongTest {
 	}
 
     /**
-     * the type of messages floating between nodes
-     */
-    static class Token extends Request<Token, Void> {
-        int hops_remained;
-
-        public Token(int hops_remained) {
-            this.hops_remained = hops_remained;
-        }
-    }
-    
-    /**
      * The pinging actor
      * 
      */
-    static class Ping extends ActorLQ<Token> {
+    static class Ping extends ActorLQ<Packet> {
         Pong pong;
-        Port<Token> sink;
 
-        public Ping(Pong pong, Port<Token> sink) {
+        public Ping(Pong pong) {
             this.pong = pong;
-            this.sink = sink;
         }
 
         /**
@@ -96,19 +79,8 @@ public class PingPongTest {
          * number of remaining hops. If number of hops become zero, send it to
          * sink, otherwise send to the Pong actor.
          */
-        protected void act(Token token) throws Exception {
-            if (token.getReplyTo() == null) {
-                token.setListener(this);
-                pong.post(token);
-            } else {
-                int nextVal = token.hops_remained - 1;
-                if (nextVal == 0) {
-                    sink.post(token);
-                } else {
-                    token.hops_remained = nextVal;
-                    pong.post(token);
-                }
-            }
+        protected void act(Packet token) throws Exception {
+            token.send(this, pong);
         }
     }
 
@@ -116,12 +88,7 @@ public class PingPongTest {
      * The ponging actor
      * 
      */
-    static class Pong extends Actor<Token> {
-        private final Port<Token> sink;
-
-        public Pong(Port<Token> sink) {
-            this.sink = sink;
-        }
+    static class Pong extends Actor<Packet> {
 
         /**
          * the method to handle incoming messages for each received packet,
@@ -129,14 +96,8 @@ public class PingPongTest {
          * send it to sink, otherwise send it back to the Ping actor.
          */
         @Override
-        protected void act(Token token) throws Exception {
-            int nextVal = token.hops_remained - 1;
-            if (nextVal == 0) {
-                sink.post(token);
-            } else {
-                token.hops_remained = nextVal;
-                token.post(null);
-            }
+        protected void act(Packet token) throws Exception {
+            token.reply();
         }
     }
 
@@ -146,19 +107,19 @@ public class PingPongTest {
     float runPingPong() throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
-        MessageSink<Token> sink = new MessageSink<Token>(NUM_TOKENS);
+        MessageSink<Packet> sink = new MessageSink<Packet>(NUM_TOKENS);
         Ping[] pings = new Ping[NUM_ACTORS];
         Random rand = new Random(1);
 
         // create Pong actor
-        Pong pong = new Pong(sink);
+        Pong pong = new Pong();
         // create Ping actors
         for (int i = 0; i < pings.length; i++) {
-            pings[i] = new Ping(pong, sink);
+            pings[i] = new Ping(pong);
         }
         // create tokens, send them to randomly chosen actors
         for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].post(new Token(TIME_TO_LIVE));
+            pings[rand.nextInt(pings.length)].post(new Packet(TIME_TO_LIVE, sink));
         }
 
         // wait for all packets to die.

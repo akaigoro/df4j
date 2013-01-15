@@ -18,7 +18,6 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.Dispatcher;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
@@ -42,8 +41,7 @@ public class DemuxPingPongTest {
     public void testImm() throws InterruptedException  {
         nThreads=1;
         final ImmediateExecutor immediateExecutor = new ImmediateExecutor();
-        DFContext c=DFContext.getCurrentContext();
-        c.setCurrentExecutor(immediateExecutor);
+        DFContext.setCurrentExecutor(immediateExecutor);
 		runTest();
     }
 
@@ -76,7 +74,7 @@ public class DemuxPingPongTest {
     float runPingPong() throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
-        MessageSink<Token> sink = new MessageSink<Token>(NUM_TOKENS);
+        MessageSink<Packet> sink = new MessageSink<Packet>(NUM_TOKENS);
         Ping[] pings = new Ping[NUM_ACTORS];
         Random rand = new Random(1);
 
@@ -88,7 +86,7 @@ public class DemuxPingPongTest {
         }
         // create tokens, send them to randomly chosen Ping actors
         for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].post(new Token(TIME_TO_LIVE, sink));
+            pings[rand.nextInt(pings.length)].post(new Packet(TIME_TO_LIVE, sink));
         }
 
         // wait for all packets to die.
@@ -103,41 +101,13 @@ public class DemuxPingPongTest {
     }
 
     /**
-     * the type of messages floating between nodes
-     */
-    static class Token extends Request<Token, Void> {
-        private int hops_remained;
-        private final Port<Token> sink;
-
-        public Token(int hops_remained, Port<Token> sink) {
-            this.hops_remained = hops_remained;
-            this.sink = sink;
-        }
-        
-        /**
-         * the method to handle incoming messages for each received packet,
-         * decrease the number of remaining hops. If number of hops become zero,
-         * send it to sink, otherwise send it back to the Ping actor.
-         */
-        protected void sendTo(Port<Token> to) throws Exception {
-            int nextVal = hops_remained - 1;
-            if (nextVal == 0) {
-                sink.post(this);
-            } else {
-                hops_remained = nextVal;
-                to.post(this);
-            }
-        }
-    }
-    
-    /**
      * The pinging actor
      * 
      */
-    static class Ping extends Actor<Token> {
-        Port<Token> pong;
+    static class Ping extends Actor<Packet> {
+        Port<Packet> pong;
 
-        public Ping(Port<Token> pong) {
+        public Ping(Port<Packet> pong) {
             this.pong = pong;
         }
 
@@ -146,13 +116,12 @@ public class DemuxPingPongTest {
          * number of remaining hops. If number of hops become zero, send it to
          * sink, otherwise send to the Pong actor.
          */
-        protected void act(Token token) throws Exception {
-            token.setListener(this);
-            token.sendTo(pong);
+        protected void act(Packet token) throws Exception {
+            token.send(this, pong);
         }
     }
 
-    static class Pong extends Dispatcher<Token> {
+    static class Pong extends Dispatcher<Packet> {
         { 
             for (int k=0; k<3; k++) {
                 new PongWorker();
@@ -163,19 +132,13 @@ public class DemuxPingPongTest {
          * The ponging actor
          * 
          */
-        class PongWorker extends ActorLQ<Token> {
+        class PongWorker extends ActorLQ<Packet> {
             {
                 listen(this);
             }
-/*
             @Override
-            protected void initInput() {
-                input=new AbstractActor.ScalarInput<Token>();
-            }
-*/
-            @Override
-            protected void act(Token token) throws Exception {
-                token.sendTo(token.getReplyTo());
+            protected void act(Packet token) throws Exception {
+                token.reply();
                 listen(this);
             }
         }

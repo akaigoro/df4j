@@ -40,8 +40,7 @@ public class GraphTest {
     public void testImm() throws InterruptedException  {
         nThreads=1;
         final ImmediateExecutor immediateExecutor = new ImmediateExecutor();
-        DFContext c=DFContext.getCurrentContext();
-        c.setCurrentExecutor(immediateExecutor);
+        DFContext.setCurrentExecutor(immediateExecutor);
 		runTest();
     }
 

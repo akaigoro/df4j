@@ -77,22 +77,17 @@ public class DFContext  {
         return res;
     }
 
+    protected synchronized Executor _setCurrentExecutor(Executor executor) {
+        Executor res = currentExecutor;
+        currentExecutor=executor;
+        return res;
+    }
+
     /**
      * @return current executor stored in thread-local variable
      */
     public static Executor getCurrentExecutor() {
         return getCurrentContext()._getCurrentExecutor();
-    }
-
-    /** 
-     * Do it on your own risk.
-     * Good practice is that your executor should spread this context on its threads.
-     * @return old executorremoveCurrentExecutor
-     */
-    public synchronized Executor setCurrentExecutor(Executor executor) {
-        Executor res = currentExecutor;
-        currentExecutor=executor;
-        return res;
     }
 
     //---------------------------------------- context-aware thread factory
@@ -119,22 +114,31 @@ public class DFContext  {
         return (ThreadPoolExecutor) Executors.newCachedThreadPool(tf);
     }
     
+    /** 
+     * Do it on your own risk.
+     * Good practice is that your executor should spread this context on its threads.
+     * @return old executorremoveCurrentExecutor
+     */
+    public static Executor setCurrentExecutor(Executor executor) {
+        return getCurrentContext()._setCurrentExecutor(executor);
+    }
+
     public static void setSingleThreadExecutor() {
         DFContext context=getCurrentContext();
         Executor executor = context.newSingleThreadExecutor();
-        context.setCurrentExecutor(executor);
+        context._setCurrentExecutor(executor);
     }
     
     public static void setFixedThreadPool(int nThreads) {
         DFContext context=getCurrentContext();
         Executor executor = context.newFixedThreadPool(nThreads);
-        context.setCurrentExecutor(executor);
+        context._setCurrentExecutor(executor);
     }
     
     public static void setCachedThreadPool() {
         DFContext context=getCurrentContext();
         Executor executor = context.newCachedThreadPool();
-        context.setCurrentExecutor(executor);
+        context._setCurrentExecutor(executor);
     }
     
     class ContextThreadFactory extends ThreadGroup implements ThreadFactory {
