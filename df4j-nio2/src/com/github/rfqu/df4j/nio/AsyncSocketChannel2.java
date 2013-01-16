@@ -57,7 +57,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
         }
         reader.resume();
         writer.resume();
-        connEvent.post(new AsyncSocketChannel2(attachement));
+        connEvent.post(this);
     }
     
     /**

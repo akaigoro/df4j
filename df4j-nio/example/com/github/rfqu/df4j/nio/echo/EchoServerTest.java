@@ -17,7 +17,7 @@ import com.github.rfqu.df4j.testutil.DoubleValue;
 /**
  * requires com.github.rfqu.df4j.ioexample.EchoServer to be launched as an application
  */
-public abstract class EchoServerTest {
+public class EchoServerTest {
 	static final long PERIOD = 0;//5; // ms between subsequent requests for given client
     static final int BUF_SIZE = 128;
     public static final AtomicInteger ids=new AtomicInteger(); // DEBUG
@@ -26,7 +26,7 @@ public abstract class EchoServerTest {
     static PrintStream out=System.out;
     static PrintStream err=System.err;
 
-    AsyncChannelFactory asyncChannelFactory;
+    AsyncChannelFactory asyncChannelFactory=AsyncChannelFactory.getCurrentAsyncChannelFactory();
 	InetSocketAddress iaddr = new InetSocketAddress("localhost", EchoServer.defaultPort);
 	int numclients;
     int rounds; // per client
@@ -34,10 +34,6 @@ public abstract class EchoServerTest {
 	HashMap<Integer, ClientConnection> clients=new HashMap<Integer, ClientConnection>();
     Aggregator sink;
 	
-    public EchoServerTest(AsyncChannelFactory asyncChannelFactory) {
-        this.asyncChannelFactory=asyncChannelFactory;
-    }
-
     public void clientFinished(ClientConnection clientConnection, DoubleValue avg) {
 		sink.post(avg);
 		clients.remove(clientConnection.id);

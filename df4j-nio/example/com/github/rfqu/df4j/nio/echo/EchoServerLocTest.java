@@ -13,14 +13,10 @@ public class EchoServerLocTest {
     static PrintStream out=System.out;
     static PrintStream err=System.err;
 
-    EchoServerGlobTest t;
-    
-    public EchoServerLocTest(EchoServerGlobTest gt) {
-        t=gt;
-    }
+    EchoServerTest t=new EchoServerTest();
 
     public void localTest(int maxConn, int numclients, int rounds) throws Exception  {
-        EchoServer es=new EchoServer(t.asyncChannelFactory, t.iaddr, maxConn);
+        EchoServer es=new EchoServer(t.iaddr, maxConn);
         Thread.sleep(100);
         try {
             t.testThroughput(numclients, rounds);
@@ -57,6 +53,9 @@ public class EchoServerLocTest {
    }
 
     public void run(String[] args) throws Exception {
+    }
+
+    public static void main(String[] args) throws IOException, InterruptedException, Exception {
         String host;
         if (args.length<1) {
 //          System.out.println("Usage: EchoServerTest host port");
@@ -71,7 +70,8 @@ public class EchoServerLocTest {
         } else {
             port = Integer.valueOf(args[1]);
         }
-        t.iaddr = new InetSocketAddress(host, port);
-        veryHeavyTest();
+        EchoServerLocTest t=new EchoServerLocTest();
+        t.t.iaddr = new InetSocketAddress(host, port);
+        t.veryHeavyTest();
     }
 }

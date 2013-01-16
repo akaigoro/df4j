@@ -1,17 +1,13 @@
 package com.github.rfqu.df4j.nio.echo;
 
-import com.github.rfqu.df4j.nio.AsyncChannelFactory1;
-import com.github.rfqu.df4j.nio.echo.EchoServerLocTest;
-
+/**
+ *  Runs tests with {@EchoServer2} launched in the same JVM.
+ *  Can be run as Junit tests or as java application.
+ */
 public class EchoServerLocTest1 extends EchoServerLocTest {
-	
-    public EchoServerLocTest1() {
-        super(new EchoServerGlobTest1(new AsyncChannelFactory1()));
-    }
 
     public static void main(String[] args) throws Exception {
-        EchoServerLocTest1 t=new EchoServerLocTest1();
-        t.run(args);
+        EchoServerLocTest.main(args);
     }
 
 }

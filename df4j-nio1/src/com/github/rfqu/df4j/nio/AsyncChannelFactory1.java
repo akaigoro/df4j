@@ -8,7 +8,7 @@ import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
-public class AsyncChannelFactory1 implements AsyncChannelFactory {
+public class AsyncChannelFactory1 extends AsyncChannelFactory {
     @Override
     public AsyncServerSocketChannel newAsyncServerSocketChannel
        (SocketAddress addr, Callback<AsyncSocketChannel> callback)

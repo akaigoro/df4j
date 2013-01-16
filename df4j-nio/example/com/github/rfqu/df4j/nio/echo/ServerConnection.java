@@ -37,7 +37,7 @@ class ServerConnection {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			echoServer.connClosed(this);
+			echoServer.connClosed();
 		}
     }
 

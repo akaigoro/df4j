@@ -75,6 +75,9 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
     boolean tryAccept() {
         for (; maxConn>0; maxConn--) {
             try {
+                if (channel==null) {
+                    break; // connection closed
+                }
                 SocketChannel sch = channel.accept();
                 if (sch==null) {
                     break;
