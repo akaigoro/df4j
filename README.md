@@ -3,11 +3,13 @@ df4j is a basic dataflow library. It can easily be extended for specific needs.
 Subprojects
 -----------
 
-df4j-core: contains core functionality. It requires java 1.5 or higher.
+df4j-core: contains core functionality. Requires java 1.6 or higher.
 
-df4j-nio (in progress): a wrapper to nio asyncronous input-output functionality (based on Selector).
+df4j-nio1: a wrapper to nio asyncronous input-output functionality (based on Selector).
 
-df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. It requires java 1.7 or higher.
+df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. Requires java 1.7 or higher.
+
+df4j-nio: common parts of df4j-nio1 and df4j-nio2.
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
@@ -74,7 +76,7 @@ and using a "poison pill" value may not be feasible. So the Actor class has meth
 
 We started with Actor example, as actor model is widely known. However, df4j treats actors as a special case of a node in
 dataflow graph, namely, a node with one explicit input arc (there is also an implicit arc which
-makes a loop and holds one token - the state of the node instance). Below is an implementation based on DataflowNode:
+makes a loop and holds one token - the state of the node instance). Below is an implementation based on naked DataflowNode:
 
 <pre>
     class Collector extends DataflowNode {
@@ -236,7 +238,7 @@ Thread context is an instance of class DFContext and is stored as a local variab
 
 Version history
 ---------------
-v0.7 2013/01/13
+v0.7 2013/01/16
 - important rename in core classes:
 Port.send => Port.post
 Callback.sendFailure => Callback.postFailure
@@ -246,7 +248,7 @@ EventSource => Promise
 - refactoring of nio* projects:
 implementation based on NIO1 moved from df4j-nio to df4j-nio1;
 df4j-nio contains now only common parts of df4j-nio1 and df4j-nio2,
-so both df4j-nio1 and df4j-nio2 require project df4j-nio
+so both df4j-nio1 and df4j-nio2 require the df4j-nio project.
 
 =======
 v0.6 2012/12/03
