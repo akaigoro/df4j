@@ -47,24 +47,15 @@ public class Dispatcher<M> extends ActorVariable<M>
 
     @Override
     protected void act(M message) throws Exception {
-        if (message==null) {
-            throw new NullPointerException();
-        }
-        if (actors.get()==null) {
-            throw new NullPointerException();
-        }
         actors.get().post(message);
     }
 
     @Override
     protected void complete() throws Exception {
-        actors.get().close();
-        for (;;) {
-            Actor<M> actor=actors.poll();
-            if (actor==null) {
-                return;
-            }
+        Actor<M> actor=actors.get();
+        while (actor!=null) {
             actor.close();
+            actor=actors.poll();
         }
     }
 

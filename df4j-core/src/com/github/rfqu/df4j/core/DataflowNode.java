@@ -24,15 +24,14 @@ import java.util.concurrent.locks.ReentrantLock;
  *  - redefine abstract method act()
  */
 public abstract class DataflowNode extends Link {
-	static final int allOnes=0xFFFFFFFF;
+    static final int allOnes=0xFFFFFFFF;
+    static final int allInputOnes=0xFFFFFFFE;
 	private Lock lock = new ReentrantLock();
 	private Throwable exc=null;
     private Pin head; // the head of the list of Pins
-    private int pinCount=0;
-    private int pinMask=0; // mask with 1 for all existing pins
-    private int readyPins=0;  // mask with 1 for all ready pins
+    private int pinCount=1; // fire bit allocated
+    private int readyPins=0;  // mask with 0 for ready pins, 1 for blocked
     private final Task task; 
-    private boolean fired=false; // true when this actor runs
     
     public DataflowNode(Executor executor) {
         task=new ActorTask(executor);
@@ -42,6 +41,39 @@ public abstract class DataflowNode extends Link {
         task=new ActorTask();
     }
 
+    /** lock pin */
+    protected final void pinOff(int pinBit) {
+        readyPins |= pinBit;
+    }
+
+    /** unlock pin */
+    protected final void pinOn(int pinBit) {
+        readyPins &= ~pinBit;
+    }
+
+    protected final void fireLock() {
+        pinOff(1);
+    }
+
+    protected final void fireUnlock() {
+        pinOn(1);
+    }
+
+    protected final boolean isFired() {
+        return (readyPins&1)==1;
+    }
+
+    /**
+     * @return true if the actor has all its pins on and so is ready for execution
+     */
+    private final boolean allInputsReady() {
+        return (readyPins&allInputOnes)==0;
+    }
+    
+    private final boolean allReady() {
+        return readyPins==0;
+    }
+    
     public  void postFailure(Throwable exc) {
         boolean doFire;       
         lock.lock();
@@ -50,10 +82,8 @@ public abstract class DataflowNode extends Link {
                 return; // only first failure is processed 
             }
             this.exc=exc;
-            if (fired) {
-                doFire=false;
-            } else {
-                doFire=fired=true;
+            if (doFire=!isFired()) {
+                fireLock();
             }
         } finally {
           lock.unlock();
@@ -63,13 +93,6 @@ public abstract class DataflowNode extends Link {
         }
     }
 
-    /**
-     * @return true if the actor has all its pins on and so is ready for execution
-     */
-    private final boolean allReady() {
-		return readyPins==pinMask;
-	}
-    
     private final void fire() {
         task.fire();
     }
@@ -95,11 +118,10 @@ public abstract class DataflowNode extends Link {
      * Extracted tokens are expected to be used used in the act() method.
      * @return 
      */
-    protected boolean consumeTokens() {
+    protected void consumeTokens() {
         for (Pin pin=head; pin!=null; pin=pin.next) {
             pin.consume();
         }
-        return allReady();
     }
     
     //====================== inner classes
@@ -137,9 +159,9 @@ public abstract class DataflowNode extends Link {
                 for (;;) {
                     lock.lock();
                     try {
-                        boolean allReady=consumeTokens();
-                        if (!allReady) {
-                            fired = false; // allow firing
+                        consumeTokens();
+                        if (!allInputsReady()) {
+                            fireUnlock(); // allow firing
                             return;
                         }
                         if (exc!=null) {
@@ -174,14 +196,13 @@ public abstract class DataflowNode extends Link {
     	protected Pin(){
             lock.lock();
             try {
-                int count = pinCount;
-                if (count==32) {
+                if (pinCount==32) {
                   throw new IllegalStateException("only 32 pins could be created");
                 }
-                next=head; head=this; // register itself in the pin list
-                pinBit = 1<<count;
-                pinMask=pinMask|pinBit;
+                pinBit = 1<<pinCount;
+                turnOff();
                 pinCount++;
+                next=head; head=this; // register itself in the pin list
             } finally {
               lock.unlock();
             }
@@ -192,13 +213,13 @@ public abstract class DataflowNode extends Link {
     	 *  @return true if actor became ready and must be fired
     	 */
         protected boolean turnOn() {
-            readyPins |= pinBit;
             //System.out.print("turnOn "+fired+" "+allReady());
-            if (fired || !allReady()) {
+            pinOn(pinBit);
+            if (!allReady()) {
                 //System.out.println(" => false");
                 return false;
             }
-            fired = true; // to prevent multiple concurrent firings
+            fireLock(); // to prevent multiple concurrent firings
             //System.out.println(" => true");
             return true;
         }
@@ -208,7 +229,7 @@ public abstract class DataflowNode extends Link {
          */
         protected void turnOff() {
             //System.out.println("turnOff");
-            readyPins &= ~pinBit;
+            pinOff(pinBit);
         }
         
         /** Executed after token processing (method act).

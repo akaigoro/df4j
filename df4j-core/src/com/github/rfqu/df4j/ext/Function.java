@@ -60,6 +60,17 @@ public abstract class Function<R> extends DataflowNode implements Promise<R> {
         res.postFailure(exc);
     }
     
+    //========== inner classes
+    
+    /** Scalar Input which also redirects failures 
+     */
+    public class CallbackInput<T> extends Input<T> implements Callback<T> {
+        @Override
+        public void postFailure(Throwable exc) {
+            Function.this.postFailure(exc);
+        }
+    }
+        
    /**
      * Unary operation
     *

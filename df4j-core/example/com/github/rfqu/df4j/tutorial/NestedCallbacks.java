@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledFuture;
 
 import org.junit.Test;
 
@@ -181,7 +182,9 @@ public class NestedCallbacks {
             requestB.addLog(", <LS:" + id);
             Timer timer = Timer.getCurrentTimer();
             delay = rand.nextInt(400) + 200; // milliseconds
-            timer.schedule(callbackB, requestB, delay);
+            // TODO cancel ttask
+            ScheduledFuture<?> ttask = timer.schedule(callbackB, requestB, delay);
+            //ttask.cancel(false);
         }
 
         Port<RequestS> callbackB = new Port<RequestS>() {

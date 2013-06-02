@@ -1,5 +1,6 @@
 package com.github.rfqu.df4j.core;
 
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -16,21 +17,21 @@ public class Timer {
     }
 
 
-    public  <T> void scheduleAt(Port<T> port, T message, long timeToFire) {
-        schedule(port, message, timeToFire-System.currentTimeMillis());
+    public  <T> ScheduledFuture<?> scheduleAt(Port<T> port, T message, long timeToFire) {
+        return schedule(port, message, timeToFire-System.currentTimeMillis());
     }
     
-    public  <T> void schedule(Port<T> port, T message, long delay) {
+    public  <T> ScheduledFuture<?> schedule(Port<T> port, T message, long delay) {
         TimerTask<T> command=new TimerTask<T>(port, message, System.currentTimeMillis()+delay);
-        timerThread.schedule(command, delay, TimeUnit.MILLISECONDS);
+        return timerThread.schedule(command, delay, TimeUnit.MILLISECONDS);
     }
     
-    public  <T> void schedule(Runnable task, long delay) {
-        timerThread.schedule(task, delay, TimeUnit.MILLISECONDS);
+    public  <T> ScheduledFuture<?> schedule(Runnable task, long delay) {
+        return timerThread.schedule(task, delay, TimeUnit.MILLISECONDS);
     }
     
-    public  <T> void scheduleAt(Runnable task, long timeToFire) {
-        timerThread.schedule(task, timeToFire-System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+    public  <T> ScheduledFuture<?> scheduleAt(Runnable task, long timeToFire) {
+        return timerThread.schedule(task, timeToFire-System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
     
     public CallbackFuture<Void> shutdown() {
