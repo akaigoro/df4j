@@ -16,7 +16,7 @@ import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.CallbackPromise;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.DFNode;
 import com.github.rfqu.df4j.core.StreamPort;
 
@@ -30,7 +30,7 @@ import com.github.rfqu.df4j.core.StreamPort;
  */
 public abstract class AsyncSocketChannel implements StreamPort<SocketIORequest<?>> {
 	/** for client-side socket: signals connection completion */
-	protected final CallbackPromise<AsyncSocketChannel> connEvent = new CallbackPromise<AsyncSocketChannel>();
+	protected final ListenableFuture<AsyncSocketChannel> connEvent = new ListenableFuture<AsyncSocketChannel>();
 	/** read requests queue */
 	protected RequestQueue reader;
 	/** write requests queue */
@@ -39,18 +39,17 @@ public abstract class AsyncSocketChannel implements StreamPort<SocketIORequest<?
 	protected Completer completer = new Completer();
 	protected volatile boolean closed = false;
 
-	public <R extends Callback<AsyncSocketChannel>> R addConnListener(R listener) {
-		connEvent.addListener(listener);
-		return listener;
-	}
-
 	public boolean isClosed() {
 		return closed;
 	}
 
+    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
+        return connEvent;
+    }
+
 	// ================== StreamPort I/O interface
 
-	@Override
+    @Override
 	public void post(SocketIORequest<?> request) {
 		(request.isReadOp() ? reader : writer).post(request);
 	}

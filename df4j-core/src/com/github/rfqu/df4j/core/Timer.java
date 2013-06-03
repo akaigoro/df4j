@@ -34,11 +34,11 @@ public class Timer {
         return timerThread.schedule(task, timeToFire-System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
     
-    public CallbackFuture<Void> shutdown() {
+    public ListenableFuture<Void> shutdown() {
         timerKey.remove();
         timerThread.shutdown();
         // wait full timer termination after shutdown
-        return new CallbackFuture<Void>(){
+        return new ListenableFuture<Void>(){
 		    @Override
 		    public synchronized Void get() throws InterruptedException {
 		        timerThread.awaitTermination(1000, TimeUnit.DAYS);

@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
@@ -135,12 +135,12 @@ public abstract class AsyncServerSocketChannelTest {
 
     static class Connection implements Port<MyRequest> {
         AsyncSocketChannel conn;
-        CallbackFuture<AsyncSocketChannel> connListener=new CallbackFuture<AsyncSocketChannel>();
+        ListenableFuture<AsyncSocketChannel> connListener=new ListenableFuture<AsyncSocketChannel>();
         ArrayBlockingQueue<MyRequest> finishedRequests=new ArrayBlockingQueue<MyRequest>(10);
 
         Connection(AsyncSocketChannel conn) throws IOException {
             this.conn=conn;
-            conn.addConnListener(connListener);
+            conn.getConnEvent().addListener(connListener);
         }
 
         public void read(MyRequest request) {

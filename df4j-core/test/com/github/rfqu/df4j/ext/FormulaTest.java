@@ -17,10 +17,10 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.CallbackPromise;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.ext.Function.BinaryOp;
 import com.github.rfqu.df4j.ext.Function.UnaryOp;
 
@@ -29,7 +29,7 @@ import com.github.rfqu.df4j.ext.Function.UnaryOp;
  * Sample networks realizing well-known mathematic formulae.
  * All network nodes execute in parallel, as soon as input data are ready.
  * Nodes communicate with each other using Port and Promise interfaces which have push semantics.
- * To convert push mechanism to more convenient pull mechanism, CallbackFuture objects are used.
+ * To convert push mechanism to more convenient pull mechanism, ListenableFuture objects are used.
  * Of course this examples have no practical meaning, as overheads for message passing 
  * overwhelms all gains from parallel execution.
  * For a dataflow network to have a sense, node execution should perform calculations
@@ -52,18 +52,18 @@ public class FormulaTest {
         // push argument values to inputs:
         sq.post(2.0); 
         // create a future to pull the result from the network
-        CallbackFuture<Double> future = new CallbackFuture<Double>(sq);
+        ListenableFuture<Double> future = new ListenableFuture<Double>(sq);
        // network starts after both arguments and result consumers are defined
         // wait for the result
         Double res = future.get();
         // alternatively, use this shortcut:
-//      Double res = CallbackFuture.getFrom(sq);
+//      Double res = ListenableFuture.getFrom(sq);
         // result is obtained 
         assertEquals(4, res.intValue());
     }
 
     /**
-     * checks that execution exception is propagated to CallbackFuture
+     * checks that execution exception is propagated to ListenableFuture
      */
     @Test
     public void t011() throws InterruptedException {
@@ -71,7 +71,7 @@ public class FormulaTest {
         sq.post(-2.0); // square root from negative number would cause an error
         try {
             // that error manifests itself when the result is pulled from the network
-            CallbackFuture.getFrom(sq);
+            ListenableFuture.getFrom(sq);
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -92,7 +92,7 @@ public class FormulaTest {
 
         try {
             // that error manifests itself when the result is pulled from the network
-            CallbackFuture.getFrom(sum);
+            ListenableFuture.getFrom(sum);
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -107,7 +107,7 @@ public class FormulaTest {
 		Mult node=new Mult();	
     	node.p1.post(2.0);
     	node.p2.post(3.0);
-        assertEquals(6, CallbackFuture.getFrom(node).intValue());
+        assertEquals(6, ListenableFuture.getFrom(node).intValue());
     }
 
     /**
@@ -129,7 +129,7 @@ public class FormulaTest {
         a.post(3.0);
         b.post(4.0);
         // wait for the result
-        double res = CallbackFuture.getFrom(sq);
+        double res = ListenableFuture.getFrom(sq);
         assertEquals(5, res, delta);
     }
 
@@ -140,7 +140,7 @@ public class FormulaTest {
      * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
-    static class Discr extends CallbackPromise<Double> {
+    static class Discr extends ListenableFuture<Double> {
         // internal nodes
         private Mult mu2=new Mult();	
         private Diff diff = new Diff();
@@ -174,8 +174,8 @@ public class FormulaTest {
 	    private Sum sum = new Sum();
 	    private Diff diff=new Diff();
         // inputs
-	    CallbackPromise<Double> a=new CallbackPromise<Double>(); // a and b used multiple times, require Promise
-	    CallbackPromise<Double> b=new CallbackPromise<Double>();
+	    ListenableFuture<Double> a=new ListenableFuture<Double>(); // a and b used multiple times, require Promise
+	    ListenableFuture<Double> b=new ListenableFuture<Double>();
 		Port<Double> c=d.c; // c is used only once
 		// results
 		Div x1 = new Div();
@@ -204,8 +204,8 @@ public class FormulaTest {
         node.b.post(3.0);
         node.c.post(-14.0);
 
-        assertEquals(2.0, CallbackFuture.getFrom(node.x1), delta);
-        assertEquals(-3.5, CallbackFuture.getFrom(node.x2), delta);
+        assertEquals(2.0, ListenableFuture.getFrom(node.x1), delta);
+        assertEquals(-3.5, ListenableFuture.getFrom(node.x2), delta);
     }
 
     /**
@@ -219,13 +219,13 @@ public class FormulaTest {
         node.c.post(14.0);
 
         try {
-            CallbackFuture.getFrom(node.x1).intValue();
+            ListenableFuture.getFrom(node.x1).intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
         try {
-            CallbackFuture.getFrom(node.x2).intValue();
+            ListenableFuture.getFrom(node.x2).intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);

@@ -19,7 +19,7 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
@@ -68,8 +68,8 @@ public class ActorVariantsTest {
     }
    
     public void testA(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
-        CallbackFuture<Double> sumcf=new CallbackFuture<Double>();
-        CallbackFuture<Double> avgcf=new CallbackFuture<Double>(node.avg);
+        ListenableFuture<Double> sumcf=new ListenableFuture<Double>();
+        ListenableFuture<Double> avgcf=new ListenableFuture<Double>(node.avg);
         node.post(new DoubleValue(1.0));
         node.post(new DoubleValue(2.0));
         node.close();
@@ -84,14 +84,15 @@ public class ActorVariantsTest {
         // check that the node did not start execution
         assertEquals(0, node.counter); 
         // trigger execution
-        sumValue=sumcf.listenTo(node.sum).get(500000);
+        node.sum.addListener(sumcf);
+        sumValue=sumcf.get(500000);
         assertEquals(3.0, sumValue, delta);
         assertEquals(1.5, avgcf.get(), delta);
     }
 
     public void testB(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
-        CallbackFuture<Double> sumcf=new CallbackFuture<Double>();
-        CallbackFuture<Double> avgcf=new CallbackFuture<Double>(node.avg);
+        ListenableFuture<Double> sumcf=new ListenableFuture<Double>();
+        ListenableFuture<Double> avgcf=new ListenableFuture<Double>(node.avg);
         double value=1.0;
         int cnt=12345;
         for (int k=0; k<cnt; k++) {
@@ -110,7 +111,8 @@ public class ActorVariantsTest {
         // check that the node did not start execution
         assertEquals(0, node.counter); 
         // trigger execution
-        sumValue=sumcf.listenTo(node.sum).get(500000);
+        node.sum.addListener(sumcf);
+        sumValue=sumcf.get(500000);
         assertEquals(1.0, sumValue, delta);
         assertEquals(1.0/cnt, avgcf.get(), delta);
     }

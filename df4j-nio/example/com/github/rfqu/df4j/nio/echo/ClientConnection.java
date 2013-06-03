@@ -8,15 +8,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
-class ClientConnection
-   implements Promise<AsyncSocketChannel>
-{
+class ClientConnection {
     static final long timeout=1000;// ms
     static AtomicInteger ids=new AtomicInteger(); // DEBUG
 
@@ -45,11 +44,9 @@ class ClientConnection
         request.setListener(startWrite);
     }
 
-    @Override
-	public ClientConnection addListener(Callback<AsyncSocketChannel> listener) {
-    	channel.addConnListener(listener);
-		return this;
-	}
+    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
+        return channel.getConnEvent();
+    }
 
     /** starts write operation
      */

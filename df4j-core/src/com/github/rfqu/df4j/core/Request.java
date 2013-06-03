@@ -11,7 +11,7 @@ package com.github.rfqu.df4j.core;
 
 /**
  * A message that carries callback port.
- * Similar to {@link CallbackPromise}, but callback port is of type {@link Port}<{@link T}>.
+ * Similar to {@link ListenableFuture}, but callback port is of type {@link Port}<{@link T}>.
  * @param <T> actual type of Request (subclassed)
  * @param <R> type of result
  */

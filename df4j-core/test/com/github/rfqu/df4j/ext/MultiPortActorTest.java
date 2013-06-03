@@ -14,14 +14,14 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Port;
 
 public class MultiPortActorTest {
 
     static class Accum extends MultiPortActor {
         int sum=0;
-        CallbackFuture<Integer> res=new CallbackFuture<Integer>();
+        ListenableFuture<Integer> res=new ListenableFuture<Integer>();
         
         final PortHandler<Integer> add=new PortHandler<Integer>() {
             @Override
@@ -56,7 +56,7 @@ public class MultiPortActorTest {
         Accum acc=new Accum();
         acc.add.post(11);
         acc.sub.post(9);
-        CallbackFuture<Integer> res=new CallbackFuture<Integer>();
+        ListenableFuture<Integer> res=new ListenableFuture<Integer>();
         acc.get.post(res);
     	Assert.assertEquals(new Integer(2), res.get());
     }
