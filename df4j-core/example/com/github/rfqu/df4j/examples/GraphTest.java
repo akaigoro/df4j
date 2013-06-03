@@ -17,7 +17,6 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.IntValue;
 import com.github.rfqu.df4j.testutil.MessageSink;
@@ -74,7 +73,7 @@ public class GraphTest {
      * The intermediate passing node
      * 
      */
-    static class NodeActor extends ActorLQ<IntValue> {
+    static class NodeActor extends Actor<IntValue> {
         NodeActor[] nodes;
         private final Port<Object> sink;
         private Random rand;

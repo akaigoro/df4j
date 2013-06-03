@@ -1,8 +1,6 @@
 package com.github.rfqu.df4j.testutil;
 
-import com.github.rfqu.df4j.core.Link;
-
-public class StringMessage extends Link {
+public class StringMessage {
     private String str;
 
     public StringMessage(String str) {

@@ -12,8 +12,6 @@ package com.github.rfqu.df4j.ext;
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.DoublyLinkedQueue;
-import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
 
 /**
@@ -43,7 +41,7 @@ public class MultiPortActor {
     protected void complete() throws Exception {
     }
 
-    private static final class Message<M> extends Link {
+    private static final class Message<M> {
         private PortHandler<M> handler;
         private M m;
         
@@ -63,11 +61,6 @@ public class MultiPortActor {
 
         public ExecActor(Executor executor) {
             super(executor);
-        }
-
-        @Override
-        protected Input<Message<?>> createInput() {
-            return new StreamInput<Message<?>>(new DoublyLinkedQueue<Message<?>>());
         }
 
         @Override

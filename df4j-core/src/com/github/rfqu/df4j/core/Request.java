@@ -15,7 +15,7 @@ package com.github.rfqu.df4j.core;
  * @param <T> actual type of Request (subclassed)
  * @param <R> type of result
  */
-public class Request<T extends Request<T, R>, R> extends Link {
+public class Request<T extends Request<T, R>, R> {
     protected boolean _hasValue=false;
     protected R result=null;
     protected Throwable exc=null;

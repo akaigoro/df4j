@@ -11,7 +11,6 @@ package com.github.rfqu.df4j.ext;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ActorVariable;
-import com.github.rfqu.df4j.core.DoublyLinkedQueue;
 
 /**
  * In multithreaded programming, often several identical worker threads are fed with
@@ -21,14 +20,9 @@ import com.github.rfqu.df4j.core.DoublyLinkedQueue;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with {@link #listen(Actor<M>)}.
  */
-public class Dispatcher<M> extends ActorVariable<M>
-{
-    private final StreamInput<Actor<M>> actors=createActorQueue();
+public class Dispatcher<M> extends ActorVariable<M> {
+    private final StreamInput<Actor<M>> actors=new StreamInput<Actor<M>>();
     
-    protected StreamInput<Actor<M>> createActorQueue() {
-        return new StreamInput<Actor<M>>(new DoublyLinkedQueue<Actor<M>>());
-    }
-
     /** Accepts request from the actor for the next message.
      * The next message will be sent to the actor as soon as it is available.
      * The request is served once, so after the message is processed by the actor,

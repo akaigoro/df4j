@@ -20,7 +20,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.DoublyLinkedQueue;
 import com.github.rfqu.df4j.testutil.IntValue;
 
 /**
@@ -132,10 +131,6 @@ public class DispatcherTest {
             }
         }
 
-        @Override
-        protected Input<Token> createInput() {
-            return new StreamInput<Token>(new DoublyLinkedQueue<Token>());
-        }
         /**
          * The ponging actor
          * 

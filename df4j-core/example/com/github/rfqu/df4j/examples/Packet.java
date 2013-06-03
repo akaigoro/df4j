@@ -1,12 +1,11 @@
 package com.github.rfqu.df4j.examples;
 
-import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.Port;
 
 /**
  * the type of messages floating between nodes
  */
-class Packet extends Link {
+class Packet {
     int hops_remained;
     Port<Packet> sink;
     Port<Packet> sender;

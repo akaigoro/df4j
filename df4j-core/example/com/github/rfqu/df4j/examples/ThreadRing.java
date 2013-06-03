@@ -12,10 +12,10 @@ import java.io.PrintStream;
 
 import org.junit.Test;
 
+import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
-import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
 
@@ -100,7 +100,7 @@ public class ThreadRing {
      * The intermediate passing node
      * 
      */
-    static class NodeActor extends ActorLQ<Token> {
+    static class NodeActor extends Actor<Token> {
         private final Port<Object> sink;
         private NodeActor next;
         int id;

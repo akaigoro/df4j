@@ -16,7 +16,6 @@ import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
-import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
 
@@ -67,7 +66,7 @@ public class PingPongTest {
      * The pinging actor
      * 
      */
-    static class Ping extends ActorLQ<Packet> {
+    static class Ping extends Actor<Packet> {
         Pong pong;
 
         public Ping(Pong pong) {

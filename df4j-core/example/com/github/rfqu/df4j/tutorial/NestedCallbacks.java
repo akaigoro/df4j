@@ -13,7 +13,6 @@ import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Timer;
-import com.github.rfqu.df4j.ext.ActorLQ;
 
 /** Demonstrates solution to the StackOverflow question 
  * http://stackoverflow.com/questions/10695152/java-pattern-for-nested-callbacks/10695933
@@ -123,7 +122,7 @@ public class NestedCallbacks {
     /** first layer service
      * To process input request, it sends 2 sequential requests to LongService
      */
-    class Service extends ActorLQ<RequestS> {
+    class Service extends Actor<RequestS> {
         Semafor running = new Semafor(); // closed when long request is executed
         private int id;
         RequestS requestA;

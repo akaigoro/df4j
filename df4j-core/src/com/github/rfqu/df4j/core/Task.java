@@ -23,7 +23,7 @@ import java.util.concurrent.Executor;
  *   
  * @author kaigorodov
  */
-public abstract class Task extends Link implements Runnable {
+public abstract class Task implements Runnable {
     protected final Executor executor;
 
     public Task(Executor executor) {

@@ -15,10 +15,10 @@
  * Executor can be set directly as a constructor argument, or taken implicitly 
  * from thread context.  
  * <p>
- * - nodes are subclasses of abstract class {@link com.github.rfqu.df4j.core.DataflowNode}.
+ * - nodes are subclasses of abstract class {@link com.github.rfqu.df4j.core.DFActor}.
  *  User have to override  method to retrieve tokens from pins 
- *  {@link com.github.rfqu.df4j.core.DataflowNode#consumeTokens()} and method to
- *  handle tokens {@link com.github.rfqu.df4j.core.DataflowNode#act()}
+ *  {@link com.github.rfqu.df4j.core.DFActor#consumeTokens()} and method to
+ *  handle tokens {@link com.github.rfqu.df4j.core.DFActor#act()}
  * <p>
  * - pins may be of several predefined types, and user can create specific pin types
  * by subclassing class {@link com.github.rfqu.df4j.core.DataflowNode.Pin}

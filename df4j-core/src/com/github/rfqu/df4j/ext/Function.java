@@ -12,7 +12,7 @@ package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
 
-import com.github.rfqu.df4j.core.DataflowNode;
+import com.github.rfqu.df4j.core.DFActor;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Promise;
 
@@ -21,7 +21,7 @@ import com.github.rfqu.df4j.core.Promise;
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends DataflowNode implements Promise<R> {
+public abstract class Function<R> extends DFActor implements Promise<R> {
     protected final Demand<R> res=new Demand<R>();
 
     public Function(Executor executor) {

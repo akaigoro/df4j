@@ -18,7 +18,6 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.ext.ActorLQ;
 import com.github.rfqu.df4j.ext.Dispatcher;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
@@ -132,7 +131,7 @@ public class DemuxPingPongTest {
          * The ponging actor
          * 
          */
-        class PongWorker extends ActorLQ<Packet> {
+        class PongWorker extends Actor<Packet> {
             {
                 listen(this);
             }

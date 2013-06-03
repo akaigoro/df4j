@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
  * This is classic Actor type.
  * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M> extends DataflowNode
+public abstract class Actor<M> extends DFActor
     implements StreamPort<M>, Callback<M>, Closeable
 {
     /** place for input token(s) */

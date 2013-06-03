@@ -14,12 +14,11 @@ package com.github.rfqu.df4j.nio;
 
 import java.util.concurrent.Executor;
 
+import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CallbackPromise;
-import com.github.rfqu.df4j.core.DataflowVariable;
-import com.github.rfqu.df4j.core.Link;
+import com.github.rfqu.df4j.core.DFNode;
 import com.github.rfqu.df4j.core.StreamPort;
-import com.github.rfqu.df4j.ext.ActorLQ;
 
 /**
  * Asynchronously executes I/O socket requests using {@link java.nio.channels.Selector}.
@@ -29,9 +28,7 @@ import com.github.rfqu.df4j.ext.ActorLQ;
  * After request is served, it is sent to the port denoted by <code>replyTo</code> parameter in
  * the read/write methods.
  */
-public abstract class AsyncSocketChannel extends Link
-    implements StreamPort<SocketIORequest<?>>
-{
+public abstract class AsyncSocketChannel implements StreamPort<SocketIORequest<?>> {
 	/** for client-side socket: signals connection completion */
 	protected final CallbackPromise<AsyncSocketChannel> connEvent = new CallbackPromise<AsyncSocketChannel>();
 	/** read requests queue */
@@ -80,7 +77,7 @@ public abstract class AsyncSocketChannel extends Link
 		post(request);
 	}
 
-    public abstract class RequestQueue extends ActorLQ<SocketIORequest<?>> {
+    public abstract class RequestQueue extends Actor<SocketIORequest<?>> {
 
         public RequestQueue(Executor executor) {
             super(executor);
@@ -101,12 +98,12 @@ public abstract class AsyncSocketChannel extends Link
 	/**
 	 * closes underlying SocketChannel after all requests has been processed.
 	 */
-	public class Completer extends DataflowVariable {
+	public class Completer extends DFNode {
 		private final Semafor readerFinished = new Semafor();
 		private final Semafor writerFinished = new Semafor();
 
 		@Override
-		protected void act() {
+		protected void fire() {
 		    AsyncSocketChannel.this.close();
 		}
 

@@ -13,13 +13,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.Link;
-import com.github.rfqu.df4j.core.Task;
 
 /**
  * Serves a set of Actors, running synchronously (one at a time).
  */
-public class SerialExecutor extends Actor<Link> implements Executor {
+public class SerialExecutor extends Actor<Runnable> implements Executor {
 
 	public SerialExecutor() {
 	}
@@ -38,34 +36,16 @@ public class SerialExecutor extends Actor<Link> implements Executor {
 	 */
 	@Override
 	public void execute(Runnable command) {
-		if (command instanceof Task) {
-			post((Task) command);
-		} else {
-			post(new TaskWrapper(command));
-		}
+        post(command);
 	}
 
 	@Override
-	protected void act(Link task) throws Exception {
-		((Runnable) task).run();
+	protected void act(Runnable task) throws Exception {
+		task.run();
 	}
 
 	@Override
 	protected void complete() throws Exception {
 		super.close();
 	}
-
-	static class TaskWrapper extends Link implements Runnable {
-		Runnable command;
-
-		public TaskWrapper(Runnable command) {
-			this.command = command;
-		}
-
-		@Override
-		public void run() {
-			command.run();
-		}
-	}
-
 }
