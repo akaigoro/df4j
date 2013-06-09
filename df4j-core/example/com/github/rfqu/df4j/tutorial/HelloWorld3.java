@@ -11,11 +11,11 @@ package com.github.rfqu.df4j.tutorial;
 
 import java.util.ArrayDeque;
 
-import com.github.rfqu.df4j.core.DFActor;
+import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.DFContext;
 
 public class HelloWorld3 {
-    static  class Collector extends DFActor {
+    static  class Collector extends DataflowNode {
         Input<String> input=new StreamInput<String>(new ArrayDeque<String>());
         StringBuilder sb=new StringBuilder();
         

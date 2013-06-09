@@ -18,7 +18,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.CallbackPromise;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
@@ -52,7 +52,7 @@ public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
     /** how many connections may be accepted */
     private int maxConn = 0;
     private AsynchronousServerSocketChannel channel;
-    private ListenableFuture<SocketAddress> closeEvent=new ListenableFuture<SocketAddress>();
+    private CallbackPromise<SocketAddress> closeEvent=new CallbackPromise<SocketAddress>();
     
     public AsyncServerSocketChannel2(SocketAddress addr, Callback<AsyncSocketChannel> acceptor)
                 throws IOException

@@ -48,4 +48,5 @@ public class SerialExecutor extends Actor<Runnable> implements Executor {
 	protected void complete() throws Exception {
 		super.close();
 	}
+
 }

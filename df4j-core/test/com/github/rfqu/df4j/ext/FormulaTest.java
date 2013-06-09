@@ -20,20 +20,18 @@ import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.ext.Function.BinaryOp;
 import com.github.rfqu.df4j.ext.Function.UnaryOp;
 
 /**
- * Demonstration of building dataflow networks.
+ * Demonstration of building functional networks.
  * Sample networks realizing well-known mathematic formulae.
  * All network nodes execute in parallel, as soon as input data are ready.
- * Nodes communicate with each other using Port and Promise interfaces which have push semantics.
- * To convert push mechanism to more convenient pull mechanism, ListenableFuture objects are used.
+ * Nodes communicate with each other using Port and Promise/Future interfaces which have push semantics.
  * Of course this examples have no practical meaning, as overheads for message passing 
  * overwhelms all gains from parallel execution.
- * For a dataflow network to have a sense, node execution should perform calculations
- * large enough to exceed the message handling time (which is less than 1 microsecond). 
+ * For a functional network to have a sense, node execution should perform calculations
+ * large enough to exceed the message handling time (which is about 1 microsecond). 
  * 
  * @author kaigorodov
  *
@@ -51,11 +49,9 @@ public class FormulaTest {
         Square sq=new Square(); 
         // push argument values to inputs:
         sq.post(2.0); 
-        // create a future to pull the result from the network
-        ListenableFuture<Double> future = new ListenableFuture<Double>(sq);
-       // network starts after both arguments and result consumers are defined
+
         // wait for the result
-        Double res = future.get();
+        Double res = sq.get();
         // alternatively, use this shortcut:
 //      Double res = ListenableFuture.getFrom(sq);
         // result is obtained 
@@ -71,7 +67,7 @@ public class FormulaTest {
         sq.post(-2.0); // square root from negative number would cause an error
         try {
             // that error manifests itself when the result is pulled from the network
-            ListenableFuture.getFrom(sq);
+            sq.get();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -79,7 +75,7 @@ public class FormulaTest {
     }
 
     /**
-     * checks that execution exception is propagated to between actors
+     * checks that execution exception is propagated between actor nodes
      */
     @Test
     public void t012() throws InterruptedException {
@@ -92,7 +88,7 @@ public class FormulaTest {
 
         try {
             // that error manifests itself when the result is pulled from the network
-            ListenableFuture.getFrom(sum);
+            sum.get();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -107,7 +103,7 @@ public class FormulaTest {
 		Mult node=new Mult();	
     	node.p1.post(2.0);
     	node.p2.post(3.0);
-        assertEquals(6, ListenableFuture.getFrom(node).intValue());
+        assertEquals(6, node.get().intValue());
     }
 
     /**
@@ -129,13 +125,13 @@ public class FormulaTest {
         a.post(3.0);
         b.post(4.0);
         // wait for the result
-        double res = ListenableFuture.getFrom(sq);
+        double res = sq.get();
         assertEquals(5, res, delta);
     }
 
     /**
      * Demonstrates how complex network with single result
-     * can be encapsulated in a class which extends {@link Promise}.
+     * can be encapsulated in a class which extends {@link ListenableFuture}.
      * 
      * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
@@ -204,12 +200,12 @@ public class FormulaTest {
         node.b.post(3.0);
         node.c.post(-14.0);
 
-        assertEquals(2.0, ListenableFuture.getFrom(node.x1), delta);
-        assertEquals(-3.5, ListenableFuture.getFrom(node.x2), delta);
+        assertEquals(2.0, node.x1.get(), delta);
+        assertEquals(-3.5, node.x2.get(), delta);
     }
 
     /**
-     * checks that execution exception is propagated
+     * checks that execution exceptions are propagated
      */
     @Test
     public void t041() throws InterruptedException, ExecutionException {
@@ -219,13 +215,13 @@ public class FormulaTest {
         node.c.post(14.0);
 
         try {
-            ListenableFuture.getFrom(node.x1).intValue();
+            node.x1.get().intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
         try {
-            ListenableFuture.getFrom(node.x2).intValue();
+            node.x2.get().intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -248,6 +244,12 @@ public class FormulaTest {
         public Double eval(Double v) {
             return v * v;
         }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            // TODO Auto-generated method stub
+            return false;
+        }
     }
 
     static class Sum extends BinaryOp<Double> {
@@ -263,8 +265,8 @@ public class FormulaTest {
     }
 
     static class MulByConst extends UnaryOp<Double> {
-        private Double c;
-        public MulByConst(Double c) {
+        private double c;
+        public MulByConst(double c) {
             this.c = c;
         }
         public Double eval(Double v) {
@@ -310,10 +312,8 @@ public class FormulaTest {
     public static void main(String args[]) throws InterruptedException, ExecutionException {
     	FormulaTest qt = new FormulaTest();
         qt.t011();
-        /*
         qt.t02();
         qt.t03();
         qt.t04();
-        */
     }
 }

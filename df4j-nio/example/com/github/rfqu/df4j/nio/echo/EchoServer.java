@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.CallbackFuture;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -102,7 +102,7 @@ public class EchoServer extends ActorVariable<AsyncSocketChannel> implements Clo
         }
         SocketAddress addr = new InetSocketAddress("localhost", port);
         EchoServer es = new EchoServer(addr, maxConn);
-        es.addCloseListener(new ListenableFuture<SocketAddress>()).get();
+        es.addCloseListener(new CallbackFuture<SocketAddress>()).get();
         // inet addr is free now
         System.out.println("EchoServer started");
     }

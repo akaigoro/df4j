@@ -73,11 +73,10 @@ public class ActorVariantsTest {
         node.post(new DoubleValue(1.0));
         node.post(new DoubleValue(2.0));
         node.close();
-        Double sumValue;
         try {
             // sumcf not ready as not connected to data source
             // and the node is not ready for execution  
-            sumValue= sumcf.get(100); 
+            sumcf.get(100); 
             fail("no TimeoutException");
         } catch (TimeoutException e) {
         }
@@ -85,8 +84,7 @@ public class ActorVariantsTest {
         assertEquals(0, node.counter); 
         // trigger execution
         node.sum.addListener(sumcf);
-        sumValue=sumcf.get(500000);
-        assertEquals(3.0, sumValue, delta);
+        assertEquals(3.0, sumcf.get(), delta);
         assertEquals(1.5, avgcf.get(), delta);
     }
 
@@ -100,11 +98,10 @@ public class ActorVariantsTest {
             node.post(new DoubleValue(value));
         }
         node.close();
-        Double sumValue;
         try {
             // sumcf not ready as not connected to data source
             // and the node is not ready for execution  
-            sumValue= sumcf.get(100); 
+            sumcf.get(100); 
             fail("no TimeoutException");
         } catch (TimeoutException e) {
         }
@@ -112,8 +109,7 @@ public class ActorVariantsTest {
         assertEquals(0, node.counter); 
         // trigger execution
         node.sum.addListener(sumcf);
-        sumValue=sumcf.get(500000);
-        assertEquals(1.0, sumValue, delta);
+        assertEquals(1.0, sumcf.get(), delta);
         assertEquals(1.0/cnt, avgcf.get(), delta);
     }
 

@@ -9,8 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.io.Closeable;
-import java.util.ArrayDeque;
 import java.util.concurrent.Executor;
 
 /**
@@ -18,84 +16,22 @@ import java.util.concurrent.Executor;
  * This is classic Actor type.
  * @param <M> the type of accepted messages.
  */
-public abstract class Actor<M> extends DFActor
-    implements StreamPort<M>, Callback<M>, Closeable
-{
-    /** place for input token(s) */
-	protected final Input<M> input=createInput();
-	
+public abstract class Actor<M> extends ActorVariable<M> {
+    private final Task task; 
+    
     public Actor(Executor executor) {
-    	super(executor);
+        task=new ActorTask(executor);
     }
 
     public Actor() {
+        task=new ActorTask();
+    }
+
+    protected void fire() {
+        task.fire();
     }
     
-    /** Override this method if another type of input queue is desired. 
-     * @return storage for input tokens
-     */
-    protected Input<M> createInput() {
-        return new StreamInput<M>(new ArrayDeque<M>());
+    public Executor getExecutor() {
+        return task.executor;
     }
-
-    @Override
-	public void post(M m) {
-		input.post(m);
-	}
-
-	@Override
-	public void close() {
-		input.close();
-	}
-
-    public boolean isClosed() {
-        return input.isClosed();
-    }
-
-    //====================== backend
-    
-    /** 
-     * process the retrieved tokens.
-     */
-    @Override
-    protected void act() {
-        M message=input.value;
-        try {
-            if (message==null) {
-                complete();
-            } else {
-                act(message);
-            }
-        } catch (Exception e) {
-            failure(message, e);
-        }
-    }
-
-    /** only have sense when called from act(M message) */
-    public void pushback() {
-        input.pushback();
-    }
-
-    /** handles failures
-     * 
-     * @param message
-     * @param e
-     */
-    protected void failure(M message, Exception e) {
-        e.printStackTrace();
-    }
-    
-    /**
-     * processes one incoming message
-     * @param message the message to process
-     * @throws Exception
-     */
-    protected abstract void act(M message) throws Exception;
-
-    /**
-     * processes closing signal
-     * @throws Exception
-     */
-    protected void complete() throws Exception {}
-
 }

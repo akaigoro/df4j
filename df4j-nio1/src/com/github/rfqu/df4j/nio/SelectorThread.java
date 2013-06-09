@@ -6,11 +6,11 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DFContext.ItemKey;
+import com.github.rfqu.df4j.core.DoublyLinkedQueue;
 import com.github.rfqu.df4j.core.Task;
 
 public class SelectorThread implements Runnable, Executor {
@@ -19,7 +19,7 @@ public class SelectorThread implements Runnable, Executor {
 	// The selector we'll be monitoring
 	private Selector selector;
     private boolean running=false;
-	private LinkedList<Task> tasks=new LinkedList<Task>();
+	private DoublyLinkedQueue<Task> tasks=new DoublyLinkedQueue<Task>();
 
     public SelectorThread(DFContext context) throws IOException {
         this.context=context;

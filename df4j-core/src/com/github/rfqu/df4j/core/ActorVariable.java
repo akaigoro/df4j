@@ -9,14 +9,85 @@
  */
 package com.github.rfqu.df4j.core;
 
+import java.io.Closeable;
+import java.util.ArrayDeque;
 
 /**
- * Dataflow variable with predefine StreamInput.
+ * A dataflow node with one input stream port.
+ * This is classic Actor type.
+ * @param <M> the type of accepted messages.
  */
-public abstract class ActorVariable<M> extends Actor<M> {
-
-    public ActorVariable() {
-		super(null);
-	}
+public abstract class ActorVariable<M> extends DataflowVariable
+    implements StreamPort<M>, Callback<M>, Closeable
+{
+    /** place for input token(s) */
+    protected final Input<M> input=createInput();
     
+    /** Override this method if another type of input queue is desired. 
+     * @return storage for input tokens
+     */
+    protected Input<M> createInput() {
+        return new StreamInput<M>(new ArrayDeque<M>());
+    }
+
+    @Override
+    public void post(M m) {
+        input.post(m);
+    }
+
+    @Override
+    public void close() {
+        input.close();
+    }
+
+    public boolean isClosed() {
+        return input.isClosed();
+    }
+
+    //====================== backend
+    
+    /** 
+     * process the retrieved tokens.
+     */
+    @Override
+    protected void act() {
+        M message=input.value;
+        try {
+            if (message==null) {
+                complete();
+            } else {
+                act(message);
+            }
+        } catch (Exception e) {
+            failure(message, e);
+        }
+    }
+
+    /** only have sense when called from act(M message) */
+    public void pushback() {
+        input.pushback();
+    }
+
+    /** handles failures
+     * 
+     * @param message
+     * @param e
+     */
+    protected void failure(M message, Exception e) {
+        e.printStackTrace();
+    }
+    
+    /**
+     * processes one incoming message
+     * @param message the message to process
+     * @throws Exception
+     */
+    protected abstract void act(M message) throws Exception;
+
+    /**
+     * processes closing signal
+     * @throws Exception
+     */
+    protected void complete() throws Exception {}
+
 }

@@ -1,13 +1,26 @@
 df4j is a basic dataflow library. It can easily be extended for specific needs.
 
+The primary goal is to extend java.util.concurrent package with means to synchronize tasks
+task submissions to a thread pool. Tasks are treated as procedures with parameters,
+which are calculated asynchronously in other tasks.
+When all parameters are set, the task is submitted to the executor, attached to the task when the task was created.
+For convenience, default executor can be created which can be attached to the task implicitly.
+When a task executes, it calculates and passes parameters to other tasks, which eventually causes their execution.
+So the tasks form a directed (but not necessarily acyclic) graph where the tasks are nodes and parameter assignments are arcs.
+This graph is named dataflow graph. It also can be considered as a colored Petri net with some restrictions.
+Transitions are defined together with input places in an instance of core class DataflowVariable,
+so places cannot submit tokens to more than one transition. Also, DataflowVariable contains implicit token loop which
+prevents parallel executions of the transition. Multiple executions can occur when
+parameters are assigned multiple times.    
+
 Subprojects
 -----------
 
 df4j-core: contains core functionality. Requires java 1.6 or higher.
 
-df4j-nio1: a wrapper to nio asyncronous input-output functionality (based on Selector).
+df4j-nio1: a wrapper to nio asynchronous input-output functionality (based on Selector).
 
-df4j-nio2: a wrapper to nio2 asyncronous input-output functionality. Requires java 1.7 or higher.
+df4j-nio2: a wrapper to nio2 asynchronous input-output functionality. Requires java 1.7 or higher.
 
 df4j-nio: common parts of df4j-nio1 and df4j-nio2.
 
@@ -60,6 +73,7 @@ and using a "poison pill" value may not be feasible. So the Actor class has meth
             sb.append(message);
             sb.append(" ");
         }
+        
         @Override
         protected void complete(){
             System.out.println(sb.toString());
@@ -74,7 +88,7 @@ and using a "poison pill" value may not be feasible. So the Actor class has meth
     }
 </pre>
 
-We started with Actor example, as actor model is widely known. However, df4j treats actors as a special case of a node in
+We started with an Actor example, as actor model is widely known. However, df4j treats actors as a special case of a node in
 dataflow graph, namely, a node with one explicit input arc (there is also an implicit arc which
 makes a loop and holds one token - the state of the node instance). Below is an implementation based on naked DataflowNode:
 
@@ -113,7 +127,10 @@ So, an Actor is a DataflowNode which:
 - has Port interface shorted to that input
 - has act() method parameterized with the value extracted from that input
 
-All these features are convenient but do not give any radical improvements. Moreover, being an Actor does not prevent from adding more inputs, and indeed many Actors from the tests and examples are in fact DataflowNodes with several inputs and cannot be represented as JetLang or Akka actors.
+All these features are convenient but do not give any radical improvements.
+Moreover, being an Actor does not prevent from adding more inputs, and indeed
+many Actors from the tests and examples are in fact DataflowNodes with several
+inputs and cannot be represented as JetLang or Akka actors.
 
 Dataflow Programming
 --------------------
@@ -212,12 +229,13 @@ is a powerful facility to represent nested non-blocking services. See program Ne
 
 Background Executor
 -------------------
-When a DataflowNode (including Actor) is created, it must be assigned an Executor to run on.
+When a DataflowNode (including Actor) is created, it should be assigned an Executor to run on.
 This library allows two ways of assigning Executor to a DataflowNode: explicitly by a constructor
 or implicitly by a ThreadLocal variable.
 
 Via constructor, Executor may be null. In this case,
-the node will be executed on the caller's thread (which invokes the post method). This is safe and fast, but implies no parallelism.
+the node will be executed on the caller's thread (which invokes the post method).
+This is safe and fast, but implies no parallelism.
 It is recommended for nodes which simply redirect incoming messages, like Dispatcher or WorkerActor in the
 examples above: add them a constructor with super(null). Equivalently, extend them from 
 DataflowVariable or ActorVariable, respectively.
@@ -233,10 +251,22 @@ contains a separate thread to serve one actor - this allow that actor to block o
 ImmediateExecutor, being set as a context executor, has effect of setting null executor for all nodes,
 and turns your program into sequential one, which can help in debugging.
 
-Thread context is an instance of class DFContext and is stored as a local variable. Besides it main purpose to store current executor, it can be used to keep any other values in a fasion similar to Threadlocal. Define and use static variables of type DFContext.ItemKey just as you used to use Threadlocals. The difference is that when spawning new Trhead, you should only care to pass DFContext, and all ItemKeys would be passed with it. 
+Thread context is an instance of class DFContext and is stored as a local variable. Besides it main purpose to store
+current executor, it can be used to keep any other values in a fashion similar to Threadlocal.
+Define and use static variables of type DFContext.ItemKey just as you used to use Threadlocals.
+The difference is that when spawning new Thread, you should only care to pass DFContext,
+and all ItemKeys would be passed with it. 
  
 
 Version history
+---------------
+v0.8 2013/06/10
+Core classes CallbackPromise and CallbackFuture combined in single class ListenableFuture.
+Core classes Link and DoublyLinkedQueue removed.
+The root of dataflow nodes class hierarchy is now DataflowVariable, which has no link to any Executor and so
+executes the method fire on caller's stack.
+Many minor simplifications, such as implementing 'fired' token as a bit in the bit mask and not as a separate variable.
+
 ---------------
 v0.7 2013/01/16
 - important rename in core classes:
@@ -267,7 +297,7 @@ BaseActor => DataflowNode;
 DataSource => EventSource; 
 ThreadFactoryTL => ConextThreadFactory; 
 LinkedQueue => DoublyLinkedQueue; 
-SerialExecutor moved to ext.
+SerialExecutor moved to the package ext.
 - Actor input queue is now pluggable.
 - DataflowNode has its own run method, which consumes tokens. Now only new act() method should be overriden.
 - DataflowNode has new method sendFailure, to create Callbacks easily.

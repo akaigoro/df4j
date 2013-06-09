@@ -20,7 +20,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DFNode;
+import com.github.rfqu.df4j.core.DataflowVariable;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
@@ -296,12 +296,12 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 	/**
 	 * closes underlying SocketChannel after all requests has been processed.
 	 */
-	class Completer extends DFNode {
+	class Completer extends DataflowVariable {
 		final Semafor readerFinished = new Semafor();
 		final Semafor writerFinished = new Semafor();
 
 		@Override
-		protected void fire() {
+		protected void act() {
 		    AsyncSocketChannel1.this.close();
 		}
 
