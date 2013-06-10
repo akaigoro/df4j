@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.CallbackFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.testutil.DoubleValue;
@@ -52,7 +52,7 @@ public class EchoServerTest {
             ClientConnection cconn = new ClientConnection(this, iaddr, rounds);
 			clients.put(cconn.id, cconn);
 			try {
-                CallbackFuture.getFrom(cconn); // wait connection to connect
+                cconn.getConnEvent().get(); // wait connection to connect
             } catch (Exception e) {
                 System.err.println("conn "+i+" failed:"+e);
                 return;
@@ -77,7 +77,7 @@ public class EchoServerTest {
 		int reportPeriod = 1000;
         double sum=0;
         long counter=0;
-        CallbackFuture<Double> avg=new CallbackFuture<Double>();
+        ListenableFuture<Double> avg=new ListenableFuture<Double>();
         long startTime=System.currentTimeMillis();
 
         public Aggregator(int numclients) {

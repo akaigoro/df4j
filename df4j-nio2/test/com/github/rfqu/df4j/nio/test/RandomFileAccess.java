@@ -99,7 +99,7 @@ public class RandomFileAccess {
     }
 
     private void testW_NIO(boolean direct) throws IOException, Exception {
-        out.println("testW_NIO: NIO with futuires; direct="+direct);
+        out.println("testW_NIO: NIO with futures; direct="+direct);
         AsynchronousFileChannel af 
             = new AsyncFileChannel<Request>(testfilePath, WRITE).getChannel();
         af.truncate(blockSize*numBlocks);
@@ -212,7 +212,7 @@ public class RandomFileAccess {
         long started=0;
         long finished=0;
         AtomicLong accTime=new AtomicLong();
-        CallbackFuture<Integer> sink = new CallbackFuture<Integer>();
+        ListenableFuture<Integer> sink = new ListenableFuture<Integer>();
 
         public StarterW(AsyncFileChannel<Request> af, int nb, boolean direct) {
             this.af = af;

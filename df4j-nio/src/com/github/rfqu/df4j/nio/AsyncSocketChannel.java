@@ -14,12 +14,11 @@ package com.github.rfqu.df4j.nio;
 
 import java.util.concurrent.Executor;
 
+import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.CallbackPromise;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.DataflowVariable;
-import com.github.rfqu.df4j.core.Link;
 import com.github.rfqu.df4j.core.StreamPort;
-import com.github.rfqu.df4j.ext.ActorLQ;
 
 /**
  * Asynchronously executes I/O socket requests using {@link java.nio.channels.Selector}.
@@ -29,11 +28,11 @@ import com.github.rfqu.df4j.ext.ActorLQ;
  * After request is served, it is sent to the port denoted by <code>replyTo</code> parameter in
  * the read/write methods.
  */
-public abstract class AsyncSocketChannel extends Link
+public abstract class AsyncSocketChannel
     implements StreamPort<SocketIORequest<?>>
 {
 	/** for client-side socket: signals connection completion */
-	protected final CallbackPromise<AsyncSocketChannel> connEvent = new CallbackPromise<AsyncSocketChannel>();
+	protected final ListenableFuture<AsyncSocketChannel> connEvent = new ListenableFuture<AsyncSocketChannel>();
 	/** read requests queue */
 	protected RequestQueue reader;
 	/** write requests queue */
@@ -51,9 +50,13 @@ public abstract class AsyncSocketChannel extends Link
 		return closed;
 	}
 
+    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
+        return connEvent;
+    }
+
 	// ================== StreamPort I/O interface
 
-	@Override
+    @Override
 	public void post(SocketIORequest<?> request) {
 		(request.isReadOp() ? reader : writer).post(request);
 	}
@@ -80,7 +83,7 @@ public abstract class AsyncSocketChannel extends Link
 		post(request);
 	}
 
-    public abstract class RequestQueue extends ActorLQ<SocketIORequest<?>> {
+    public abstract class RequestQueue extends Actor<SocketIORequest<?>> {
 
         public RequestQueue(Executor executor) {
             super(executor);

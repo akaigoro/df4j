@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.CallbackPromise;
+import com.github.rfqu.df4j.core.ListenableFuture;
 
 /**
  * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
@@ -24,7 +24,7 @@ public abstract class AsyncServerSocketChannel {
     /** how many connections may be accepted */
     protected int maxConn = 0;
     protected SocketAddress addr;
-    protected CallbackPromise<SocketAddress> closeEvent = new CallbackPromise<SocketAddress>();
+    protected ListenableFuture<SocketAddress> closeEvent = new ListenableFuture<SocketAddress>();
 
     public AsyncServerSocketChannel(SocketAddress addr, Callback<AsyncSocketChannel> acceptor) throws IOException {
         this.addr = addr;
