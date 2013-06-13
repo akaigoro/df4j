@@ -15,8 +15,6 @@ import java.util.concurrent.locks.ReentrantLock;
  *  - redefine abstract method act()
  */
 public abstract class DataflowVariable {
-    static final int allOnes=0xFFFFFFFF;
-    static final int allInputOnes=0xFFFFFFFE;
     private Lock lock = new ReentrantLock();
     private Throwable exc=null;
     private Pin head; // the head of the list of Pins
@@ -49,7 +47,7 @@ public abstract class DataflowVariable {
      * @return true if the actor has all its pins on and so is ready for execution
      */
     private final boolean allInputsReady() {
-        return (readyPins&allInputOnes)==0;
+        return (readyPins|1)==1;
     }
     
     private final boolean allReady() {
