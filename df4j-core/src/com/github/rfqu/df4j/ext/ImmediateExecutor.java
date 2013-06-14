@@ -9,16 +9,35 @@
  */
 package com.github.rfqu.df4j.ext;
 
+import java.util.ArrayDeque;
 import java.util.concurrent.Executor;
 
 /**
- * Executes task synchronously on the caller's thread.
+ * Executes tasks synchronously on the caller's thread.
  * Useful for debugging, as execution sequence is always the same.
  */
 public class ImmediateExecutor implements Executor {
+	protected boolean running=false;
+	protected ArrayDeque<Runnable>queue = new ArrayDeque<Runnable>();
 
     @Override
     public void execute(Runnable command) {
-        command.run();
+    	synchronized (queue) {
+			if (running) {
+				queue.add(command);
+				return;
+			}
+			running=true;
+		}
+        for (;;) {
+            command.run();
+        	synchronized (queue) {
+        		command=queue.poll();
+    			if (command==null) {
+        			running=false;
+    				return;
+    			}
+    		}
+        }
     }
 }

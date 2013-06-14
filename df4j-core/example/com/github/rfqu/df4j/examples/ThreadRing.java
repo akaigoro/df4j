@@ -25,8 +25,8 @@ import com.github.rfqu.df4j.testutil.MessageSink;
  *
  */
 public class ThreadRing {
-    final static int NUM_ACTORS = 503; // number of nodes
-    final static int TIME_TO_LIVE = 100000; // hops
+    final static int NUM_ACTORS = 5003; // number of nodes
+    final static int TIME_TO_LIVE = 1000000; // hops
     final static PrintStream out = System.out;
     final static int times = 3;
     int nThreads;
