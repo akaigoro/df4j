@@ -43,4 +43,8 @@ public abstract class AsyncServerSocketChannel implements Closeable {
     public abstract AsyncSocketChannel accept();
 
     public abstract void close();
+
+	public boolean isClosed() {
+        return getCloseEvent().isDone();
+	}
 }

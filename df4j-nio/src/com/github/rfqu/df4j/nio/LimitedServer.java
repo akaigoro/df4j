@@ -10,7 +10,8 @@
 package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.AsynchronousCloseException;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowNode;
@@ -24,12 +25,9 @@ public abstract class LimitedServer {
     protected AsyncServerSocketChannel assc;
     private ASCGenerator generator = new ASCGenerator();
 
-    public LimitedServer(AsyncChannelFactory asyncrSocketFactory, InetSocketAddress addr) throws IOException {
-        this.assc=asyncrSocketFactory.newAsyncServerSocketChannel();
+    public void start(AsyncServerSocketChannel assc, SocketAddress addr, int waitCount, int maxCount) throws IOException {
+		this.assc = assc;
         assc.bind(addr);
-    }
-
-    public void start(int waitCount, int maxCount) {
         generator.waitCount.up(waitCount);
         generator.maxCount.up(maxCount);
     }
@@ -52,7 +50,16 @@ public abstract class LimitedServer {
             accepted(asc);
         }
 
-        class QuaziSemafor extends Semafor implements Callback<AsyncSocketChannel> {
+        @Override
+		protected void handleException(Throwable exc) {
+            if (exc instanceof AsynchronousCloseException) {
+            	// channel closed, just return without new call to accept()
+            	return;
+            }
+        	super.handleException(exc);
+		}
+
+		class QuaziSemafor extends Semafor implements Callback<AsyncSocketChannel> {
 
             @Override
             public void post(AsyncSocketChannel m) {

@@ -26,11 +26,12 @@ public abstract class LimitedServerTest {
     AsyncChannelFactory asyncrSocketFactory;
     
     /**
-     * tests serever with max 1 connection
+     * tests server with max 1 connection
      */
     @Test
     public void smokeTest() throws Exception {
-        Server server=new Server(local9990, 1, 1);
+        Server server=new Server();
+        server.start(local9990, 1, 1);
         Connection conn = newClientConnection(local9990);
         Thread.sleep(100); // wait server to accept connections
         // only maxConn0 should be opened
@@ -144,12 +145,12 @@ public abstract class LimitedServerTest {
 
         public void read(MyRequest request) {
             conn.read(request);
-            request.setListener(this);
+            request.addListener(this);
         }
 
         public void write(MyRequest request) {
             conn.write(request);
-            request.setListener(this);
+            request.addListener(this);
         }
 
         public void read() {
@@ -192,9 +193,8 @@ public abstract class LimitedServerTest {
     class Server extends LimitedServer {        
         ArrayList<Connection> allConns=new ArrayList<Connection>();
             
-        public Server(InetSocketAddress addr, int waitCount, int maxCount) throws IOException {
-            super(asyncrSocketFactory, addr);
-            super.start(waitCount, maxCount);
+        public void start(InetSocketAddress addr, int waitCount, int maxCount) throws IOException {
+            super.start(asyncrSocketFactory.newAsyncServerSocketChannel(), addr, waitCount, maxCount);
         }
 
         @Override

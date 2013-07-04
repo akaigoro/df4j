@@ -7,7 +7,6 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -41,7 +40,7 @@ class ClientConnection {
         request=new CliRequest(buffer);
 //        channel.read(request, endRead1, timeout);
         request.post(0);
-        request.setListener(startWrite);
+        request.addListener(startWrite);
     }
 
 	public ListenableFuture<AsyncSocketChannel> getConnEvent() {
@@ -60,7 +59,7 @@ class ClientConnection {
             buffer.clear();
             buffer.putInt(request.data);
             channel.write(request, timeout);
-            request.setListener(endWrite);
+            request.addListener(endWrite);
         }
     };
 
@@ -70,7 +69,7 @@ class ClientConnection {
             count2endWrite++;
 //            System.err.println("  client Request write ended, id="+id+" rid="+request.rid);
             channel.read(request, timeout);
-            request.setListener(endRead);
+            request.addListener(endRead);
 //            System.err.println("client Request read started id="+id+" rid="+request.rid);
         }
 
@@ -93,7 +92,12 @@ class ClientConnection {
             rounds.decrementAndGet();
             if (rounds.get()==0) {
 //                System.out.println("SocketIORequest finished id="+id);
-                channel.close();
+                try {
+					channel.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
                 DoubleValue avg = new DoubleValue(((double)sum)/count3endRead);
                 echoServerTest.clientFinished(ClientConnection.this, avg);
 //                System.out.println("clients="+echoServerTest.clients.size());

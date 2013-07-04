@@ -236,7 +236,7 @@ public class RandomFileAccess {
                 fillBuf(req.getBuffer(), blockId);
                 Port<Request> port=this;
 				req.prepareWrite(blockId * blockSize);
-				req.setListener(port);
+				req.addListener(port);
 				af.post(req);
                 started++;
             }
@@ -246,7 +246,7 @@ public class RandomFileAccess {
          */
 		@Override
         protected void act(Request request) throws Exception {
-        	Throwable exc=request.getExc();
+        	Throwable exc=request.getException();
 			if (exc!=null) {
                 exc.printStackTrace();
                 sink.post(1); // signal the caller

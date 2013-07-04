@@ -14,7 +14,7 @@ package com.github.rfqu.df4j.nio;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 
-import com.github.rfqu.df4j.ext.Request;
+import com.github.rfqu.df4j.core.Request;
 
 /**
  * Request for an I/O operation.

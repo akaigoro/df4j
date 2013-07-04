@@ -8,12 +8,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.ActorVariable;
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio.LimitedServer;
 
 /** Running this echo server requires that an implementation of {@link com.github.rfqu.df4j.nio.AsyncChannelFactory}
 * be present in the classpath {@see com.github.rfqu.df4j.nio.AsyncChannelFactory#factoryClassNames}.
@@ -22,8 +21,7 @@ import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 * 
 * To run tests, {@see EchoServerLockTest} and {@see EchoServerGlobTest}.
 */
-public class EchoServer
-    extends ActorVariable<AsyncSocketChannel> // as a connection acceptor
+public class EchoServer extends LimitedServer         
     implements Closeable
 {
     public static final int defaultPort = 8007;
@@ -33,19 +31,17 @@ public class EchoServer
     AtomicInteger ids = new AtomicInteger(); // for DEBUG
     SocketAddress addr; // address of this server
     /** maximum allowed numer of simultaneous connections */
-    int maxConn;
     AsyncServerSocketChannel assch;  // provides ready connections for us
     /** active connections */
     HashMap<Integer, ServerConnection> connections = new HashMap<Integer, ServerConnection>();
 
-    public EchoServer(SocketAddress addr, int maxConn) throws IOException {
+    public EchoServer(SocketAddress addr, int maxConnCount) throws IOException {
         this.addr = addr;
-        this.maxConn = maxConn;
-        assch = asyncChannelFactory.newAsyncServerSocketChannel(addr);
-        assch.post(this);  // ready to accept first clien connection request
+        this.assch = asyncChannelFactory.newAsyncServerSocketChannel();
+        super.start(assch, addr, 1, maxConnCount);
     }
 
-    public CompletableFuture<SocketAddress> getCloseEvent() {
+    public CompletableFuture<AsyncServerSocketChannel> getCloseEvent() {
         return assch.getCloseEvent();
     }
 
@@ -54,8 +50,6 @@ public class EchoServer
             return;
         }
         connections.remove(serverConnection.id);
-        // System.out.println("connections="+connections.size());
-        assch.post(this); // allow next accept
     }
 
     @Override
@@ -77,21 +71,11 @@ public class EchoServer
     /**
      * AsyncServerSocketChannel informs on new client connection
      */
-    @Override
-    protected synchronized void act(AsyncSocketChannel channel) throws Exception {
+
+	@Override
+	protected void accepted(AsyncSocketChannel channel) {
         ServerConnection connection = new ServerConnection(EchoServer.this, channel);
         connections.put(connection.id, connection);
-        if (connections.size() < maxConn) {
-            assch.post(this); // allow next accept
-        }
-    }
-
-    /**
-     * AsyncServerSocketChannel sends failure
-     */
-    @Override
-    public void postFailure(Throwable exc) {
-        exc.printStackTrace();
     }
 
     public static void main(String[] args) throws Exception {
@@ -109,7 +93,8 @@ public class EchoServer
             maxConn = 1000;
         }
         SocketAddress addr = new InetSocketAddress("localhost", port);
-        EchoServer es = new EchoServer(addr, maxConn);
+        @SuppressWarnings("resource")
+		EchoServer es = new EchoServer(addr, maxConn);
         es.getCloseEvent().get();
         // inet addr is free now
         System.out.println("EchoServer started");

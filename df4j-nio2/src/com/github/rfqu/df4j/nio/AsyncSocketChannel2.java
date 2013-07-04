@@ -133,7 +133,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
         public void failed(Throwable exc, SocketIORequest<?> request) {
             if (exc instanceof AsynchronousCloseException) {
                 synchronized (AsyncSocketChannel2.this) {
-                    if (!isClosed()) {
+                    if (!AsyncSocketChannel2.this.isClosed()) {
                         closeEvent.post(AsyncSocketChannel2.this);
                     }
                 }

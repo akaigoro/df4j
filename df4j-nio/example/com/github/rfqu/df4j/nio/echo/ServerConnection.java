@@ -7,11 +7,10 @@ import com.github.rfqu.df4j.nio.SocketIORequest;
 
 class ServerConnection {
     private final EchoServer echoServer;
-    AsyncSocketChannel channel;
+    private AsyncSocketChannel channel;
     public int id;
     private ByteBuffer buffer;
-    SerRequest request;
-    boolean closed = false;
+    private SerRequest request;
 
     public ServerConnection(EchoServer echoServer, AsyncSocketChannel channel)
     //        throws ClosedChannelException
@@ -22,15 +21,12 @@ class ServerConnection {
         buffer = ByteBuffer.allocate(EchoServer.BUF_SIZE);
         request = new SerRequest(buffer);
         channel.read(request);
-        request.setListener(endRead);
+        request.addListener(endRead);
     }
 
-    public void close() {
-        synchronized (this) {
-            if (closed) {
-                return;
-            }
-            closed = true;
+    public synchronized void close() {
+        if (channel.isClosed()) {
+            return;
         }
         try {
 			channel.close();
@@ -49,7 +45,7 @@ class ServerConnection {
             buffer.position(buffer.limit());
             // write it to socket
             channel.write(request);
-            request.setListener(endWrite);
+            request.addListener(endWrite);
         }
 
         @Override
@@ -63,7 +59,7 @@ class ServerConnection {
 		public void completed(int result, SerRequest request) {//throws IOException {
             // System.out.println("  ServerRequest writeCompleted id="+id);
             channel.read(request);
-            request.setListener(endRead);
+            request.addListener(endRead);
         }
 
         @Override
