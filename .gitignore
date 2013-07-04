@@ -1,5 +1,7 @@
 # eclipse files
 .settings
+.classpath
+.project
 */.classpath
 */.project
 .classpath
