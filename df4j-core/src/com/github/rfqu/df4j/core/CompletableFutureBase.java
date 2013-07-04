@@ -18,7 +18,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * 
- * Common base for {@link CompletableFuture} and {@link com.github.rfqu.df4j.ext.Request},
+ * Common base for {@link CompletableFuture} and {@link com.github.rfqu.df4j.core.Request},
  * which differ in relations with listeners.
  *
  * @param <R>  type of result
@@ -33,8 +33,8 @@ public abstract class CompletableFutureBase<R, L>
     protected Throwable exc;
     protected Object listener;
 
-    protected abstract void informResult(L listenerLoc);
-    protected abstract void informFailure(L listenerLoc);
+    protected abstract void broadcastResult(L listenerLoc);
+    protected abstract void broadcastFailure(L listenerLoc);
 
     /**
      * @return null if was interrupted
@@ -163,10 +163,10 @@ public abstract class CompletableFutureBase<R, L>
         if (listenerLoc instanceof ArrayList) {
             ArrayList<L> listenersLoc=(ArrayList<L>) listenerLoc;
             for (int k=0; k<listenersLoc.size(); k++) {
-                informResult(listenersLoc.get(k));
+                broadcastResult(listenersLoc.get(k));
             }
         } else {
-            informResult((L)listenerLoc);
+            broadcastResult((L)listenerLoc);
         }
     }
 
@@ -180,10 +180,10 @@ public abstract class CompletableFutureBase<R, L>
         if (listenerLoc instanceof ArrayList<?>) {
             ArrayList<L> listenersLoc=(ArrayList<L>) listenerLoc;
             for (int k=0; k<listenersLoc.size(); k++) {
-                informFailure(listenersLoc.get(k));
+                broadcastFailure(listenersLoc.get(k));
             }
         } else {
-            informFailure((L)listenerLoc);
+            broadcastFailure((L)listenerLoc);
         }
     }
 
@@ -219,9 +219,9 @@ public abstract class CompletableFutureBase<R, L>
         boolean _hasValueLoc = addListenerGetHasValue(sink);
         if (_hasValueLoc) {
             if (exc != null) {
-                informResult(sink);
+                broadcastResult(sink);
             } else {
-                informFailure(sink);
+                broadcastFailure(sink);
             }
         }
     }

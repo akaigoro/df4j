@@ -9,10 +9,9 @@ import java.util.concurrent.ScheduledFuture;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.core.Timer;
-import com.github.rfqu.df4j.ext.Request;
 
 /** Demonstrates solution to the StackOverflow question 
  * http://stackoverflow.com/questions/10695152/java-pattern-for-nested-callbacks/10695933
@@ -82,7 +81,7 @@ public class NestedCallbacks {
      *  - set that port as listener in the request  
      *  - send request to service. The service should just call request.post(result).
      */
-    class Client implements Callback<Integer> {
+    class Client {
         int id;
 
         public Client(int id) {
@@ -100,23 +99,16 @@ public class NestedCallbacks {
             @Override
             public void post(RequestS responseA) {
                 responseA.addLog(", Client:" + id+">");
-                responseA.toCallback(Client.this);
+                Throwable exc = responseA.getException();
+                if (exc == null) { // check exc, returned result may be null
+                    log("Client:" + id+" time:"+responseA.getResult().toString());
+                } else {
+                    log("Client:" + id+" failed:" + exc);
+                }
                 sink.countDown();
             }
 
         };
-
-        // implements Callback
-        
-        @Override
-        public void post(Integer m) {
-            log("Client:" + id+" time:"+m.toString());
-        }
-
-        @Override
-        public void postFailure(Throwable exc) {
-            log("Client:" + id+" failed:" + exc);
-        }
     }
 
     /** first layer service
@@ -197,42 +189,28 @@ public class NestedCallbacks {
         };
     }
 
-//////////// tests
+    //====================== tests
     
+    /** test Long Service only */
     @Test
     public void lsTest() throws Exception, IOException, InterruptedException {
-        final CountDownLatch sink = new CountDownLatch(1);
-        Port<RequestS> callbackB1 = new Port<RequestS>() {
-            @Override
-            public void post(RequestS requestB) {
-                requestB.addLog(", lsTest>");
-                sink.countDown();
-            }
-        };
         RequestS requestB = new RequestS("<lsTest ");
-        requestB.addListener(callbackB1);
 //        randomLongService().post(requestB);
         LongService ls1=new LongService(1);
         ls1.post(requestB);
-        sink.await();
-        log("time="+requestB.getResult());
+        Integer res = requestB.get();
+        requestB.addLog(", lsTest>");
+        log("time="+res);
     }
     
+    /** test Service only */
     @Test
     public void sTest() throws Exception, IOException, InterruptedException {
-        final CountDownLatch sink = new CountDownLatch(1);
-        Port<RequestS> callbackB1 = new Port<RequestS>() {
-            @Override
-            public void post(RequestS requestB) {
-                requestB.addLog(", sTest>");
-                sink.countDown();
-            }
-        };
         RequestS requestB = new RequestS("<sTest ");
-        requestB.addListener(callbackB1);
         randomService().post(requestB);
-        sink.await();
-        log("time="+requestB.getResult());
+        Integer res = requestB.get();
+        requestB.addLog(", sTest>");
+        log("time="+res);
     }
 
     @Test

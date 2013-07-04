@@ -15,8 +15,8 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
+import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
-import com.github.rfqu.df4j.ext.Request;
 import com.github.rfqu.df4j.testutil.MessageSink;
 
 /**
