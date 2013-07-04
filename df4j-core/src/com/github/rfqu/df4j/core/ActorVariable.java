@@ -18,7 +18,7 @@ import java.util.ArrayDeque;
  * @param <M> the type of accepted messages.
  */
 public abstract class ActorVariable<M> extends DataflowVariable
-    implements StreamPort<M>, Callback<M>, Closeable
+    implements StreamPort<M>, Callback<M>
 {
     /** place for input token(s) */
     protected final Input<M> input=createInput();

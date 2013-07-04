@@ -91,7 +91,7 @@ public class NestedCallbacks {
 
         void start() {
             RequestS requestA = new RequestS("<Client:" + id);
-            requestA.setListener(finish);
+            requestA.addListener(finish);
             randomService().post(requestA);
         }
 
@@ -138,7 +138,7 @@ public class NestedCallbacks {
             this.requestA = requestA;
             requestA.addLog(", <Service:" + id);
             RequestS requestB1 = new RequestS(requestA.getLog());
-            requestB1.setListener(callbackB1);
+            requestB1.addListener(callbackB1);
             start=System.currentTimeMillis();
             randomLongService().post(requestB1);
         }
@@ -148,7 +148,7 @@ public class NestedCallbacks {
             public void post(RequestS requestB1) {
                 RequestS requestB2 = new RequestS(requestB1.getLog());
                 requestB2.addLog(", Service:" + id);
-                requestB2.setListener(callbackB2);
+                requestB2.addListener(callbackB2);
                 randomLongService().post(requestB2);
             }
         };
@@ -209,7 +209,7 @@ public class NestedCallbacks {
             }
         };
         RequestS requestB = new RequestS("<lsTest ");
-        requestB.setListener(callbackB1);
+        requestB.addListener(callbackB1);
         randomLongService().post(requestB);
         sink.await();
         log("time="+requestB.getResult());
@@ -226,7 +226,7 @@ public class NestedCallbacks {
             }
         };
         RequestS requestB = new RequestS("<sTest ");
-        requestB.setListener(callbackB1);
+        requestB.addListener(callbackB1);
         randomService().post(requestB);
         sink.await();
         log("time="+requestB.getResult());

@@ -17,7 +17,7 @@ import org.junit.Test;
 public class TaskTest {
 
     static class MyTask extends Task {
-        ListenableFuture<Integer> res=new ListenableFuture<Integer>();
+        CompletableFuture<Integer> res=new CompletableFuture<Integer>();
 
         @Override
         public void run() {

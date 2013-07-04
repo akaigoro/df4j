@@ -19,8 +19,10 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.DFContext;
+import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.testutil.DoubleValue;
 
 /** An actor run by different executors
@@ -64,12 +66,52 @@ public class ActorVariantsTest {
             sum.post(_sum);
             avg.post(_sum/counter);
         }
-     
+
+        /**
+         * This pin carries demand(s) of the result.
+         * Demand is two-fold: it is an input pin, so firing possible only if
+         * someone demanded the execution, and it holds listeners' ports where
+         * the result should be sent. 
+         * @param <R>  type of result
+         */
+        public class Demand<R> extends PinBase<Callback<R>> implements Promise<R>, Callback<R> {
+            private CompletableFuture<R> listeners=new CompletableFuture<R>();
+
+            /** indicates a demand
+             * @param sink Port to send the result
+             * @return 
+             */
+            @Override
+            public Promise<R> addListener(Callback<R> sink) {
+                checkOn(sink);
+                return this;
+            }
+
+            @Override
+            protected boolean turnedOn(Callback<R> sink) {
+                listeners.addListener(sink);
+                return true;
+            }
+
+            /** satisfy demand(s)
+             */
+            @Override
+            public void post(R m) {
+                listeners.post(m);
+            }
+
+            @Override
+            public void postFailure(Throwable exc) {
+                listeners.postFailure(exc);
+            }
+        }
+    
     }
    
     public void testA(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
-        ListenableFuture<Double> sumcf=new ListenableFuture<Double>();
-        ListenableFuture<Double> avgcf=new ListenableFuture<Double>(node.avg);
+        CompletableFuture<Double> sumcf=new CompletableFuture<Double>();
+        CompletableFuture<Double> avgcf=new CompletableFuture<Double>();
+        node.avg.addListener(avgcf);
         node.post(new DoubleValue(1.0));
         node.post(new DoubleValue(2.0));
         node.close();
@@ -89,8 +131,9 @@ public class ActorVariantsTest {
     }
 
     public void testB(Aggregator node) throws InterruptedException, ExecutionException, TimeoutException {
-        ListenableFuture<Double> sumcf=new ListenableFuture<Double>();
-        ListenableFuture<Double> avgcf=new ListenableFuture<Double>(node.avg);
+        CompletableFuture<Double> sumcf=new CompletableFuture<Double>();
+        CompletableFuture<Double> avgcf=new CompletableFuture<Double>();
+        node.avg.addListener(avgcf);
         double value=1.0;
         int cnt=12345;
         for (int k=0; k<cnt; k++) {

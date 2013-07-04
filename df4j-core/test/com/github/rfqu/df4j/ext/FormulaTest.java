@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.Promise;
 import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.ext.Function.BinaryOp;
@@ -51,7 +51,7 @@ public class FormulaTest {
         sq.post(2.0); 
 
         // wait for the result
-        Double res = sq.get();
+        Double res = sq.res.get();
         // alternatively, use this shortcut:
 //      Double res = ListenableFuture.getFrom(sq);
         // result is obtained 
@@ -67,7 +67,7 @@ public class FormulaTest {
         sq.post(-2.0); // square root from negative number would cause an error
         try {
             // that error manifests itself when the result is pulled from the network
-            sq.get();
+            sq.res.get();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -81,14 +81,14 @@ public class FormulaTest {
     public void t012() throws InterruptedException {
         Sqrt sq=new Sqrt(); 
         Sum sum=new Sum();
-        sq.addListener(sum.p1);
+        sq.res.addListener(sum.p1);
 
         sq.post(-2.0); // square root from negative number would cause an error
         //sum.p2.send(1.0);
 
         try {
             // that error manifests itself when the result is pulled from the network
-            sum.get();
+            sum.res.get();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -103,7 +103,7 @@ public class FormulaTest {
 		Mult node=new Mult();	
     	node.p1.post(2.0);
     	node.p2.post(3.0);
-        assertEquals(6, node.get().intValue());
+        assertEquals(6, node.res.get().intValue());
     }
 
     /**
@@ -118,25 +118,25 @@ public class FormulaTest {
         Sum sum = new Sum();
         Sqrt sq=new Sqrt(); 
         // create vertices
-        a.addListener(sum.p1);        // a^2+b^2 -> sum
-        b.addListener(sum.p2);
-        sum.addListener(sq);         // sum -> sqrt
+        a.res.addListener(sum.p1);        // a^2+b^2 -> sum
+        b.res.addListener(sum.p2);
+        sum.res.addListener(sq);         // sum -> sqrt
         // send arguments
         a.post(3.0);
         b.post(4.0);
         // wait for the result
-        double res = sq.get();
+        double res = sq.res.get();
         assertEquals(5, res, delta);
     }
 
     /**
      * Demonstrates how complex network with single result
-     * can be encapsulated in a class which extends {@link ListenableFuture}.
+     * can be encapsulated in a class which extends {@link CompletableFuture}.
      * 
      * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
-    static class Discr extends ListenableFuture<Double> {
+    static class Discr extends CompletableFuture<Double> {
         // internal nodes
         private Mult mu2=new Mult();	
         private Diff diff = new Diff();
@@ -145,10 +145,10 @@ public class FormulaTest {
         Square b=new Square();
         Callback<Double> c=mu2.p2;
 		{
-            a.addListener(mu2.p1);
-            b.addListener(diff.p1);
-            mu2.addListener(diff.p2);
-            diff.addListener(this);
+            a.res.addListener(mu2.p1);
+            b.res.addListener(diff.p1);
+            mu2.res.addListener(diff.p2);
+            diff.res.addListener(this);
         }
 	}
 	
@@ -170,8 +170,8 @@ public class FormulaTest {
 	    private Sum sum = new Sum();
 	    private Diff diff=new Diff();
         // inputs
-	    ListenableFuture<Double> a=new ListenableFuture<Double>(); // a and b used multiple times, require Promise
-	    ListenableFuture<Double> b=new ListenableFuture<Double>();
+	    CompletableFuture<Double> a=new CompletableFuture<Double>(); // a and b used multiple times, require Promise
+	    CompletableFuture<Double> b=new CompletableFuture<Double>();
 		Port<Double> c=d.c; // c is used only once
 		// results
 		Div x1 = new Div();
@@ -182,12 +182,12 @@ public class FormulaTest {
             b.addListener(d.b).addListener(mb);
             d.addListener(sqrt);
             
-            mb.addListener(sum.p1).addListener(diff.p1);
-            sqrt.addListener(sum.p2).addListener(diff.p2);
-            sum.addListener(x1.p1);
-            mul.addListener(x1.p2).addListener(x2.p2);
+            mb.res.addListener(sum.p1).addListener(diff.p1);
+            sqrt.res.addListener(sum.p2).addListener(diff.p2);
+            sum.res.addListener(x1.p1);
+            mul.res.addListener(x1.p2).addListener(x2.p2);
             
-            diff.addListener(x2.p1);
+            diff.res.addListener(x2.p1);
         }
 	}
 
@@ -200,8 +200,8 @@ public class FormulaTest {
         node.b.post(3.0);
         node.c.post(-14.0);
 
-        assertEquals(2.0, node.x1.get(), delta);
-        assertEquals(-3.5, node.x2.get(), delta);
+        assertEquals(2.0, node.x1.res.get(), delta);
+        assertEquals(-3.5, node.x2.res.get(), delta);
     }
 
     /**
@@ -215,13 +215,13 @@ public class FormulaTest {
         node.c.post(14.0);
 
         try {
-            node.x1.get().intValue();
+            node.x1.res.get().intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
         try {
-            node.x2.get().intValue();
+            node.x2.res.get().intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -243,12 +243,6 @@ public class FormulaTest {
     static class Square extends UnaryOp<Double> {
         public Double eval(Double v) {
             return v * v;
-        }
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            // TODO Auto-generated method stub
-            return false;
         }
     }
 

@@ -10,73 +10,26 @@
 //package com.github.rfqu.df4j.util;
 package com.github.rfqu.df4j.ext;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.core.Promise;
+import com.github.rfqu.df4j.core.DataflowNode;
+import com.github.rfqu.df4j.core.CompletableFuture;
 
 /**
  * abstract node with multiple inputs, single output and exception handling
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends DataflowNode
-    implements Promise<R>, Future<R>
-{
+public abstract class Function<R> extends DataflowNode {
 //    protected final Demand<R> res=new Demand<R>();
-    ListenableFuture<R> res=new ListenableFuture<R>();
+    public final CompletableFuture<R> res=new CompletableFuture<R>();
+    
     public Function(Executor executor) {
         super(executor);
     }
 
     public Function() {
-    }
-
-    /**
-     * Subscribes a consumer to which the result will be send.
-     * Function evaluation would not start until at least one
-     * consumer subscribes.
-     * It is allowed to subscribe after the function is evaluated.
-     * @param sink
-     * @return 
-     */
-    @Override
-    public Function<R> addListener(Callback<R> sink) {
-        res.addListener(sink);
-        return this;
-    }
-    
-    //========= backend
-    
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return res.cancel(mayInterruptIfRunning);
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return res.isCancelled();
-    }
-
-    @Override
-    public boolean isDone() {
-        return res.isDone();
-    }
-
-    @Override
-    public R get() throws InterruptedException, ExecutionException {
-        return res.get();
-    }
-
-    @Override
-    public R get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return res.get(timeout, unit);
     }
 
     /**

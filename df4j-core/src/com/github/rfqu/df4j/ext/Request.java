@@ -9,94 +9,64 @@
  */
 package com.github.rfqu.df4j.ext;
 
+import java.util.concurrent.Future;
+
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.CompletableFutureBase;
 import com.github.rfqu.df4j.core.Port;
 
 /**
  * A message that carries callback port.
- * Similar to {@link ListenableFuture}, but callback port is of type {@link Port}<{@link T}>.
+ * Similar to {@link CompletableFuture}, but listeners are of type
+ *  {@link Port}<{@link Request}>, and that listeners will receive
+ * the request itself.
  * @param <T> actual type of Request (subclassed)
  * @param <R> type of result
  */
-public class Request<T extends Request<T, R>, R> {
-    protected boolean _hasValue=false;
-    protected R result=null;
-    protected Throwable exc=null;
-    protected Port<T> replyTo=null;
-
-    public Request() {
+public class Request<T extends Request<T, R>, R>
+   extends CompletableFutureBase<R, Port<T>>
+   implements Callback<R>, Future<R>
+{
+    @Override
+    protected void informResult(Port<T> listenerLoc) {
+        listenerLoc.post((T) this);
     }
 
-    public Request(Port<T> replyTo) {
-        this.replyTo = replyTo;
+    @Override
+    protected void informFailure(Port<T> listenerLoc) {
+        listenerLoc.post((T) this);
     }
 
-    /** reinitialize
+    public Request<T, R> addListener(Port<T> sink) {
+        _addListener(sink);
+        return this;
+    }
+
+    /**
+     * reinitialize
      */
     public void reset() {
-        _hasValue=false;
-        result = null;
+        _hasValue = false;
+        value = null;
         exc = null;
-        replyTo=null;
-    }
-
-    /** 
-     * sends itself to the destination
-     * should be invoked from synchronized methods
-     */
-    @SuppressWarnings("unchecked")
-    private void reply() {
-        _hasValue=true;
-        Port<T> replyToLoc = replyTo;
-        if (replyToLoc != null) {
-            replyTo=null; // avoid memory leak
-            replyToLoc.post((T) this);
-        }
-    }
-
-    /** sets the result and forwards to the destination
-     * @param result
-     */
-    public synchronized void post(R result) {
-        this.result=result;
-        reply();
-    }
-
-    /** sets the error and forwards to the destination
-     * @param exc
-     */
-    public synchronized void postFailure(Throwable exc) {
-        this.exc=exc;
-        reply();
-    }
-
-    @SuppressWarnings("unchecked")
-    public synchronized void setListener(Port<T> replyTo) {
-        if (_hasValue) {
-            replyTo.post((T) this);
-        } else {
-            this.replyTo = replyTo;
-        }
+        listener = null;
     }
 
     public void toCallback(Callback<R> handler) {
         if (exc == null) { // check exc, returned result may be null
-            handler.post(result);
+            handler.post(value);
         } else {
             handler.postFailure(exc);
         }
     }
-    
-    public synchronized boolean isDone() {
-        return _hasValue;
-    }
 
     public synchronized R getResult() {
-        return result;
+        return value;
     }
 
-    public synchronized Throwable getExc() {
+    public synchronized Throwable getException() {
         return exc;
     }
+
 }

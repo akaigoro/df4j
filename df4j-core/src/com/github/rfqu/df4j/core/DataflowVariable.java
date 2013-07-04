@@ -164,7 +164,7 @@ public abstract class DataflowVariable {
      * Initial state should be empty, to prevent premature firing.
      */
     protected abstract class Pin {
-        private Pin next; // link to list
+        private final Pin next; // link to list
         private final int pinBit; // distinct for all other pins of the node 
 
         protected Pin(){
@@ -186,22 +186,23 @@ public abstract class DataflowVariable {
          * sets pin's bit on and fires task if all pins are on
          *  @return true if actor became ready and must be fired
          */
-        protected boolean turnOn() {
+        final boolean turnOn() {
             //System.out.print("turnOn "+fired+" "+allReady());
             pinOn(pinBit);
-            if (!allReady()) {
+            if (allReady()) {
+                fireLock(); // to prevent multiple concurrent firings
+                //System.out.println(" => true");
+                return true;
+            } else {
                 //System.out.println(" => false");
                 return false;
             }
-            fireLock(); // to prevent multiple concurrent firings
-            //System.out.println(" => true");
-            return true;
         }
 
         /**
          * sets pin's bit off
          */
-        protected void turnOff() {
+        protected final void turnOff() {
             //System.out.println("turnOff");
             pinOff(pinBit);
         }
@@ -213,6 +214,33 @@ public abstract class DataflowVariable {
          * Default implementation does nothing.
          */
         protected void consume() {
+        }
+    }
+
+
+    //============== stuff for extending Pin from another package without showing up lock
+    public abstract class PinBase<T> extends Pin {
+        
+        /** 
+         * @return true if Pin turned on
+         */
+        protected abstract boolean turnedOn(T token);
+        
+        protected final void checkOn(T token) {
+            boolean doFire;
+            lock.lock();
+            try {
+                if (turnedOn(token)) {
+                    doFire=turnOn();
+                } else {
+                    return;
+                }
+            } finally {
+                lock.unlock();
+            }
+            if (doFire) {
+                fire();
+            }
         }
     }
 
@@ -246,12 +274,24 @@ public abstract class DataflowVariable {
     }
 
     /**
-     * holds tokens without data 
+     * holds token counter without data
+     * counter can be negative 
      */
     public class Semafor extends Pin {
-        private int count=0;
+        private int count;
         
-        /** increments resource counter */
+        public Semafor() {
+            this.count = 0;
+        }
+
+        public Semafor(int count) {
+            if (count>0) {
+                throw new IllegalArgumentException("initial counter cannot be positive");
+            }
+            this.count = count;
+        }
+
+        /** increments resource counter by 1 */
         public void up() {
             boolean doFire;
             lock.lock();
@@ -271,15 +311,25 @@ public abstract class DataflowVariable {
 
         /** increments resource counter by delta */
         public void up(int delta) {
+            boolean doFire;
             lock.lock();
             try {
-                boolean wasOff=(count==0);
+                boolean wasOff=(count<=0);
                 count+=delta;
-                if (wasOff && count>0) {
-                    turnOn();
+                boolean isOff=(count<=0);
+                if (wasOff == isOff) {
+                    return;
                 }
+                if (isOff) {
+                    turnOff();
+                    return;
+                }
+                doFire=turnOn();
             } finally {
               lock.unlock();
+            }
+            if (doFire) {
+                fire();
             }
         }
 
@@ -294,24 +344,9 @@ public abstract class DataflowVariable {
             }
         }
 
-        /** sets resource counter to 0 */
-        public void clear() {
-            lock.lock();
-            try {
-                count=0;
-                turnOff();
-            } finally {
-              lock.unlock();
-            }
-        }
-
         @Override
         protected void consume() {
-            if (count==0) {
-                return;
-            }
-            count--;
-            if (count==0) {
+            if (--count==0) {
                 turnOff();
             }
         }
@@ -513,49 +548,6 @@ public abstract class DataflowVariable {
         @Override
         public T poll() {
             return queue.poll();
-        }
-    }
-
-    /**
-     * This pin carries demand(s) of the result.
-     * Demand is two-fold: it is a pin, so firing possible only if
-     * someone demanded the execution, and it holds consumer's port where
-     * the result should be sent. 
-     * @param <R>  type of result
-     */
-    public class Demand<R> extends Pin implements Promise<R>, Callback<R> {
-        private ListenableFuture<R> listeners=new ListenableFuture<R>();
-
-        /** indicates a demand
-         * @param sink Port to send the result
-         * @return 
-         */
-        @Override
-        public Promise<R> addListener(Callback<R> sink) {
-            boolean doFire;
-            lock.lock();
-            try {
-                listeners.addListener(sink);
-                doFire=turnOn();
-            } finally {
-              lock.unlock();
-            }
-            if (doFire) {
-                fire();
-            }
-            return this;
-        }
-
-        /** satisfy demand(s)
-         */
-        @Override
-        public void post(R m) {
-            listeners.post(m);
-        }
-
-        @Override
-        public void postFailure(Throwable exc) {
-            listeners.postFailure(exc);
         }
     }
 }

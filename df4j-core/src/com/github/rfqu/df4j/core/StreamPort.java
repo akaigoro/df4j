@@ -10,11 +10,13 @@
 
 package com.github.rfqu.df4j.core;
 
+import java.io.Closeable;
+
 /**
  * output port for multiple messages
  * @param <M> the type of the message
  */
-public interface StreamPort<M> extends Port<M>{
+public interface StreamPort<M> extends Port<M>, Closeable {
     /**
      * signals the end of token stream 
      */
