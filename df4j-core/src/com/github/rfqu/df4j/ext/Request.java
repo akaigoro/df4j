@@ -28,11 +28,13 @@ public class Request<T extends Request<T, R>, R>
    extends CompletableFutureBase<R, Port<T>>
    implements Callback<R>, Future<R>
 {
+    @SuppressWarnings("unchecked")
     @Override
     protected void informResult(Port<T> listenerLoc) {
         listenerLoc.post((T) this);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void informFailure(Port<T> listenerLoc) {
         listenerLoc.post((T) this);

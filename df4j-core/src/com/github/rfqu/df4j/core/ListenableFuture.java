@@ -11,7 +11,7 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.Future;
 
 /**
- * Consumer's view on a  Future which servers also asynchronous listeners.
+ * Consumer's view on a Future which servers also asynchronous listeners.
  *
  * @param <T>
  */

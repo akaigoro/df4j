@@ -182,6 +182,7 @@ public class NestedCallbacks {
             Timer timer = Timer.getCurrentTimer();
             delay = rand.nextInt(400) + 200; // milliseconds
             // TODO cancel ttask
+            @SuppressWarnings("unused")
             ScheduledFuture<?> ttask = timer.schedule(callbackB, requestB, delay);
             //ttask.cancel(false);
         }
