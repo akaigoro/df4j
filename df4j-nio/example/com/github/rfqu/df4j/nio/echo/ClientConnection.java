@@ -7,6 +7,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -34,7 +35,8 @@ class ClientConnection {
         this.echoServerTest = echoServerTest;
         this.timer = echoServerTest.timer;
         this.rounds=new AtomicLong(rounds);
-        channel=echoServerTest.asyncChannelFactory.newAsyncSocketChannel(addr);
+        channel=echoServerTest.asyncChannelFactory.newAsyncSocketChannel();
+        channel.connect(addr);
         ByteBuffer buffer = ByteBuffer.allocate(EchoServerGlobTest.BUF_SIZE);
         request=new CliRequest(buffer);
 //        channel.read(request, endRead1, timeout);

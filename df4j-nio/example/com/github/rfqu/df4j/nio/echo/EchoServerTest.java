@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.Timer;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.testutil.DoubleValue;
@@ -77,7 +77,7 @@ public class EchoServerTest {
 		int reportPeriod = 1000;
         double sum=0;
         long counter=0;
-        ListenableFuture<Double> avg=new ListenableFuture<Double>();
+        CompletableFuture<Double> avg=new CompletableFuture<Double>();
         long startTime=System.currentTimeMillis();
 
         public Aggregator(int numclients) {
@@ -106,11 +106,11 @@ public class EchoServerTest {
 
     }
 
-//    @Test
+    @Test
     public void smokeTest() throws Exception, IOException, InterruptedException {
         testThroughput(1,1);
    }
-//    @Test
+    @Test
     public void smokeTest1() throws Exception, IOException, InterruptedException {
         testThroughput(1,2);
    }

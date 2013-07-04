@@ -9,47 +9,38 @@
  */
 package com.github.rfqu.df4j.nio;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 
-import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.CompletableFuture;
 
 /**
- * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
- * Simplifies input-output, handling queues of accept requests.
+ * For using on server side.
+ * <pre><code>AsyncServerSocketChannel assc=...;
+ * assc.bind(SocketAddress);
+ * AsyncSocketChannel asc=assc.accept(); // non-blocking operation
+ * asc.write(Request); // real I/O will start after actual client connection 
+ * asc.read(Request);
+ * </code></pre>
  */
-public abstract class AsyncServerSocketChannel {
-    protected Callback<AsyncSocketChannel> acceptor;
-    /** how many connections may be accepted */
-    protected int maxConn = 0;
+public abstract class AsyncServerSocketChannel implements Closeable {
     protected SocketAddress addr;
-    protected ListenableFuture<SocketAddress> closeEvent = new ListenableFuture<SocketAddress>();
+    protected CompletableFuture<AsyncServerSocketChannel> closeEvent =
+            new CompletableFuture<AsyncServerSocketChannel>();
 
-    public AsyncServerSocketChannel(SocketAddress addr, Callback<AsyncSocketChannel> acceptor) throws IOException {
-        this.addr = addr;
-        this.acceptor=acceptor;
+    public abstract void bind(SocketAddress addr) throws IOException;
+
+    public CompletableFuture<AsyncServerSocketChannel> getCloseEvent() {
+        return closeEvent;
     }
-
+    
     /**
-     * initiates acceptance process when the channel is free
+     * creates new AsyncSocketChannel, and makes it to wait for incoming client connection request.
      * 
-     * @param acceptor
+     * @return 
      */
-    abstract public void up(int delta);
+    public abstract AsyncSocketChannel accept();
 
-    public void up() {
-        up(1);
-    }
-
-    public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
-        closeEvent.addListener(listener);
-        return listener;
-    }
-
-//    @Override
-    abstract public void close();
-
-    abstract public boolean isClosed();
-
+    public abstract void close();
 }

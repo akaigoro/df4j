@@ -21,70 +21,43 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
 
-import com.github.rfqu.df4j.core.Callback;
+import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
-/**
- * Wrapper over {@link AsynchronousSocketChannel}.
- * Simplifies input-output, handling queues of I/O requests.
- * 
- * Internally, manages 2 actors: one for reading requests and one for writing requests.
- * After request is served, it is sent to the port denoted by <code>replyTo</code> parameter in
- * the read/write methods.
- */
-public class AsyncSocketChannel2 extends AsyncSocketChannel 
-   implements CompletionHandler<Void, AsynchronousSocketChannel>
-{
+public class AsyncSocketChannel2 extends AsyncSocketChannel {
     protected volatile AsynchronousSocketChannel channel;
+    protected final ConnectionCompleter connEvent=new ConnectionCompleter();
+    protected final CompletableFuture<AsyncSocketChannel> closeEvent=new CompletableFuture<AsyncSocketChannel>();
+
     {
         reader = new ReaderQueue();
         writer = new WriterQueue();
     }
-
-    /**
-     * for server-side socket
-     * @param assch
-     * @throws IOException 
-     */
-    public AsyncSocketChannel2(AsynchronousSocketChannel assch) {
-        init(assch);
-    }
     
-    void init(AsynchronousSocketChannel attachement) {
-        synchronized(this) {
-            channel=attachement;
-        }
-        reader.resume();
-        writer.resume();
-        connEvent.post(this);
-    }
-    
-    /**
-     * for client-side socket
-     * Starts connection to a server.
-     * IO requests can be queued immediately,
-     * but will be executed only after connection completes.
-     * If interested in the moment when connection is established,
-     * add a listener. 
-     * @throws IOException
-     */
-    public AsyncSocketChannel2(SocketAddress addr) throws IOException {
+    /** starts connection process from client side 
+     * @throws IOException */
+    public void connect(SocketAddress addr) throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
-        channel=AsynchronousSocketChannel.open(acg);
-        channel.connect(addr, channel, this);
+        AsynchronousSocketChannel channel=AsynchronousSocketChannel.open(acg);
+        channel.connect(addr, channel, connEvent);
     }
-
+    
     public void setTcpNoDelay(boolean on) throws IOException {
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
-    
-    public <R extends Callback<AsyncSocketChannel>> R addConnListener(R listener) {
-    	connEvent.addListener(listener);
-        return listener;
+
+    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
+        return connEvent;
+    }
+
+    @Override
+    public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
+        return closeEvent;
     }
     
-    public AsynchronousSocketChannel getChannel() {
+    public synchronized AsynchronousSocketChannel getChannel() {
         return channel;
     }
 
@@ -92,106 +65,123 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
         return channel!=null;
     }
 
-    public boolean isClosed() {
-        return closed;
-    }
-
     // ================== StreamPort I/O interface 
 
     /** disallows subsequent posts of requests; already posted requests 
      * would be processed.
+     * @throws IOException 
      */
     @Override
-    public void close() {
-        closed=true;
-        reader.close();
-        writer.close();
+    public synchronized void close() throws IOException {
+        if (isClosed()) return;
+        closeEvent.post(this);
+        channel.close();
     }
-
-/*
-    public synchronized void addListener(Callback<AsynchronousSocketChannel> listener) {
-        connEvent.addListener(listener);
-    }
-*/
-	//========================= backend
-	
-	/**
-     * callback method for successful connection in client-side mode
-     */
-    @Override
-    public void completed(Void result, AsynchronousSocketChannel channel) {
-        init(channel);
-    }
-
-    /**
-     * callback method for failed connection in client-side mode
-     */
-    @Override
-    public void failed(Throwable exc, AsynchronousSocketChannel channel) {
-        connEvent.postFailure(exc);
-    } 
 
     //===================== inner classes
     
-    abstract class RequestQueue2 extends RequestQueue
-    	implements CompletionHandler<Integer, SocketIORequest<?>>
+    /**
+     * callback for connection completion
+     * works both in client-side and server-side modes
+     */
+    class ConnectionCompleter extends CompletableFuture<AsyncSocketChannel>
+         implements CompletionHandler<Void, AsynchronousSocketChannel>
     {
-     protected Semafor channelAcc=new Semafor(); // channel accessible
-     protected SocketIORequest<?> currentRequest;
-     
-     public RequestQueue2() {
-        super(null); // immediate executor - act() method  
+        // ------------- CompletionHandler's backend
+
+        @Override
+        public void completed(Void result, AsynchronousSocketChannel asc) {
+            channel=asc;
+            reader.resume();
+            writer.resume();
+            super.post(AsyncSocketChannel2.this);
+        }
+
+        /**
+         * in server-side mode, channel==null
+         */
+        @Override
+        public void failed(Throwable exc, AsynchronousSocketChannel channel) {
+            super.postFailure(exc);
+        } 
+    };
+
+    abstract class RequestQueue2 extends RequestQueue
+      implements CompletionHandler<Integer, SocketIORequest<?>>
+    {
+        protected Semafor channelAcc = new Semafor(); // channel accessible
+        protected SocketIORequest<?> currentRequest;
+
+        public RequestQueue2(boolean isReader) {
+            super(null, isReader); // immediate executor - act() method
+        }
+
+        public void resume() {
+            channelAcc.up();
+        }
+
+        // ------------- CompletionHandler's backend
+
+        @Override
+        public void completed(Integer result, SocketIORequest<?> request) {
+            currentRequest = null;
+            channelAcc.up();
+            request.post(result);
+        }
+
+        @Override
+        public void failed(Throwable exc, SocketIORequest<?> request) {
+            if (exc instanceof AsynchronousCloseException) {
+                synchronized (AsyncSocketChannel2.this) {
+                    if (!isClosed()) {
+                        closeEvent.post(AsyncSocketChannel2.this);
+                    }
+                }
+            }
+            currentRequest = null;
+            channelAcc.up(); // let subsequent requests fail
+            request.postFailure(exc);
+        }
     }
-
-     public void resume() {
-         channelAcc.up();
-     }
-		//------------- CompletionHandler's backend
-		
-	 @Override
-     public void completed(Integer result, SocketIORequest<?> request) {
-		 currentRequest=null;
-         channelAcc.up();
-         request.post(result);
-     }
-
-     @Override
-     public void failed(Throwable exc, SocketIORequest<?> request) {
-         if (exc instanceof AsynchronousCloseException) {
-             AsyncSocketChannel2.this.close();
-         }
-		 currentRequest=null;
-         channelAcc.up();
-         request.postFailure(exc);
-     }
- }
 	
     class ReaderQueue extends RequestQueue2 {
-        //-------------------- Actor's backend
         
+        public ReaderQueue() {
+            super(true);
+        }
+
+        //-------------------- Actor's backend
+
         @Override
         protected void act(SocketIORequest<?> request) throws Exception {
-           currentRequest=request;
-           if (request.isTimed()) {
-               channel.read(request.getBuffer(),
+            if (isClosed()) {
+                request.postFailure(new AsynchronousCloseException());
+                return;
+            }
+            currentRequest=request;
+            if (request.isTimed()) {
+                channel.read(request.getBuffer(),
                        request.getTimeout(), TimeUnit.MILLISECONDS, request, this);
-           } else {
-               channel.read(request.getBuffer(), request, this);
-           }
+            } else {
+                channel.read(request.getBuffer(), request, this);
+            }
         }
-        
-   		@Override
-   		protected void complete() throws Exception {
-   			completer.getReaderFinished().up();
-   		}
-
     }
    	
     class WriterQueue extends RequestQueue2 {
-        //-------------------- Actor's backend
         
+        public WriterQueue() {
+            super(false);
+        }
+
+        //-------------------- Actor's backend
+
         @Override
         protected void act(SocketIORequest<?> request) throws Exception {
+            if (isClosed()) {
+                request.postFailure(new AsynchronousCloseException());
+                return;
+            }
         	currentRequest=request;
             if (request.isTimed()) {
                 channel.write(request.getBuffer(), request.getTimeout(), TimeUnit.MILLISECONDS,
@@ -200,11 +190,5 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel
                 channel.write(request.getBuffer(), request, this);
             }
         }
-        
-   		@Override
-   		protected void complete() throws Exception {
-   			completer.getWriterFinished().up();
-   		}
-
     }
 }

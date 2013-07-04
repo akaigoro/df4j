@@ -12,87 +12,99 @@
  */
 package com.github.rfqu.df4j.nio;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.core.DataflowVariable;
-import com.github.rfqu.df4j.core.StreamPort;
 
 /**
- * Asynchronously executes I/O socket requests using {@link java.nio.channels.Selector}.
+ * Wrapper over {@link AsynchronousSocketChannel}.
  * Simplifies input-output, handling queues of I/O requests.
  * 
- * Internally, manages 2 actors: one for reading requests and one for writing requests.
- * After request is served, it is sent to the port denoted by <code>replyTo</code> parameter in
- * the read/write methods.
+ * For client-side connections, instatntiate and call connect(addr).
+ * For server-side connections, obtain new instances via AsyncServerSocketChannel.accept().
+ *  
+ * Internally, manages 2 input queues: one for reading requests and one for writing requests.
+ * After request is served, it is sent to the port denoted by <code>replyTo</code>
+ * property in the request.
+ * 
+ * IO requests can be posted immediately, but will be executed
+ * only after connection completes.
+ * If interested in the moment when connection is established,
+ * add a listener to connEvent.
  */
-public abstract class AsyncSocketChannel
-    implements StreamPort<SocketIORequest<?>>
-{
-	/** for client-side socket: signals connection completion */
-	protected final ListenableFuture<AsyncSocketChannel> connEvent = new ListenableFuture<AsyncSocketChannel>();
+public abstract class AsyncSocketChannel implements Closeable {
 	/** read requests queue */
 	protected RequestQueue reader;
 	/** write requests queue */
 	protected RequestQueue writer;
-	/** closes channel */
-	protected Completer completer = new Completer();
-	protected volatile boolean closed = false;
 
-	public <R extends Callback<AsyncSocketChannel>> R addConnListener(R listener) {
-		connEvent.addListener(listener);
-		return listener;
-	}
+    /**
+     * for client-side socket
+     * Starts connection to a server.
+     * @throws IOException
+     */
+    public abstract void connect(SocketAddress addr) throws IOException;
+    
+    /** signals connection completion */
+    public abstract ListenableFuture<AsyncSocketChannel> getConnEvent();
 
-	public boolean isClosed() {
-		return closed;
-	}
+    /** signals connection closing */
+    public abstract ListenableFuture<AsyncSocketChannel> getCloseEvent();
 
-    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
-        return connEvent;
+    public boolean isConnected() {
+        return getConnEvent().isDone();
     }
 
-	// ================== StreamPort I/O interface
+    public boolean isClosed() {
+        return getCloseEvent().isDone();
+    }
 
-    @Override
-	public void post(SocketIORequest<?> request) {
-		(request.isReadOp() ? reader : writer).post(request);
-	}
+    public abstract void close() throws IOException;
 
-	// ================== conventional I/O interface
+    // ================== conventional I/O interface
 
 	public <R extends SocketIORequest<R>> void write(R request) {
 		request.prepareWrite();
-		post(request);
+		writer.post(request);
 	}
 
 	public <R extends SocketIORequest<R>> void write(R request,	long timeout) {
 		request.prepareWrite(timeout);
-		post(request);
+		writer.post(request);
 	}
 
 	public <R extends SocketIORequest<R>> void read(R request) {
 		request.prepareRead();
-		post(request);
+		reader.post(request);
 	}
 
 	public <R extends SocketIORequest<R>> void read(R request, long timeout) {
 		request.prepareRead(timeout);
-		post(request);
+		reader.post(request);
 	}
 
     public abstract class RequestQueue extends Actor<SocketIORequest<?>> {
-
-        public RequestQueue(Executor executor) {
+        protected boolean isReader;
+        
+        public RequestQueue(Executor executor, boolean isReader) {
             super(executor);
+            this.isReader=isReader;
         }
 
         public abstract void resume();
         
         @Override
         public synchronized void post(SocketIORequest<?> request) {
+            if (isClosed()) {
+                request.postFailure(new AsynchronousCloseException());
+                return;
+            }
             if (!request.getBuffer().hasRemaining()) {
                 request.postFailure(new IllegalArgumentException());
                 return;
@@ -100,27 +112,4 @@ public abstract class AsyncSocketChannel
             super.post(request);
         }
  	}
-
-	/**
-	 * closes underlying SocketChannel after all requests has been processed.
-	 */
-	public class Completer extends DataflowVariable {
-		private final Semafor readerFinished = new Semafor();
-		private final Semafor writerFinished = new Semafor();
-
-		@Override
-		protected void act() {
-		    AsyncSocketChannel.this.close();
-		}
-
-        public Semafor getReaderFinished() {
-            return readerFinished;
-        }
-
-        public Semafor getWriterFinished() {
-            return writerFinished;
-        }
-
-	}
-
 }

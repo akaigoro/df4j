@@ -212,7 +212,7 @@ public class RandomFileAccess {
         long started=0;
         long finished=0;
         AtomicLong accTime=new AtomicLong();
-        ListenableFuture<Integer> sink = new ListenableFuture<Integer>();
+        CompletableFuture<Integer> sink = new CompletableFuture<Integer>();
 
         public StarterW(AsyncFileChannel<Request> af, int nb, boolean direct) {
             this.af = af;

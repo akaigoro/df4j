@@ -3,11 +3,8 @@ package com.github.rfqu.df4j.nio.echo;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 import org.junit.Test;
-
-import com.github.rfqu.df4j.core.ListenableFuture;
 
 public class EchoServerLocTest {
     static PrintStream out=System.out;
@@ -22,7 +19,7 @@ public class EchoServerLocTest {
             t.testThroughput(numclients, rounds);
         } finally {
             es.close(); // start closing process
-            es.addCloseListener(new ListenableFuture<SocketAddress>()).get(); // inet addr is free now
+            es.getCloseEvent().get();
         }
         out.println("all closed");
     }

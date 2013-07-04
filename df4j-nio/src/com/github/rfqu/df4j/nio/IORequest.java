@@ -23,7 +23,6 @@ import com.github.rfqu.df4j.ext.Request;
 public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
     protected ByteBuffer buffer;
     private boolean inRead;
-    private boolean inTrans=false;
 
 	public IORequest(ByteBuffer buffer) {
 		this.buffer = buffer;
@@ -59,10 +58,10 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
 //        IORequest<T> r =  this;
 		T r =  (T)this;
         if (exc == null) {
-            if (result==-1) {
+            if (value==-1) {
                 handler.closed(r);
             } else {
-                handler.completed(result, r);
+                handler.completed(value, r);
             }
         } else {
             if (exc instanceof AsynchronousCloseException) {
@@ -88,10 +87,6 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         return inRead;
     }
 
-    public boolean isInTrans() {
-        return inTrans;
-    }
-    
     //======================== backend methods - called from socket handler 
 
 	public synchronized void post(Integer result) {
@@ -103,12 +98,10 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         	//System.out.println("channel write completed id="+id);
             buffer.clear();
         }
-        inTrans=false;
         super.post(result);
 	}
 
     public synchronized void postFailure(Throwable exc) {
-        inTrans=false;
         super.postFailure(exc);
     }
 }

@@ -21,6 +21,7 @@ import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowVariable;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
@@ -139,8 +140,8 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 
     abstract class RequestQueue1 extends RequestQueue {
         
-	    public RequestQueue1() {
-            super(selectorThread);
+	    public RequestQueue1(boolean isReader) {
+            super(selectorThread, isReader);
         }
 
         /** is on when resources from network are available */
@@ -173,6 +174,10 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
  	}
 
 	class ReaderQueue extends RequestQueue1 {
+        public ReaderQueue() {
+            super(true);
+        }
+
         int getSelectionKeyOp() { 
             return SelectionKey.OP_READ;
         }
@@ -215,15 +220,14 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
                 request.post(numRead);
             }
 		}
-		
-        @Override
-        protected void complete() throws Exception {
-            completer.getReaderFinished().up();
-        }
 	}
 
 	class WriterQueue extends RequestQueue1 {
-	    int getSelectionKeyOp() { 
+	    public WriterQueue() {
+            super(false);
+        }
+
+        int getSelectionKeyOp() { 
 	        return SelectionKey.OP_WRITE;
 	    }
 
@@ -260,11 +264,6 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
                 }
             }
 		}
-
-        @Override
-        protected void complete() throws Exception {
-            completer.getWriterFinished().up();
-        }
 	}
 	
 	class SelectorListener implements SelectorEventListener {
@@ -293,18 +292,22 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 	     }
 	}
 
-	/**
-	 * closes underlying SocketChannel after all requests has been processed.
-	 */
-	class Completer extends DataflowVariable {
-		final Semafor readerFinished = new Semafor();
-		final Semafor writerFinished = new Semafor();
+    @Override
+    public void connect(SocketAddress addr) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
 
-		@Override
-		protected void act() {
-		    AsyncSocketChannel1.this.close();
-		}
+    @Override
+    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	}
+    @Override
+    public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
 }

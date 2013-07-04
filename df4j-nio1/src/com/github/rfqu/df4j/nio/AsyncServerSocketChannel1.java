@@ -16,6 +16,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -30,8 +31,8 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
     private ServerSocketChannel channel;
     private SelectorThread selectorThread;
 
-    public AsyncServerSocketChannel1(SocketAddress addr, Callback<AsyncSocketChannel> acceptor) throws IOException {
-        super(addr, acceptor);
+    public AsyncServerSocketChannel1() throws IOException {
+        super(addr);
         selectorThread = SelectorThread.getCurrentSelectorThread();
         channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
@@ -40,22 +41,13 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
 
     /**
      * initiates acceptance process when the channel is free
-     * 
-     * @param acceptor
      */
-    public synchronized void up(int delta) {
-        if (delta<0) {
-            throw new IllegalArgumentException();
-        }
+    @Override
+    public AsyncSocketChannel accept() {
         if (isClosed()) {
             throw new IllegalStateException();
         }
-        if (maxConn>0) { // there are waiting server-side connections
-            maxConn+=delta;
-            // do nothing: already registered at selector
-            return;
-        }
-        maxConn=delta;
+        AsyncSocketChannel1 asc=new AsyncSocketChannel1();
         boolean allAccepted=tryAccept();
         if (allAccepted) {
             return; // 
@@ -73,7 +65,9 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
      * @return true if maxConn limit is exhausted
      */
     boolean tryAccept() {
+        int maxConn = 0;
         for (; maxConn>0; maxConn--) {
+            Callback<AsyncSocketChannel> acceptor = null;
             try {
                 if (channel==null) {
                     break; // connection closed
@@ -82,7 +76,7 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
                 if (sch==null) {
                     break;
                 }
-                acceptor.post(new AsyncSocketChannel1(sch));
+                acceptor.post();
             } catch (IOException e) {
                 acceptor.postFailure(e);
             }
@@ -108,12 +102,7 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
         }
     }
 
-    public <R extends Callback<SocketAddress>> R addCloseListener(R listener) {
-        closeEvent.addListener(listener);
-        return listener;
-    }
-
-//    @Override
+    @Override
     public synchronized void close() {
         try {
             channel.close();
@@ -121,11 +110,19 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
             e.printStackTrace();
         }
         channel = null;
-        closeEvent.post(addr);
+        closeEvent.post(this);
     }
 
     public boolean isClosed() {
         return channel==null;
+    }
+
+    // ========================= Actor's backend
+
+    @Override
+    protected void act(Callback<AsyncSocketChannel> acceptor) throws Exception {
+        // TODO Auto-generated method stub
+        
     }
 
     // ========================= ServerSocketEventListener backend
