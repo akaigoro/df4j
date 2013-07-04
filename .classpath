@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="df4j-core/example"/>
+	<classpathentry kind="src" path="df4j-nio/test"/>
+	<classpathentry kind="src" path="df4j-nio1/src"/>
+	<classpathentry kind="src" path="df4j-nio1/test"/>
+	<classpathentry kind="src" path="df4j-nio/src"/>
+	<classpathentry kind="src" path="df4j-nio1/example"/>
+	<classpathentry kind="src" path="df4j-nio/example"/>
 	<classpathentry kind="src" path="df4j-core/src"/>
 	<classpathentry kind="src" path="df4j-core/test"/>
-	<classpathentry kind="src" path="df4j-corefj/example"/>
-	<classpathentry kind="src" path="df4j-corefj/src"/>
-	<classpathentry kind="src" path="df4j-demux/src"/>
-	<classpathentry kind="src" path="df4j-demux/test"/>
-	<classpathentry kind="src" path="df4j-netty/src"/>
 	<classpathentry kind="src" path="df4j-nio2/example"/>
 	<classpathentry kind="src" path="df4j-nio2/src"/>
 	<classpathentry kind="src" path="df4j-nio2/test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="df4j-nio2/bin"/>
 </classpath>
