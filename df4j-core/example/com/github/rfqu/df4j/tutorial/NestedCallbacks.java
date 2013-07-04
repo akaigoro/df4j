@@ -210,7 +210,9 @@ public class NestedCallbacks {
         };
         RequestS requestB = new RequestS("<lsTest ");
         requestB.addListener(callbackB1);
-        randomLongService().post(requestB);
+//        randomLongService().post(requestB);
+        LongService ls1=new LongService(1);
+        ls1.post(requestB);
         sink.await();
         log("time="+requestB.getResult());
     }

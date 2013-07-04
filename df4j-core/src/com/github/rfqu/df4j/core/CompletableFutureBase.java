@@ -18,18 +18,8 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * 
- * A kind of dataflow variable: single input, multiple asynchronous outputs.
- * Distributes received value among listeners.
- * Value (or failure) can only be assigned once. It is then saved, and 
- * listeners connected after the assignment still would receive it.
- * May connect actors.
- * <p>Promise plays the same role as {@link java.util.concurrent.Future},
- * but the result is sent to ports, registered as listeners using {@link #addListener}.
- * Registration can happen at any time, before or after the result is computed.
- * 
- * Also acts as a Furure and connects Actors and Threads.
- * Actors are allowed to send messages to it, but not to get from. 
- * Threads are allowed both to send and get.
+ * Common base for {@link CompletableFuture} and {@link com.github.rfqu.df4j.ext.Request},
+ * which differ in relations with listeners.
  *
  * @param <R>  type of result
  * @param <R>  type of listeners
@@ -165,13 +155,13 @@ public abstract class CompletableFutureBase<R, L>
      */
     @SuppressWarnings("unchecked")
     @Override
-    public synchronized void post(R m) {
+    public void post(R m) {
         Object listenerLoc = setValueGetListener(m);
         if (listenerLoc == null) {
             return;
         }
-        if (listener instanceof ArrayList<?>) {
-            ArrayList<L> listenersLoc=(ArrayList<L>) listener;
+        if (listenerLoc instanceof ArrayList) {
+            ArrayList<L> listenersLoc=(ArrayList<L>) listenerLoc;
             for (int k=0; k<listenersLoc.size(); k++) {
                 informResult(listenersLoc.get(k));
             }
@@ -182,13 +172,13 @@ public abstract class CompletableFutureBase<R, L>
 
     @SuppressWarnings("unchecked")
     @Override
-    public synchronized void postFailure(Throwable exc) {
+    public void postFailure(Throwable exc) {
         Object listenerLoc = setFailureGetListener(exc);
         if (listenerLoc == null) {
             return;
         }
-        if (listener instanceof ArrayList<?>) {
-            ArrayList<L> listenersLoc=(ArrayList<L>) listener;
+        if (listenerLoc instanceof ArrayList<?>) {
+            ArrayList<L> listenersLoc=(ArrayList<L>) listenerLoc;
             for (int k=0; k<listenersLoc.size(); k++) {
                 informFailure(listenersLoc.get(k));
             }
@@ -197,41 +187,29 @@ public abstract class CompletableFutureBase<R, L>
         }
     }
 
-    private Object setValueGetListener(R m) {
-        Object listenerLoc;
-        synchronized (this) {
-            if (_hasValue) {
-                Object v = this.exc != null ? this.exc : value;
-                throw new IllegalStateException("value set already: " + v);
-            }
-            _hasValue = true;
-            value = m;
-            notifyAll();
-            /*
-             * if (listener == null) { return; }
-             */
-            listenerLoc = listener;
-            listener = null;
+    private synchronized Object setValueGetListener(R m) {
+        if (_hasValue) {
+            Object v = this.exc != null ? this.exc : value;
+            throw new IllegalStateException("value set already: " + v);
         }
+        _hasValue = true;
+        value = m;
+        notifyAll();
+        Object listenerLoc = listener;
+        listener = null;
         return listenerLoc;
     }
 
-    private Object setFailureGetListener(Throwable exc) {
-        Object listenerLoc;
-        synchronized (this) {
-            if (_hasValue) {
-                Object v = this.exc != null ? this.exc : value;
-                throw new IllegalStateException("value set already: " + v);
-            }
-            _hasValue = true;
-            this.exc = exc;
-            notifyAll();
-            /*
-             * if (listener == null) { return; }
-             */
-            listenerLoc = listener;
-            listener = null;
+    private synchronized Object setFailureGetListener(Throwable exc) {
+        if (_hasValue) {
+            Object v = this.exc != null ? this.exc : value;
+            throw new IllegalStateException("value set already: " + v);
         }
+        _hasValue = true;
+        this.exc = exc;
+        notifyAll();
+        Object listenerLoc = listener;
+        listener = null;
         return listenerLoc;
     }
 
@@ -250,12 +228,12 @@ public abstract class CompletableFutureBase<R, L>
 
     @SuppressWarnings("unchecked")
     private synchronized boolean addListenerGetHasValue(L sink) {
-        if (!_hasValue) {
-            return false;
+        if (_hasValue) {
+            return true;
         }
         if (listener == null) {
             listener = sink;
-            return true;
+            return false;
         }
         if (listener instanceof ArrayList<?>) {
             ((ArrayList<L>) listener).add(sink);
@@ -265,7 +243,7 @@ public abstract class CompletableFutureBase<R, L>
             listenersLoc.add(sink);
             listener = listenersLoc;
         }
-        return true;
+        return false;
     }
 
 }

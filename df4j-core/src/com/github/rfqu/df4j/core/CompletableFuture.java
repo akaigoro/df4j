@@ -12,13 +12,9 @@ package com.github.rfqu.df4j.core;
 /**
  * 
  * A kind of dataflow variable: single input, multiple asynchronous outputs.
- * Distributes received value among listeners.
+ * Distributes received value/failure among listeners.
  * Value (or failure) can only be assigned once. It is then saved, and 
  * listeners connected after the assignment still would receive it.
- * May connect actors.
- * <p>Promise plays the same role as {@link java.util.concurrent.Future},
- * but the result is sent to ports, registered as listeners using {@link #addListener}.
- * Registration can happen at any time, before or after the result is computed.
  * 
  * Also acts as a Furure and connects Actors and Threads.
  * Actors are allowed to send messages to it, but not to get from. 
