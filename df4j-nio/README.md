@@ -114,7 +114,7 @@ SocketIORequest also implements Promise<SocketIORequest>, so it is possible to r
         /** starts reading operation */
         ListenableFuture read() {
             int remained=data.length-loaded;
-            if (remained==0) {
+            if (remained == 0) {
                 // all bytes have been read
                 result.post(data); // notify listeners
                 return result;
@@ -136,7 +136,7 @@ SocketIORequest also implements Promise<SocketIORequest>, so it is possible to r
                result.postFailure(r.getException()); // inform listeners
                return;
             }
-            int bytesRead=r.getResult(); // must be >0
+            int bytesRead=r.getResult(); // must be positive
             r.getBuffer().get(array, loaded, bytesRead);
             loaded+=bytesRead;
             read(); // read next portion
