@@ -39,7 +39,7 @@ A sketch of a server program is as follows:
 Since ListenableFuture provides also asynchronous notifications, it is possible to 
 make a non-blocking acception loop:
 <pre>
-    class Acceptor implements Callback<AsyncSocketChannel> {
+    class Acceptor implements Callback&lt;AsyncSocketChannel&gt; {
         void next() {
             AsyncSocketChannel asc = assc.accept();
             ListenableFuture connectionEvent=asc.getConnEvent();
@@ -93,17 +93,17 @@ completion of I/O operation:
     int res=r.get(); // returns actual number of bytes read
 </pre>
 
-SocketIORequest also implements Promise<SocketIORequest>, so it is possible to react asyncronousely:
+SocketIORequest also implements Promise&lt;SocketIORequest&gt;, so it is possible to react asyncronousely:
 <pre>
     /** reads specified amount of bytes from a TCP connection
      *  and stores them in an array
      */
-    class DataLoader implements Port<SocketIORequest> {
+    class DataLoader implements Port&lt;SocketIORequest&gt; {
         AsyncSocketChannel asc;
         SocketIORequest r=new SocketIORequest();
         byte[] data;
         int loaded=0;
-        CompletableFuture<byte[]> result=new CompletableFuture<byte[]>;
+        CompletableFuture&lt;byte[]&gt; result=new CompletableFuture&lt;byte[]&gt;;
         
         DataLoader(AsyncSocketChannel asc, int nbytes) {
             this.asc = asc;
@@ -119,7 +119,7 @@ SocketIORequest also implements Promise<SocketIORequest>, so it is possible to r
                 result.post(data); // notify listeners
                 return result;
             }
-            if (remained<r.getBuffer().remaining()) {
+            if (remained &lt; r.getBuffer().remaining()) {
                 // shrink buffer
                 r.getBuffer().limit(remained);
             }
@@ -148,7 +148,7 @@ SocketIORequest also implements Promise<SocketIORequest>, so it is possible to r
     ....
     byte array[]=result.get();// waits if nessesary
     // or set a callback to be invoked when all data will be read:
-    result.addListener(new Callback<byte[]>() {
+    result.addListener(new Callback&lt;byte[]&gt;() {
         public void post(byte[] array) {
             // do something with the array
         }
