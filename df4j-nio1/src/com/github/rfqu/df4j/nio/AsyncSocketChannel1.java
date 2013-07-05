@@ -20,7 +20,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DataflowVariable;
+import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.core.Task;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -35,10 +35,13 @@ import com.github.rfqu.df4j.nio.SocketIORequest;
  * the read/write methods.
  */
 public class AsyncSocketChannel1 extends AsyncSocketChannel {
+    protected final CompletableFuture<AsyncSocketChannel> connEvent=new CompletableFuture<AsyncSocketChannel>();
+    protected final CompletableFuture<AsyncSocketChannel> closeEvent=new CompletableFuture<AsyncSocketChannel>();
 	private SelectorThread selectorThread = SelectorThread
 			.getCurrentSelectorThread();
 	protected volatile SocketChannel socketChannel;
 	private final SelectorListener selectorListener=new SelectorListener();
+	
     {
         reader = new ReaderQueue();
         writer = new WriterQueue();
@@ -46,15 +49,11 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
    
     /**
 	 * for server-side socket
-	 * 
-	 * @param assch
-	 * @throws IOException
-	 */
-	public AsyncSocketChannel1(SocketChannel channel) throws IOException {
-		init(channel);
-	}
+	 */ 
+	public AsyncSocketChannel1() {
+    }
 
-	void init(SocketChannel channel) throws IOException {
+    void init(SocketChannel channel) throws IOException {
         channel.configureBlocking(false);
 	    channel.socket().setTcpNoDelay(true);
 	    socketChannel = channel;
@@ -64,14 +63,16 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 	}
 
 	/**
-	 * for client-side socket Starts connection to a server. IO requests can be
-	 * queued immediately, but will be executed only after connection completes.
+	 * for client-side socket
+	 * Starts connection to a server. IO requests can be queued immediately,
+	 * but will be executed only after connection completes.
 	 * If interested in the moment when connection is established, add a
-	 * listener.
+	 * listener to the {@link connEvent}.
+	 * @return 
 	 * 
 	 * @throws IOException
 	 */
-	public AsyncSocketChannel1(final SocketAddress addr) throws IOException {
+	public void connect(final SocketAddress addr) throws IOException {
 		// Create a non-blocking socket channel
 		final SocketChannel channel = SocketChannel.open();
 		channel.configureBlocking(false);
@@ -101,28 +102,30 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 		return listener;
 	}
 
-	// ================== StreamPort I/O interface
+    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
+        return connEvent;
+    }
+
+    @Override
+    public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
+        return closeEvent;
+    }
+
+    // ================== StreamPort I/O interface
 
 	/**
 	 * disallows subsequent posts of requests; already posted requests would be
 	 * processed.
 	 */
 	@Override
-	public void close() {
-	    if (closed) {
-	        return;
-	    }
-		closed = true;
-		reader.close();
-		writer.close();
+    public synchronized void close() throws IOException {
+        if (isClosed()) return;
+        closeEvent.post(this);
 		if (socketChannel==null) { // this may happen if connection rejected
 		    return;
 		}
         try {
             socketChannel.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         } finally {
             socketChannel=null;
         }
@@ -280,7 +283,12 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 	                init(channel);
 	            } catch (IOException e) {
 	                e.printStackTrace();
-	                AsyncSocketChannel1.this.close(); // TODO send failure
+	                try {
+                        AsyncSocketChannel1.this.close();
+                    } catch (IOException e1) {
+                        // TODO Auto-generated catch block
+                        e1.printStackTrace();
+                    } // TODO send failure
 	            }
 	        }
 	        if (key.isValid()&& key.isReadable()) {
@@ -291,23 +299,4 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
 	        }
 	     }
 	}
-
-    @Override
-    public void connect(SocketAddress addr) throws IOException {
-        // TODO Auto-generated method stub
-        
-    }
-
-    @Override
-    public ListenableFuture<AsyncSocketChannel> getConnEvent() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
 }

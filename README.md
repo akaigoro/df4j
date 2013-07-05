@@ -22,7 +22,8 @@ df4j-nio1: a wrapper to nio asynchronous input-output functionality (based on Se
 
 df4j-nio2: a wrapper to nio2 asynchronous input-output functionality. Requires java 1.7 or higher.
 
-df4j-nio: common parts of df4j-nio1 and df4j-nio2.
+df4j-nio: common parts of df4j-nio1 and df4j-nio2. Almost all programming interface is located here.
+Read introduction [here](df4j-nio/README.md)  
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
@@ -259,6 +260,11 @@ and all ItemKeys would be passed with it.
  
 
 Version history
+---------------
+v0.9 2013/07/10
+ListenableFuture become an interface, implementation is CompletableFuture.
+Request has moved from package ext to package core, and implements Future<Result> and Promise<Request>.
+
 ---------------
 v0.8 2013/06/10
 Core classes CallbackPromise and CallbackFuture combined in single class ListenableFuture.

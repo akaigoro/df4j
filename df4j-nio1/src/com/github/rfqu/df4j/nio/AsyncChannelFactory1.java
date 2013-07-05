@@ -16,8 +16,8 @@ public class AsyncChannelFactory1 extends AsyncChannelFactory {
     }
 
     @Override
-    public AsyncSocketChannel newAsyncSocketChannel(SocketAddress addr) throws IOException {
-        return new AsyncSocketChannel1(addr);
+    public AsyncSocketChannel newAsyncSocketChannel() throws IOException {
+        return new AsyncSocketChannel1();
     }
 
 }

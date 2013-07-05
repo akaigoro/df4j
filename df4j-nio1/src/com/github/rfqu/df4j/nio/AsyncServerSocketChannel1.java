@@ -32,11 +32,28 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
     private SelectorThread selectorThread;
 
     public AsyncServerSocketChannel1() throws IOException {
-        super(addr);
         selectorThread = SelectorThread.getCurrentSelectorThread();
         channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
+    }
+
+    @Override
+    public void bind(SocketAddress addr) throws IOException {
+        if (addr==null) {
+            throw new NullPointerException();
+        }
+        super.addr=addr;
         channel.socket().bind(addr);
+    }
+ 
+    /** initiates acceptance process
+     * @return AsyncSocketChannel waiting to connect
+     */
+    @Override
+    public AsyncSocketChannel accept() {
+        AsyncSocketChannel1 res=new AsyncSocketChannel1();
+        acceptor1.post(res);
+        return res;
     }
 
     /**
@@ -54,10 +71,6 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel
         }
         // switch to selector-helped mode
         selectorThread.execute(this);
-    }
-
-    public void up() {
-        up(1);
     }
 
     /**

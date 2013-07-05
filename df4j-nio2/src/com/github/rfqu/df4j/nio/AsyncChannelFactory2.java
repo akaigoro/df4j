@@ -9,15 +9,16 @@ import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 public class AsyncChannelFactory2 extends AsyncChannelFactory {
 
     @Override
-    public AsyncServerSocketChannel newAsyncServerSocketChannel
-       () throws IOException
+    public AsyncServerSocketChannel newAsyncServerSocketChannel()
+        throws IOException
     {
         return new AsyncServerSocketChannel2();
     }
 
     @Override
     public AsyncSocketChannel newAsyncSocketChannel()
-    throws IOException {
+        throws IOException
+    {
         return new AsyncSocketChannel2();
     }
 
