@@ -32,7 +32,7 @@ public abstract class AsyncServerSocketChannel implements Closeable {
 
     public abstract void bind(SocketAddress addr) throws IOException;
 
-    public CompletableFuture<AsyncServerSocketChannel> getCloseEvent() {
+    public ListenableFuture<AsyncServerSocketChannel> getCloseEvent() {
         return closeEvent;
     }
     
@@ -46,6 +46,6 @@ public abstract class AsyncServerSocketChannel implements Closeable {
     public abstract void close();
 
 	public boolean isClosed() {
-        return getCloseEvent().isDone();
+        return closeEvent.isDone();
 	}
 }

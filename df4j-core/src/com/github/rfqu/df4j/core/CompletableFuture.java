@@ -28,12 +28,12 @@ public class CompletableFuture<T>
 {
 
     @Override
-    protected void broadcastResult(Callback<T> listenerLoc) {
+    protected void passResult(Callback<T> listenerLoc) {
         listenerLoc.post(value);
     }
 
     @Override
-    protected void broadcastFailure(Callback<T> listenerLoc) {
+    protected void passFailure(Callback<T> listenerLoc) {
         listenerLoc.postFailure(exc);
     }
 

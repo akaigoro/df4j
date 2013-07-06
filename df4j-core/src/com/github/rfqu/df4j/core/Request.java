@@ -27,13 +27,13 @@ public class Request<T extends Request<T, R>, R>
 {
     @SuppressWarnings("unchecked")
     @Override
-    protected void broadcastResult(Port<T> listenerLoc) {
+    protected void passResult(Port<T> listenerLoc) {
         listenerLoc.post((T) this);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void broadcastFailure(Port<T> listenerLoc) {
+    protected void passFailure(Port<T> listenerLoc) {
         listenerLoc.post((T) this);
     }
 

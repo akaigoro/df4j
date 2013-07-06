@@ -44,9 +44,9 @@ public class EchoServerLocTest {
     	localTest(500, 1000, 10);
    }
 
-    @Test
+//    @Test
     public void veryHeavyTest() throws Exception, IOException, InterruptedException {
-    	localTest(3000, 5000, 10);
+    	localTest(2000, 2500, 100);
    }
 
     public void run(String[] args) throws Exception {

@@ -13,20 +13,22 @@
 package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DFContext.ItemKey;
 
-public class SelectorThread implements Runnable {
+public class SelectorThread implements Runnable, Executor {
     DFContext context;
     private Thread thrd;
 	// The selector we'll be monitoring
 	Selector selector;
+    private LinkedList<Runnable> tasks=new LinkedList<Runnable>();
+    private boolean running=false;
 
     public SelectorThread(DFContext context) throws IOException {
         this.context=context;
@@ -38,62 +40,59 @@ public class SelectorThread implements Runnable {
 		thrd.start(); // TODO kill suicide when not used
     }
 
+    @Override
+    public void execute(final Runnable command) {
+        boolean doFire;
+        synchronized (this) {
+            tasks.add(command);
+            doFire = !running;
+            running = true;
+        }
+        if (doFire) {
+            selector.wakeup();
+        }
+    }
+
     public void run() {
 	    DFContext.setCurrentContext(context);
 		while (selector.isOpen() && !Thread.interrupted()) {
-
             try {
-                if (selector.select()==0) {
-                    continue;
+                if (selector.select()!=0) {
+                    // Iterate over the set of keys for which events are available
+                    Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+                    while (selectedKeys.hasNext()) {
+                        SelectionKey key = selectedKeys.next();
+                        selectedKeys.remove();
+
+                        if (!key.isValid()) {
+                            break;
+                        }
+
+                        SelectorEventListener task=(SelectorEventListener)key.attachment();
+                        if (task.key!=key) {
+                            throw new RuntimeException("keys different");
+                        }
+                        task.run();
+                    }
+                }
+                for (;;) {
+                    Runnable task;
+                    synchronized (this) {
+                        task=tasks.poll();
+                        if (task==null) {
+                            running=false;
+                            break;
+                        }
+                    }
+                    task.run();
                 }
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
-            }
-
-            // Iterate over the set of keys for which events are available
-            Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
-            while (selectedKeys.hasNext()) {
-                SelectionKey key = selectedKeys.next();
-                selectedKeys.remove();
-
-                if (!key.isValid()) {
-                    continue;
-                }
-
-                SelectorEventListener task=(SelectorEventListener)key.attachment();
-                try {
-                    task.run(key);
-                    fixInterest(key.channel(), task.interestBits);
-                } catch (ClosedChannelException e) {
-                    task.channelClosed();
-                }                
+                return;
             }
 		}
 	}
-	
-    public void fixInterest(SelectableChannel channel, int interestBits) throws ClosedChannelException {
-        if (channel==null) {
-            return;
-        }
-        SelectionKey key = channel.keyFor(selector);
-        int actualBits;
-        if (key==null || !key.isValid()) {
-            actualBits=0;
-            key=null;
-        } else {
-            actualBits=key.interestOps();
-        }
-        if (interestBits==actualBits) {
-            return;
-        }
-        if (key==null) {
-            channel.register(selector, interestBits, this);
-        } else {
-            key.interestOps(interestBits);
-        }
-    }
-
     //--------------------- context
     
     private static ItemKey<SelectorThread> selectorThreadKey

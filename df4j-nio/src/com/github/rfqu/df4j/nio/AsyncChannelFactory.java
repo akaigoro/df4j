@@ -27,7 +27,7 @@ public abstract class AsyncChannelFactory {
             "com.github.rfqu.df4j.nio.AsyncChannelFactory1"
     };
     
-    private static final ItemKey<AsyncChannelFactory> AsyncChannelFactorydKey
+    private static final ItemKey<AsyncChannelFactory> AsyncChannelFactoryKey
         = DFContext.getCurrentContext().new ItemKey<AsyncChannelFactory>()
     {
         @Override
@@ -52,6 +52,6 @@ public abstract class AsyncChannelFactory {
     };
     
     public static AsyncChannelFactory getCurrentAsyncChannelFactory() {
-        return AsyncChannelFactorydKey.get();
+        return AsyncChannelFactoryKey.get();
     }
  }

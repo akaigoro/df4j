@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
@@ -38,10 +39,11 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
     
     /** starts connection process from client side 
      * @throws IOException */
-    public void connect(SocketAddress addr) throws IOException {
+    public ListenableFuture<AsyncSocketChannel> connect(SocketAddress addr) throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
         AsynchronousSocketChannel channel=AsynchronousSocketChannel.open(acg);
         channel.connect(addr, channel, connEvent);
+        return connEvent;
     }
     
     public void setTcpNoDelay(boolean on) throws IOException {
@@ -112,7 +114,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
     {
         
         public ReaderQueue() {
-            super(true);
+            super(new ImmediateExecutor(), true);
         }
 
         //-------------------- Actor's backend
@@ -138,7 +140,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
     {
         
         public WriterQueue() {
-            super(false);
+            super(new ImmediateExecutor(), false);
         }
 
         //-------------------- Actor's backend

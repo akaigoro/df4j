@@ -12,10 +12,12 @@ package com.github.rfqu.df4j.nio;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
+import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.ext.ImmediateExecutor;
 
 /**
  * A server with limited number of connections
@@ -42,6 +44,10 @@ public abstract class LimitedServer {
     private class ASCGenerator extends DataflowNode {
         ConnSemafor waitCount = new ConnSemafor();
         CloseSemafor maxCount = new CloseSemafor();
+
+        public ASCGenerator() {
+            super(new ImmediateExecutor());
+        }
 
         @Override
         protected void act() {

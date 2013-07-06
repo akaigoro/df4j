@@ -136,7 +136,7 @@ public class EchoServerTest {
 
 //    @Test
     public void veryHeavyTest() throws Exception, IOException, InterruptedException {
-    	testThroughput(10000,10);
+    	testThroughput(5000,20);
    }
 
     public void run(String[] args) throws Exception {

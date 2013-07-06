@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -41,7 +42,7 @@ public class EchoServer extends LimitedServer
         super.start(assch, addr, 1, maxConnCount);
     }
 
-    public CompletableFuture<AsyncServerSocketChannel> getCloseEvent() {
+    public ListenableFuture<AsyncServerSocketChannel> getCloseEvent() {
         return assch.getCloseEvent();
     }
 

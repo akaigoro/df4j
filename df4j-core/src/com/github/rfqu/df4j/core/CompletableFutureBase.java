@@ -33,8 +33,8 @@ public abstract class CompletableFutureBase<R, L>
     protected Throwable exc;
     protected Object listener;
 
-    protected abstract void broadcastResult(L listenerLoc);
-    protected abstract void broadcastFailure(L listenerLoc);
+    protected abstract void passResult(L listenerLoc);
+    protected abstract void passFailure(L listenerLoc);
 
     /**
      * @return null if was interrupted
@@ -163,10 +163,10 @@ public abstract class CompletableFutureBase<R, L>
         if (listenerLoc instanceof ArrayList) {
             ArrayList<L> listenersLoc=(ArrayList<L>) listenerLoc;
             for (int k=0; k<listenersLoc.size(); k++) {
-                broadcastResult(listenersLoc.get(k));
+                passResult(listenersLoc.get(k));
             }
         } else {
-            broadcastResult((L)listenerLoc);
+            passResult((L)listenerLoc);
         }
     }
 
@@ -180,10 +180,10 @@ public abstract class CompletableFutureBase<R, L>
         if (listenerLoc instanceof ArrayList<?>) {
             ArrayList<L> listenersLoc=(ArrayList<L>) listenerLoc;
             for (int k=0; k<listenersLoc.size(); k++) {
-                broadcastFailure(listenersLoc.get(k));
+                passFailure(listenersLoc.get(k));
             }
         } else {
-            broadcastFailure((L)listenerLoc);
+            passFailure((L)listenerLoc);
         }
     }
 
@@ -219,9 +219,9 @@ public abstract class CompletableFutureBase<R, L>
         boolean _hasValueLoc = addListenerGetHasValue(sink);
         if (_hasValueLoc) {
             if (exc != null) {
-                broadcastResult(sink);
+                passResult(sink);
             } else {
-                broadcastFailure(sink);
+                passFailure(sink);
             }
         }
     }

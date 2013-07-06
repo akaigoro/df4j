@@ -11,13 +11,13 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-import com.github.rfqu.df4j.core.ActorVariable;
+import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
 
 /**
@@ -27,14 +27,14 @@ import com.github.rfqu.df4j.core.ListenableFuture;
 public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel {
     private ServerSocketChannel channel;
     private SelectorThread selectorThread;
-    private final Acceptor acceptor1=new Acceptor();
+    private final Acceptor acceptor1;
     private SelectorListener selectorListener;
 
     public AsyncServerSocketChannel1() throws IOException {
         selectorThread = SelectorThread.getCurrentSelectorThread();
+        acceptor1=new Acceptor(selectorThread);
         channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
-        selectorListener=new SelectorListener(selectorThread.selector);
     }
 
     @Override
@@ -44,6 +44,8 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel {
         }
         super.addr = addr;
         channel.socket().bind(addr);
+        selectorListener=new SelectorListener(selectorThread.selector, channel);
+        acceptor1.channelAccess.up();
     }
 
     /**
@@ -81,21 +83,29 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel {
     /**
      * Serializes concurrent attempts to accept connections
      */
-    class Acceptor extends ActorVariable<AsyncSocketChannel1> // TODO Actor?
-    {
+    class Acceptor extends Actor<AsyncSocketChannel1> {
         /** prevents simultaneous channel.accept() */
-        protected Semafor channelAccess = new Semafor();
+        Semafor channelAccess = new Semafor();
+        AsyncSocketChannel1 currentAsc;
+
+        public Acceptor(SelectorThread selectorThread) {
+            super(selectorThread);
+        }
 
         @Override
         protected void act(AsyncSocketChannel1 asc) throws Exception {
 //            assc.accept(asc.connEvent, this);
             try {
+                if (currentAsc!=null) {
+                    throw new IllegalStateException("pending accept");
+                }
                 SocketChannel sch = channel.accept();
                 if (sch != null) {
                     asc.connEvent.postSocketChannel(sch);
                 } else {
                     // switch to selector-helped mode
-                    selectorListener.listen(asc);
+                    currentAsc=asc;
+                    selectorListener.interestOn(SelectionKey.OP_ACCEPT);
                 }
             } catch (IOException e) {
                 asc.connEvent.postFailure(e);
@@ -103,76 +113,53 @@ public class AsyncServerSocketChannel1 extends AsyncServerSocketChannel {
 
         }
 
-        public void completed(SocketChannel sch, AsyncSocketChannel1 asc) {
-            asc.connEvent.postSocketChannel(sch);
-            channelAccess.up();
-        }
-
-        /** new client connection failed */
-        public void failed(Throwable exc, AsyncSocketChannel1 asc) {
-            asc.connEvent.postFailure(exc); // TODO
-            if (exc instanceof AsynchronousCloseException) {
-                // channel closed.
-                close();
-            } else {
+        void doAccept() throws ClosedChannelException {
+            AsyncSocketChannel1 asc=currentAsc;
+            SocketChannel sch;
+            try {
+                sch = channel.accept();
+            } catch (IOException e1) {
+                asc.connEvent.postFailure(e1);
+                currentAsc=null;
                 channelAccess.up();
+                return;
+            }
+            if (sch != null) {
+                // call interestOff first
+                selectorListener.interestOff(SelectionKey.OP_ACCEPT);
+                currentAsc=null;
+                asc.connEvent.postSocketChannel(sch);
+                // call semafore up last, it may call act() and interstOn
+                channelAccess.up();
+            } else {
+                selectorListener.interestOn(SelectionKey.OP_ACCEPT);
             }
         }
     }
 
     class SelectorListener extends SelectorEventListener {
-        AsyncSocketChannel1 currentAsc;
         
-        public SelectorListener(Selector selector) {
-            super(selector);
-        }
-
-        public void listen(AsyncSocketChannel1 asc) {
-            if (currentAsc!=null) {
-                throw new IllegalStateException("pending accept");
-            }
-            currentAsc=asc;
-            super.listen(SelectionKey.OP_ACCEPT);
+        public SelectorListener(Selector selector, ServerSocketChannel channel) throws ClosedChannelException {
+            super(selector, channel);
         }
 
         /** called on selector thread
          * 
          */
         @Override
-        public void run(SelectionKey key) {
-            // first repeat attempt to connect, as some time passed
-            // since previous attempt, and there was no registration
-            SocketChannel sch;
+        public void run() {
             try {
-                sch = channel.accept();
-            } catch (IOException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-                return;
-            }
-            if (sch != null) {
-                AsyncSocketChannel1 asc=currentAsc;
-                currentAsc=null;
-                acceptor1.completed(sch, asc);
-            } else {
-                // now register to listen accept requests
-                interestOn(SelectionKey.OP_ACCEPT);
+                acceptor1.doAccept();
+            } catch (ClosedChannelException e) {
+                closeEvent.post(AsyncServerSocketChannel1.this);
             }
         }
 
         protected void stop() {
-            SelectionKey key = channel.keyFor(selectorThread.selector);
             if (key==null || !key.isValid()) {
                 return;
             }
             key.cancel();
-            channel=null;
-        }
-        
-       @Override
-        protected void channelClosed() {
-            // TODO Auto-generated method stub
-            
         }
     }
 

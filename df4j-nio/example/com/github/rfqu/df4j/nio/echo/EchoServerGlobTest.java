@@ -28,6 +28,8 @@ public class EchoServerGlobTest extends EchoServerTest {
         EchoServerGlobTest t=new EchoServerGlobTest();
         t.iaddr = new InetSocketAddress(host, port);
         t.mediumTest();
+        t.heavyTest();
+        t.veryHeavyTest();
         pr.destroy();
     }
 }

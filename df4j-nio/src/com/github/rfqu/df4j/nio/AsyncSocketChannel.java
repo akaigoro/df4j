@@ -16,12 +16,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.core.DataflowVariable.Semafor;
+import com.github.rfqu.df4j.ext.ImmediateExecutor;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -52,12 +51,12 @@ public abstract class AsyncSocketChannel
      * Starts connection to a server. IO requests can be queued immediately,
      * but will be executed only after connection completes.
      * If interested in the moment when connection is established, add a
-     * listener to the {@link connEvent}.
+     * listener to the returned ListenableFuture.
      * @return 
      * 
      * @throws IOException
      */
-    public abstract void connect(SocketAddress addr) throws IOException;
+    public abstract ListenableFuture<AsyncSocketChannel> connect(SocketAddress addr) throws IOException;
     
     /** signals connection completion */
     public abstract ListenableFuture<AsyncSocketChannel> getConnEvent();
@@ -100,11 +99,10 @@ public abstract class AsyncSocketChannel
     public abstract class RequestQueue extends Actor<SocketIORequest<?>> {
         protected Semafor channelAcc = new Semafor(); // channel accessible
         protected boolean isReader;
-        /** for debugging only */
         protected SocketIORequest<?> currentRequest;
 
-        public RequestQueue(boolean isReader) {
-            super(null); // immediate executor - act() method
+        public RequestQueue(Executor executor, boolean isReader) {
+            super(executor);
             this.isReader=isReader;
         }
 
