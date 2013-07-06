@@ -1,12 +1,6 @@
 package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-
-import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.nio.AsyncChannelFactory;
-import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
-import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
 public class AsyncChannelFactory1 extends AsyncChannelFactory {
     @Override

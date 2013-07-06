@@ -1,3 +1,15 @@
+/*
+ * Copyright 2011-2013 by Alexei Kaigorodov
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ */
 package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
@@ -6,20 +18,15 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DFContext.ItemKey;
-import com.github.rfqu.df4j.core.Task;
 
-public class SelectorThread implements Runnable, Executor {
+public class SelectorThread implements Runnable {
     DFContext context;
     private Thread thrd;
 	// The selector we'll be monitoring
-	private Selector selector;
-    private boolean running=false;
-	private LinkedList<Task> tasks=new LinkedList<Task>();
+	Selector selector;
 
     public SelectorThread(DFContext context) throws IOException {
         this.context=context;
@@ -31,63 +38,9 @@ public class SelectorThread implements Runnable, Executor {
 		thrd.start(); // TODO kill suicide when not used
     }
 
-    @Override
-    public void execute(final Runnable command) {
-        Task task = (command instanceof Task) ? ((Task) command):
-          new Task() {
-            @Override
-            public void run() {
-                command.run();
-            }
-        };
-        boolean doFire;
-        synchronized (this) {
-            tasks.add(task);
-            doFire = !running;
-            running = true;
-        }
-        if (doFire) {
-            selector.wakeup();
-        }
-    }
-
-    synchronized Task nextTask() {
-        Task task=tasks.poll();
-        if (task==null) {
-            running=false;
-        }
-        return task;
-    }
-    
-    void registerNow(SelectableChannel socket, int ops, SelectorEventListener att) throws ClosedChannelException {
-        SelectionKey key = socket.keyFor(selector);
-        if (key==null || !key.isValid()) {
-            socket.register(selector, ops, att);
-        } else {
-            int interestOps = key.interestOps();
-            key.interestOps(ops|interestOps);
-        }
-    }
-
-    void interestOff(SelectableChannel socket, int noInterestOps) {
-        SelectionKey key = socket.keyFor(selector);
-        if (key==null) {
-            return;
-        }
-        int interestOps = key.interestOps();
-        key.interestOps(interestOps & ~noInterestOps);
-    }
-    
-	public void run() {
+    public void run() {
 	    DFContext.setCurrentContext(context);
 		while (selector.isOpen() && !Thread.interrupted()) {
-            for (;;) {
-                Runnable task=nextTask();
-                if (task==null) {
-                    break;
-                }
-                task.run();
-            }
 
             try {
                 if (selector.select()==0) {
@@ -108,12 +61,39 @@ public class SelectorThread implements Runnable, Executor {
                     continue;
                 }
 
-                // Pass event to the listener
-                ((SelectorEventListener)key.attachment()).onSelectorEvent(key);
+                SelectorEventListener task=(SelectorEventListener)key.attachment();
+                try {
+                    task.run(key);
+                    fixInterest(key.channel(), task.interestBits);
+                } catch (ClosedChannelException e) {
+                    task.channelClosed();
+                }                
             }
 		}
 	}
 	
+    public void fixInterest(SelectableChannel channel, int interestBits) throws ClosedChannelException {
+        if (channel==null) {
+            return;
+        }
+        SelectionKey key = channel.keyFor(selector);
+        int actualBits;
+        if (key==null || !key.isValid()) {
+            actualBits=0;
+            key=null;
+        } else {
+            actualBits=key.interestOps();
+        }
+        if (interestBits==actualBits) {
+            return;
+        }
+        if (key==null) {
+            channel.register(selector, interestBits, this);
+        } else {
+            key.interestOps(interestBits);
+        }
+    }
+
     //--------------------- context
     
     private static ItemKey<SelectorThread> selectorThreadKey

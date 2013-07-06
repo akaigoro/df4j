@@ -27,12 +27,9 @@ A sketch of a server program is as follows:
     
     // accept connections, synchronous way
     while (true) {
-        AsyncSocketChannel asc = assc.accept();
-        // connection channel is created immediately but not yet connected.
-        // It will become connected as soon as a client appear.
-        // Connection event is signalled by a Future:
-        ListenableFuture connectionEvent=asc.getConnEvent();
-        connectionEvent.get(); // this operation blocks, waiting for next client connection request
+        ListenableFuture&lt;AsyncSocketChannel&gt; connectionEvent=assc.accept();
+        // following operation blocks, waiting for the next client connection request
+        AsyncSocketChannel asc = connectionEvent.get();
     }
 </pre>
 
@@ -41,15 +38,14 @@ make a non-blocking acception loop:
 <pre>
     class Acceptor implements Callback&lt;AsyncSocketChannel&gt; {
         void next() {
-            AsyncSocketChannel asc = assc.accept();
-            ListenableFuture connectionEvent=asc.getConnEvent();
+            ListenableFuture&lt;AsyncSocketChannel&gt; connectionEvent=assc.accept();
             connectionEvent.addListener(this); // this operation does not block
-            // do something with the newly created AsyncSocketChannel
         }
         
         @Override
         public void post(AsyncSocketChannel readyChannel) {
-            // connection established, wait for the next client
+            // do something with the newly created AsyncSocketChannel
+            // wait for the next client
             next();
         }
         
@@ -72,8 +68,8 @@ Client-side connection is established like this:
     asc.connect(addr);
 </pre>
 
-Again, as in server-side variant, connection is created but not completed, and actual connection monent
-can be observed via ListenableFuture returned by asc.getConnEvent(). But in both cases, not yet connected
+Here connection is created but not completed, and actual connection monent
+can be observed via ListenableFuture returned by asc.getConnEvent(). But not yet connected
 AsyncSocketChannel can accept I/O requests right after creation (requests will be buffered).
 
 Real I/O exchange is performed using instances of class SocketIORequest:

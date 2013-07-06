@@ -3,6 +3,7 @@ package com.github.rfqu.df4j.nio.echo;
 import java.nio.ByteBuffer;
 
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
+import com.github.rfqu.df4j.nio.IOHandler;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
 class ServerConnection {

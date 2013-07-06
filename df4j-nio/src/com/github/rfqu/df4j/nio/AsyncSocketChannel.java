@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.DataflowVariable.Semafor;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -38,7 +39,9 @@ import com.github.rfqu.df4j.core.ListenableFuture;
  * If interested in the moment when connection is established,
  * add a listener to connEvent.
  */
-public abstract class AsyncSocketChannel implements Closeable {
+public abstract class AsyncSocketChannel
+    implements Closeable
+{
 	/** read requests queue */
 	protected RequestQueue reader;
 	/** write requests queue */
@@ -46,7 +49,12 @@ public abstract class AsyncSocketChannel implements Closeable {
 
     /**
      * for client-side socket
-     * Starts connection to a server.
+     * Starts connection to a server. IO requests can be queued immediately,
+     * but will be executed only after connection completes.
+     * If interested in the moment when connection is established, add a
+     * listener to the {@link connEvent}.
+     * @return 
+     * 
      * @throws IOException
      */
     public abstract void connect(SocketAddress addr) throws IOException;
@@ -69,35 +77,37 @@ public abstract class AsyncSocketChannel implements Closeable {
 
     // ================== conventional I/O interface
 
-	public <R extends SocketIORequest<R>> void write(R request) {
+	public void write(SocketIORequest<?> request) {
 		request.prepareWrite();
 		writer.post(request);
 	}
 
-	public <R extends SocketIORequest<R>> void write(R request,	long timeout) {
+	public void write(SocketIORequest<?> request,	long timeout) {
 		request.prepareWrite(timeout);
 		writer.post(request);
 	}
 
-	public <R extends SocketIORequest<R>> void read(R request) {
+	public void read(SocketIORequest<?> request) {
 		request.prepareRead();
 		reader.post(request);
 	}
 
-	public <R extends SocketIORequest<R>> void read(R request, long timeout) {
+	public  void read(SocketIORequest<?> request, long timeout) {
 		request.prepareRead(timeout);
 		reader.post(request);
 	}
 
     public abstract class RequestQueue extends Actor<SocketIORequest<?>> {
+        protected Semafor channelAcc = new Semafor(); // channel accessible
         protected boolean isReader;
-        
-        public RequestQueue(Executor executor, boolean isReader) {
-            super(executor);
+        /** for debugging only */
+        protected SocketIORequest<?> currentRequest;
+
+        public RequestQueue(boolean isReader) {
+            super(null); // immediate executor - act() method
             this.isReader=isReader;
         }
 
-        public abstract void resume();
         
         @Override
         public synchronized void post(SocketIORequest<?> request) {
@@ -111,5 +121,34 @@ public abstract class AsyncSocketChannel implements Closeable {
             }
             super.post(request);
         }
- 	}
+
+        public void resume() {
+            channelAcc.up();
+        }
+
+        // ------------- CompletionHandler's backend
+
+        public void completed(Integer result, SocketIORequest<?> request) {
+            currentRequest = null;
+            channelAcc.up();
+            request.post(result);
+        }
+
+        public void failed(Throwable exc, SocketIORequest<?> request) {
+            if (exc instanceof AsynchronousCloseException) {
+                synchronized (AsyncSocketChannel.this) {
+                    try {
+                        AsyncSocketChannel.this.close();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+            currentRequest = null;
+            channelAcc.up(); // let subsequent requests fail
+            request.postFailure(exc);
+        }
+    }
+
 }

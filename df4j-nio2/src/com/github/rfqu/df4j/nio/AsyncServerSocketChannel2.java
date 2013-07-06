@@ -19,6 +19,7 @@ import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.ActorVariable;
 import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 
@@ -51,10 +52,10 @@ public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
      * @return AsyncSocketChannel waiting to connect
      */
     @Override
-    public AsyncSocketChannel accept() {
+    public ListenableFuture<AsyncSocketChannel> accept() {
         AsyncSocketChannel2 res=new AsyncSocketChannel2();
         acceptor1.post(res);
-        return res;
+        return res.connEvent;
     }
 
     public void close() {
@@ -73,14 +74,14 @@ public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
 
     //====================== CompletionHandler's backend
     class Acceptor extends ActorVariable<AsyncSocketChannel2> // TODO Actor?
-    implements CompletionHandler<AsynchronousSocketChannel, CompletionHandler<Void, AsynchronousSocketChannel>>
+       implements CompletionHandler<AsynchronousSocketChannel, CompletionHandler<Void, AsynchronousSocketChannel>>
     {
         /** prevents simultaneous channel.accept() */
         protected Semafor channelAccess = new Semafor();
 
         @Override
-        protected void act(AsyncSocketChannel2 message) throws Exception {
-            assc.accept(message.connEvent, this);
+        protected void act(AsyncSocketChannel2 asc) throws Exception {
+            assc.accept(asc.connEvent, this);
         }
 
         @Override

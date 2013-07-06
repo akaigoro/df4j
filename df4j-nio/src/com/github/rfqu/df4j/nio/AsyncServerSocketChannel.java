@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.ListenableFuture;
 
 /**
  * For using on server side.
@@ -40,7 +41,7 @@ public abstract class AsyncServerSocketChannel implements Closeable {
      * 
      * @return 
      */
-    public abstract AsyncSocketChannel accept();
+    public abstract ListenableFuture<AsyncSocketChannel> accept();
 
     public abstract void close();
 

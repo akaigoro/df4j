@@ -15,6 +15,7 @@ import java.nio.channels.AsynchronousCloseException;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowNode;
+import com.github.rfqu.df4j.core.ListenableFuture;
 
 /**
  * A server with limited number of connections
@@ -39,15 +40,13 @@ public abstract class LimitedServer {
     }
 
     private class ASCGenerator extends DataflowNode {
-        QuaziSemafor waitCount = new QuaziSemafor();
-        QuaziSemafor maxCount = new QuaziSemafor();
+        ConnSemafor waitCount = new ConnSemafor();
+        CloseSemafor maxCount = new CloseSemafor();
 
         @Override
         protected void act() {
-            AsyncSocketChannel asc = assc.accept();
-            asc.getConnEvent().addListener(waitCount);
-            asc.getCloseEvent().addListener(maxCount);
-            accepted(asc);
+            ListenableFuture<AsyncSocketChannel> connEvent = assc.accept();
+            connEvent.addListener(waitCount);
         }
 
         @Override
@@ -59,10 +58,26 @@ public abstract class LimitedServer {
         	super.handleException(exc);
 		}
 
-		class QuaziSemafor extends Semafor implements Callback<AsyncSocketChannel> {
+        class ConnSemafor extends Semafor implements Callback<AsyncSocketChannel> {
 
             @Override
-            public void post(AsyncSocketChannel m) {
+            public void post(AsyncSocketChannel asc) {
+                super.up();
+                asc.getCloseEvent().addListener(maxCount);
+                accepted(asc);
+            }
+
+            @Override
+            public void postFailure(Throwable exc) {
+                super.up();
+                ASCGenerator.super.postFailure(exc);
+            }
+            
+        }
+        class CloseSemafor extends Semafor implements Callback<AsyncSocketChannel> {
+
+            @Override
+            public void post(AsyncSocketChannel asg) {
                 super.up();
             }
 

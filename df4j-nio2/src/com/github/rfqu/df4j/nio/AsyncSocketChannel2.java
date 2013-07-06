@@ -106,45 +106,10 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
         } 
     };
 
-    abstract class RequestQueue2 extends RequestQueue
-      implements CompletionHandler<Integer, SocketIORequest<?>>
-    {
-        protected Semafor channelAcc = new Semafor(); // channel accessible
-        protected SocketIORequest<?> currentRequest;
-
-        public RequestQueue2(boolean isReader) {
-            super(null, isReader); // immediate executor - act() method
-        }
-
-        public void resume() {
-            channelAcc.up();
-        }
-
-        // ------------- CompletionHandler's backend
-
-        @Override
-        public void completed(Integer result, SocketIORequest<?> request) {
-            currentRequest = null;
-            channelAcc.up();
-            request.post(result);
-        }
-
-        @Override
-        public void failed(Throwable exc, SocketIORequest<?> request) {
-            if (exc instanceof AsynchronousCloseException) {
-                synchronized (AsyncSocketChannel2.this) {
-                    if (!AsyncSocketChannel2.this.isClosed()) {
-                        closeEvent.post(AsyncSocketChannel2.this);
-                    }
-                }
-            }
-            currentRequest = null;
-            channelAcc.up(); // let subsequent requests fail
-            request.postFailure(exc);
-        }
-    }
 	
-    class ReaderQueue extends RequestQueue2 {
+    class ReaderQueue extends RequestQueue
+       implements CompletionHandler<Integer, SocketIORequest<?>>
+    {
         
         public ReaderQueue() {
             super(true);
@@ -168,7 +133,9 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
         }
     }
    	
-    class WriterQueue extends RequestQueue2 {
+    class WriterQueue extends RequestQueue
+       implements CompletionHandler<Integer, SocketIORequest<?>>
+    {
         
         public WriterQueue() {
             super(false);

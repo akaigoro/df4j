@@ -14,17 +14,13 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.core.Task;
-import com.github.rfqu.df4j.nio.AsyncSocketChannel;
-import com.github.rfqu.df4j.nio.SocketIORequest;
 
 /**
  * Asynchronously executes I/O socket requests using {@link java.nio.channels.Selector}.
@@ -35,72 +31,42 @@ import com.github.rfqu.df4j.nio.SocketIORequest;
  * the read/write methods.
  */
 public class AsyncSocketChannel1 extends AsyncSocketChannel {
-    protected final CompletableFuture<AsyncSocketChannel> connEvent=new CompletableFuture<AsyncSocketChannel>();
+    private SelectorThread selectorThread;
+    protected volatile SocketChannel socketChannel;
+    protected final ConnectionCompleter connEvent=new ConnectionCompleter();
     protected final CompletableFuture<AsyncSocketChannel> closeEvent=new CompletableFuture<AsyncSocketChannel>();
-	private SelectorThread selectorThread = SelectorThread
-			.getCurrentSelectorThread();
-	protected volatile SocketChannel socketChannel;
-	private final SelectorListener selectorListener=new SelectorListener();
-	
+    protected SelectorListener selectorListener;//=new SelectorListener(); 
+    
     {
         reader = new ReaderQueue();
         writer = new WriterQueue();
     }
-   
-    /**
-	 * for server-side socket
-	 */ 
-	public AsyncSocketChannel1() {
+    
+    public AsyncSocketChannel1(SelectorThread selectorThread) {
+        this.selectorThread=selectorThread;
     }
 
-    void init(SocketChannel channel) throws IOException {
+    public AsyncSocketChannel1() {
+        this(SelectorThread.getCurrentSelectorThread());
+    }
+
+    public void connect(final SocketAddress addr) throws IOException {
+        // Create a non-blocking socket channel
+        final SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
-	    channel.socket().setTcpNoDelay(true);
-	    socketChannel = channel;
-		reader.resume();
-		writer.resume();
-		connEvent.post(this);
-	}
-
-	/**
-	 * for client-side socket
-	 * Starts connection to a server. IO requests can be queued immediately,
-	 * but will be executed only after connection completes.
-	 * If interested in the moment when connection is established, add a
-	 * listener to the {@link connEvent}.
-	 * @return 
-	 * 
-	 * @throws IOException
-	 */
-	public void connect(final SocketAddress addr) throws IOException {
-		// Create a non-blocking socket channel
-		final SocketChannel channel = SocketChannel.open();
-		channel.configureBlocking(false);
-		selectorThread.execute(new Task(){
-            @Override
-            public void run() {
-                boolean connected;
-                try {
-                    connected = channel.connect(addr);
-                    if (connected) {
-                        init(channel);
-                    } else {
-                        // Kick off connection establishment
-                        selectorThread.registerNow(channel, SelectionKey.OP_CONNECT,
-                                selectorListener);
-                    }
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-         });
-	}
-
-	public <R extends Callback<AsyncSocketChannel>> R addConnListener(R listener) {
-		connEvent.addListener(listener);
-		return listener;
-	}
+        selectorListener=new SelectorListener(selectorThread.selector);
+        // try to connect
+        boolean connected = channel.connect(addr);
+        if (connected) {
+            connEvent.postSocketChannel(channel);
+            return;
+        }
+        selectorListener.interestOn(SelectionKey.OP_CONNECT);
+    }
+    
+    public void setTcpNoDelay(boolean on) throws IOException {
+//  TODO      socketChannel.setOption(StandardSocketOptions.TCP_NODELAY, on);
+    }
 
     public ListenableFuture<AsyncSocketChannel> getConnEvent() {
         return connEvent;
@@ -110,193 +76,178 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
     public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
         return closeEvent;
     }
+    
+    // ================== StreamPort I/O interface 
 
-    // ================== StreamPort I/O interface
-
-	/**
-	 * disallows subsequent posts of requests; already posted requests would be
-	 * processed.
-	 */
-	@Override
+    @Override
     public synchronized void close() throws IOException {
         if (isClosed()) return;
         closeEvent.post(this);
-		if (socketChannel==null) { // this may happen if connection rejected
-		    return;
-		}
-        try {
-            socketChannel.close();
-        } finally {
-            socketChannel=null;
-        }
-	}
-
-	// ===================== inner classes
-
-    void interestOn(int op) throws ClosedChannelException {
-        selectorThread.registerNow(socketChannel, op, selectorListener);
+        socketChannel.close();
     }
 
-    void interestOff(int op) throws ClosedChannelException {
-        selectorThread.interestOff(socketChannel, op);
-    }
-
-    abstract class RequestQueue1 extends RequestQueue {
-        
-	    public RequestQueue1(boolean isReader) {
-            super(selectorThread, isReader);
-        }
-
-        /** is on when resources from network are available */
-	    Lockup net=new Lockup();
-
-        public void resume() {
-            net.on();
+    //===================== inner classes
+    
+    /**
+     * callback for connection completion
+     * works both in client-side and server-side modes
+     */
+    class ConnectionCompleter extends CompletableFuture<AsyncSocketChannel> {
+        public void postSocketChannel(SocketChannel channel) {
             try {
-                interestOff(getSelectionKeyOp());
-            } catch (ClosedChannelException e) {
+                channel.configureBlocking(false);
+                channel.socket().setTcpNoDelay(true);
+                socketChannel = channel;
+                reader.resume();
+                writer.resume();
+                super.post(AsyncSocketChannel1.this);
+            } catch (IOException e) {
+                super.postFailure(e);
             }
         }
+    }
 
-        @Override
-        public synchronized void post(SocketIORequest<?> request) {
-            if (!request.getBuffer().hasRemaining()) {
-                request.postFailure(new IllegalArgumentException());
-                return;
-            }
-            super.post(request);
-        }
+    class ReaderQueue extends RequestQueue {
         
-        /** called when a request could not be executed immediately */
-        void interestOn() throws ClosedChannelException {
-            net.off(); // do not react on next request
-            AsyncSocketChannel1.this.interestOn(getSelectionKeyOp());  // until selector notifies
-        }
-
-        abstract int getSelectionKeyOp(); 
- 	}
-
-	class ReaderQueue extends RequestQueue1 {
         public ReaderQueue() {
             super(true);
         }
 
-        int getSelectionKeyOp() { 
-            return SelectionKey.OP_READ;
-        }
-	    /**
-	     * @param request
-	     * @throws ClosedChannelException 
-	     */
-		@Override
-        public void act(SocketIORequest<?> request) {
-            ByteBuffer readBuffer = request.getBuffer();
-            // Attempt to read off the channel
-            int numRead;
-            try {
-                numRead = socketChannel.read(readBuffer);
-            } catch (IOException exc) {
-                request.postFailure(exc);
-                close(); // what TODO with the remaining requests?
+        //-------------------- Actor's backend
+
+        @Override
+        protected void act(SocketIORequest<?> request) {
+            if (isClosed()) {
+                request.postFailure(new AsynchronousCloseException());
                 return;
             }
-            if (numRead == -1) {
-                // Remote entity shut the socket down cleanly. Do the
-                // same from our end and cancel the channel.
-                request.post(-1); // TODO define how to signal end of stream
-                close(); // what TODO with the remaining requests?
-            } else if (!request.getBuffer().hasRemaining()) {
-                // buffer is full;
-                request.post(numRead);
-            } else if (numRead == 0) {
-                // no data available, put request back into queue,
-                // and order to wait next signal from selector,
-                // then repeat attempt to read to the same buffer
-                try {
-                    interestOn();
-                    pushback();
-                } catch (ClosedChannelException e) {
-                    request.postFailure(e);
-                    close(); // what TODO with the remaining requests?
-                }
+            currentRequest=request;
+            /* TODO timed
+            if (request.isTimed()) {
+                socketChannel.read(request.getBuffer(),
+                       request.getTimeout(), TimeUnit.MILLISECONDS, request, this);
             } else {
-                request.post(numRead);
+                socketChannel.read(request.getBuffer(), request, this);
             }
-		}
-	}
-
-	class WriterQueue extends RequestQueue1 {
-	    public WriterQueue() {
+            */
+            doRead();
+        }
+        
+        void doRead() {
+            int nb;
+            try {
+                nb = socketChannel.read(currentRequest.getBuffer());
+                if (nb==0) {
+                    selectorListener.listenRead();
+                } else {
+                    currentRequest.post(nb);
+                    channelAcc.up();
+                }
+            } catch (IOException e) {
+                currentRequest.postFailure(e);
+            }
+        }
+    }
+    
+    class WriterQueue extends RequestQueue {
+        
+        public WriterQueue() {
             super(false);
         }
 
-        int getSelectionKeyOp() { 
-	        return SelectionKey.OP_WRITE;
-	    }
+        //-------------------- Actor's backend
 
-		@Override
-		protected void act(SocketIORequest<?> request) {
-            ByteBuffer writeBuffer = request.getBuffer();
-            int numWrit;
-            try {
-                numWrit = socketChannel.write(writeBuffer);
-            } catch (IOException exc) {
-                request.postFailure(exc);
-                close();
+        @Override
+        protected void act(SocketIORequest<?> request) throws Exception {
+            if (isClosed()) {
+                request.postFailure(new AsynchronousCloseException());
                 return;
             }
-            if (numWrit == -1) {
-                // Remote entity shut the socket down cleanly. Do the
-                // same from our end and cancel the channel.
-                request.post(-1); // TODO define how to signal end of stream
-                close();
-            } else if (!request.getBuffer().hasRemaining()) {
-                // all data from buffer written to socket
-                request.post(numWrit);
+            currentRequest=request;
+            /* TODO timed
+            if (request.isTimed()) {
+                socketChannel.write(request.getBuffer(), request.getTimeout(), TimeUnit.MILLISECONDS,
+                        request, this);
             } else {
-                // not all data from buffer written
-                // put request back into queue,
-                // and order to wait next signal from selector,
-                // then repeat attempt to read to the same buffer
+                socketChannel.write(request.getBuffer(), request, this);
+            }
+            */
+            doWrite();
+        }
+
+        public void doWrite() {
+            int nb;
+            try {
+                nb = socketChannel.write(currentRequest.getBuffer());
+                if (nb==0) {
+                    selectorListener.listenWrite();
+                } else {
+                    currentRequest.post(nb);
+                }
+            } catch (IOException e) {
+                currentRequest.postFailure(e);
+            }
+        }
+    }
+    
+    class SelectorListener extends SelectorEventListener {
+        
+        public SelectorListener(Selector selector) {
+            super(selector);
+        }
+
+        public void listenConnect() {
+            super.listen(SelectionKey.OP_CONNECT);
+        }
+
+        public void listenRead() {
+            super.listen(SelectionKey.OP_READ);
+        }
+
+        public void listenWrite() {
+            super.listen(SelectionKey.OP_WRITE);
+        }
+
+        /** called on selector thread
+         * 
+         */
+        @Override
+        public void run(SelectionKey key) {
+            if (key.isConnectable()) {
+                boolean connected;
                 try {
-                    interestOn();
-                    pushback();
-                } catch (ClosedChannelException e) {
-                    request.postFailure(e);
-                    close(); // what TODO with the remaining requests?
+                    connected = socketChannel.finishConnect();
+                    if (connected) {
+                        connEvent.postSocketChannel(socketChannel);
+                    } else {
+                        interestOn(SelectionKey.OP_CONNECT);
+                    }
+                } catch (IOException e) {
+                    connEvent.postFailure(e);
                 }
             }
-		}
-	}
-	
-	class SelectorListener implements SelectorEventListener {
-	    /** called on selector thread
-	     * 
-	     */
-	    @Override
-	    public void onSelectorEvent(SelectionKey key) {
-	        if (key.isConnectable()) {
-	            try {
-	                SocketChannel channel = (SocketChannel) key.channel();
-	                channel.finishConnect();
-	                selectorThread.interestOff(channel, SelectionKey.OP_CONNECT);
-	                init(channel);
-	            } catch (IOException e) {
-	                e.printStackTrace();
-	                try {
-                        AsyncSocketChannel1.this.close();
-                    } catch (IOException e1) {
-                        // TODO Auto-generated catch block
-                        e1.printStackTrace();
-                    } // TODO send failure
-	            }
-	        }
-	        if (key.isValid()&& key.isReadable()) {
-	            reader.resume();
-	        }
-	        if (key.isValid()&& key.isWritable()) {
-	            writer.resume();
-	        }
-	     }
-	}
+            if (key.isValid()&& key.isReadable()) {
+                ((ReaderQueue)reader).doRead();
+            }
+            if (key.isValid()&& key.isWritable()) {
+                ((WriterQueue)writer).doWrite();
+            }
+        }
+
+        protected void stop() {
+            SelectionKey key = socketChannel.keyFor(selectorThread.selector);
+            if (key==null || !key.isValid()) {
+                return;
+            }
+            key.cancel();
+            socketChannel=null;
+        }
+        
+        @Override
+        protected void channelClosed() {
+            // TODO Auto-generated method stub
+            
+        }
+    }
+
 }
