@@ -41,13 +41,14 @@ public class SelectorThread implements Runnable, Executor {
     }
 
     @Override
-    public void execute(final Runnable command) {
+    public void execute(final Runnable task) {
         boolean doFire;
         synchronized (this) {
-            tasks.add(command);
+            tasks.add(task);
             doFire = !running;
             running = true;
         }
+//        System.err.println("task enqueued:"+task);
         if (doFire) {
             selector.wakeup();
         }
@@ -68,11 +69,11 @@ public class SelectorThread implements Runnable, Executor {
                             break;
                         }
 
-                        SelectorEventListener task=(SelectorEventListener)key.attachment();
-                        if (task.key!=key) {
+                        SelectorListener listener=(SelectorListener)key.attachment();
+                        if (listener.key!=key) {
                             throw new RuntimeException("keys different");
                         }
-                        task.run();
+                        listener.run();
                     }
                 }
                 for (;;) {
@@ -84,6 +85,7 @@ public class SelectorThread implements Runnable, Executor {
                             break;
                         }
                     }
+                    System.err.println("task started:"+task);
                     task.run();
                 }
             } catch (IOException e) {
@@ -103,7 +105,6 @@ public class SelectorThread implements Runnable, Executor {
             try {
                 return new SelectorThread(context);
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
                 return null;
             }

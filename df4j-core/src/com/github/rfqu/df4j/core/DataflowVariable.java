@@ -157,6 +157,10 @@ public abstract class DataflowVariable {
             loopAct();
         }
 
+        @Override
+        public String toString() {
+            return DataflowVariable.this.toString();
+        }
     }
 
     /**

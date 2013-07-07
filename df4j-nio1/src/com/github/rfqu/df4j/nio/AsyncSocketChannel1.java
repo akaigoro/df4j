@@ -14,13 +14,16 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.ListenableFuture;
 
 /**
@@ -31,20 +34,22 @@ import com.github.rfqu.df4j.core.ListenableFuture;
  * After request is served, it is sent to the port denoted by <code>replyTo</code> parameter in
  * the read/write methods.
  */
-public class AsyncSocketChannel1 extends AsyncSocketChannel {
+public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorListenerUser {
     private SelectorThread selectorThread;
     protected volatile SocketChannel socketChannel;
-    protected final ConnectionCompleter connEvent=new ConnectionCompleter();
+    protected final ConnectionCompleter connectionCompleter;
+    protected final ConnectionFuture connEvent=new ConnectionFuture();
     protected final CompletableFuture<AsyncSocketChannel> closeEvent=new CompletableFuture<AsyncSocketChannel>();
     protected SelectorListener selectorListener;//=new SelectorListener(); 
     
     {
-        reader = new ReaderQueue();
-        writer = new WriterQueue();
+        reader = new RequestQueue1(true);
+        writer = new RequestQueue1(false);
     }
     
     public AsyncSocketChannel1(SelectorThread selectorThread) {
         this.selectorThread=selectorThread;
+        connectionCompleter=new ConnectionCompleter();
     }
 
     public AsyncSocketChannel1() {
@@ -55,23 +60,14 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
         // Create a non-blocking socket channel
         socketChannel = SocketChannel.open();
         socketChannel.configureBlocking(false);
-        selectorListener=new SelectorListener(selectorThread.selector, socketChannel);
+        selectorListener=new SelectorListener(this);
         // try to connect
         boolean connected = socketChannel.connect(addr);
         if (connected) {
             connEvent.postSocketChannel(socketChannel);
-            return connEvent;
+        } else {
+            connectionCompleter.connectSignal.up();
         }
-        selectorThread.execute(new Runnable() {
-            public void run() {
-                try {
-                    selectorListener.interestOn(SelectionKey.OP_CONNECT);
-                } catch (ClosedChannelException e) {
-                    closeEvent.post(AsyncSocketChannel1.this);
-                    connEvent.postFailure(e);
-                }
-            }
-        });
         return connEvent;
     }
     
@@ -87,14 +83,29 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
     public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
         return closeEvent;
     }
+
+    @Override
+    public Selector getSelector() {
+        return selectorThread.selector;
+    }
+
+    @Override
+    public SelectableChannel getChannel() {
+        return socketChannel;
+    }
     
     // ================== StreamPort I/O interface 
 
     @Override
-    public synchronized void close() throws IOException {
+    public synchronized void close(){
         if (isClosed()) return;
         closeEvent.post(this);
-        socketChannel.close();
+        try {
+            socketChannel.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     //===================== inner classes
@@ -103,14 +114,14 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
      * callback for connection completion
      * works both in client-side and server-side modes
      */
-    class ConnectionCompleter extends CompletableFuture<AsyncSocketChannel> {
+    class ConnectionFuture extends CompletableFuture<AsyncSocketChannel> {
         public void postSocketChannel(SocketChannel channel) {
             try {
                 channel.configureBlocking(false);
                 channel.socket().setTcpNoDelay(true);
                 socketChannel = channel;
                 if (selectorListener==null) {
-                    selectorListener=new SelectorListener(selectorThread.selector, channel);
+                    selectorListener=new SelectorListener(AsyncSocketChannel1.this);
                 }
                 reader.resume();
                 writer.resume();
@@ -120,11 +131,45 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
             }
         }
     }
+    
+    class ConnectionCompleter extends DataflowNode {
+        Semafor connectSignal=new Semafor();
 
-    class ReaderQueue extends RequestQueue {
+        public ConnectionCompleter() {
+            super(selectorThread);
+        }
+
+        @Override
+        protected void act() {
+            boolean connected;
+            try {
+                connected = socketChannel.finishConnect();
+                if (connected) {
+                    connEvent.postSocketChannel(socketChannel);
+                } else {
+                    selectorListener.interestOn(SelectionKey.OP_CONNECT, connectSignal);
+                }
+            } catch (ClosedChannelException e) {
+                closeEvent.post(AsyncSocketChannel1.this);
+                connEvent.postFailure(e);
+            } catch (IOException e) {
+                connEvent.postFailure(e);
+            }
+        }
         
-        public ReaderQueue() {
-            super(selectorThread, true);
+    }
+
+    class RequestQueue1 extends RequestQueue {
+        
+        private final int keyBit;
+
+        public RequestQueue1(boolean isReader) {
+            super(selectorThread, isReader);
+            if (isReader) {
+                keyBit = SelectionKey.OP_READ;
+            } else {
+                keyBit = SelectionKey.OP_WRITE;
+            }
         }
 
         //-------------------- Actor's backend
@@ -144,20 +189,21 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
                 socketChannel.read(request.getBuffer(), request, this);
             }
             */
-            doRead();
-        }
-        
-        void doRead() {
             int nb;
             try {
                 try {
-                    nb = socketChannel.read(currentRequest.getBuffer());
+                    ByteBuffer buffer = currentRequest.getBuffer();
+                    if (isReader) {
+                        nb = socketChannel.read(buffer);
+                    } else {
+                        nb = socketChannel.write(buffer);
+                    }
                     if (nb != 0) {
-                        selectorListener.interestOff(SelectionKey.OP_READ);
                         currentRequest.post(nb);
                         channelAcc.up();
                     } else {
-                        selectorListener.interestOn(SelectionKey.OP_READ);
+                        selectorListener.interestOn(keyBit, channelAcc);
+                        input.pushback();
                     }
                 } catch (ClosedChannelException e) {
                     AsyncSocketChannel1.this.close();
@@ -169,101 +215,4 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel {
         }
     }
     
-    class WriterQueue extends RequestQueue {
-        
-        public WriterQueue() {
-            super(selectorThread, false);
-        }
-
-        //-------------------- Actor's backend
-
-        @Override
-        protected void act(SocketIORequest<?> request) throws Exception {
-            if (isClosed()) {
-                request.postFailure(new AsynchronousCloseException());
-                return;
-            }
-            currentRequest=request;
-            /* TODO timed
-            if (request.isTimed()) {
-                socketChannel.write(request.getBuffer(), request.getTimeout(), TimeUnit.MILLISECONDS,
-                        request, this);
-            } else {
-                socketChannel.write(request.getBuffer(), request, this);
-            }
-            */
-            doWrite();
-        }
-
-        public void doWrite() {
-            int nb;
-            try {
-                try {
-                    nb = socketChannel.write(currentRequest.getBuffer());
-                    if (nb!=0) {
-                        selectorListener.interestOff(SelectionKey.OP_WRITE);
-                        currentRequest.post(nb);
-                        channelAcc.up();
-                    } else {
-                        selectorListener.interestOn(SelectionKey.OP_WRITE);
-                    }
-                } catch (ClosedChannelException e) {
-                    AsyncSocketChannel1.this.close();
-                    currentRequest.postFailure(e);
-                }
-            } catch (ClosedChannelException e) {
-                closeEvent.post(AsyncSocketChannel1.this);
-                connEvent.postFailure(e);
-            } catch (IOException e) {
-                currentRequest.postFailure(e);
-            }
-        }
-    }
-    
-    class SelectorListener extends SelectorEventListener {
-        
-        public SelectorListener(Selector selector, SocketChannel socketChannel) throws ClosedChannelException {
-            super(selector, socketChannel);
-        }
-
-        /** called on selector thread
-         * 
-         */
-        @Override
-        public void run() {
-            if (key.isConnectable()) {
-                boolean connected;
-                try {
-                    connected = socketChannel.finishConnect();
-                    if (connected) {
-                        connEvent.postSocketChannel(socketChannel);
-                        interestOff(SelectionKey.OP_CONNECT);
-                    } else {
-                        interestOn(SelectionKey.OP_CONNECT);
-                    }
-                } catch (ClosedChannelException e) {
-                    closeEvent.post(AsyncSocketChannel1.this);
-                    connEvent.postFailure(e);
-                } catch (IOException e) {
-                    connEvent.postFailure(e);
-                }
-            }
-            if (key.isValid()&& key.isReadable()) {
-                ((ReaderQueue)reader).doRead();
-            }
-            if (key.isValid()&& key.isWritable()) {
-                ((WriterQueue)writer).doWrite();
-            }
-        }
-
-        protected void stop() {
-            SelectionKey key = socketChannel.keyFor(selectorThread.selector);
-            if (key==null || !key.isValid()) {
-                return;
-            }
-            key.cancel();
-            socketChannel=null;
-        }
-    }
-
 }

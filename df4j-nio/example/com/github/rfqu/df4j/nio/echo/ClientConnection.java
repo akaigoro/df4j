@@ -93,12 +93,7 @@ class ClientConnection {
             rounds.decrementAndGet();
             if (rounds.get()==0) {
 //                System.out.println("SocketIORequest finished id="+id);
-                try {
-					channel.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+                channel.close();
                 DoubleValue avg = new DoubleValue(((double)sum)/count3endRead);
                 echoServerTest.clientFinished(ClientConnection.this, avg);
 //                System.out.println("clients="+echoServerTest.clients.size());

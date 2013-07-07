@@ -15,6 +15,7 @@ package com.github.rfqu.df4j.nio;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -33,8 +34,8 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
     protected final CompletableFuture<AsyncSocketChannel> closeEvent=new CompletableFuture<AsyncSocketChannel>();
 
     {
-        reader = new ReaderQueue();
-        writer = new WriterQueue();
+        reader = new RequestQueue2(true);
+        writer = new RequestQueue2(false);
     }
     
     /** starts connection process from client side 
@@ -59,14 +60,6 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
         return closeEvent;
     }
     
-    public synchronized AsynchronousSocketChannel getChannel() {
-        return channel;
-    }
-
-    public boolean isConnected() {
-        return channel!=null;
-    }
-
     // ================== StreamPort I/O interface 
 
     /** disallows subsequent posts of requests; already posted requests 
@@ -74,10 +67,15 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
      * @throws IOException 
      */
     @Override
-    public synchronized void close() throws IOException {
+    public synchronized void close() {
         if (isClosed()) return;
         closeEvent.post(this);
-        channel.close();
+        try {
+            channel.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     //===================== inner classes
@@ -106,15 +104,14 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
         public void failed(Throwable exc, AsynchronousSocketChannel channel) {
             super.postFailure(exc);
         } 
-    };
-
+    }
 	
-    class ReaderQueue extends RequestQueue
+    class RequestQueue2 extends RequestQueue
        implements CompletionHandler<Integer, SocketIORequest<?>>
     {
         
-        public ReaderQueue() {
-            super(new ImmediateExecutor(), true);
+        public RequestQueue2(boolean isReader) {
+            super(new ImmediateExecutor(), isReader);
         }
 
         //-------------------- Actor's backend
@@ -126,38 +123,24 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
                 return;
             }
             currentRequest=request;
+            ByteBuffer buffer = request.getBuffer();
             if (request.isTimed()) {
-                channel.read(request.getBuffer(),
-                       request.getTimeout(), TimeUnit.MILLISECONDS, request, this);
+                long timeout = request.getTimeout();
+                if (isReader) {
+                    channel.read(buffer,
+                            timeout, TimeUnit.MILLISECONDS, request, this);
+                } else {
+                    channel.write(buffer,
+                            timeout, TimeUnit.MILLISECONDS, request, this);
+                }
             } else {
-                channel.read(request.getBuffer(), request, this);
+                if (isReader) {
+                    channel.read(buffer, request, this);
+                } else {
+                    channel.write(buffer, request, this);
+                }
             }
         }
     }
    	
-    class WriterQueue extends RequestQueue
-       implements CompletionHandler<Integer, SocketIORequest<?>>
-    {
-        
-        public WriterQueue() {
-            super(new ImmediateExecutor(), false);
-        }
-
-        //-------------------- Actor's backend
-
-        @Override
-        protected void act(SocketIORequest<?> request) throws Exception {
-            if (isClosed()) {
-                request.postFailure(new AsynchronousCloseException());
-                return;
-            }
-        	currentRequest=request;
-            if (request.isTimed()) {
-                channel.write(request.getBuffer(), request.getTimeout(), TimeUnit.MILLISECONDS,
-                        request, this);
-            } else {
-                channel.write(request.getBuffer(), request, this);
-            }
-        }
-    }
 }

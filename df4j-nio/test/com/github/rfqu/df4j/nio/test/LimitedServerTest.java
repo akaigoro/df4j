@@ -135,12 +135,7 @@ public abstract class LimitedServerTest {
         }
 
         public void close() {
-            try {
-                conn.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            conn.close();
         }
 
         public void read(MyRequest request) {

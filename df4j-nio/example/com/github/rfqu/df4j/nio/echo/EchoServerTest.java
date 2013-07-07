@@ -55,6 +55,7 @@ public class EchoServerTest {
                 cconn.getConnEvent().get(); // wait connection to connect
             } catch (Exception e) {
                 System.err.println("conn "+i+" failed:"+e);
+                e.printStackTrace();
                 return;
             }
 //            Thread.sleep(2);

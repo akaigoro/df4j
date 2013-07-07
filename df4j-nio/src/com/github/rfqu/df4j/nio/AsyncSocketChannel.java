@@ -12,7 +12,6 @@
  */
 package com.github.rfqu.df4j.nio;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
@@ -20,7 +19,7 @@ import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.ext.ImmediateExecutor;
+import com.github.rfqu.df4j.core.StreamPort;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -38,9 +37,7 @@ import com.github.rfqu.df4j.ext.ImmediateExecutor;
  * If interested in the moment when connection is established,
  * add a listener to connEvent.
  */
-public abstract class AsyncSocketChannel
-    implements Closeable
-{
+public abstract class AsyncSocketChannel implements StreamPort<SocketIORequest<?>> {
 	/** read requests queue */
 	protected RequestQueue reader;
 	/** write requests queue */
@@ -52,13 +49,15 @@ public abstract class AsyncSocketChannel
      * but will be executed only after connection completes.
      * If interested in the moment when connection is established, add a
      * listener to the returned ListenableFuture.
-     * @return 
+     * @return  same object as {@link getConnEvent }
      * 
      * @throws IOException
      */
     public abstract ListenableFuture<AsyncSocketChannel> connect(SocketAddress addr) throws IOException;
     
-    /** signals connection completion */
+    /** signals connection completion
+     *  @return same object as {@link connect }
+     */
     public abstract ListenableFuture<AsyncSocketChannel> getConnEvent();
 
     /** signals connection closing */
@@ -72,7 +71,7 @@ public abstract class AsyncSocketChannel
         return getCloseEvent().isDone();
     }
 
-    public abstract void close() throws IOException;
+    public abstract void close();
 
     // ================== conventional I/O interface
 
@@ -95,10 +94,23 @@ public abstract class AsyncSocketChannel
 		request.prepareRead(timeout);
 		reader.post(request);
 	}
+    
+    // ================== StreamPort I/O interface 
+
+	@Override
+    public void post(SocketIORequest<?> request) {
+	    if (request.isReadOp()) {
+	        read(request);
+	    } else {
+	        write(request);
+	    }
+    }
+
+	//=================== inner classes
 
     public abstract class RequestQueue extends Actor<SocketIORequest<?>> {
         protected Semafor channelAcc = new Semafor(); // channel accessible
-        protected boolean isReader;
+        protected final boolean isReader;
         protected SocketIORequest<?> currentRequest;
 
         public RequestQueue(Executor executor, boolean isReader) {
@@ -134,18 +146,12 @@ public abstract class AsyncSocketChannel
 
         public void failed(Throwable exc, SocketIORequest<?> request) {
             if (exc instanceof AsynchronousCloseException) {
-                synchronized (AsyncSocketChannel.this) {
-                    try {
-                        AsyncSocketChannel.this.close();
-                    } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
+                AsyncSocketChannel.this.close();
+            } else {
+                currentRequest = null;
+                channelAcc.up(); // let subsequent requests fail
+                request.postFailure(exc);
             }
-            currentRequest = null;
-            channelAcc.up(); // let subsequent requests fail
-            request.postFailure(exc);
         }
     }
 

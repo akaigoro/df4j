@@ -87,9 +87,13 @@ public class IORequest<T extends IORequest<T>> extends Request<T, Integer> {
         return inRead;
     }
 
+    public void setReadOp(boolean inRead) {
+        this.inRead = inRead;
+    }
+
     //======================== backend methods - called from socket handler 
 
-	public synchronized void post(Integer result) {
+    public synchronized void post(Integer result) {
 //        System.err.println(" IORequest.completed "+state+" rid="+rid);
         if (inRead) {
             //System.out.println("channel read completed id="+id);

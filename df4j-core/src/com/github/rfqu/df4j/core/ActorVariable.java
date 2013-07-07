@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.io.Closeable;
 import java.util.ArrayDeque;
 
 /**

@@ -12,7 +12,6 @@ package com.github.rfqu.df4j.nio;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
-import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowNode;
