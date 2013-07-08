@@ -30,72 +30,63 @@ See examples and test directories for various custom-made dataflow objects and t
 If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
 or send email to alexei.kaigorodov($)gmail.com.
 
-Hello World Example
--------------------
+Flow based programming approach
+-----------------
+This library follows the concept of [Flow based programming](https://en.wikipedia.org/wiki/Flow-based_programming).
+Visit that site to see pictures of FBP diagrams and grasp the idea.
 
-<pre>
-    class Collector extends Actor<String> {
-        StringBuilder sb=new StringBuilder();
-        
-        @Override
-        protected void act(String message) {
-            if (message.length()==0) {
-                System.out.println(sb.toString());
-            } else {
-                sb.append(message);
-                sb.append(" ");
-            }
-        }
-    }
+Terminilogy notes: here FBP diagram is called dataflow graph, and its component process called a dataflow node, or an actor. Note that the term
+Actor can also denote a dataflow node with single input, as does Akka library.
 
-    public void test() {
-        Collector coll=new Collector();
-        coll.post("Hello");
-        coll.post("World");
-        coll.post("");
-    }
-</pre>
+So, node of a dataflow graph consists of frontend and backend.
+Frontend contains one or more pins (like pins of a microchip), which accept and store input tokens.
+When all pins are ready (have received tokens), then backend procedure is called. Backend procedure reads the input tokens,
+perform calculations and sends that (or new) tokens to pins of other (or the same) nodes.
 
-That's it. No additional object creation, like Properties and ActorSystem in Akka, or Fiber in JetLang.
-Well, that objects can be useful under some circumstances, but why force programmer to use them always?
-df4j is built around a few number of simple principles, and as long as programmer follows that principles,
-he can extend the library in any direction.
+This idea can be impelmented in many ways, depending of desgn decisions chosed:
 
-Very often actor have to do some action when input stream of messages ended. In the above example,
-the end of stream is coded as empty string. This is not convenient: the act method have to check each messsage,
-and using a "poison pill" value may not be feasible. So the Actor class has methods close and complete for this cases: 
+- what kinds of tokens are possible
+- how tokens are passed to nodes
+- how backend procedure is called
+- how tokens are deleted from inputs.
 
-<pre>
-    class Collector extends Actor<String> {
-        StringBuilder sb=new StringBuilder();
-        
-        @Override
-        protected void act(String message) {
-            sb.append(message);
-            sb.append(" ");
-        }
-        
-        @Override
-        protected void complete(){
-            System.out.println(sb.toString());
-        }
-    }
+In df4j, following decisions were made:
 
-    public void test() {
-        Collector coll=new Collector();
-        coll.post("Hello");
-        coll.post("World");
-        coll.close();
-    }
-</pre>
+- tokens are either references to arbitrary java objects, or just signals which cannot be denoted but can be counted.
 
-We started with an Actor example, as actor model is widely known. However, df4j treats actors as a special case of a node in
-dataflow graph, namely, a node with one explicit input arc (there is also an implicit arc which
-makes a loop and holds one token - the state of the node instance). Below is an implementation based on naked DataflowNode:
+- tokens are passed to pins directly with a simple method call, usually Port.post(token). General contract is that this method call should be fast,
+and sender need not bother to organise this call as a separtate task.
 
+- the way the backend procedure is executed is determined at the time of creation of the component, by assigning an executor the the component.
+df4j provides several kinds of executors (and programmer can define custom executor), but most of them require that backend procedure cannot block
+or sleep, avoiding thread starvation.
+In case if the algorithm of the backend procrdure needs, say, to read from network, then another component should be declared, with a pin that receives
+network packets, and asynchronous I/O operation should be started, which eventually passes the result to that component.
+df4j has nonblocking network library, which support both NIO1 and NIO2.
+
+ - tokens are deleted from inputs only after the backend procedure completes. This way backend procedure can read tokens 
+directly from inputs during the execution. Invocations of the backend procedure are serialized with respect to the component instance:
+even if all inputs have many tokens, they are processed serially, thus the backend procedure need not synchronize on the component body.
+
+As a result, dataflow graph can contain millions of components, serving thousands of network connections, and using a small number of threads. 
+
+API overview
+------------
+
+Base class of a graph component is [DataflowNode](df4j-core/src/com/github/rfqu/df4j/core/DataflowNode.java).
+To build a component, user have to define pins and backend procedure. Pins are instances of predefined inner classes.
+Backend procedure has signature void act(). Most important pin classes are:
+
+- Semafor: a resource counter. Each execution of the backend procedure consumes one unit of the resource.
+When all resources are exhausted, the excution would not start.
+
+- StreamPort: a queue of tokens represented as java objects.
+
+Hello world for StreamInput:
+------------------------
 <pre>
     class Collector extends DataflowNode {
-        Input<String> input=new StreamInput<String>();
+        StreamInput<String> input=new StreamInput<String>();
         StringBuilder sb=new StringBuilder();
         
         @Override
@@ -123,21 +114,74 @@ makes a loop and holds one token - the state of the node instance). Below is an 
     }
 </pre>
 
-So, an Actor is a DataflowNode which:
-- has predefined variable StreamInput input
-- has Port interface shorted to that input
-- has act() method parameterized with the value extracted from that input
+Since Collector has single input, it can be refactored to an Actor.
+Note that this simplifies both access to frontend pins and declaration of backend procedure,
+but adds nothing essentiol - just a sintactic sugar.
 
-All these features are convenient but do not give any radical improvements.
-Moreover, being an Actor does not prevent from adding more inputs, and indeed
+
+Single-input Actor Hello World Example
+------------------------
+
+<pre>
+    class Collector extends Actor<String> {
+        StringBuilder sb=new StringBuilder();
+        
+        @Override
+        protected void act(String message) {
+            if (message.length()==0) {
+                System.out.println(sb.toString());
+            } else {
+                sb.append(message);
+                sb.append(" ");
+            }
+        }
+    }
+
+    public void test() {
+        Collector coll=new Collector();
+        coll.post("Hello");
+        coll.post("World");
+        coll.post("");
+    }
+</pre>
+
+That's it. No additional object creation, like Properties and ActorSystem in Akka, or Fiber in JetLang.
+
+Very often actor have to do some action when input stream of messages ended. In the above example,
+the end of stream is coded as empty string. This is not convenient: the act method have to check each messsage,
+and using a "poison pill" value may not be feasible. So the Actor class has frontend method close and
+corresponding method complete for this cases: 
+
+<pre>
+    class Collector extends Actor<String> {
+        StringBuilder sb=new StringBuilder();
+        
+        @Override
+        protected void act(String message) {
+            sb.append(message);
+            sb.append(" ");
+        }
+        
+        @Override
+        protected void complete(){
+            System.out.println(sb.toString());
+        }
+    }
+
+    public void test() {
+        Collector coll=new Collector();
+        coll.post("Hello");
+        coll.post("World");
+        coll.close();
+    }
+</pre>
+
+Note, being an Actor does not preclude a node from adding more inputs, and indeed
 many Actors from the tests and examples are in fact DataflowNodes with several
-inputs and cannot be represented as JetLang or Akka actors.
+inputs (and cannot be represented as JetLang or Akka actors).
 
-Dataflow Programming
+Actors as tokens
 --------------------
-
-DataflowNode can contain multiple inputs and so can solve many tasks
-which are difficult to solve with classic Actors. 
 
 Let we have several worker actors, for example, representing computational nodes in cluster.
 The actors accept messages with assignments. Cluster users would like to have a single port
@@ -230,13 +274,14 @@ is a powerful facility to represent nested non-blocking services. See program Ne
 
 Background Executor
 -------------------
-When a DataflowNode (including Actor) is created, it should be assigned an Executor to run on.
+Executors used in df4j need to implement simple java.util.concurrent.Executor interface. 
+When a Task (including DataflowNode or Actor) is created, it should be assigned an Executor to run on.
 This library allows two ways of assigning Executor to a DataflowNode: explicitly by a constructor
 or implicitly by a ThreadLocal variable.
 
 Via constructor, Executor may be null. In this case,
 the node will be executed on the caller's thread (which invokes the post method).
-This is safe and fast, but implies no parallelism.
+This is fast, but implies no parallelism, and may cause stack overflow if dataflow graph contains a loop.
 It is recommended for nodes which simply redirect incoming messages, like Dispatcher or WorkerActor in the
 examples above: add them a constructor with super(null). Equivalently, extend them from 
 DataflowVariable or ActorVariable, respectively.
@@ -264,6 +309,7 @@ Version history
 v0.9 2013/07/10
 ListenableFuture become an interface, implementation is CompletableFuture.
 Request has moved from package ext to package core, and implements Future<Result> and Promise<Request>.
+df4j-nio1 deeply refactored, to demonstrate dataflow-style implementation.
 
 ---------------
 v0.8 2013/06/10

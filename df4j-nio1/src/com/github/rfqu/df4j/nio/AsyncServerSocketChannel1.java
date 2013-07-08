@@ -19,6 +19,7 @@ import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.nio.SelectorThread.SelectorListener;
 
 /**
  * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
@@ -34,10 +35,11 @@ public class AsyncServerSocketChannel1
     private SelectorListener selectorListener;
 
     public AsyncServerSocketChannel1() throws IOException {
-        selectorThread = SelectorThread.getCurrentSelectorThread();
-        acceptor1=new Acceptor(selectorThread);
         channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
+        selectorThread = SelectorThread.getCurrentSelectorThread();
+        selectorListener=selectorThread.new SelectorListener(this);
+        acceptor1=new Acceptor(selectorThread);
     }
 
     @Override
@@ -47,7 +49,6 @@ public class AsyncServerSocketChannel1
         }
         super.addr = addr;
         channel.socket().bind(addr);
-        selectorListener=new SelectorListener(this);
         acceptor1.channelAccess.up();
     }
 

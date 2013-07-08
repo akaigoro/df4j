@@ -26,6 +26,7 @@ public class EchoServerGlobTest extends EchoServerTest {
         Process pr=JavaAppLauncher.startJavaApp(name,
                 Integer.toString(port));
         EchoServerGlobTest t=new EchoServerGlobTest();
+        Thread.sleep(500); // let echo server start
         t.iaddr = new InetSocketAddress(host, port);
         t.mediumTest();
         t.heavyTest();

@@ -67,14 +67,14 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
      * @throws IOException 
      */
     @Override
-    public synchronized void close() {
-        if (isClosed()) return;
-        closeEvent.post(this);
+    public void close() {
         try {
-            channel.close();
+			closeEvent.post(this);
+		} catch (IllegalStateException ok) {
+		}
+		try {
+			channel.close();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         }
     }
 

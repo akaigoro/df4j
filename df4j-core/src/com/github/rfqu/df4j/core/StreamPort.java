@@ -21,4 +21,6 @@ public interface StreamPort<M> extends Port<M>, Closeable {
      * signals the end of token stream 
      */
     public void close();
+
+	public boolean isClosed();
 }

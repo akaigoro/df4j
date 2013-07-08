@@ -20,12 +20,12 @@ public abstract class ActorVariable<M> extends DataflowVariable
     implements StreamPort<M>, Callback<M>
 {
     /** place for input token(s) */
-    protected final Input<M> input=createInput();
+    protected final StreamInput<M> input=createInput();
     
     /** Override this method if another type of input queue is desired. 
      * @return storage for input tokens
      */
-    protected Input<M> createInput() {
+    protected StreamInput<M> createInput() {
         return new StreamInput<M>(new ArrayDeque<M>());
     }
 

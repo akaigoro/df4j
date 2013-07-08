@@ -18,7 +18,6 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
 import com.github.rfqu.df4j.core.ActorVariable;
-import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
@@ -31,7 +30,6 @@ public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
 {
     private volatile AsynchronousServerSocketChannel assc;
     private final Acceptor acceptor1=new Acceptor();
-    private final CompletableFuture<SocketAddress> closeEvent=new CompletableFuture<SocketAddress>();
     
     public AsyncServerSocketChannel2() throws IOException {
         AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
@@ -65,7 +63,7 @@ public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
             e.printStackTrace();
         }
         assc = null;
-        closeEvent.post(addr);
+        closeEvent.post(this);
     }
 
     public boolean isClosed() {

@@ -42,7 +42,10 @@ public abstract class Function<R> extends DataflowNode {
     }
 
     protected void handleException(Throwable exc) {
-        res.postFailure(exc);
+        try {
+			res.postFailure(exc);
+		} catch (IllegalStateException e) {
+		}
     }
     
     //========== inner classes

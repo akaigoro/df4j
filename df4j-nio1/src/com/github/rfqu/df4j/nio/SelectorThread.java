@@ -13,6 +13,8 @@
 package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -21,6 +23,7 @@ import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.DFContext.ItemKey;
+import com.github.rfqu.df4j.core.DataflowVariable.Semafor;
 
 public class SelectorThread implements Runnable, Executor {
     DFContext context;
@@ -85,7 +88,7 @@ public class SelectorThread implements Runnable, Executor {
                             break;
                         }
                     }
-                    System.err.println("task started:"+task);
+//                    System.err.println("task started:"+task);
                     task.run();
                 }
             } catch (IOException e) {
@@ -95,6 +98,78 @@ public class SelectorThread implements Runnable, Executor {
             }
 		}
 	}
+    
+    //--------------------- inner class
+    public class SelectorListener {
+        private SelectorListenerUser asyncChannel;
+        SelectionKey key;
+        /** set of SelectionKeys: OP_ACCEPT, OP_CONNECT, OP_READ, OP_WRITE */
+        private int interestBits=0;
+        private Semafor[] semafores=new Semafor[5];
+        
+        SelectorListener(SelectorListenerUser asyncChannel) throws ClosedChannelException {
+            this.asyncChannel=asyncChannel;
+        }
+
+        /** 
+         * @param bit
+         * @throws ClosedChannelException 
+         */
+        void interestOn(int bit, Semafor sema) throws ClosedChannelException {
+            if (sema==null) {
+                throw new IllegalArgumentException("sema=null");
+            }
+            int bitPos=bitPosByBit[bit];
+            semafores[bitPos]=sema;
+            if ((interestBits&bit)!=0) { // bit set already
+//                System.err.println("interest On: "+bitPosToString[bitPos]+ " already");
+                return;
+            }
+//            System.err.println("interest On: "+bitPosToString[bitPos]);
+            interestBits|=bit;
+            if (key==null) {
+                key=asyncChannel.getChannel().register(selector, interestBits, this);
+            } else {
+                key.interestOps(interestBits);
+            }
+        }
+        
+        public void run() {
+            int interestOps=key.interestOps();
+//            System.err.println("listener started: "+asyncChannel+"; bits="+interestOps);
+            try {
+                for (int bitPos=0; bitPos<5; bitPos++) {
+                    int bit=1<<bitPos;
+                    if ((interestOps&bit)==0) continue;
+                    if (semafores[bitPos]==null) {
+                    	// unwanted signal received
+//                        System.err.println("semafores["+bitPos+"]==null for "+bitPosToString[bitPos]);
+                    	continue;
+                    }
+                    semafores[bitPos].up();
+                    semafores[bitPos]=null;
+                    /*
+                    if ((interestBits&bit)==0) {  // bit unset already
+                        System.err.println("interest Off: "+bitPosToString[bitPos]+ " already");
+                    } else {
+                        System.err.println("interest Off: "+bitPosToString[bitPos]);
+                    }
+                    */
+                }
+            } catch (CancelledKeyException e) {
+                 asyncChannel.close();
+            } finally {
+                 interestBits=0;
+                 key.interestOps(0);
+            }
+        }
+
+    }
+    
+    private static final int[] bitPosByBit = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
+    @SuppressWarnings("unused")
+	private static final String[] bitPosToString={"READ","UNISED","WRITE","ACCEPT","CONNECT"};
+
     //--------------------- context
     
     private static ItemKey<SelectorThread> selectorThreadKey
