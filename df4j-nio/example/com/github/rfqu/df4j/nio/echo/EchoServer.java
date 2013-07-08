@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
 import com.github.rfqu.df4j.nio.AsyncChannelFactory;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
@@ -31,23 +30,21 @@ public class EchoServer extends LimitedServer
     AsyncChannelFactory asyncChannelFactory=AsyncChannelFactory.getCurrentAsyncChannelFactory();
     AtomicInteger ids = new AtomicInteger(); // for DEBUG
     SocketAddress addr; // address of this server
-    /** maximum allowed numer of simultaneous connections */
-    AsyncServerSocketChannel assch;  // provides ready connections for us
     /** active connections */
     HashMap<Integer, ServerConnection> connections = new HashMap<Integer, ServerConnection>();
 
     public EchoServer(SocketAddress addr, int maxConnCount) throws IOException {
         this.addr = addr;
-        this.assch = asyncChannelFactory.newAsyncServerSocketChannel();
-        super.start(assch, addr, 1, maxConnCount);
+        AsyncServerSocketChannel assc = asyncChannelFactory.newAsyncServerSocketChannel();
+        super.start(assc, addr, 1, maxConnCount);
     }
 
     public ListenableFuture<AsyncServerSocketChannel> getCloseEvent() {
-        return assch.getCloseEvent();
+        return assc.getCloseEvent();
     }
 
     protected synchronized void connClosed(ServerConnection serverConnection) {
-        if (assch.isClosed()) {
+        if (assc.isClosed()) {
             return;
         }
         connections.remove(serverConnection.id);
@@ -55,10 +52,10 @@ public class EchoServer extends LimitedServer
 
     @Override
     public synchronized void close() {
-        if (assch.isClosed()) {
+        if (assc.isClosed()) {
             return;
         }
-        assch.close();
+        assc.close();
         Iterator<Integer> ids = connections.keySet().iterator();
         while (ids.hasNext()) {
             Integer id = ids.next();

@@ -69,6 +69,6 @@ public class EchoServerLocTest {
         }
         EchoServerLocTest t=new EchoServerLocTest();
         t.t.iaddr = new InetSocketAddress(host, port);
-        t.veryHeavyTest();
+        t.heavyTest();
     }
 }

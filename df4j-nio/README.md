@@ -45,8 +45,8 @@ make a non-blocking acception loop:
         @Override
         public void post(AsyncSocketChannel readyChannel) {
             // do something with the newly created AsyncSocketChannel
-            // wait for the next client
-            next();
+            ...
+            next();// wait for the next client
         }
         
         @Override

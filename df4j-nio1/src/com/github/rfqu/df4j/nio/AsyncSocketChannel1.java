@@ -25,6 +25,7 @@ import java.nio.channels.SocketChannel;
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.nio.SelectorThread.SelectorListener;
 
 /**
  * Asynchronously executes I/O socket requests using {@link java.nio.channels.Selector}.
@@ -40,32 +41,31 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
     protected final ConnectionCompleter connectionCompleter;
     protected final ConnectionFuture connEvent=new ConnectionFuture();
     protected final CompletableFuture<AsyncSocketChannel> closeEvent=new CompletableFuture<AsyncSocketChannel>();
-    protected SelectorListener selectorListener;//=new SelectorListener(); 
-    
-    {
-        reader = new RequestQueue1(true);
-        writer = new RequestQueue1(false);
-    }
+    protected SelectorListener selectorListener;
     
     public AsyncSocketChannel1(SelectorThread selectorThread) {
         this.selectorThread=selectorThread;
-        connectionCompleter=new ConnectionCompleter();
+        reader = new RequestQueue1(selectorThread, true);
+        writer = new RequestQueue1(selectorThread, false);
+        connectionCompleter=new ConnectionCompleter(selectorThread);
     }
 
     public AsyncSocketChannel1() {
         this(SelectorThread.getCurrentSelectorThread());
     }
 
+    /** for client-side connections
+     */
     public ListenableFuture<AsyncSocketChannel> connect(final SocketAddress addr) throws IOException {
         // Create a non-blocking socket channel
         socketChannel = SocketChannel.open();
         socketChannel.configureBlocking(false);
-        selectorListener=new SelectorListener(this);
         // try to connect
         boolean connected = socketChannel.connect(addr);
         if (connected) {
             connEvent.postSocketChannel(socketChannel);
         } else {
+        	// connection delayed
             connectionCompleter.connectSignal.up();
         }
         return connEvent;
@@ -97,10 +97,12 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
     // ================== StreamPort I/O interface 
 
     @Override
-    public synchronized void close(){
-        if (isClosed()) return;
-        closeEvent.post(this);
+    public void close(){
         try {
+			closeEvent.post(this);
+		} catch (IllegalStateException ok) {
+		}
+		try {
             socketChannel.close();
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -110,32 +112,10 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
 
     //===================== inner classes
     
-    /**
-     * callback for connection completion
-     * works both in client-side and server-side modes
-     */
-    class ConnectionFuture extends CompletableFuture<AsyncSocketChannel> {
-        public void postSocketChannel(SocketChannel channel) {
-            try {
-                channel.configureBlocking(false);
-                channel.socket().setTcpNoDelay(true);
-                socketChannel = channel;
-                if (selectorListener==null) {
-                    selectorListener=new SelectorListener(AsyncSocketChannel1.this);
-                }
-                reader.resume();
-                writer.resume();
-                super.post(AsyncSocketChannel1.this);
-            } catch (IOException e) {
-                super.postFailure(e);
-            }
-        }
-    }
-    
     class ConnectionCompleter extends DataflowNode {
         Semafor connectSignal=new Semafor();
 
-        public ConnectionCompleter() {
+        public ConnectionCompleter(SelectorThread selectorThread) {
             super(selectorThread);
         }
 
@@ -159,11 +139,31 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
         
     }
 
+    /**
+     * callback for connection completion
+     * works both in client-side and server-side modes
+     */
+    class ConnectionFuture extends CompletableFuture<AsyncSocketChannel> {
+        public void postSocketChannel(SocketChannel channel) {
+            try {
+                channel.configureBlocking(false);
+                channel.socket().setTcpNoDelay(true);
+                socketChannel = channel;
+                selectorListener=selectorThread.new SelectorListener(AsyncSocketChannel1.this);
+                reader.resume();
+                writer.resume();
+                super.post(AsyncSocketChannel1.this);
+            } catch (IOException e) {
+                super.postFailure(e);
+            }
+        }
+    }
+    
     class RequestQueue1 extends RequestQueue {
         
         private final int keyBit;
 
-        public RequestQueue1(boolean isReader) {
+        public RequestQueue1(SelectorThread selectorThread, boolean isReader) {
             super(selectorThread, isReader);
             if (isReader) {
                 keyBit = SelectionKey.OP_READ;

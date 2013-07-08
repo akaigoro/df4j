@@ -16,7 +16,7 @@ import com.github.rfqu.df4j.core.DFContext;
 
 public class HelloWorld3 {
     static  class Collector extends DataflowNode {
-        Input<String> input=new StreamInput<String>(new ArrayDeque<String>());
+    	StreamInput<String> input=new StreamInput<String>(new ArrayDeque<String>());
         StringBuilder sb=new StringBuilder();
         
         @Override

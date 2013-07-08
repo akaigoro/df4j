@@ -23,7 +23,7 @@ public abstract class LimitedServerTest {
 //    static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 9990);
     static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 8007);
 
-    AsyncChannelFactory asyncrSocketFactory;
+    AsyncChannelFactory channelFactory;
     
     /**
      * tests server with max 1 connection
@@ -83,7 +83,7 @@ public abstract class LimitedServerTest {
      */
 
     private Connection newClientConnection(InetSocketAddress addr) throws IOException {
-        AsyncSocketChannel asc=asyncrSocketFactory.newAsyncSocketChannel();
+        AsyncSocketChannel asc=channelFactory.newAsyncSocketChannel();
         asc.connect(addr);
         return new Connection(asc);
     }
@@ -189,7 +189,7 @@ public abstract class LimitedServerTest {
         ArrayList<Connection> allConns=new ArrayList<Connection>();
             
         public void start(InetSocketAddress addr, int waitCount, int maxCount) throws IOException {
-            super.start(asyncrSocketFactory.newAsyncServerSocketChannel(), addr, waitCount, maxCount);
+            super.start(channelFactory.newAsyncServerSocketChannel(), addr, waitCount, maxCount);
         }
 
         @Override

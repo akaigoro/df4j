@@ -361,11 +361,10 @@ public abstract class DataflowVariable {
      * By default, it has place for only one token.
      * @param <T> type of accepted tokens.
      */
-    public class Input<T> extends Pin implements StreamPort<T>, Iterable<T>{
+    public class Input<T> extends Pin implements Port<T> {
         /** extracted token */
         T value=null;
         boolean pushback=false; // if true, do not consume
-        private boolean closeRequested=false;
 
         @Override
         public void post(T token) {
@@ -375,15 +374,11 @@ public abstract class DataflowVariable {
             boolean doFire;
             lock.lock();
             try {
-                if (closeRequested) {
-                    throw new IllegalStateException("closed already");
-                }
                 if (value==null) {
                     value=token;
                     doFire=turnOn();
                 } else {
-                    add(token);
-                    return; // is On already
+                    throw new IllegalStateException();
                 }
             } finally {
               lock.unlock();
@@ -393,78 +388,9 @@ public abstract class DataflowVariable {
             }
         }
 
-        /** Signals the end of the stream. 
-         * Turns this pin on. Removed value is null 
-         * (null cannot be send with StreamInput.add(message)).
-         */
-        @Override
-        public void close() {
-            boolean doFire;
-            lock.lock();
-            try {
-                if (closeRequested) {
-                    return;
-                }
-                closeRequested=true;
-                //System.out.println("close()");
-                doFire=turnOn();
-            } finally {
-              lock.unlock();
-            }
-            if (doFire) {
-                fire();
-            }
-        }
-
-        public boolean isClosed() {
-            lock.lock();
-            try {
-                return closeRequested;
-            } finally {
-              lock.unlock();
-            }
-        }
-
-        /**
-         * saves passed token
-         * @param newToken
-         */
-        protected void add(T newToken) {
-            throw new IllegalStateException();
-        }
-                
-        public T get() {
-            return value;
-        }
-
-        /** look ahead */
-        public T getNext() {
-            return value=poll();
-        }
-
-        /**
-         * iterates over and removes all input tokens.   
-         */
-        @Override
-        public Iterator<T> iterator() {
-            return new Iterator<T>(){
-                @Override
-                public boolean hasNext() {
-                    return value!=null;
-                }
-
-                @Override
-                public T next() {
-                    T res=value;
-                    value=poll();
-                    return res;
-                }
-
-                @Override
-                public void remove() {
-                }
-            };
-        }
+		public T get() {
+			return value;
+		}
 
         //===================== backend
         
@@ -501,23 +427,7 @@ public abstract class DataflowVariable {
             if (wasNull) {
                 turnOff(); // closing processed already
             }
-            if (!closeRequested) {
-                turnOff(); // closing not requested
-            }
             // else make one more round with message==null
-        }
-    }
-
-    /** A place for single unremovable token of type <T>
-     * @param <T> 
-     */
-    public class ConstInput<T> extends Input<T> {
-
-        /** restores value
-         */
-        @Override
-        protected T poll() {
-            return get();
         }
     }
 
@@ -533,8 +443,9 @@ public abstract class DataflowVariable {
     /** A Queue of tokens of type <T>
      * @param <T> 
      */
-    public class StreamInput<T> extends Input<T> {
+    public class StreamInput<T> extends Input<T> implements StreamPort<T>, Iterable<T>{
         private Queue<T> queue;
+        private boolean closeRequested=false;
 
         public StreamInput() {
             this.queue = new LinkedList<T>();
@@ -543,8 +454,42 @@ public abstract class DataflowVariable {
         public StreamInput(Queue<T> queue) {
             this.queue = queue;
         }
+        
+        public T get() {
+            return value;
+        }
+
+        /** look ahead */
+        public T getNext() {
+            return value=poll();
+        }
 
         @Override
+        public void post(T token) {
+            if (token==null) {
+                throw new NullPointerException();
+            }
+            boolean doFire;
+            lock.lock();
+            try {
+                if (closeRequested) {
+                    throw new IllegalStateException("closed already");
+                }
+                if (value==null) {
+                    value=token;
+                    doFire=turnOn();
+                } else {
+                    add(token);
+                    return; // is On already
+                }
+            } finally {
+              lock.unlock();
+            }
+            if (doFire) {
+                fire();
+            }
+        }
+
         protected void add(T token) {
             queue.add(token);
         }
@@ -552,6 +497,85 @@ public abstract class DataflowVariable {
         @Override
         public T poll() {
             return queue.poll();
+        }
+
+        /** Signals the end of the stream. 
+         * Turns this pin on. Removed value is null 
+         * (null cannot be send with StreamInput.add(message)).
+         */
+        @Override
+        public void close() {
+            boolean doFire;
+            lock.lock();
+            try {
+                if (closeRequested) {
+                    return;
+                }
+                closeRequested=true;
+                //System.out.println("close()");
+                doFire=turnOn();
+            } finally {
+              lock.unlock();
+            }
+            if (doFire) {
+                fire();
+            }
+        }
+
+        @Override
+        protected void consume() {
+            if (pushback) {
+                pushback=false;
+                // value remains the same, the pin remains turned on
+                return; 
+            }
+            boolean wasNull=(value==null);
+            value = poll();
+            if (value!=null) {
+                return; // continue processing
+            }
+            // no more tokens; check closing
+            if (wasNull) {
+                turnOff(); // closing processed already
+            }
+            if (!closeRequested) {
+                turnOff(); // closing not requested
+            }
+            // else make one more round with message==null
+        }
+
+        public boolean isClosed() {
+            lock.lock();
+            try {
+                return closeRequested;
+            } finally {
+              lock.unlock();
+            }
+        }
+
+
+        /**
+         * iterates over and removes all input tokens.   
+         */
+        @Override
+        public Iterator<T> iterator() {
+            return new Iterator<T>(){
+                @Override
+                public boolean hasNext() {
+                    return value!=null;
+                }
+
+                @Override
+                public T next() {
+                    T res=value;
+                    value=poll();
+                    return res;
+                }
+
+                @Override
+                public void remove() {
+                }
+            };
         }
     }
 }

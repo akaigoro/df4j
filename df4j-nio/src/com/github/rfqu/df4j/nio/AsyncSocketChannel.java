@@ -117,7 +117,6 @@ public abstract class AsyncSocketChannel implements StreamPort<SocketIORequest<?
             super(executor);
             this.isReader=isReader;
         }
-
         
         @Override
         public synchronized void post(SocketIORequest<?> request) {

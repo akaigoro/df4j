@@ -25,7 +25,7 @@ class ServerConnection {
         request.addListener(endRead);
     }
 
-    public synchronized void close() {
+    public void close() {
         if (channel.isClosed()) {
             return;
         }
