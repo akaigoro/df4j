@@ -8,6 +8,7 @@
  * specific language governing permissions and limitations under the License.
  */
 package com.github.rfqu.df4j.examples;
+import java.io.IOException;
 import java.io.PrintStream;
 
 import org.junit.Test;
@@ -28,7 +29,7 @@ public class ThreadRing {
     final static int NUM_ACTORS = 5;//5003; // number of nodes
     final static int TIME_TO_LIVE = 1000000; // hops
     final static PrintStream out = System.out;
-    final static int times = 3;
+    final static int times = 1;
     int nThreads;
     
     @Test
@@ -140,5 +141,11 @@ public class ThreadRing {
         public Token(int hops_remained) {
             this.hops_remained = hops_remained;
         }
+    }
+    
+    public static void main(String[] args) throws IOException, InterruptedException {
+        ThreadRing t= new ThreadRing();
+//        System.in.read();
+        t.testFixed();
     }
 }
