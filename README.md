@@ -23,7 +23,7 @@ df4j-nio1: a wrapper to nio asynchronous input-output functionality (based on Se
 df4j-nio2: a wrapper to nio2 asynchronous input-output functionality. Requires java 1.7 or higher.
 
 df4j-nio: common parts of df4j-nio1 and df4j-nio2. Almost all programming interface is located here.
-Read introduction [here](df4j-nio/README.md)  
+Read introduction [here](df4j-nio/README.md). 
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
@@ -54,7 +54,8 @@ In df4j, following decisions were made:
 
 - tokens are either references to arbitrary java objects, or just signals which cannot be denoted but can be counted.
 
-- tokens are passed to pins directly with a simple method call, usually Port.post(token). General contract is that this method call should be fast,
+- tokens are passed to pins directly with a simple method call, usually Port.post(token).
+General contract is that this method call should be fast,
 and sender need not bother to organise this call as a separtate task.
 
 - the way the backend procedure is executed is determined at the time of creation of the component, by assigning an executor the the component.

@@ -158,7 +158,14 @@ public class EchoServerTest {
     	Process pr=JavaAppLauncher.startJavaApp("com.github.rfqu.df4j.nio2.echo.EchoServer",
     	        Integer.toString(port));
 		iaddr = new InetSocketAddress(host, port);
-        mediumTest();
-        pr.destroy();
+        try {
+            mediumTest();
+            heavyTest();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } finally {
+            pr.destroy();
+        }
     }
 }

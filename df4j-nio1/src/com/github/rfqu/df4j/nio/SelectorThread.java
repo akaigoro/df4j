@@ -76,7 +76,9 @@ public class SelectorThread implements Runnable, Executor {
                         if (listener.key!=key) {
                             throw new RuntimeException("keys different");
                         }
-                        listener.run();
+                        int interestOps = key.interestOps();
+                        key.interestOps(0);
+                        listener.run(interestOps);
                     }
                 }
                 for (;;) {
@@ -100,22 +102,28 @@ public class SelectorThread implements Runnable, Executor {
 	}
     
     //--------------------- inner class
-    public class SelectorListener {
+    public class SelectorListener implements Runnable {
         private SelectorListenerUser asyncChannel;
         SelectionKey key;
         /** set of SelectionKeys: OP_ACCEPT, OP_CONNECT, OP_READ, OP_WRITE */
         private int interestBits=0;
         private Semafor[] semafores=new Semafor[5];
+        boolean fired=false;
         
         SelectorListener(SelectorListenerUser asyncChannel) throws ClosedChannelException {
             this.asyncChannel=asyncChannel;
         }
 
         /** 
-         * @param bit
+         * Raises bit in the key's interest operations.
+         * When selector return this key, the semaphore will be notified.
+         * Note that if this channel has two bits raised simultaneously,
+         * and one of them fired, then both semafores will be notified, 
+         * one of them receiving false notification.
+         * @param bit one of SelectorKey constants
          * @throws ClosedChannelException 
          */
-        void interestOn(int bit, Semafor sema) throws ClosedChannelException {
+        synchronized void interestOn(int bit, Semafor sema) throws ClosedChannelException {
             if (sema==null) {
                 throw new IllegalArgumentException("sema=null");
             }
@@ -127,20 +135,38 @@ public class SelectorThread implements Runnable, Executor {
             }
 //            System.err.println("interest On: "+bitPosToString[bitPos]);
             interestBits|=bit;
+            if (fired) {
+                
+            }
+            fired=true;
+            SelectorThread.this.execute(this);
+        }
+        
+        // to set inerest on
+        public synchronized void run(){
             if (key==null) {
-                key=asyncChannel.getChannel().register(selector, interestBits, this);
+                try {
+                    key=asyncChannel.getChannel().register(selector, interestBits, this);
+                } catch (ClosedChannelException e) {
+                    run(interestBits);// let listeners retry and receive the exception
+                }
             } else {
                 key.interestOps(interestBits);
             }
+//            System.err.println("set :"+interestBits);
         }
         
-        public void run() {
-            int interestOps=key.interestOps();
+        public synchronized void run(int interestOps) {
+//            System.err.println(" get:"+interestOps);
+            int cout=0;
+
+            interestBits=0;
 //            System.err.println("listener started: "+asyncChannel+"; bits="+interestOps);
             try {
                 for (int bitPos=0; bitPos<5; bitPos++) {
                     int bit=1<<bitPos;
                     if ((interestOps&bit)==0) continue;
+                    cout++;
                     if (semafores[bitPos]==null) {
                     	// unwanted signal received
 //                        System.err.println("semafores["+bitPos+"]==null for "+bitPosToString[bitPos]);
@@ -158,9 +184,9 @@ public class SelectorThread implements Runnable, Executor {
                 }
             } catch (CancelledKeyException e) {
                  asyncChannel.close();
-            } finally {
-                 interestBits=0;
-                 key.interestOps(0);
+            }
+            if(cout>1) {
+                System.err.println(" get:"+interestOps+" -- "+cout);
             }
         }
 

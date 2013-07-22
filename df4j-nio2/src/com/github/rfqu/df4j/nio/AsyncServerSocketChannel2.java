@@ -37,13 +37,14 @@ public class AsyncServerSocketChannel2 extends AsyncServerSocketChannel
     }
     
     @Override
-    public void bind(SocketAddress addr) throws IOException{
+    public AsyncServerSocketChannel bind(SocketAddress addr) throws IOException{
         if (addr==null) {
             throw new NullPointerException();
         }
         super.addr=addr;
         assc.bind(addr);
         acceptor1.channelAccess.up();
+        return this;
     }
 
     /** initiates acceptance process

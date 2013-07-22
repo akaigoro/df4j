@@ -1,6 +1,5 @@
 package com.github.rfqu.df4j.nio.echo;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -9,7 +8,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.nio.AsyncChannelFactory;
+import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.nio.AsyncServerSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.LimitedServer;
@@ -22,21 +21,21 @@ import com.github.rfqu.df4j.nio.LimitedServer;
 * To run tests, {@see EchoServerLockTest} and {@see EchoServerGlobTest}.
 */
 public class EchoServer extends LimitedServer         
-    implements Closeable
+    implements Port<AsyncSocketChannel>
 {
     public static final int defaultPort = 8007;
     public static final int BUF_SIZE = 128;
 
-    AsyncChannelFactory asyncChannelFactory=AsyncChannelFactory.getCurrentAsyncChannelFactory();
-    AtomicInteger ids = new AtomicInteger(); // for DEBUG
-    SocketAddress addr; // address of this server
+    final AtomicInteger ids = new AtomicInteger(); // for debugging
     /** active connections */
-    HashMap<Integer, ServerConnection> connections = new HashMap<Integer, ServerConnection>();
+    final HashMap<Integer, ServerConnection> connections = new HashMap<Integer, ServerConnection>();
 
-    public EchoServer(SocketAddress addr, int maxConnCount) throws IOException {
-        this.addr = addr;
-        AsyncServerSocketChannel assc = asyncChannelFactory.newAsyncServerSocketChannel();
-        super.start(assc, addr, 1, maxConnCount);
+    public EchoServer(SocketAddress addr) throws IOException {
+        super(addr);
+    }
+
+    protected void start(int maxConnCount) {
+        super.start(this, 1, maxConnCount);
     }
 
     public ListenableFuture<AsyncServerSocketChannel> getCloseEvent() {
@@ -71,7 +70,7 @@ public class EchoServer extends LimitedServer
      */
 
 	@Override
-	protected void accepted(AsyncSocketChannel channel) {
+    public void post(AsyncSocketChannel channel) {
         ServerConnection connection = new ServerConnection(EchoServer.this, channel);
         connections.put(connection.id, connection);
     }
@@ -91,8 +90,8 @@ public class EchoServer extends LimitedServer
             maxConn = 1000;
         }
         SocketAddress addr = new InetSocketAddress("localhost", port);
-        @SuppressWarnings("resource")
-		EchoServer es = new EchoServer(addr, maxConn);
+		EchoServer es = new EchoServer(addr);
+		es.start(maxConn);
         es.getCloseEvent().get();
         // inet addr is free now
         System.out.println("EchoServer started");

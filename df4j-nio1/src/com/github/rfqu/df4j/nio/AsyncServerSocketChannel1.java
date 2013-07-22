@@ -11,9 +11,9 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -43,22 +43,24 @@ public class AsyncServerSocketChannel1
     }
 
     @Override
-    public void bind(SocketAddress addr) throws IOException {
+    public AsyncServerSocketChannel bind(SocketAddress addr) throws IOException {
         if (addr == null) {
             throw new NullPointerException();
         }
         super.addr = addr;
         channel.socket().bind(addr);
         acceptor1.channelAccess.up();
+        return this;
     }
 
     /**
      * initiates acceptance process
      * 
      * @return AsyncSocketChannel waiting to connect
+     * @throws ClosedChannelException 
      */
     @Override
-    public ListenableFuture<AsyncSocketChannel> accept() {
+    public ListenableFuture<AsyncSocketChannel> accept() throws ClosedChannelException {
         if (isClosed()) {
             throw new IllegalStateException();
         }
@@ -80,11 +82,6 @@ public class AsyncServerSocketChannel1
 
     public boolean isClosed() {
         return channel == null;
-    }
-
-    @Override
-    public Selector getSelector() {
-        return selectorThread.selector;
     }
 
     @Override
@@ -110,8 +107,11 @@ public class AsyncServerSocketChannel1
             SocketChannel sch;
             try {
                 sch = channel.accept();
-            } catch (IOException e1) {
+            } catch (ClosedChannelException e1) {
                 asc.connEvent.postFailure(e1);
+                return;
+            } catch (IOException e2) {
+                asc.connEvent.postFailure(e2);
                 channelAccess.up();
                 return;
             }

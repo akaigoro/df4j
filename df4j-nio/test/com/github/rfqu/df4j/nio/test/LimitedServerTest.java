@@ -6,9 +6,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import com.github.rfqu.df4j.core.Port;
@@ -24,14 +26,19 @@ public abstract class LimitedServerTest {
     static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 8007);
 
     AsyncChannelFactory channelFactory;
-    
+ 
+    @Before
+    public void init() {
+        channelFactory=AsyncChannelFactory.getCurrentAsyncChannelFactory();
+    }
+
     /**
      * tests server with max 1 connection
      */
     @Test
     public void smokeTest() throws Exception {
-        Server server=new Server();
-        server.start(local9990, 1, 1);
+        Server server=new Server(local9990);
+        server.start(1, 1);
         Connection conn = newClientConnection(local9990);
         Thread.sleep(100); // wait server to accept connections
         // only maxConn0 should be opened
@@ -185,15 +192,19 @@ public abstract class LimitedServerTest {
         }
     }
 
-    class Server extends LimitedServer {        
+    class Server extends LimitedServer implements Port<AsyncSocketChannel> {        
         ArrayList<Connection> allConns=new ArrayList<Connection>();
             
-        public void start(InetSocketAddress addr, int waitCount, int maxCount) throws IOException {
-            super.start(channelFactory.newAsyncServerSocketChannel(), addr, waitCount, maxCount);
+        public Server(SocketAddress addr) throws IOException {
+            super(addr);
+        }
+
+        public void start(int waitCount, int maxCount) throws IOException {
+            super.start(this, waitCount, maxCount);
         }
 
         @Override
-        protected void accepted(AsyncSocketChannel asc) {
+        public void post(AsyncSocketChannel asc) {
             Connection conn = new Connection(asc);
             allConns.add(conn);
             conn.read();

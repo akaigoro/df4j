@@ -25,7 +25,7 @@ import com.github.rfqu.df4j.testutil.MessageSink;
  *
  */
 public class ThreadRing {
-    final static int NUM_ACTORS = 5003; // number of nodes
+    final static int NUM_ACTORS = 5;//5003; // number of nodes
     final static int TIME_TO_LIVE = 1000000; // hops
     final static PrintStream out = System.out;
     final static int times = 3;
@@ -124,7 +124,6 @@ public class ThreadRing {
             int nextVal = token.hops_remained - 1;
             if (nextVal == 0) {
                 sink.post(token);
-                System.out.println(""+id);
             } else {
                 token.hops_remained = nextVal;
                 next.post(token);
