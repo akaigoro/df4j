@@ -37,7 +37,7 @@ public abstract class Task implements Runnable {
     /**
      * activates this task by sending it to the executor
      */
-    protected final void fire() {
+    public final void fire() {
         if (executor==null) {
             run();
         } else {

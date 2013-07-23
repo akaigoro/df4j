@@ -5,6 +5,7 @@
 	<classpathentry kind="src" path="example"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/df4j-core"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.6.0_29"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/df4j-nio1/bin" sourcepath="/df4j-nio1/src"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

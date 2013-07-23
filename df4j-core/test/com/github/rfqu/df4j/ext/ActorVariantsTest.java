@@ -145,7 +145,21 @@ public class ActorVariantsTest {
      */
     @Test
     public void t04() throws InterruptedException, ExecutionException, TimeoutException {
-        testB(new Aggregator(SwingSupport.getSwingExecutor()));
+        testB(new Aggregator(new SwingExecutor()));
+    }
+
+    /** Serial Executor
+     */
+    @Test
+    public void t05() throws InterruptedException, ExecutionException, TimeoutException {
+        testB(new Aggregator(new SerialExecutor()));
+    }
+    
+    /** Secondary Executor
+     */
+    @Test
+    public void t06() throws InterruptedException, ExecutionException, TimeoutException {
+        testB(new Aggregator(new SecondaryExecutor()));
     }
 
     public static void main(String args[]) throws TimeoutException, InterruptedException, ExecutionException {

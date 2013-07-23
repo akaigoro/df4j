@@ -9,7 +9,6 @@
  */
 package com.github.rfqu.df4j.examples;
 
-import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -18,10 +17,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
-import com.github.rfqu.df4j.core.DFContext;
+import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.ext.MultiPortActor;
-import com.github.rfqu.df4j.ext.SwingSupport;
-import com.github.rfqu.df4j.ext.SwingSupport.EDTActor;
+import com.github.rfqu.df4j.ext.SwingExecutor;
 
 /**
  * Interaction between GUI and Actors.
@@ -40,9 +38,8 @@ public class Recalc extends JFrame {
     PrintingActor pa1 = new PrintingActor(res1Field);
     PrintingActor pa2 = new PrintingActor(res2Field);
 
-    public Recalc(DFContext context) {
-    	boolean ok=(context == DFContext.getCurrentContext());
-        this.setTitle("Recalculator: "+(ok?"ok":"bad"));
+    public Recalc() {
+        this.setTitle("Recalculator");
         this.setSize(360, 300);
         this.getContentPane().setLayout(null);
 
@@ -77,11 +74,6 @@ public class Recalc extends JFrame {
         NumInput input1=new NumInput();
         NumInput input2=new NumInput();
         
-        void print(String res1, String res2) {
-            pa1.post(res1);
-            pa2.post(res2);
-        }
-
         void recalc() {
             Number opnd1=input1.opnd, opnd2=input2.opnd;
             String res1=null, res2=null;
@@ -104,7 +96,8 @@ public class Recalc extends JFrame {
                 res1=Integer.toString(r1);
                 res2=Integer.toString(r2);
             }
-            print(res1, res2);            
+            pa1.post(res1);
+            pa2.post(res2);            
         }
 
         class NumInput extends PortHandler<String> implements ActionListener {
@@ -116,7 +109,7 @@ public class Recalc extends JFrame {
             }
 
             /**
-            * Processes message asynchronously using its ExecutorService.
+            * Processes message asynchronously using context Executor.
             */
             @Override
             protected void act(String str) {
@@ -146,10 +139,11 @@ public class Recalc extends JFrame {
     /**
      * Processes messages on EDT.
      */
-    class PrintingActor extends EDTActor<String> {
+    class PrintingActor extends Actor<String> {
         JTextField resField;
 
         public PrintingActor(JTextField resField) {
+            super(new SwingExecutor());
             this.resField = resField;
         }
 
@@ -160,12 +154,9 @@ public class Recalc extends JFrame {
     }
 
     public static void main(String[] args) throws Exception {
-		DFContext.setSingleThreadExecutor(); // for example
-		final DFContext currentContext = DFContext.getCurrentContext();
-		SwingSupport.setEDTDefaultContext(currentContext);
-    	EventQueue.invokeLater(new Runnable() {
+		SwingExecutor.invokeFirstTask(new Runnable() {
             public void run() {
-                new Recalc(currentContext).setVisible(true);
+                new Recalc().setVisible(true);
             }
         });
     }
