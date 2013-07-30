@@ -12,6 +12,7 @@ package com.github.rfqu.df4j.nio;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
@@ -30,7 +31,7 @@ public abstract class AsyncServerSocketChannel implements Closeable {
     protected CompletableFuture<AsyncServerSocketChannel> closeEvent =
             new CompletableFuture<AsyncServerSocketChannel>();
 
-    public abstract void bind(SocketAddress addr) throws IOException;
+    public abstract AsyncServerSocketChannel bind(SocketAddress addr) throws IOException;
 
     public ListenableFuture<AsyncServerSocketChannel> getCloseEvent() {
         return closeEvent;
@@ -40,8 +41,9 @@ public abstract class AsyncServerSocketChannel implements Closeable {
      * creates new AsyncSocketChannel, and makes it to wait for incoming client connection request.
      * 
      * @return 
+     * @throws ClosedChannelException 
      */
-    public abstract ListenableFuture<AsyncSocketChannel> accept();
+    public abstract ListenableFuture<AsyncSocketChannel> accept() throws ClosedChannelException;
 
     public abstract void close();
 

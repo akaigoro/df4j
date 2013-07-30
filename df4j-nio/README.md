@@ -96,10 +96,10 @@ SocketIORequest also implements Promise&lt;SocketIORequest&gt;, so it is possibl
      */
     class DataLoader implements Port&lt;SocketIORequest&gt; {
         AsyncSocketChannel asc;
-        SocketIORequest r=new SocketIORequest();
+        SocketIORequest r=new SocketIORequest(ByteBuffer.allocate(1024));
         byte[] data;
         int loaded=0;
-        CompletableFuture&lt;byte[]&gt; result=new CompletableFuture&lt;byte[]&gt;;
+        CompletableFuture&lt;byte[]&gt; result=new CompletableFuture&lt;byte[]&gt();;
         
         DataLoader(AsyncSocketChannel asc, int nbytes) {
             this.asc = asc;
@@ -133,7 +133,7 @@ SocketIORequest also implements Promise&lt;SocketIORequest&gt;, so it is possibl
                return;
             }
             int bytesRead=r.getResult(); // must be positive
-            r.getBuffer().get(array, loaded, bytesRead);
+            r.getBuffer().get(data, loaded, bytesRead);
             loaded+=bytesRead;
             read(); // read next portion
         }
@@ -151,7 +151,7 @@ SocketIORequest also implements Promise&lt;SocketIORequest&gt;, so it is possibl
         public void postFailure(Throwable exc){
             // react to possible I/O errors
         }
-    }
+    });
 </pre>
 
 

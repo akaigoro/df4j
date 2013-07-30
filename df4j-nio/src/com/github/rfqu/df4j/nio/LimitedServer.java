@@ -12,10 +12,12 @@ package com.github.rfqu.df4j.nio;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedChannelException;
 
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.core.Port;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 
 /**
@@ -23,40 +25,62 @@ import com.github.rfqu.df4j.ext.ImmediateExecutor;
  * 
  * @author Alexei Kaigorodov
  */
-public abstract class LimitedServer {
+public class LimitedServer {
     protected AsyncServerSocketChannel assc;
     private ASCGenerator generator = new ASCGenerator();
+    private Port<AsyncSocketChannel> sink;
 
-    public void start(AsyncServerSocketChannel assc, SocketAddress addr, int waitCount, int maxCount) throws IOException {
-		this.assc = assc;
-        assc.bind(addr);
+    public LimitedServer(AsyncServerSocketChannel assc) {
+        this.assc = assc;
+    }
+
+    public LimitedServer(SocketAddress addr) throws IOException {
+        this(AsyncChannelFactory.getCurrentAsyncChannelFactory()
+             .newAsyncServerSocketChannel().bind(addr));
+    }
+
+    public void start(Port<AsyncSocketChannel> sink, int waitCount, int maxCount) {
+        this.sink = sink;
         generator.waitCount.up(waitCount);
         generator.maxCount.up(maxCount);
     }
     
-    protected abstract void accepted(AsyncSocketChannel asc);
-
     public void close() {
         assc.close();
     }
 
+    /**
+     * 
+     * @author Alexei Kaigorodov
+     *
+     */
     private class ASCGenerator extends DataflowNode {
+        /** limitd the number of accrpt requests */
         ConnSemafor waitCount = new ConnSemafor();
+        /** limits the number of accepted connections */
         CloseSemafor maxCount = new CloseSemafor();
 
         public ASCGenerator() {
             super(new ImmediateExecutor());
         }
 
+        /** invoked when both resource constraints are met */
         @Override
         protected void act() {
-            ListenableFuture<AsyncSocketChannel> connEvent = assc.accept();
-            connEvent.addListener(waitCount);
+            try {
+                // starts another acception
+                ListenableFuture<AsyncSocketChannel> connEvent = assc.accept();
+                // when connection accepted, increase waitcount
+                connEvent.addListener(waitCount);
+            } catch (ClosedChannelException e) {
+            }
         }
 
         @Override
 		protected void handleException(Throwable exc) {
-            if (exc instanceof AsynchronousCloseException) {
+            if ( (exc instanceof AsynchronousCloseException)
+               ||(exc instanceof ClosedChannelException))
+            {
             	// channel closed, just return without new call to accept()
             	return;
             }
@@ -69,13 +93,12 @@ public abstract class LimitedServer {
             public void post(AsyncSocketChannel asc) {
                 super.up();
                 asc.getCloseEvent().addListener(maxCount);
-                accepted(asc);
+                sink.post(asc);
             }
 
             @Override
             public void postFailure(Throwable exc) {
                 super.up();
-                ASCGenerator.super.postFailure(exc);
             }
             
         }

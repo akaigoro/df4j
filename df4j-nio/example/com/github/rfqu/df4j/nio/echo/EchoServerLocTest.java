@@ -13,7 +13,8 @@ public class EchoServerLocTest {
     EchoServerTest t=new EchoServerTest();
 
     public void localTest(int maxConn, int numclients, int rounds) throws Exception  {
-        EchoServer es=new EchoServer(t.iaddr, maxConn);
+        EchoServer es = new EchoServer(t.iaddr);
+        es.start(maxConn);
         Thread.sleep(100);
         try {
             t.testThroughput(numclients, rounds);

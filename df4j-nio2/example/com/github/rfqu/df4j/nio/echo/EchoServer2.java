@@ -1,14 +1,6 @@
 package com.github.rfqu.df4j.nio.echo;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-
-public class EchoServer2 extends EchoServer {
-
-    public EchoServer2(SocketAddress addr, int maxConn) throws IOException {
-        super(addr, maxConn);
-        // TODO Auto-generated constructor stub
-    }
+public class EchoServer2 {
 
     /** Runs {@EchoServer} with nio-2.
     * 

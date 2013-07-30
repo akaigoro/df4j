@@ -51,6 +51,10 @@ public abstract class AsyncChannelFactory {
         
     };
     
+    public static void setCurrentAsyncChannelFactory(AsyncChannelFactory f) {
+        AsyncChannelFactoryKey.set(f);
+    }
+    
     public static AsyncChannelFactory getCurrentAsyncChannelFactory() {
         return AsyncChannelFactoryKey.get();
     }
