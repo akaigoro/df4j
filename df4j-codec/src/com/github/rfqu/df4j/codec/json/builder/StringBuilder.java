@@ -1,19 +1,21 @@
-package com.github.rfqu.df4j.codec.json;
+package com.github.rfqu.df4j.codec.json.builder;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
+
+import com.github.rfqu.df4j.codec.json.JsonBuilder;
 
 /** converts instructions to String
  * 
  * @author Alexei Kaigorodov
  *
  */
-public abstract class StringAssembler implements JsonAssembler {
+public abstract class StringBuilder implements JsonBuilder {
     final Appendable sink;
     ArrayDeque<String> stack=new ArrayDeque<String>(); 
     boolean commaNeeded=false;
         
-    public StringAssembler(Appendable sink) {
+    public StringBuilder(Appendable sink) {
         this.sink = sink;
     }
 

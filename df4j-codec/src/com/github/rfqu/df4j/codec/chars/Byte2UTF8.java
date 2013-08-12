@@ -9,62 +9,103 @@
  */
 package com.github.rfqu.df4j.codec.chars;
 
-import com.github.rfqu.df4j.codec.BytePort;
-import com.github.rfqu.df4j.codec.CharPort;
+import com.github.rfqu.df4j.core.DataflowNode;
+import com.github.rfqu.df4j.core.StreamPort;
+import com.github.rfqu.df4j.pipeline.CharArrayChunk;
+import com.github.rfqu.df4j.pipeline.ByteChunk;
+import com.github.rfqu.df4j.pipeline.CharChunk;
+import com.github.rfqu.df4j.pipeline.ByteIterator;
+import com.github.rfqu.df4j.pipeline.Supply;
 
-public class Byte2UTF8 implements BytePort {
-    final CharPort out;
-    int num; // of cont bytes
-    int data;
+public class Byte2UTF8 extends DataflowNode 
+	implements StreamPort<ByteChunk<?>>, Supply<CharChunk<?>>
+{
+	private Supply<ByteChunk<?>> supply;
+	private StreamInput<ByteChunk<?>> inp = new StreamInput<ByteChunk<?>>();
+	private StreamInput<CharArrayChunk> buffs = new StreamInput<CharArrayChunk>();
+	private StreamInput<StreamPort<CharChunk<?>>> demands = new StreamInput<StreamPort<CharChunk<?>>>();
 
-    public Byte2UTF8(CharPort out) {
-        if (out==null) {
-            throw new IllegalArgumentException();
-        }
-        this.out = out;
-    }
+	public Byte2UTF8(Supply<ByteChunk<?>> supply, int buffLen) {
+		if (buffLen<3) {
+			throw new IllegalArgumentException();
+		}
+		this.supply = supply;
+		for (int k = 0; k < 2; k++) {
+			CharArrayChunk t = new CharArrayChunk(buffs, buffLen);
+			buffs.post(t);
+		}
+		supply.demand(this);
+	}
 
-    BytePort leadingByteDecoder=new BytePort(){
-        /** 1 - 0
-         *  2 — 110
-         *  3 — 1110
-         */
-        public void postByte(int b) {
-            int n=zeroPos(b);
-            if (n==1) {
-                // 1 byte
-                out.postChar((char) b);
-            } else {
-                num=n-2;
-                data=b&(0xFF>>n);
-                decoder=continuationByteDecoder;
-            }
-        }
-        
-    };
-    
-    BytePort continuationByteDecoder=new BytePort(){
+	@Override
+	public void demand(StreamPort<CharChunk<?>> port) {
+		demands.post(port);
+	}
 
-        @Override
-        public void postByte(int b) {
-            data = (data<<6) | (b&0x3F);
-            if (num > 1) {
-                num--;
-            } else {
-                out.postChar((char) data);
-                decoder=leadingByteDecoder;
-            }
-        }
-    };
-    
-    BytePort decoder=leadingByteDecoder;
+	@Override
+	public void post(ByteChunk<?> chunk) {
+		inp.post(chunk);
+	}
 
-    @Override
-    public void postByte(int b) {
-        decoder.postByte(b);
-    }
-    
-    /** counted from left to right, started from 1
+	@Override
+	public void close() {
+		inp.close();
+	}
+
+	@Override
+	public boolean isClosed() {
+		return inp.isClosed();
+	}
+
+	ByteIterator it = null;
+
+	@Override
+	protected void act() {
+		ByteChunk<?> inpChunk = inp.get();
+		StreamPort<CharChunk<?>> demand = demands.get();
+		if (inpChunk == null) { // ==inp.isClosed();
+			demand.close();
+			return;
+		}
+		ByteIterator it = this.it == null ? inpChunk.byteIterator() : this.it;
+		CharArrayChunk outChunk = buffs.get();
+		outChunk.clear();
+		while (it.hasNext() && outChunk.hasSpace()) {
+			byte b0 = it.next();
+	        if (b0<128) {
+				outChunk.add((char) b0);
+	        } else {
+	        	int numBytes=zeroPos(b0)-2; // extra bytes required
+				if (!it.has(numBytes)) {
+					it.pushback(b0);
+					break;
+				}
+	        	int ch;
+				if (numBytes==1) { // 110x xxxx 10xx xxxx
+		            byte b1=it.next();
+		            ch=(b0&0x1F<<6) | (b1&0x3F);
+		        } else if (numBytes==2) { // 1110 xxxx 10xx xxxx 10xx xxxx
+		            byte b1=it.next();
+		            byte b2=it.next();
+		            ch=(b0&0x0F<<12) |(b1&0x3F<<8) | (b2&0x3F);
+		        } else {
+		        	// TODO report error
+		        }
+				outChunk.add((char) ch);
+	        }
+		}
+		if (it.hasNext()) {
+			inp.pushback();
+			this.it = it;
+		} else {
+			inpChunk.free();
+			this.it = null;
+			supply.demand(this);
+		}
+		demand.post(outChunk);
+	}
+
+	/** counted from left to right, started from 1
      * @param b
      * @return position of zero bit
      */

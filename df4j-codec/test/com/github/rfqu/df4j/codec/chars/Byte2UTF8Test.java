@@ -12,21 +12,19 @@ package com.github.rfqu.df4j.codec.chars;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.codec.CharPort;
+import com.github.rfqu.codec.CharPort;
+import com.github.rfqu.codec.chars.Byte2UTF8;
 
 public class Byte2UTF8Test {
 
     void test(String s) throws IOException {
-        ByteArrayOutputStream outs=new ByteArrayOutputStream();
-        OutputStreamWriter out=new OutputStreamWriter(outs, "UTF8");
-        out.write(s);
-        out.close();
-        byte[] bytes=outs.toByteArray();
-        CharPort chp=new CharCollector();
+        byte[] bytes = string2Bytes(s);
+        CharSink chp=new CharCollector();
         Byte2UTF8 decoder=new Byte2UTF8(chp);
         for (int k=0; k<bytes.length; k++) {
             decoder.postByte(bytes[k]);
@@ -34,23 +32,37 @@ public class Byte2UTF8Test {
         String res=chp.toString();
         Assert.assertEquals(s, res);
     }
+
+    protected byte[] string2Bytes(String s) throws UnsupportedEncodingException, IOException {
+        ByteArrayOutputStream outs=new ByteArrayOutputStream();
+        OutputStreamWriter out=new OutputStreamWriter(outs, "UTF8");
+        out.write(s);
+        out.close();
+        byte[] bytes=outs.toByteArray();
+        return bytes;
+    }
     
     @Test
-    public void testACII() throws IOException {
+    public void testACII1() throws IOException {
+        test("a");
+    }
+    
+    @Test
+    public void testACII2() throws IOException {
         test("ascii");
     }
     
     @Test
     public void testCyrillic1() throws IOException {
-        test("А");
+        test("пїЅ");
     }
     
     @Test
     public void testCyrillic() throws IOException {
-        test("Маша ела кашу");
+        test("пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ");
     }
     
-    static class CharCollector implements CharPort{
+    static class CharCollector implements CharSink{
         StringBuilder sb=new StringBuilder();
 
         @Override
@@ -61,6 +73,12 @@ public class Byte2UTF8Test {
         @Override
         public String toString() {
             return sb.toString();
+        }
+
+        @Override
+        public void postEOF() {
+            // TODO Auto-generated method stub
+            
         }
         
     }

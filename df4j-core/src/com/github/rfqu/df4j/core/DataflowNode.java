@@ -26,7 +26,7 @@ public abstract class DataflowNode extends DataflowVariable {
     }
 
     public DataflowNode() {
-        task=new ActorTask();
+        task=new ActorTask(null);
     }
 
     protected void fire() {
