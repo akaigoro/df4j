@@ -34,10 +34,14 @@ public abstract class Task implements Runnable {
         }
     }
 
+    public Task() {
+        this.executor = DFContext.getCurrentExecutor();
+    }
+
     /**
      * activates this task by sending it to the executor
      */
-    protected final void fire() {
+    public final void fire() {
         executor.execute(this);
     }
 

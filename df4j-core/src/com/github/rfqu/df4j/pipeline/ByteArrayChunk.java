@@ -1,5 +1,7 @@
 package com.github.rfqu.df4j.pipeline;
 
+import java.util.Arrays;
+
 import com.github.rfqu.df4j.core.Port;
 
 public class ByteArrayChunk extends ByteChunk<ByteArrayChunk> {
@@ -7,16 +9,19 @@ public class ByteArrayChunk extends ByteChunk<ByteArrayChunk> {
 	protected int len;
 	private int capacity;
 
+    /** creates empty chunk */
 	public ByteArrayChunk(Port<ByteArrayChunk> returnPort, int capacity) {
-		super(returnPort);
-		this.capacity=capacity;
-		array=new byte[capacity];
+        super(returnPort);
+        this.array=new byte[capacity];
+        this.capacity=array.length;
 	}
 	
-	public void setArray(byte[] array) {
-		this.array = array;
-		this.len = this.capacity=array.length;
-	}		
+	/** creates full chunk */
+	public ByteArrayChunk(Port<ByteArrayChunk> returnPort, byte[] data) {
+        super(returnPort);
+        this.array=data;
+        this.capacity=this.len=data.length;
+    }
 
 	public final void clear() {
 		len=0;
@@ -54,4 +59,8 @@ public class ByteArrayChunk extends ByteChunk<ByteArrayChunk> {
 			return array[pos++];
 		}
 	}
+
+    public byte[] getBytes() {
+        return Arrays.copyOf(array, len);
+    }
 }

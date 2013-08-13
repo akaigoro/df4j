@@ -9,22 +9,22 @@
  */
 package com.github.rfqu.df4j.codec.chars;
 
+import static com.github.rfqu.df4j.testutil.Utils.byteArraysEqual;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.github.rfqu.df4j.codec.chars.UTF82Byte;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
-import com.github.rfqu.df4j.pipeline.ByteSink;
-import com.github.rfqu.df4j.pipeline.ByteIterator;
-import com.github.rfqu.df4j.pipeline.CharSink;
-import com.github.rfqu.df4j.pipeline.CharIterator;
+import com.github.rfqu.df4j.pipeline.ByteChunkSink;
+import com.github.rfqu.df4j.pipeline.CharChunkSource;
 
 public class UTF82ByteTest {
 	@BeforeClass
@@ -44,12 +44,12 @@ public class UTF82ByteTest {
     
     @Test
     public void testCyrillic1() throws IOException {
-        test("�");
+        test("Я");
     }
     
     @Test
     public void testCyrillic() throws IOException {
-        test("���� ��� ����");
+        test("Овсянка, sir");
     }
 
     protected byte[] string2Bytes(String s) throws UnsupportedEncodingException, IOException {
@@ -62,71 +62,14 @@ public class UTF82ByteTest {
     }
 
     void test(String s) throws IOException {
-        CharEnumerator charSource=new CharEnumerator();
-        UTF82Byte decoder=new UTF82Byte(charSource);
-        ByteCollector chp=new ByteCollector(decoder);
+        CharChunkSource source = new CharChunkSource();
+        UTF82Byte decoder=new UTF82Byte(source,4);
+        ByteChunkSink sink = new ByteChunkSink(decoder);
         
-        charSource.postString(s);
-        byte[] arr=new byte[10]; 
-        chp.read(arr);
-        
-        String res=chp.toString();
-        Assert.assertEquals(s, res);
-    }
-    
-    static class CharEnumerator implements CharIterator {
-        CharSink sink;
-
-        void postString(String s) {
-            for (int k=0; k<s.length(); k++) {
-                sink.postChar(s.charAt(k));
-            }
-
-        }
-        @Override
-        public void demand(CharSink sink) {
-            this.sink=sink;
-        }
-        
-    }
-
-    static class ByteCollector implements ByteSink {
-        ByteIterator source;
-        byte[] data;
-        int pos=0;
-
-        public ByteCollector(ByteIterator source) {
-            this.source=source;
-        }
-
-        @Override
-        public boolean postByte(byte b) {
-            data[pos++]=b;
-            return pos<data.length;
-        }
-
-        @Override
-        public String toString() {
-            try {
-                return new String(data, 0, pos, "UTF8");
-            } catch (UnsupportedEncodingException e) {
-                return e.toString();
-            }
-        }
-
-        @Override
-        public void postEOF() {
-            // TODO Auto-generated method stub
-            
-        }
-        
-        //==============================
-        
-        void read(byte data[]) {
-            this.data=data;
-            pos=0;
-            source.demand(this);
-        }
-        
+        source.post(s);
+        assertFalse(sink.isClosed());
+        source.close();
+        assertTrue(sink.isClosed());
+        assertTrue(byteArraysEqual(string2Bytes(s), sink.getRes()));
     }
 }

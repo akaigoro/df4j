@@ -10,7 +10,6 @@
 package com.github.rfqu.df4j.ext;
 
 import java.awt.Color;
-import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -23,7 +22,6 @@ import javax.swing.border.LineBorder;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
-import com.github.rfqu.df4j.ext.SwingSupport.EDTActor;
 import com.github.rfqu.df4j.testutil.StringMessage;
 
 /**
@@ -106,7 +104,11 @@ public class SwingActorTest extends JFrame {
     /**
      * Processes messages on EDT.
      */
-    class PrintingActor extends EDTActor<StringMessage> {
+    class PrintingActor extends Actor<StringMessage> {
+        public PrintingActor() {
+            super(new SwingExecutor());
+        }
+
         @Override
         protected void act(StringMessage m) throws Exception {
             jlist.append(m.getStr());
@@ -120,8 +122,7 @@ public class SwingActorTest extends JFrame {
     public static void main(String[] args) throws Exception {
 		DFContext.setSingleThreadExecutor(); // for example
 		final DFContext currentContext = DFContext.getCurrentContext();
-		SwingSupport.setEDTDefaultContext(currentContext);
-    	EventQueue.invokeLater(new Runnable() {
+		SwingExecutor.invokeFirstTask(new Runnable() {
             public void run() {
                 new SwingActorTest(currentContext).setVisible(true);
             }

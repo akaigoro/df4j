@@ -3,7 +3,7 @@ package com.github.rfqu.df4j.pipeline;
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.StreamPort;
 
-class CharChunkSource extends DataflowNode
+public class CharChunkSource extends DataflowNode
     implements StreamPort<String>, Supply<CharChunk<?>>
 {
 	private StreamInput<CharChunk<?>> inp=new StreamInput<CharChunk<?>>();

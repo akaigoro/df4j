@@ -7,7 +7,7 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 
-public class ChunkTest {
+public class CharChunkTest {
 	final static String string1 = "1st str";
 	final static String string2 = "2nd str";
 	final static String string3 = string1+string2;
@@ -29,12 +29,19 @@ public class ChunkTest {
 		assertEquals(string3, sink.getRes());
 	}
 	
-	@Test
-	public void tSource2Sink() {
-		source=new CharChunkSource();
-		sink=new CharChunkSink(source);
-		check();
-	}
+    @Test
+    public void tByte2Byte() {
+        source=new CharChunkSource();
+        sink=new CharChunkSink(source);
+        check();
+    }
+
+    @Test
+    public void tChar2Char() {
+        source=new CharChunkSource();
+        sink=new CharChunkSink(source);
+        check();
+    }
 
 	@Test
 	public void tNullTransform1() {

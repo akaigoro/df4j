@@ -11,29 +11,37 @@ package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
 
-import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.Port;
 
 /**
  * An Actor with several input Ports, subclassed from MultiPortActor.PortHandler.
  * Each port has specific message handler PortHandler.act(M m).
- * Handlers are determined by the exact type of Message, subclassed from MultiPortActor.Message.
- * The message type M need not to extend Link.
  * Messages for all ports are stored in the single message queue.
  */
 public class MultiPortActor {
-    protected final Actor<Message<?>> execActor;
+    protected final SecondaryExecutor execActor;
 
     public MultiPortActor() {
-        execActor=new ExecActor();
+        execActor=new SecondaryExecutor();
     }
 
     public MultiPortActor(Executor executor) {
-        execActor=new ExecActor(executor);
+        execActor=new SecondaryExecutor(executor);
     }
 
 	public void close() {
-		execActor.close();
+        execActor.execute(new Runnable(){
+            @Override
+            public void run() {
+                try {
+                    MultiPortActor.this.complete();
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        
+        });
 	}
 
 	//======= backend
@@ -41,44 +49,17 @@ public class MultiPortActor {
     protected void complete() throws Exception {
     }
 
-    private static final class Message<M> {
-        private PortHandler<M> handler;
-        private M m;
-        
-        Message(PortHandler<M> handler, M m) {
-            this.handler=handler;
-            this.m=m;
-        }
-
-        void act() {
-            handler.act(m);            
-        }
-    }
-    
-    private final class ExecActor extends Actor<Message<?>> {
-        public ExecActor() {
-        }
-
-        public ExecActor(Executor executor) {
-            super(executor);
-        }
-
-        @Override
-        protected final void act(Message<?> message) throws Exception {
-            message.act();
-        }
-        
-        @Override
-        protected void complete() throws Exception {
-        	MultiPortActor.this.complete();
-        }
-    }
-    
     public abstract class PortHandler<M> implements Port<M> {
 
         @Override
-        public final void post(M m) {
-            execActor.post(new Message<M>(this, m));
+        public final void post(final M m) {
+            execActor.execute(new Runnable(){
+                @Override
+                public void run() {
+                    PortHandler.this.act(m);            
+                }
+            
+            });
         }
         
         protected abstract void act(M m);

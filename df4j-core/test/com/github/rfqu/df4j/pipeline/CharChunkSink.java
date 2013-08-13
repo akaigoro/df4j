@@ -2,7 +2,7 @@ package com.github.rfqu.df4j.pipeline;
 
 import com.github.rfqu.df4j.core.StreamPort;
 
-class CharChunkSink implements StreamPort<CharChunk<?>> {
+public class CharChunkSink implements StreamPort<CharChunk<?>> {
 	Supply<CharChunk<?>> supply;
 	StringBuilder sb=new StringBuilder();
 	private String res;
