@@ -277,17 +277,7 @@ Background Executor
 -------------------
 Executors used in df4j need to implement simple java.util.concurrent.Executor interface. 
 When a Task (including DataflowNode or Actor) is created, it should be assigned an Executor to run on.
-This library allows two ways of assigning Executor to a DataflowNode: explicitly by a constructor
-or implicitly by a ThreadLocal variable.
-
-Via constructor, Executor may be null. In this case,
-the node will be executed on the caller's thread (which invokes the post method).
-This is fast, but implies no parallelism, and may cause stack overflow if dataflow graph contains a loop.
-It is recommended for nodes which simply redirect incoming messages, like Dispatcher or WorkerActor in the
-examples above: add them a constructor with super(null). Equivalently, extend them from 
-DataflowVariable or ActorVariable, respectively.
-
-When a no-arg constructor is used, this makes DataflowNode to take Executor from thread context.
+If Executor argument is, Executor is taken from thread context.
 If no executor in the thread context found, new default Executor is created (with fixed number of threads
 equal to the number of available processors). If another kind of context executor wanted, create it before
 instantiating any DataflowNode and set in context by DFContex.setCurrentExecutor().

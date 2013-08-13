@@ -10,7 +10,7 @@ import java.io.IOException;
  * @author Alexei Kaigorodov
  *
  */
-public interface JsonAssembler {
+public interface JsonBuilder {
     public void startList() throws IOException;
     public void startSet() throws IOException;
     public void addInt(int value) throws IOException;

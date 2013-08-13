@@ -12,12 +12,24 @@ package com.github.rfqu.df4j.core;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.github.rfqu.df4j.ext.ImmediateExecutor;
 
 public class TaskTest {
 
+	@BeforeClass
+	public static void init() {
+		DFContext.setCurrentExecutor(new ImmediateExecutor());
+	}
+	
     static class MyTask extends Task {
-        CompletableFuture<Integer> res=new CompletableFuture<Integer>();
+        public MyTask() {
+			super(null);
+		}
+
+		CompletableFuture<Integer> res=new CompletableFuture<Integer>();
 
         @Override
         public void run() {

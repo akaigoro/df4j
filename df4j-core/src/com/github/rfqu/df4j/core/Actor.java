@@ -24,7 +24,7 @@ public abstract class Actor<M> extends ActorVariable<M> {
     }
 
     public Actor() {
-        task=new ActorTask();
+        task=new ActorTask(null);
     }
 
     protected void fire() {

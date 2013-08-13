@@ -8,13 +8,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.github.rfqu.df4j.codec;
+package com.github.rfqu.df4j.pipeline;
 
 /**
- * output port for bytes
+ * output port for characters
  */
-public interface BytePort {
-
-	public void postByte(int b);
-	
+public interface CharIterator  {
+	boolean hasNext();
+	char next();
 }

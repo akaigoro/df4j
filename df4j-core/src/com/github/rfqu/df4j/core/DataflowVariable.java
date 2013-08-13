@@ -142,9 +142,6 @@ public abstract class DataflowVariable {
     //====================== inner classes
     protected class ActorTask extends Task {
         
-        public ActorTask() {
-        }
-
         public ActorTask(Executor executor) {
             super(executor);
         }

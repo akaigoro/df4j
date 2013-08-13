@@ -30,6 +30,7 @@ public abstract class Function<R> extends DataflowNode {
     }
 
     public Function() {
+        super(null);
     }
 
     /**

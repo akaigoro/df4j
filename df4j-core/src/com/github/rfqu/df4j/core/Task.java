@@ -27,22 +27,22 @@ public abstract class Task implements Runnable {
     protected final Executor executor;
 
     public Task(Executor executor) {
-        this.executor = executor;
+        if (executor==null) {
+            this.executor = DFContext.getCurrentExecutor();
+        } else {
+            this.executor = executor;
+        }
     }
 
     public Task() {
-        this(DFContext.getCurrentExecutor());
+        this.executor = DFContext.getCurrentExecutor();
     }
 
     /**
      * activates this task by sending it to the executor
      */
     public final void fire() {
-        if (executor==null) {
-            run();
-        } else {
-            executor.execute(this);
-        }
+        executor.execute(this);
     }
 
 }

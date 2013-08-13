@@ -7,25 +7,26 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.rfqu.df4j.codec.json;
+package com.github.rfqu.df4j.codec.json.parser;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
 
-import com.github.rfqu.df4j.codec.CharPort;
+import com.github.rfqu.df4j.codec.json.*;
+import com.github.rfqu.df4j.pipeline.CharSink;
 
-public class JsonParser implements CharPort {
+public class JsonParser implements CharSink {
     static final char LBRACE='{', RBRACE='}', LSQUARE='[', RSQUARE=']'
             , COMMA=',', COLON=':'
             , SPACE=' ', TAB='\t', NEWL='\n', QUOTE='"'
             , EOF=Character.MAX_VALUE;
     static final int stringTag=1, numTag=2, valueTag=3;
     
-    final JsonAssembler out;
+    final JsonBuilder out;
     ArrayDeque<Decoder> parserStack=new ArrayDeque<Decoder>();
     Scanner currentScanner;
 
-    public JsonParser(JsonAssembler out) {
+    public JsonParser(JsonBuilder out) {
         if (out==null) {
             throw new IllegalArgumentException();
         }
