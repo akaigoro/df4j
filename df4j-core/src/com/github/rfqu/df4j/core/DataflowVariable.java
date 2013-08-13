@@ -102,7 +102,9 @@ public abstract class DataflowVariable {
                 try {
                     // consume tokens
                     for (Pin pin=head; pin!=null; pin=pin.next) {
-                        pin.consume();
+                        if (pin.consume()==0) {
+                        	pin.turnOff();
+                        }
                     }
                     if (!allInputsReady()) {
                         fireUnlock(); // allow firing
@@ -168,7 +170,7 @@ public abstract class DataflowVariable {
         private final Pin next; // link to list
         private final int pinBit; // distinct for all other pins of the node 
 
-        protected Pin(){
+        protected Pin() {
             lock.lock();
             try {
                 if (pinCount==32) {
@@ -207,15 +209,17 @@ public abstract class DataflowVariable {
             //System.out.println("turnOff");
             pinOff(pinBit);
         }
-        
+
         /** Executed after token processing (method act).
          * Cleans reference to value, if any.
-         * Sets state to off if no more tokens are in the place.
+         * Signals to set state to off if no more tokens are in the place.
          * Should return quickly, as is called from the actor's synchronized block.
          * Default implementation does nothing.
+         * @return -1 when end of stream reached
+         *          0 if no data available
+         *          1 if next token provided 
          */
-        protected void consume() {
-        }
+        protected abstract int consume();
     }
 
 
@@ -272,6 +276,11 @@ public abstract class DataflowVariable {
               lock.unlock();
             }
         }
+
+		@Override
+		protected int consume() {
+			return 1;// do not turn off
+		}
     }
 
     /**
@@ -338,7 +347,9 @@ public abstract class DataflowVariable {
         public void down() {
             lock.lock();
             try {
-                consume();
+                if (consume()==0) {
+                    turnOff();
+                }
             }
             finally {
               lock.unlock();
@@ -346,9 +357,11 @@ public abstract class DataflowVariable {
         }
 
         @Override
-        protected void consume() {
+        protected int consume() {
             if (--count==0) {
-                turnOff();
+                return 0;
+            } else {
+            	return 1;
             }
         }
     }
@@ -409,38 +422,29 @@ public abstract class DataflowVariable {
         }
 
         @Override
-        protected void consume() {
+        protected int consume() {
             if (pushback) {
                 pushback=false;
                 // value remains the same, the pin remains turned on
-                return; 
+                return 1; 
             }
             boolean wasNull=(value==null);
             value = poll();
             if (value!=null) {
-                return; // continue processing
+                return 1; // continue processing
             }
             // no more tokens; check closing
             if (wasNull) {
-                turnOff(); // closing processed already
+            	return 0; // closing processed already
             }
-            // else make one more round with message==null
+            return -1; // else make one more round with message==null
         }
     }
 
-    /** Scalar Input which also redirects failures 
-     */
-    public class CallbackInput<T> extends Input<T> implements Callback<T> {
-        @Override
-        public void postFailure(Throwable exc) {
-            DataflowVariable.this.postFailure(exc);
-        }
-    }
-        
     /** A Queue of tokens of type <T>
      * @param <T> 
      */
-    public class StreamInput<T> extends Input<T> implements StreamPort<T>, Iterable<T>{
+    public class StreamInput<T> extends Input<T> implements StreamPort<T> {
         private Queue<T> queue;
         private boolean closeRequested=false;
 
@@ -454,11 +458,6 @@ public abstract class DataflowVariable {
         
         public T get() {
             return value;
-        }
-
-        /** look ahead */
-        public T getNext() {
-            return value=poll();
         }
 
         @Override
@@ -519,28 +518,60 @@ public abstract class DataflowVariable {
             }
         }
 
+
+        /** dryRun consume()
+         * 
+         * @return
+         */
+        public int hasNext() {
+            lock.lock();
+            try {
+                if (pushback || !queue.isEmpty()) {
+                    return 1; // continue processing
+                }
+                // no more tokens; check closing
+                if ((value!=null) && closeRequested) {
+                    return -1; // EOF, process end of stream with message==null
+                } else {
+                	return 0;
+                }
+            } finally {
+              lock.unlock();
+            }
+        }
+
         @Override
-        protected void consume() {
+        protected int  consume() {
             if (pushback) {
                 pushback=false;
                 // value remains the same, the pin remains turned on
-                return; 
+                return 1; 
             }
             boolean wasNull=(value==null);
             value = poll();
             if (value!=null) {
-                return; // continue processing
+                return 1; // continue processing
             }
             // no more tokens; check closing
-            if (wasNull) {
-                turnOff(); // closing processed already
+            if (!wasNull && closeRequested) {
+                return -1; // EOF, process end of stream with message==null
+            } else {
+            	return 0;
             }
-            if (!closeRequested) {
-                turnOff(); // closing not requested
-            }
-            // else make one more round with message==null
         }
 
+        /**
+         */
+        public T moveNext() {
+            lock.lock();
+            try {
+                consume();
+                return value;
+            } finally {
+              lock.unlock();
+            }
+        }
+        
         public boolean isClosed() {
             lock.lock();
             try {
@@ -548,31 +579,6 @@ public abstract class DataflowVariable {
             } finally {
               lock.unlock();
             }
-        }
-
-
-        /**
-         * iterates over and removes all input tokens.   
-         */
-        @Override
-        public Iterator<T> iterator() {
-            return new Iterator<T>(){
-                @Override
-                public boolean hasNext() {
-                    return value!=null;
-                }
-
-                @Override
-                public T next() {
-                    T res=value;
-                    value=poll();
-                    return res;
-                }
-
-                @Override
-                public void remove() {
-                }
-            };
         }
     }
 }

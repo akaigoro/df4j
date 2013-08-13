@@ -21,8 +21,12 @@ class CharChunkNullTransform extends DataflowNode
 	}
 
 	@Override
-	public void demand(StreamPort<CharChunk<?>> port) {
-		demands.post(port);
+	public void demand(StreamPort<CharChunk<?>> consumer) {
+		if (closed) {
+			consumer.close();
+		} else {
+			demands.post(consumer);
+		}
 	}
 
 	@Override
@@ -41,9 +45,67 @@ class CharChunkNullTransform extends DataflowNode
 	}
 	
 	CharIterator it=null;
+	private volatile boolean closed;
 
+	@SuppressWarnings("resource")
 	@Override
 	protected void act() {
+		CharChunk<?> inpChunk=inp.get();
+		StreamPort<CharChunk<?>> demand=demands.get();
+		if (inpChunk==null) { // ==inp.isClosed();
+			closed=true;
+			demand.close();
+			return;
+		}
+		if (it==null) {
+			it=inpChunk.charIterator();
+		}
+		CharArrayChunk outChunk=buffs.get();
+		outChunk.clear();
+		for (;;) {
+			while (it.hasNext() && outChunk.hasSpace()) {
+				char ch=it.next();
+				outChunk.add(ch);
+			}
+			if (!it.hasNext()) {
+				inpChunk.free();
+				it=null;
+				inpChunk=null;
+				switch (inp.hasNext()) {
+				case -1: // EOF
+					closed=true;
+					inp.moveNext();
+					demand.post(outChunk);
+					demand.close();
+					// TODO free buffers
+					return;
+				case 0: 
+					demand.post(outChunk);
+					return;
+				}
+				inpChunk=inp.moveNext();
+				supply.demand(this);
+				it=inpChunk.charIterator();
+			}
+			if (!outChunk.hasSpace()) {
+				demand.post(outChunk);
+				if ((buffs.hasNext()==0) || (demands.hasNext()==0)) {
+					if (it.hasNext()) {
+						inp.pushback();
+					} else {
+						it=null;
+						inpChunk.free();
+					}
+					return;
+				}
+				demand=demands.moveNext();
+				outChunk=buffs.moveNext();
+				outChunk.clear();
+			}
+		}
+	}
+	
+	protected void act1() {
 		CharChunk<?> inpChunk=inp.get();
 		StreamPort<CharChunk<?>> demand=demands.get();
 		if (inpChunk==null) { // ==inp.isClosed();
