@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.ListenableFuture;
+import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
@@ -110,7 +111,7 @@ public class AsyncSocketChannel2 extends AsyncSocketChannel {
     {
         
         public RequestQueue2(boolean isReader) {
-            super(isReader);
+            super(new ImmediateExecutor(), isReader);
         }
 
         //-------------------- Actor's backend

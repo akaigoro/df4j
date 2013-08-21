@@ -11,15 +11,14 @@ package com.github.rfqu.df4j.nio;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.nio.SelectorThread.SelectorListener;
 
 /**
  * Wrapper over {@link java.nio.channels.ServerSocketChannel} in non-blocking mode.
@@ -27,7 +26,6 @@ import com.github.rfqu.df4j.nio.SelectorThread.SelectorListener;
  */
 public class AsyncServerSocketChannel1
     extends AsyncServerSocketChannel
-    implements SelectorListenerUser
 {
     private ServerSocketChannel channel;
     private SelectorThread selectorThread;
@@ -38,7 +36,7 @@ public class AsyncServerSocketChannel1
         channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
         selectorThread = SelectorThread.getCurrentSelectorThread();
-        selectorListener=selectorThread.new SelectorListener(this);
+        selectorListener=new SelectorListener(selectorThread);
         acceptor1=new Acceptor(selectorThread);
     }
 
@@ -62,7 +60,7 @@ public class AsyncServerSocketChannel1
     @Override
     public ListenableFuture<AsyncSocketChannel> accept() throws ClosedChannelException {
         if (isClosed()) {
-            throw new IllegalStateException();
+            throw new IllegalStateException(); // TODO ivestigate why it happens; make test fail
         }
         AsyncSocketChannel1 asc = new AsyncSocketChannel1(selectorThread);
         acceptor1.post(asc);
@@ -82,11 +80,6 @@ public class AsyncServerSocketChannel1
 
     public boolean isClosed() {
         return channel == null;
-    }
-
-    @Override
-    public SelectableChannel getChannel() {
-        return channel;
     }
 
     //===================== inner classes
@@ -121,8 +114,38 @@ public class AsyncServerSocketChannel1
                 channelAccess.up();
             } else {
                 input.pushback();
-                selectorListener.interestOn(SelectionKey.OP_ACCEPT, acceptor1.channelAccess);
+                selectorListener.interestOn(SelectionKey.OP_ACCEPT);
             }
         }
     }
-}
+
+    class SelectorListener  extends AbstractSelectorListener{
+        SelectorListener(SelectorThread selectorThread) throws ClosedChannelException {
+            super(selectorThread);
+        }
+
+        // react to key events
+        synchronized void run(SelectionKey key) {
+            int readyOps=key.readyOps();
+            //            System.err.println("listener started: "+asyncChannel+"; bits="+);
+            try {
+                if ((readyOps&SelectionKey.OP_ACCEPT)!=0) {
+                    acceptor1.channelAccess.up();
+                }
+            } catch (CancelledKeyException e) {
+                AsyncServerSocketChannel1.this.close();
+            }
+        }
+
+
+        @Override
+        public void run() {
+            try {
+                super.run(channel);
+            } catch (ClosedChannelException e) {
+                AsyncServerSocketChannel1.this.close();// let listeners retry and receive the exception
+            }
+        }
+
+    }
+ }

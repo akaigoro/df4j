@@ -24,7 +24,7 @@ package com.github.rfqu.df4j.core;
  */
 public class CompletableFuture<T>
     extends CompletableFutureBase<T, Callback<T>>
-    implements Callback<T>, ListenableFuture<T>
+    implements ListenableFuture<T>
 {
 
     @Override

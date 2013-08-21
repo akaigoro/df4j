@@ -36,7 +36,6 @@ public abstract class DemandDrivenActor<T> extends Actor<T> {
      */
     public class Demand<R> extends PinBase<Callback<R>> implements Promise<R>, Callback<R> {
         private CompletableFuture<R> listeners=new CompletableFuture<R>();
-        private int state=1;
 
         /** indicates a demand
          * @param sink Port to send the result
@@ -58,20 +57,13 @@ public abstract class DemandDrivenActor<T> extends Actor<T> {
          */
         @Override
         public void post(R m) {
-        	state=0;
             listeners.post(m);
         }
 
         @Override
         public void postFailure(Throwable exc) {
-        	state=0;
             listeners.postFailure(exc);
         }
-
-		@Override
-		protected int consume() {
-			return state;
-		}
     }
 
 }

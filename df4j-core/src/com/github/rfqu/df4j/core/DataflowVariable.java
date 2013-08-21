@@ -1,8 +1,7 @@
 package com.github.rfqu.df4j.core;
 
-import java.util.Iterator;
+import java.util.Deque;
 import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -15,12 +14,25 @@ import java.util.concurrent.locks.ReentrantLock;
  *  - redefine abstract method act()
  */
 public abstract class DataflowVariable {
-    private Lock lock = new ReentrantLock();
+    private final Lock lock = new ReentrantLock();
     private Throwable exc=null;
     private Pin head; // the head of the list of Pins
     private int pinCount=1; // fire bit allocated
     private int readyPins=0;  // mask with 0 for ready pins, 1 for blocked
+    private final Task task; 
     
+    public DataflowVariable(RunnableTask task) {
+        this.task=task;
+        if (task instanceof NodeTask) {
+            ((NodeTask)task).outer=this;
+        }
+    }
+
+    public DataflowVariable() {
+        task=new SyncTask();
+    }
+
+
     /** lock pin */
     protected final void pinOff(int pinBit) {
         readyPins |= pinBit;
@@ -69,20 +81,10 @@ public abstract class DataflowVariable {
           lock.unlock();
         }
         if (doFire) {
-            fire();
+            task.fire();
         }
     }
 
-    /**
-     * Processes combined input event synchronously.  
-     * Override this method for asynchronous event processing,
-     * using ActorTask.
-     * 
-     */
-    protected void fire() {
-        loopAct();
-    }
-    
     private final void loopAct() {
         execLoop:
         try {
@@ -96,15 +98,13 @@ public abstract class DataflowVariable {
             } finally {
                 lock.unlock();
             }
-            act();
             for (;;) {
+                act();
                 lock.lock();
                 try {
                     // consume tokens
                     for (Pin pin=head; pin!=null; pin=pin.next) {
-                        if (pin.consume()==0) {
-                        	pin.turnOff();
-                        }
+                        pin.consume();
                     }
                     if (!allInputsReady()) {
                         fireUnlock(); // allow firing
@@ -117,7 +117,42 @@ public abstract class DataflowVariable {
                 finally {
                   lock.unlock();
                 }
-                act();
+            }
+        } catch (Throwable e) {
+            exc=e;
+        }
+        try {
+            handleException(exc);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    private final void loopActNoConsume() {
+        execLoop:
+        try {
+            // the loop slightly unrolled to have only one
+            // synchronized statement in the loop
+            lock.lock();
+            try {
+                if (exc!=null) {
+                    break execLoop; // fired remains true, preventing subsequent execution
+                }
+            } finally {
+                lock.unlock();
+            }
+            act();
+            lock.lock();
+            try {
+                if (allInputsReady()) {
+                    exc=new RuntimeException(this.getClass().getName()+"#act returned in ready state");
+                } else {
+                    fireUnlock(); // allow firing
+                    return;
+                }
+            }
+            finally {
+              lock.unlock();
             }
         } catch (Throwable e) {
             exc=e;
@@ -142,7 +177,24 @@ public abstract class DataflowVariable {
     }
 
     //====================== inner classes
-    protected class ActorTask extends Task {
+    protected class SyncTask implements Task {
+        
+        @Override
+        public void fire() {
+            loopAct();
+        }
+    }
+    
+    private static abstract class NodeTask extends RunnableTask {
+        DataflowVariable outer;
+        
+        protected NodeTask(Executor executor) {
+            super(executor);
+        }
+
+    }
+
+    protected static class ActorTask extends NodeTask {
         
         public ActorTask(Executor executor) {
             super(executor);
@@ -153,12 +205,22 @@ public abstract class DataflowVariable {
         @Override
         public void run() {
             //System.out.println("ActorTask run");
-            loopAct();
+            outer.loopAct();
+        }
+    }
+
+    protected static class VertexTask extends NodeTask {
+        
+        public VertexTask(Executor executor) {
+            super(executor);
         }
 
+        /** loops while all pins are ready
+         */
         @Override
-        public String toString() {
-            return DataflowVariable.this.toString();
+        public void run() {
+            //System.out.println("ActorTask run");
+            outer.loopActNoConsume();
         }
     }
 
@@ -219,7 +281,7 @@ public abstract class DataflowVariable {
          *          0 if no data available
          *          1 if next token provided 
          */
-        protected abstract int consume();
+        protected void consume(){}
     }
 
 
@@ -244,7 +306,7 @@ public abstract class DataflowVariable {
                 lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
     }
@@ -263,7 +325,7 @@ public abstract class DataflowVariable {
                 lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
 
@@ -278,8 +340,8 @@ public abstract class DataflowVariable {
         }
 
 		@Override
-		protected int consume() {
-			return 1;// do not turn off
+		protected void consume() {
+			return;// do not turn off
 		}
     }
 
@@ -315,7 +377,7 @@ public abstract class DataflowVariable {
               lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
 
@@ -339,7 +401,7 @@ public abstract class DataflowVariable {
               lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
 
@@ -347,9 +409,7 @@ public abstract class DataflowVariable {
         public void down() {
             lock.lock();
             try {
-                if (consume()==0) {
-                    turnOff();
-                }
+                consume();
             }
             finally {
               lock.unlock();
@@ -357,24 +417,21 @@ public abstract class DataflowVariable {
         }
 
         @Override
-        protected int consume() {
+        protected void consume() {
             if (--count==0) {
-                return 0;
-            } else {
-            	return 1;
+                turnOff();
             }
         }
     }
 
     /**
      * Token storage with standard Port<T> interface.
-     * By default, it has place for only one token.
+     * It has place for only one token, which is not consumed.
      * @param <T> type of accepted tokens.
      */
-    public class Input<T> extends Pin implements Port<T> {
+    public class ConstInput<T> extends Pin implements Port<T> {
         /** extracted token */
         T value=null;
-        boolean pushback=false; // if true, do not consume
 
         @Override
         public void post(T token) {
@@ -384,23 +441,22 @@ public abstract class DataflowVariable {
             boolean doFire;
             lock.lock();
             try {
-                if (value==null) {
-                    value=token;
-                    doFire=turnOn();
-                } else {
-                    throw new IllegalStateException();
+                if (value!=null) {
+                    throw new IllegalStateException("token set already");
                 }
+                value=token;
+                doFire=turnOn();
             } finally {
               lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
 
-		public T get() {
-			return value;
-		}
+        public T get() {
+            return value;
+        }
 
         //===================== backend
         
@@ -411,33 +467,51 @@ public abstract class DataflowVariable {
         protected T poll() {
             return null;
         }
+    }
+
+
+    /**
+     * Token storage with standard Port<T> interface.
+     * By default, it has place for only one token.
+     * @param <T> type of accepted tokens.
+     */
+    public class Input<T> extends ConstInput<T> implements Port<T> {
+        boolean pushback=false; // if true, do not consume
+
+        public T get() {
+            return value;
+        }
+
+        //===================== backend
 
         public void pushback() {
+            if (pushback) {
+                throw new IllegalStateException();
+            }
             pushback=true;
         }
 
         protected void pushback(T value) {
+            if (pushback) {
+                throw new IllegalStateException();
+            }
             pushback=true;
             this.value=value;
         }
 
         @Override
-        protected int consume() {
+        protected void consume() {
             if (pushback) {
                 pushback=false;
                 // value remains the same, the pin remains turned on
-                return 1; 
+                return; 
             }
-            boolean wasNull=(value==null);
-            value = poll();
-            if (value!=null) {
-                return 1; // continue processing
+            // check closing
+            if ((value==null)) {
+                turnOff(); // closing processed already
             }
-            // no more tokens; check closing
-            if (wasNull) {
-            	return 0; // closing processed already
-            }
-            return -1; // else make one more round with message==null
+            // else make one more round with value==null
+            value = null;
         }
     }
 
@@ -445,14 +519,14 @@ public abstract class DataflowVariable {
      * @param <T> 
      */
     public class StreamInput<T> extends Input<T> implements StreamPort<T> {
-        private Queue<T> queue;
+        private Deque<T> queue;
         private boolean closeRequested=false;
 
         public StreamInput() {
             this.queue = new LinkedList<T>();
         }
 
-        public StreamInput(Queue<T> queue) {
+        public StreamInput(Deque<T> queue) {
             this.queue = queue;
         }
         
@@ -482,7 +556,7 @@ public abstract class DataflowVariable {
               lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
 
@@ -514,68 +588,82 @@ public abstract class DataflowVariable {
               lock.unlock();
             }
             if (doFire) {
-                fire();
+                task.fire();
             }
         }
 
 
-        /** dryRun consume()
-         * 
-         * @return
-         */
-        public int hasNext() {
-            lock.lock();
-            try {
-                if (pushback || !queue.isEmpty()) {
-                    return 1; // continue processing
-                }
-                // no more tokens; check closing
-                if ((value!=null) && closeRequested) {
-                    return -1; // EOF, process end of stream with message==null
-                } else {
-                	return 0;
-                }
-            } finally {
-              lock.unlock();
+        @Override
+        public void pushback() {
+            if (pushback) {
+                throw new IllegalStateException();
             }
+            pushback=true;
         }
 
         @Override
-        protected int  consume() {
+        protected void pushback(T value) {
+            if (!pushback) {
+                pushback=true;
+            } else {
+                queue.addFirst(this.value);
+                this.value=value;
+            }
+        }
+
+        /** 
+         * attempt to take next token from the input queue
+         * @return true if next token is available, or if stream is closed
+         *   false if input queue is empty
+         */
+        public boolean moveNext() {
+            lock.lock();
+            try {
+                if (pushback) {
+                    pushback=false;
+                    return true;
+                }
+                T newValue=queue.poll();
+				if (newValue!=null) {
+					value=newValue;
+                    return true;
+				} else if (closeRequested) {
+					value=null;
+	                return true;
+				} else {
+					return false;
+				}
+            } finally {
+                lock.unlock();
+            }
+        }
+        
+        @Override
+        protected void  consume() {
             if (pushback) {
                 pushback=false;
                 // value remains the same, the pin remains turned on
-                return 1; 
+                return; 
             }
             boolean wasNull=(value==null);
             value = poll();
             if (value!=null) {
-                return 1; // continue processing
+                return; // continue processing
             }
             // no more tokens; check closing
-            if (!wasNull && closeRequested) {
-                return -1; // EOF, process end of stream with message==null
-            } else {
-            	return 0;
+            if (wasNull) {
+                turnOff(); // closing processed already
             }
+            if (!closeRequested) {
+                turnOff(); // closing not requested
+            }
+            // else make one more round with message==null
         }
 
-        /**
-         */
-        public T moveNext() {
-            lock.lock();
-            try {
-                consume();
-                return value;
-            } finally {
-              lock.unlock();
-            }
-        }
-        
         public boolean isClosed() {
             lock.lock();
             try {
-                return closeRequested;
+                return closeRequested && (value==null);
             } finally {
               lock.unlock();
             }

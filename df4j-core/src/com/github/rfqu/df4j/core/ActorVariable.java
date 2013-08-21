@@ -17,11 +17,18 @@ import java.util.ArrayDeque;
  * @param <M> the type of accepted messages.
  */
 public abstract class ActorVariable<M> extends DataflowVariable
-    implements StreamPort<M>, Callback<M>
+    implements ActorPort<M>
 {
     /** place for input token(s) */
     protected final StreamInput<M> input=createInput();
     
+    public ActorVariable() {
+    }
+
+    public ActorVariable(RunnableTask task) {
+        super(task);
+    }
+
     /** Override this method if another type of input queue is desired. 
      * @return storage for input tokens
      */

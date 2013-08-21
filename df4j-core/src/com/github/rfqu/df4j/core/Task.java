@@ -9,40 +9,10 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.concurrent.Executor;
-
-/**
- * Base class for dataflow nodes (including Actors).
- * Features:
- *  - Task is Runnable - can be submitted to an Executor
- *  - Task holds default executor, which was set at the moment of creation:
- *  either explicitly, or implicitly via thread-local current executor.
- *  If executor is null, firing executes immediately on the thread which fires the task.
- *  - Task is Link, and can be enqueued in the standard {link:DoublyLinkedQueue},
- *   e.g can be sent to ActorLQ.
- *   
- * @author kaigorodov
- */
-public abstract class Task implements Runnable {
-    protected final Executor executor;
-
-    public Task(Executor executor) {
-        if (executor==null) {
-            this.executor = DFContext.getCurrentExecutor();
-        } else {
-            this.executor = executor;
-        }
-    }
-
-    public Task() {
-        this.executor = DFContext.getCurrentExecutor();
-    }
+public interface Task {
 
     /**
      * activates this task by sending it to the executor
      */
-    public final void fire() {
-        executor.execute(this);
-    }
-
+    public void fire();
 }
