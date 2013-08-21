@@ -13,7 +13,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 
-import com.github.rfqu.df4j.core.Task;
+import com.github.rfqu.df4j.core.RunnableTask;
 
 /** 
  * Independent implementation of a Serial Executor.
@@ -50,11 +50,12 @@ public class SecondaryExecutor implements Executor {
         myTask.fire();
     }
 
-    private final class MyTask extends Task {
+    private final class MyTask extends RunnableTask {
         /** current token */
         private Runnable message=null;
 
         public MyTask() {
+            super(null);
         }
 
         public MyTask(Executor executor) {

@@ -39,13 +39,6 @@ public abstract class CompletableFutureBase<R, L>
     /**
      * @return null if was interrupted
      */
-    public synchronized R getResult() {
-        return value;
-    }
-
-    /**
-     * @return null if was interrupted
-     */
     public synchronized Throwable getException() {
         return exc;
     }
@@ -73,6 +66,7 @@ public abstract class CompletableFutureBase<R, L>
         while (!_hasValue) {
             wait();
         }
+        // contract: value and exc cannot both be null
         if (value != null) {
             return value;
         } else if (exc != null) {
@@ -156,7 +150,14 @@ public abstract class CompletableFutureBase<R, L>
     @SuppressWarnings("unchecked")
     @Override
     public void post(R m) {
-        Object listenerLoc = setValueGetListener(m);
+        Object listenerLoc;
+        synchronized(this) {
+            listenerLoc = listener;
+            if (setHasValue(null)) {
+                return;
+            }
+            value = m;
+        }
         if (listenerLoc == null) {
             return;
         }
@@ -172,8 +173,15 @@ public abstract class CompletableFutureBase<R, L>
 
     @SuppressWarnings("unchecked")
     @Override
-    public void postFailure(Throwable exc) {
-        Object listenerLoc = setFailureGetListener(exc);
+    public void postFailure(Throwable newExc) {
+        Object listenerLoc;
+        synchronized(this) {
+            listenerLoc = listener;
+            if (setHasValue(newExc)) {
+                return;
+            }
+            this.exc = newExc;
+        }
         if (listenerLoc == null) {
             return;
         }
@@ -186,32 +194,24 @@ public abstract class CompletableFutureBase<R, L>
             passFailure((L)listenerLoc);
         }
     }
-
-    private synchronized Object setValueGetListener(R m) {
+    protected boolean setHasValue(Throwable newExc) {
         if (_hasValue) {
-            Object v = this.exc != null ? this.exc : value;
-            throw new IllegalStateException("value set already: " + v);
+            // not an ideal solution - some customers may already get old result
+            String m="value set already: " + (exc==null?value:exc);
+            if (newExc == null) {
+                exc=new IllegalStateException(m);
+            } else {
+                exc=new IllegalStateException(m, newExc);
+            }
+            value=null;  // contract: value and exc cannot both be null
+            return true;
         }
         _hasValue = true;
-        value = m;
         notifyAll();
-        Object listenerLoc = listener;
         listener = null;
-        return listenerLoc;
+        return false;
     }
-
-    private synchronized Object setFailureGetListener(Throwable exc) {
-        if (_hasValue) {
-            Object v = this.exc != null ? this.exc : value;
-            throw new IllegalStateException("value set already: " + v);
-        }
-        _hasValue = true;
-        this.exc = exc;
-        notifyAll();
-        Object listenerLoc = listener;
-        listener = null;
-        return listenerLoc;
-    }
+    
 
     // ================= Promise implementation
 

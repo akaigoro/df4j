@@ -14,18 +14,19 @@ import java.util.concurrent.Executor;
 /**
  * General dataflow node with several inputs and outputs.
  * Firing occur when all inputs are filled.
+ * It is user's responsibility to consume tokens and avoid cycling.
  * Typical use case is:
  *  - create 1 or more pins for inputs and/or outputs
  *  - redefine abstract method act()
  */
-public abstract class DataflowNode extends DataflowVariable {
+public abstract class DataflowVertex extends DataflowVariable {
     
-    public DataflowNode(Executor executor) {
-        super(new ActorTask(executor));
+    public DataflowVertex(Executor executor) {
+        super(new VertexTask(executor));
     }
 
-    public DataflowNode() {
-        super(new ActorTask(null));
+    public DataflowVertex() {
+        super(new VertexTask(null));
     }
 
     @Override

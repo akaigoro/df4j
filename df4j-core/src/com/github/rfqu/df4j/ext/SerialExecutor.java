@@ -20,6 +20,7 @@ import com.github.rfqu.df4j.core.Actor;
 public class SerialExecutor extends Actor<Runnable> implements Executor {
 
 	public SerialExecutor() {
+	    super();
 	}
 
 	public SerialExecutor(Executor executor) {

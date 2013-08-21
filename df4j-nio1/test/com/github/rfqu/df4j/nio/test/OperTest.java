@@ -15,7 +15,7 @@ import com.github.rfqu.df4j.nio.AsyncSocketChannel;
 import com.github.rfqu.df4j.nio.AsyncSocketChannel1;
 import com.github.rfqu.df4j.nio.SocketIORequest;
 
-public class KeyTest {
+public class OperTest {
     static final int BUF_SIZE = 2048;
     // static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 9990);
     static final InetSocketAddress local9990 = new InetSocketAddress("localhost", 8007);
@@ -50,40 +50,46 @@ public class KeyTest {
         serverConn = (AsyncSocketChannel1) connectionEvent.get();
     }
 
-    /**
-     * if key is removed from iterator, but condition holds,
-     * will this key remein in selected set?
-     */
     @Test
-    public void selectTest() throws Exception {
+    public void readWriteTest() throws Exception {
         smokeTest1(); // open connections
 
-        WriteRequest swrequest = new WriteRequest();
-        System.out.println("selectTest: write");
-        serverConn.write(swrequest);
+        for (int k = 0; k < 24; k++) {
+            WriteRequest swrequest = new WriteRequest();
+            serverConn.write(swrequest);
+        }
 
-        ReadRequest crrequest = new ReadRequest();
-        clientConn.read(crrequest);
-        System.out.println("selectTest: sleep");
-        Thread.sleep(1000);
-        System.out.println("selectTest: write");
-        serverConn.write(new WriteRequest());
-        clientConn.read(new ReadRequest());
-        System.out.println("selectTest: sleep");
-        Thread.sleep(1000);
+        ReadRequest srrequest = new ReadRequest();
+        serverConn.read(srrequest);
+
+        Thread.sleep(3000);
+        for (int k = 0; k < 2; k++) {
+            ReadRequest crrequest = new ReadRequest();
+            clientConn.read(crrequest);
+        }
+        Thread.sleep(3000);
+        for (int k = 0; k < 24; k++) {
+            WriteRequest swrequest = new WriteRequest();
+            serverConn.write(swrequest);
+        }
+
+        Thread.sleep(3000);
+        clientConn.write(new WriteRequest());
+
+        Thread.sleep(3000);
+        for (int k = 0; k < 12; k++) {
+            ReadRequest crrequest = new ReadRequest();
+            clientConn.read(crrequest);
+        }
     }
 
     static class ReadRequest extends SocketIORequest<ReadRequest> {
         ByteBuffer buff;
 
         public ReadRequest() {
-            this(BUF_SIZE);
-        }
-
-		public ReadRequest(int sz) {
-            super(ByteBuffer.allocate(sz));
+            super(ByteBuffer.allocate(BUF_SIZE));
             buff = super.getBuffer();
-		}
+        }
 
     }
 

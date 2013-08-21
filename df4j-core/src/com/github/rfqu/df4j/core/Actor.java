@@ -17,21 +17,12 @@ import java.util.concurrent.Executor;
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor<M> extends ActorVariable<M> {
-    private final Task task; 
     
     public Actor(Executor executor) {
-        task=new ActorTask(executor);
+        super(new ActorTask(executor));
     }
 
     public Actor() {
-        task=new ActorTask(null);
-    }
-
-    protected void fire() {
-        task.fire();
-    }
-    
-    public Executor getExecutor() {
-        return task.executor;
+        super(new ActorTask(null));
     }
 }

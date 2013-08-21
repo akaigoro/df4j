@@ -49,13 +49,8 @@ public class LimitedServer {
         assc.close();
     }
 
-    /**
-     * 
-     * @author Alexei Kaigorodov
-     *
-     */
     private class ASCGenerator extends DataflowNode {
-        /** limitd the number of accrpt requests */
+        /** limits the number of accept requests */
         ConnSemafor waitCount = new ConnSemafor();
         /** limits the number of accepted connections */
         CloseSemafor maxCount = new CloseSemafor();

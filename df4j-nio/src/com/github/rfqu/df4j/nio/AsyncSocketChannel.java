@@ -15,6 +15,7 @@ package com.github.rfqu.df4j.nio;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
+import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.ListenableFuture;
@@ -112,7 +113,8 @@ public abstract class AsyncSocketChannel implements StreamPort<SocketIORequest<?
         protected final boolean isReader;
         protected SocketIORequest<?> currentRequest;
 
-        public RequestQueue(boolean isReader) {
+        public RequestQueue(Executor executor, boolean isReader) {
+        	super(executor);
             this.isReader=isReader;
         }
         

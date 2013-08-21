@@ -16,15 +16,14 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.ListenableFuture;
-import com.github.rfqu.df4j.nio.SelectorThread.SelectorListener;
 
 /**
  * Asynchronously executes I/O socket requests using {@link java.nio.channels.Selector}.
@@ -34,7 +33,8 @@ import com.github.rfqu.df4j.nio.SelectorThread.SelectorListener;
  * After request is served, it is sent to the port denoted by <code>replyTo</code> parameter in
  * the read/write methods.
  */
-public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorListenerUser {
+public class AsyncSocketChannel1 extends AsyncSocketChannel {
+	protected final SelectorThread selectorThread;
     protected volatile SocketChannel socketChannel;
     protected final ConnectionCompleter connectionCompleter;
     protected final ConnectionFuture connEvent=new ConnectionFuture();
@@ -42,7 +42,8 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
     protected SelectorListener selectorListener;
     
     public AsyncSocketChannel1(SelectorThread selectorThread) throws ClosedChannelException {
-        selectorListener=selectorThread.new SelectorListener(AsyncSocketChannel1.this);
+    	this.selectorThread=selectorThread;
+        selectorListener=new SelectorListener(selectorThread);
         connectionCompleter=new ConnectionCompleter(selectorThread);
         reader = new RequestQueue1(true);
         writer = new RequestQueue1(false);
@@ -81,11 +82,6 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
     public ListenableFuture<AsyncSocketChannel> getCloseEvent() {
         return closeEvent;
     }
-
-    @Override
-    public SelectableChannel getChannel() {
-        return socketChannel;
-    }
     
     // ================== StreamPort I/O interface 
 
@@ -122,7 +118,7 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
                 if (connected) {
                     connEvent.postSocketChannel(socketChannel);
                 } else {
-                    selectorListener.interestOn(SelectionKey.OP_CONNECT, connectSignal);
+                    selectorListener.interestOn(SelectionKey.OP_CONNECT);
                 }
             } catch (ClosedChannelException e) {
                 closeEvent.post(AsyncSocketChannel1.this);
@@ -164,7 +160,7 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
         private final int keyBit;
 
         public RequestQueue1(boolean isReader) {
-            super(isReader);
+            super(selectorThread, isReader);
             if (isReader) {
                 keyBit = SelectionKey.OP_READ;
             } else {
@@ -176,6 +172,7 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
 
         @Override
         protected void act(SocketIORequest<?> request) {
+//            System.out.println("RequestQueue1.act: isReader="+isReader);
             if (isClosed()) {
                 request.postFailure(new AsynchronousCloseException());
                 return;
@@ -200,9 +197,10 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
                     }
                     if (nb != 0) {
                         currentRequest.post(nb);
+                        selectorListener.interestOff(keyBit);
                         channelAcc.up();
                     } else {
-                        selectorListener.interestOn(keyBit, channelAcc);
+                        selectorListener.interestOn(keyBit);
                         input.pushback();
                     }
                 } catch (ClosedChannelException e) {
@@ -215,4 +213,38 @@ public class AsyncSocketChannel1 extends AsyncSocketChannel implements SelectorL
         }
     }
     
+    class SelectorListener  extends AbstractSelectorListener{
+        
+        SelectorListener(SelectorThread selectorThread) throws ClosedChannelException {
+            super(selectorThread);
+        }
+
+        // react to key events
+        synchronized void run(SelectionKey key) {
+            try {
+                int readyOps=key.readyOps();
+                if ((readyOps&SelectionKey.OP_CONNECT) != 0) {
+                    connectionCompleter.connectSignal.up();
+                }
+                if ((readyOps&SelectionKey.OP_READ) != 0) {
+                    reader.channelAcc.up();
+                }
+                if ((readyOps&SelectionKey.OP_WRITE) != 0) {
+                    writer.channelAcc.up();
+                }
+            } catch (CancelledKeyException e) {
+                AsyncSocketChannel1.this.close();
+            }
+        }
+
+        @Override
+        public void run() {
+            try {
+                super.run(socketChannel);
+            } catch (ClosedChannelException e) {
+                AsyncSocketChannel1.this.close();// let listeners retry and receive the exception
+            }
+        }
+
+    }
 }
