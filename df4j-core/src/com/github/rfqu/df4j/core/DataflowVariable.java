@@ -18,7 +18,7 @@ public abstract class DataflowVariable {
     private Throwable exc=null;
     private Pin head; // the head of the list of Pins
     private int pinCount=1; // fire bit allocated
-    private int readyPins=0;  // mask with 0 for ready pins, 1 for blocked
+    private int blockedPins=0;  // mask with 0 for ready pins, 1 for blocked
     private final Task task; 
     
     public DataflowVariable(RunnableTask task) {
@@ -35,12 +35,12 @@ public abstract class DataflowVariable {
 
     /** lock pin */
     protected final void pinOff(int pinBit) {
-        readyPins |= pinBit;
+        blockedPins |= pinBit;
     }
 
     /** unlock pin */
     protected final void pinOn(int pinBit) {
-        readyPins &= ~pinBit;
+        blockedPins &= ~pinBit;
     }
 
     protected final void fireLock() {
@@ -52,18 +52,18 @@ public abstract class DataflowVariable {
     }
 
     protected final boolean isFired() {
-        return (readyPins&1)==1;
+        return (blockedPins&1)==1;
     }
 
     /**
      * @return true if the actor has all its pins on and so is ready for execution
      */
     private final boolean allInputsReady() {
-        return (readyPins|1)==1;
+        return (blockedPins|1)==1;
     }
     
     private final boolean allReady() {
-        return readyPins==0;
+        return blockedPins==0;
     }
     
     public  void postFailure(Throwable exc) {
@@ -83,6 +83,26 @@ public abstract class DataflowVariable {
         if (doFire) {
             task.fire();
         }
+    }
+
+    public String getStatus() {
+        StringBuilder sb=new StringBuilder();
+        try {
+            lock.lock();
+            sb.append("running:");
+            sb.append(blockedPins&1);
+            for (Pin pin=head; pin!=null; pin=pin.next) {
+                sb.append(", ");
+                sb.append(pin.getClass().getSimpleName());
+                sb.append("(bit:");
+                sb.append(pin.pinBit);
+                sb.append(", blocked:");
+                sb.append((blockedPins&pin.pinBit)==0?"0)":"1)");
+            }
+        } finally {
+            lock.unlock();
+        }
+        return sb.toString();
     }
 
     private final void loopAct() {
@@ -117,42 +137,6 @@ public abstract class DataflowVariable {
                 finally {
                   lock.unlock();
                 }
-            }
-        } catch (Throwable e) {
-            exc=e;
-        }
-        try {
-            handleException(exc);
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
-
-    private final void loopActNoConsume() {
-        execLoop:
-        try {
-            // the loop slightly unrolled to have only one
-            // synchronized statement in the loop
-            lock.lock();
-            try {
-                if (exc!=null) {
-                    break execLoop; // fired remains true, preventing subsequent execution
-                }
-            } finally {
-                lock.unlock();
-            }
-            act();
-            lock.lock();
-            try {
-                if (allInputsReady()) {
-                    exc=new RuntimeException(this.getClass().getName()+"#act returned in ready state");
-                } else {
-                    fireUnlock(); // allow firing
-                    return;
-                }
-            }
-            finally {
-              lock.unlock();
             }
         } catch (Throwable e) {
             exc=e;
@@ -209,27 +193,12 @@ public abstract class DataflowVariable {
         }
     }
 
-    protected static class VertexTask extends NodeTask {
-        
-        public VertexTask(Executor executor) {
-            super(executor);
-        }
-
-        /** loops while all pins are ready
-         */
-        @Override
-        public void run() {
-            //System.out.println("ActorTask run");
-            outer.loopActNoConsume();
-        }
-    }
-
     /**
      * Basic place for input tokens.
      * Initial state should be empty, to prevent premature firing.
      */
     protected abstract class Pin {
-        private final Pin next; // link to list
+        private Pin next=null; // link to list
         private final int pinBit; // distinct for all other pins of the node 
 
         protected Pin() {
@@ -241,7 +210,16 @@ public abstract class DataflowVariable {
                 pinBit = 1<<pinCount;
                 turnOff();
                 pinCount++;
-                next=head; head=this; // register itself in the pin list
+                // register itself in the pin list
+                if (head==null) {
+                    head=this; 
+                    return;
+                } 
+                Pin prev=head;
+                while (prev.next!=null) {
+                    prev=prev.next;
+                }
+                prev.next=this; 
             } finally {
               lock.unlock();
             }
@@ -543,7 +521,7 @@ public abstract class DataflowVariable {
             lock.lock();
             try {
                 if (closeRequested) {
-                    throw new IllegalStateException("closed already");
+                    overflow(token);
                 }
                 if (value==null) {
                     value=token;
@@ -558,6 +536,10 @@ public abstract class DataflowVariable {
             if (doFire) {
                 task.fire();
             }
+        }
+
+        protected void overflow(T token) {
+            throw new IllegalStateException("closed already");
         }
 
         protected void add(T token) {
@@ -585,7 +567,7 @@ public abstract class DataflowVariable {
                 //System.out.println("close()");
                 doFire=turnOn();
             } finally {
-              lock.unlock();
+                lock.unlock();
             }
             if (doFire) {
                 task.fire();
@@ -603,9 +585,15 @@ public abstract class DataflowVariable {
 
         @Override
         protected void pushback(T value) {
+            if (value==null) {
+                throw new IllegalArgumentException();
+            }
             if (!pushback) {
                 pushback=true;
             } else {
+                if (this.value==null) {
+                    throw new IllegalStateException();
+                }
                 queue.addFirst(this.value);
                 this.value=value;
             }
@@ -623,13 +611,14 @@ public abstract class DataflowVariable {
                     pushback=false;
                     return true;
                 }
+                boolean wasNotNull=(value!=null);
                 T newValue=queue.poll();
 				if (newValue!=null) {
 					value=newValue;
                     return true;
 				} else if (closeRequested) {
 					value=null;
-	                return true;
+	                return wasNotNull;// after close, return true once, then false
 				} else {
 					return false;
 				}
@@ -657,7 +646,7 @@ public abstract class DataflowVariable {
             if (!closeRequested) {
                 turnOff(); // closing not requested
             }
-            // else make one more round with message==null
+            // else process closing: value is null, the pin remains turned on
         }
 
         public boolean isClosed() {

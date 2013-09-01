@@ -66,13 +66,14 @@ public abstract class CompletableFutureBase<R, L>
         while (!_hasValue) {
             wait();
         }
-        // contract: value and exc cannot both be null
-        if (value != null) {
-            return value;
-        } else if (exc != null) {
-            throw new ExecutionException(exc);
+        if (exc != null) {
+            if (exc instanceof CancellationException) {
+                throw (CancellationException)exc;
+            } else {
+                throw new ExecutionException(exc);
+            }
         } else {
-            throw new CancellationException();
+            return value;
         }
     }
 
@@ -124,28 +125,32 @@ public abstract class CompletableFutureBase<R, L>
     }
 
     /**
-     * Since this Future does not represent any task, this method is used to
-     * interrupt waiting threads.
+     * Posts CancellationException to listeners.
+     * @return
+     *   true if this future was not yet done
+     *   false if this future was already done or cancelled.
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        if (_hasValue) {
-            throw new IllegalStateException("has value already");
+        try {
+            postFailure(new CancellationException());
+            return true;
+        } catch (IllegalStateException e) {
+            return false;
         }
-        _hasValue = true;
-        notifyAll();
-        return true;
     }
 
     @Override
     public synchronized boolean isCancelled() {
-        return _hasValue && value == null && exc == null;
+        return exc instanceof CancellationException;
     }
 
     // ==================== Callback implementation
 
     /**
      * sends a message to this instance and then to its listeners.
+     * @throws IllegalStateException
+     *    if value or exception already have been posted
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -171,6 +176,11 @@ public abstract class CompletableFutureBase<R, L>
         }
     }
 
+    
+    /**
+     * @throws IllegalStateException
+     *    if value or exception already have been posted
+     */
     @SuppressWarnings("unchecked")
     @Override
     public void postFailure(Throwable newExc) {
@@ -194,17 +204,14 @@ public abstract class CompletableFutureBase<R, L>
             passFailure((L)listenerLoc);
         }
     }
+    
     protected boolean setHasValue(Throwable newExc) {
         if (_hasValue) {
-            // not an ideal solution - some customers may already get old result
-            String m="value set already: " + (exc==null?value:exc);
-            if (newExc == null) {
-                exc=new IllegalStateException(m);
+            if (exc == null) {
+                throw new IllegalStateException("value set already: "+value);
             } else {
-                exc=new IllegalStateException(m, newExc);
+                throw new IllegalStateException("exception set already: "+exc);
             }
-            value=null;  // contract: value and exc cannot both be null
-            return true;
         }
         _hasValue = true;
         notifyAll();

@@ -9,8 +9,6 @@
  */
 package com.github.rfqu.df4j.core;
 
-import java.util.ArrayDeque;
-
 /**
  * A dataflow node with one input stream port.
  * This is classic Actor type.
@@ -33,7 +31,8 @@ public abstract class ActorVariable<M> extends DataflowVariable
      * @return storage for input tokens
      */
     protected StreamInput<M> createInput() {
-        return new StreamInput<M>(new ArrayDeque<M>());
+//        return new StreamInput<M>(new ArrayDeque<M>());
+        return new StreamInput<M>();
     }
 
     @Override

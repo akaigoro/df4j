@@ -23,5 +23,5 @@ package com.github.rfqu.df4j.core;
  * @param <T>  type of result
  */
 public interface Promise<T> {
-	public Promise<T> addListener(Callback<T> sink);
+	public Promise<T> addListener(Callback<T> listener);
 }

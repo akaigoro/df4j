@@ -19,6 +19,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -167,6 +168,12 @@ public class DFContext  {
                 super.run();
             }
         }
+
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            // TODO Auto-generated method stub
+            super.uncaughtException(t, e);
+        }
     }
 
     //----------------------- ----------------- ExecutorService
@@ -246,7 +253,6 @@ public class DFContext  {
         @Override
         public void shutdown() {
             throw new UnsupportedOperationException(message);
-            
         }
 
         @Override
@@ -256,12 +262,12 @@ public class DFContext  {
 
         @Override
         public boolean isShutdown() {
-            throw new UnsupportedOperationException(message);
+            return false;
         }
 
         @Override
         public boolean isTerminated() {
-            throw new UnsupportedOperationException(message);
+            return false;
         }
 
         @Override
@@ -272,17 +278,23 @@ public class DFContext  {
 
         @Override
         public <T> Future<T> submit(Callable<T> task) {
-            throw new UnsupportedOperationException(message);
+            FutureTask<T> future = new FutureTask<T>(task);
+            executor.execute(future);
+            return future;
         }
 
         @Override
         public <T> Future<T> submit(Runnable task, T result) {
-            throw new UnsupportedOperationException(message);
+            FutureTask<T> future = new FutureTask<T>(task, result);
+            executor.execute(future);
+            return future;
         }
 
         @Override
         public Future<?> submit(Runnable task) {
-            throw new UnsupportedOperationException(message);
+            FutureTask<Void> future = new FutureTask<Void>(task, null);
+            executor.execute(future);
+            return future;
         }
 
         @Override

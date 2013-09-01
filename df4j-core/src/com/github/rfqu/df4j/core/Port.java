@@ -16,6 +16,6 @@ package com.github.rfqu.df4j.core;
  */
 public interface Port<M> {
 
-	public void post(M m);
+	public void post(M message);
 	
 }

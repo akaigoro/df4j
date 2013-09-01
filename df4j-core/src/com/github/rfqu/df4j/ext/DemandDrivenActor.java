@@ -34,7 +34,9 @@ public abstract class DemandDrivenActor<T> extends Actor<T> {
      * the result should be sent. 
      * @param <R>  type of result
      */
-    public class Demand<R> extends PinBase<Callback<R>> implements Promise<R>, Callback<R> {
+    public class Demand<R> extends PinBase<Callback<R>>
+        implements Promise<R>, Callback<R>
+    {
         private CompletableFuture<R> listeners=new CompletableFuture<R>();
 
         /** indicates a demand
