@@ -105,7 +105,7 @@ Hello world for StreamInput:
 
 Since Collector has single input, it can be refactored to an Actor.
 Note that this simplifies both access to frontend pins and declaration of backend procedure,
-but adds nothing essentiol - just a sintactic sugar.
+but adds nothing essential - just a sintactic sugar.
 
 
 Single-input Actor Hello World Example
@@ -265,7 +265,7 @@ Background Executor
 -------------------
 Executors used in df4j need to implement simple java.util.concurrent.Executor interface. 
 When a Task (including DataflowNode or Actor) is created, it should be assigned an Executor to run on.
-If Executor argument is, Executor is taken from thread context.
+If Executor argument is null (or parameterless constructor used),  Executor is taken from the thread context.
 If no executor in the thread context found, new default Executor is created (with fixed number of threads
 equal to the number of available processors). If another kind of context executor wanted, create it before
 instantiating any DataflowNode and set in context by DFContex.setCurrentExecutor().
@@ -273,8 +273,7 @@ Take care for executor's threads to have references to that executor.
 Class ContextThreadFactory can be used for this purpose - see DFContext.newFixedThreadPool(nThreads)
 and other similar methods. See also the package df4j.ext for a number of specific executors. PrivateExecutor
 contains a separate thread to serve one actor - this allow that actor to block on monitors or input/outut operations.
-ImmediateExecutor, being set as a context executor, has effect of setting null executor for all nodes,
-and turns your program into sequential one, which can help in debugging.
+ImmediateExecutor runs tasks on caller's thread and turns your program into sequential one, which helps in debugging.
 
 Thread context is an instance of class DFContext and is stored as a local variable. Besides it main purpose to store
 current executor, it can be used to keep any other values in a fashion similar to Threadlocal.
