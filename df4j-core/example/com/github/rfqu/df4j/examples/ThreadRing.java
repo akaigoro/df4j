@@ -16,7 +16,6 @@ import org.junit.Test;
 import com.github.rfqu.df4j.core.Actor;
 import com.github.rfqu.df4j.core.DFContext;
 import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.core.Request;
 import com.github.rfqu.df4j.ext.ImmediateExecutor;
 import com.github.rfqu.df4j.testutil.MessageSink;
 
@@ -132,17 +131,6 @@ public class ThreadRing {
         }
     }
 
-    /**
-     * the type of messages floating between nodes
-     */
-    static class Token extends Request<Token, Void> {
-        int hops_remained;
-
-        public Token(int hops_remained) {
-            this.hops_remained = hops_remained;
-        }
-    }
-    
     public static void main(String[] args) throws IOException, InterruptedException {
         ThreadRing t= new ThreadRing();
 //        System.in.read();

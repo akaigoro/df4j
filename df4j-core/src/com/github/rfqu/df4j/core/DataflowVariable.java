@@ -78,7 +78,7 @@ public abstract class DataflowVariable {
                 fireLock();
             }
         } finally {
-          lock.unlock();
+            lock.unlock();
         }
         if (doFire) {
             task.fire();
@@ -124,7 +124,9 @@ public abstract class DataflowVariable {
                 try {
                     // consume tokens
                     for (Pin pin=head; pin!=null; pin=pin.next) {
-                        pin.consume();
+                        if (!pin.consume()) {
+                            pin.turnOff();
+                        }
                     }
                     if (!allInputsReady()) {
                         fireUnlock(); // allow firing
@@ -255,27 +257,53 @@ public abstract class DataflowVariable {
          * Signals to set state to off if no more tokens are in the place.
          * Should return quickly, as is called from the actor's synchronized block.
          * Default implementation does nothing.
-         * @return -1 when end of stream reached
-         *          0 if no data available
-         *          1 if next token provided 
+         * @return true if Pin should remain on
          */
-        protected void consume(){}
+        protected boolean consume() {
+            return true;// do not turn off
+        }
     }
 
 
     //============== stuff for extending Pin from another package without showing up lock
     public abstract class PinBase<T> extends Pin {
         
-        /** 
-         * @return true if Pin turned on
+        /**
+         * @return true if Pin should be turned on
          */
-        protected abstract boolean turnedOn(T token);
+        protected boolean turnedOn(T token) {
+            return true;
+        }
+        
+        /**
+         * @return true if Pin should be turned on
+         */
+        protected boolean turnedOn(long value) {
+            return true;
+        }
         
         protected final void checkOn(T token) {
             boolean doFire;
             lock.lock();
             try {
                 if (turnedOn(token)) {
+                    doFire=turnOn();
+                } else {
+                    return;
+                }
+            } finally {
+                lock.unlock();
+            }
+            if (doFire) {
+                task.fire();
+            }
+        }
+        
+        protected final void checkOn(long value) {
+            boolean doFire;
+            lock.lock();
+            try {
+                if (turnedOn(value)) {
                     doFire=turnOn();
                 } else {
                     return;
@@ -316,11 +344,6 @@ public abstract class DataflowVariable {
               lock.unlock();
             }
         }
-
-		@Override
-		protected void consume() {
-			return;// do not turn off
-		}
     }
 
     /**
@@ -395,10 +418,8 @@ public abstract class DataflowVariable {
         }
 
         @Override
-        protected void consume() {
-            if (--count==0) {
-                turnOff();
-            }
+        protected boolean consume() {
+            return --count>0;
         }
     }
 
@@ -478,18 +499,20 @@ public abstract class DataflowVariable {
         }
 
         @Override
-        protected void consume() {
+        protected boolean consume() {
             if (pushback) {
                 pushback=false;
                 // value remains the same, the pin remains turned on
-                return; 
+                return true; 
             }
             // check closing
             if ((value==null)) {
-                turnOff(); // closing processed already
+                return false; 
+            } else {
+                // else make one more round with value==null
+                value = null;
+                return true; 
             }
-            // else make one more round with value==null
-            value = null;
         }
     }
 
@@ -628,24 +651,19 @@ public abstract class DataflowVariable {
         }
         
         @Override
-        protected void  consume() {
+        protected boolean consume() {
             if (pushback) {
                 pushback=false;
                 // value remains the same, the pin remains turned on
-                return; 
+                return true; 
             }
-            boolean wasNull=(value==null);
+            boolean wasNotNull=(value!=null);
             value = poll();
             if (value!=null) {
-                return; // continue processing
+                return true; // continue processing
             }
             // no more tokens; check closing
-            if (wasNull) {
-                turnOff(); // closing processed already
-            }
-            if (!closeRequested) {
-                turnOff(); // closing not requested
-            }
+            return wasNotNull && closeRequested;
             // else process closing: value is null, the pin remains turned on
         }
 
