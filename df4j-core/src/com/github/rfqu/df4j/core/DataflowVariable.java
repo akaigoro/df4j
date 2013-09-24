@@ -154,8 +154,9 @@ public abstract class DataflowVariable {
     
     /**
      * reads extracted tokens from places and performs specific calculations 
+     * @throws Exception 
      */
-    protected abstract void act();
+    protected abstract void act() throws Exception;
 
     protected void handleException(Throwable exc) {
         System.err.println("DataflowNode.handleException:"+exc);

@@ -53,33 +53,21 @@ public abstract class ActorVariable<M> extends DataflowVariable
     
     /** 
      * process the retrieved tokens.
+     * @throws Exception 
      */
     @Override
-    protected void act() {
+    protected void act() throws Exception {
         M message=input.value;
-        try {
-            if (message==null) {
-                complete();
-            } else {
-                act(message);
-            }
-        } catch (Exception e) {
-            failure(message, e);
+        if (message==null) {
+            complete();
+        } else {
+            act(message);
         }
     }
 
     /** only have sense when called from act(M message) */
     public void pushback() {
         input.pushback();
-    }
-
-    /** handles failures
-     * 
-     * @param message
-     * @param e
-     */
-    protected void failure(M message, Exception e) {
-        e.printStackTrace();
     }
     
     /**
