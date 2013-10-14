@@ -12,7 +12,7 @@ Version history
 ---------------
 v1.0 2013/09/01
 df4j-core proved to be stable, so version number 1.0 is assigned.  
-nio* projects removed. Use [pipeline-nio](../pipeline/pipeline-nio).
+nio* projects removed. Use [pipeline-nio](https://github.com/rfqu/pipeline/tree/master/pipeline-nio).
 
 ---------------
 v0.9 2013/07/10
@@ -41,13 +41,15 @@ implementation based on NIO1 moved from df4j-nio to df4j-nio1;
 df4j-nio contains now only common parts of df4j-nio1 and df4j-nio2,
 so both df4j-nio1 and df4j-nio2 require the df4j-nio project.
 
-=======
+---------------
 v0.6 2012/12/03
 nio project basically finished
-=======
+
+---------------
 v0.5.2 2012/11/27
 DFContext class created - a collection of all context resources, including current executor.
 
+---------------
 v0.5.1 2012/11/19
 - class MessageQueue renamed to Dispatcher.
 - synchronization in DataflowNode made by j.u.c.ReentrantLock.
@@ -64,7 +66,8 @@ SerialExecutor moved to the package ext.
 - DataflowNode has new method sendFailure, to create Callbacks easily.
   It as accompanied with back-end method handleException(Throwable).
 - New core class MessageQueue created (suggest a better name).
-=======
+
+---------------
 v0.4 2012/07/07 nio2: IO requests are handled by actors (IOHandlers).
 Timer class created with interface similar to AsyncChannel. 
 
