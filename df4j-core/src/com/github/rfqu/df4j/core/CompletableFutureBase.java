@@ -69,6 +69,8 @@ public abstract class CompletableFutureBase<R, L>
         if (exc != null) {
             if (exc instanceof CancellationException) {
                 throw (CancellationException)exc;
+            } else if (exc instanceof ExecutionException) {
+                throw (ExecutionException)exc;
             } else {
                 throw new ExecutionException(exc);
             }

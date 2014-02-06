@@ -14,6 +14,7 @@ import java.util.concurrent.Executor;
 import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.DataflowVariable;
+import com.github.rfqu.df4j.core.ListenableFuture;
 
 /**
  * abstract node with multiple inputs, single output and exception handling
@@ -46,7 +47,7 @@ abstract class Function<T> extends CompletableFuture<T> {
 		return this;
 	}
 
-	abstract protected T eval(Object[] args);
+	abstract protected Object eval(Object[] args);
 	
 	class MyDataflowNode extends DataflowVariable {
 		Object[] args;
@@ -59,6 +60,11 @@ abstract class Function<T> extends CompletableFuture<T> {
 	        super(new SingleTask(null));
 	    }
 
+	    /**
+	     * @param args arguments of the function
+	     *  if argument is of type ListenableFuture (typically another Function),
+	     *  execution is suspended until value is available.
+	     */
 		public void setArgs(Object[] args) {
 			if (this.args!=null) {
 				throw new IllegalArgumentException("arguments are set already");
@@ -67,9 +73,9 @@ abstract class Function<T> extends CompletableFuture<T> {
 			lockFire();
 			for (int k=0; k<args.length; k++) {
 				Object arg=args[k];
-				if (arg instanceof CompletableFuture) {
+				if (arg instanceof ListenableFuture) {
 					@SuppressWarnings("unchecked")
-					CompletableFuture<Object> argf=(CompletableFuture<Object>) arg;
+					ListenableFuture<Object> argf=(ListenableFuture<Object>) arg;
 					if (argf.isDone()) {
 						try {
 							args[k]=argf.get();
@@ -87,8 +93,14 @@ abstract class Function<T> extends CompletableFuture<T> {
 		}
 
 		@Override
+		@SuppressWarnings("unchecked")
 		protected void act() {
-			Function.this.post(eval(args));
+			Object res = eval(args);
+			if (res instanceof ListenableFuture) {
+				((ListenableFuture<T>)res).addListener(Function.this);
+			} else {
+				Function.this.post((T)res);
+			}
 		}
 		
 	    @Override
@@ -96,7 +108,7 @@ abstract class Function<T> extends CompletableFuture<T> {
 	    	Function.this.postFailure(exc);
 		}
 
-		/** Scalar Input which also redirects failures 
+		/** a listener to arguments passed as ListenableFuture
 	     */
 	    public class CallbackInput extends Semafor implements Callback<Object> {
 	    	int idx;

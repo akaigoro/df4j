@@ -10,17 +10,20 @@
 package com.github.rfqu.df4j.core;
 
 /**
+ * A kind of dataflow variable: single input, single output.
  * 
- * A kind of dataflow variable: single input, multiple asynchronous outputs.
- * Distributes received value/failure among listeners.
+ * Distributes received value/failure among consumers.
  * Value (or failure) can only be assigned once. It is then saved, and 
- * listeners connected after the assignment still would receive it.
+ * consumers connected after the assignment still would receive it.
  * 
- * Also acts as a Furure and connects Actors and Threads.
- * Actors are allowed to send messages to it, but not to get from. 
- * Threads are allowed both to send and get.
+ * Consumers can be of two kinds: synchronous via Future.get(),
+ * and asynchronous via Promise.addListener(). 
+ * 
+ * To avoid thread starvation when limited threadpool is used,
+ * Actors and other Tasks should not use Future.get(), but only subscription.
+ * Threads can use synchronous interface.
  *
- * @param <T>  type of result
+ * @param <T>  type of passed value
  */
 public class CompletableFuture<T>
     extends CompletableFutureBase<T, Callback<T>>

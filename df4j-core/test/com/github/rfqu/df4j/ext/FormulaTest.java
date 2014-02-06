@@ -122,11 +122,14 @@ public class FormulaTest {
      */
     public static class Discr extends Function<Double> {
 		@Override
-		protected Double eval(Object[] args) {
+		protected Object eval(Object[] args) {
 			Double a = (Double) args[0];
 			Double b = (Double) args[1];
 			Double c = (Double) args[2];
-			return b*b-4*a*c ;
+			return new Diff().setArgs(
+					new Mult().setArgs(b, b),
+					new Mult().setArgs(4.0, new Mult().setArgs(a, c))
+				);
 		}
 	}
 	
@@ -153,12 +156,12 @@ public class FormulaTest {
 		Future<Double> mb=new UnaryMinus().setArg(b);
 		// results
 		Future<Double> x1=new Div().setArgs(
-				new Sum().setArgs(mb, sd),
-				a2
+				  new Sum().setArgs(mb, sd),
+				  a2
 				);
 		Future<Double> x2=new Div().setArgs(
-				new Diff().setArgs(mb, sd),
-				a2
+				  new Diff().setArgs(mb, sd),
+				  a2
 				);
 	}
 
