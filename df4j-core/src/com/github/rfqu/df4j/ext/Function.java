@@ -7,100 +7,114 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-//package com.github.rfqu.df4j.util;
 package com.github.rfqu.df4j.ext;
 
 import java.util.concurrent.Executor;
 
 import com.github.rfqu.df4j.core.Callback;
-import com.github.rfqu.df4j.core.DataflowNode;
 import com.github.rfqu.df4j.core.CompletableFuture;
+import com.github.rfqu.df4j.core.DataflowVariable;
 
 /**
  * abstract node with multiple inputs, single output and exception handling
  * Unlike Actor, it is single shot. 
  * @param <R> type of result
  */
-public abstract class Function<R> extends DataflowNode {
-//    protected final Demand<R> res=new Demand<R>();
-    public final CompletableFuture<R> res=new CompletableFuture<R>();
-    
-    public Function(Executor executor) {
-        super(executor);
-    }
+abstract class Function<T> extends CompletableFuture<T> {
+	MyDataflowNode node;
 
-    public Function() {
-        super(null);
-    }
+	public Function() {
+		node=new MyDataflowNode(null);
+	}
 
-    /**
-     * evaluates the function's result
-     */
-    abstract protected R eval();
-    
-    protected void act() {
-        res.post(eval());
-    }
+	public Function(Executor executor) {
+		node=new MyDataflowNode(executor);
+	}
 
-    protected void handleException(Throwable exc) {
-        try {
-			res.postFailure(exc);
-		} catch (IllegalStateException e) {
+	public Function(Object... args) {
+		node=new MyDataflowNode(null);
+		node.setArgs(args);
+	}
+
+	public Function(Executor executor, Object... args) {
+		node=new MyDataflowNode(executor);
+		node.setArgs(args);
+	}
+
+	public Function<T> setArgs(Object... args) {
+		node.setArgs(args);
+		return this;
+	}
+
+	abstract protected T eval(Object[] args);
+	
+	class MyDataflowNode extends DataflowVariable {
+		Object[] args;
+
+	    public MyDataflowNode(Executor executor) {
+	        super(new SingleTask(executor));
+	    }
+
+	    public MyDataflowNode() {
+	        super(new SingleTask(null));
+	    }
+
+		public void setArgs(Object[] args) {
+			if (this.args!=null) {
+				throw new IllegalArgumentException("arguments are set already");
+			}
+			this.args = args;
+			lockFire();
+			for (int k=0; k<args.length; k++) {
+				Object arg=args[k];
+				if (arg instanceof CompletableFuture) {
+					@SuppressWarnings("unchecked")
+					CompletableFuture<Object> argf=(CompletableFuture<Object>) arg;
+					if (argf.isDone()) {
+						try {
+							args[k]=argf.get();
+						} catch (Exception e) {
+							postFailure(e);
+						}
+					} else {
+						args[k]=null;
+						CallbackInput input=new CallbackInput(k);
+						argf.addListener(input);
+					}
+				}
+			}
+			unlockFire();
 		}
-    }
-    
-    //========== inner classes
-    
-    /** Scalar Input which also redirects failures 
-     */
-    public class CallbackInput<T> extends Input<T> implements Callback<T> {
-        @Override
-        public void postFailure(Throwable exc) {
-            Function.this.postFailure(exc);
-        }
-    }
-        
-   /**
-     * Unary operation
-    *
-    * @param <T> type of the operand and the result
-    */
-   public static abstract class UnaryOp<T> extends Function<T> implements Callback<T> {
-       protected CallbackInput<T> input=new CallbackInput<T>();
 
-       @Override
-       public void post(T value) {
-           input.post(value);
-       }
+		@Override
+		protected void act() {
+			Function.this.post(eval(args));
+		}
+		
+	    @Override
+		protected void handleException(Throwable exc) {
+	    	Function.this.postFailure(exc);
+		}
 
-       @Override
-       protected T eval() {
-           return eval(input.get());
-       }
+		/** Scalar Input which also redirects failures 
+	     */
+	    public class CallbackInput extends Semafor implements Callback<Object> {
+	    	int idx;
+	    	
+	        public CallbackInput(int idx) {
+				this.idx = idx;
+			}
 
-       abstract protected T eval(T operand);
+			@Override
+			public void post(Object token) {
+				args[idx]=(token);
+				super.up();
+			}
 
-   }
-   
-   /**
-    * Binary operation: classic dataflow object.
-    * Waits for both operands to arrive,
-    * computes the operation, and sends result to the Demand object,
-    * which routes the result to the interested parties.
-    *
-    * @param <T> the type of operands and the result
-    */
-    public static abstract class BinaryOp<T> extends Function<T> {
-        CallbackInput<T> p1 = new CallbackInput<T>();
-        CallbackInput<T> p2 = new CallbackInput<T>();
-
-        @Override
-        protected T eval() {
-            return eval(p1.get(), p2.get());
-        }
-
-        abstract protected T eval(T opnd, T opnd2);
-
-    }
-
+			@Override
+	        public void postFailure(Throwable exc) {
+	        	MyDataflowNode.this.postFailure(exc);
+	        }
+	    }
+	}
 }

@@ -14,667 +14,738 @@ import java.util.concurrent.locks.ReentrantLock;
  *  - redefine abstract method act()
  */
 public abstract class DataflowVariable {
-    private final Lock lock = new ReentrantLock();
-    private Throwable exc=null;
-    private Pin head; // the head of the list of Pins
-    private int pinCount=1; // fire bit allocated
-    private int blockedPins=0;  // mask with 0 for ready pins, 1 for blocked
-    private final Task task; 
-    
-    public DataflowVariable(RunnableTask task) {
-        this.task=task;
-        if (task instanceof NodeTask) {
-            ((NodeTask)task).outer=this;
-        }
-    }
+	private final Lock lock = new ReentrantLock();
+	private volatile Throwable exc = null;
+	private Pin head; // the head of the list of Pins
+	private int pinCount = 1; // fire bit allocated
+	private int blockedPins = 0; // mask with 0 for ready pins, 1 for blocked
+	private final Task task;
 
-    public DataflowVariable() {
-        task=new SyncTask();
-    }
+	public DataflowVariable(RunnableTask task) {
+		this.task = task;
+		if (task instanceof NodeTask) {
+			((NodeTask) task).outer = this;
+		}
+	}
 
+	public DataflowVariable() {
+		task = new SyncTask();
+	}
 
-    /** lock pin */
-    protected final void pinOff(int pinBit) {
-        blockedPins |= pinBit;
-    }
+	/** lock pin */
+	private final void pinOff(int pinBit) {
+		blockedPins |= pinBit;
+	}
 
-    /** unlock pin */
-    protected final void pinOn(int pinBit) {
-        blockedPins &= ~pinBit;
-    }
+	/** unlock pin */
+	private final void pinOn(int pinBit) {
+		blockedPins &= ~pinBit;
+	}
 
-    protected final void fireLock() {
-        pinOff(1);
-    }
+	private final void _lockFire() {
+		pinOff(1);
+	}
 
-    protected final void fireUnlock() {
-        pinOn(1);
-    }
+	private final void _unlockFire() {
+		pinOn(1);
+	}
 
-    protected final boolean isFired() {
-        return (blockedPins&1)==1;
-    }
+	private final boolean isFired() {
+		return (blockedPins & 1) == 1;
+	}
 
-    /**
-     * @return true if the actor has all its pins on and so is ready for execution
-     */
-    private final boolean allInputsReady() {
-        return (blockedPins|1)==1;
-    }
-    
-    private final boolean allReady() {
-        return blockedPins==0;
-    }
-    
-    public  void postFailure(Throwable exc) {
-        boolean doFire;       
-        lock.lock();
-        try {
-            if (this.exc!=null) {
-                return; // only first failure is processed 
-            }
-            this.exc=exc;
-            if (doFire=!isFired()) {
-                fireLock();
-            }
-        } finally {
-            lock.unlock();
-        }
-        if (doFire) {
-            task.fire();
-        }
-    }
+	/**
+	 * @return true if the actor has all its pins on and so is ready for
+	 *         execution
+	 */
+	private final boolean allInputsReady() {
+		return (blockedPins | 1) == 1;
+	}
 
-    public String getStatus() {
-        StringBuilder sb=new StringBuilder();
-        try {
-            lock.lock();
-            sb.append("running:");
-            sb.append(blockedPins&1);
-            for (Pin pin=head; pin!=null; pin=pin.next) {
-                sb.append(", ");
-                sb.append(pin.getClass().getSimpleName());
-                sb.append("(bit:");
-                sb.append(pin.pinBit);
-                sb.append(", blocked:");
-                sb.append((blockedPins&pin.pinBit)==0?"0)":"1)");
-            }
-        } finally {
-            lock.unlock();
-        }
-        return sb.toString();
-    }
+	private final boolean allReady() {
+		return blockedPins == 0;
+	}
 
-    private final void loopAct() {
-        execLoop:
-        try {
-            // the loop slightly unrolled to have only one
-            // synchronized statement in the loop
-            lock.lock();
-            try {
-                if (exc!=null) {
-                    break execLoop; // fired remains true, preventing subsequent execution
-                }
-            } finally {
-                lock.unlock();
-            }
-            for (;;) {
-                act();
-                lock.lock();
-                try {
-                    // consume tokens
-                    for (Pin pin=head; pin!=null; pin=pin.next) {
-                        if (!pin.consume()) {
-                            pin.turnOff();
-                        }
-                    }
-                    if (!allInputsReady()) {
-                        fireUnlock(); // allow firing
-                        return;
-                    }
-                    if (exc!=null) {
-                        break execLoop; // fired remains true, preventing subsequent execution
-                    }
-                }
-                finally {
-                  lock.unlock();
-                }
-            }
-        } catch (Throwable e) {
-            exc=e;
-        }
-        try {
-            handleException(exc);
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
+	protected final void lockFire() {
+		lock.lock();
+		try {
+			_lockFire();
+		} finally {
+			lock.unlock();
+		}
+	}
 
-    //========= backend
-    
-    /**
-     * reads extracted tokens from places and performs specific calculations 
-     * @throws Exception 
-     */
-    protected abstract void act() throws Exception;
+	protected final void unlockFire() {
+		boolean doFire;
+		lock.lock();
+		try {
+			if (allInputsReady()||(exc != null)) {
+				doFire=true;
+			} else {
+	 			_unlockFire();
+				doFire=false;
+			}
+		} finally {
+			lock.unlock();
+		}
+		if (doFire) {
+			task.fire();
+		}
+	}
 
-    protected void handleException(Throwable exc) {
-        System.err.println("DataflowNode.handleException:"+exc);
-        exc.printStackTrace();
-    }
+	public void postFailure(Throwable exc) {
+		if (exc==null) {
+			throw new IllegalArgumentException("failure may not be null");
+		}
+		boolean doFire;
+		lock.lock();
+		try {
+			if (this.exc != null) {
+				return; // only first failure is processed
+			}
+			this.exc = exc;
+			if (doFire = !isFired()) {
+				_lockFire();
+			}
+		} finally {
+			lock.unlock();
+		}
+		if (doFire) {
+			task.fire();
+		}
+	}
 
-    //====================== inner classes
-    protected class SyncTask implements Task {
-        
-        @Override
-        public void fire() {
-            loopAct();
-        }
-    }
-    
-    private static abstract class NodeTask extends RunnableTask {
-        DataflowVariable outer;
-        
-        protected NodeTask(Executor executor) {
-            super(executor);
-        }
+	public String getStatus() {
+		StringBuilder sb = new StringBuilder();
+		try {
+			lock.lock();
+			sb.append("running:");
+			sb.append(blockedPins & 1);
+			for (Pin pin = head; pin != null; pin = pin.next) {
+				sb.append(", ");
+				sb.append(pin.getClass().getSimpleName());
+				sb.append("(bit:");
+				sb.append(pin.pinBit);
+				sb.append(", blocked:");
+				sb.append((blockedPins & pin.pinBit) == 0 ? "0)" : "1)");
+			}
+		} finally {
+			lock.unlock();
+		}
+		return sb.toString();
+	}
 
-    }
+	private final void singleAct() {
+		try {
+			if (exc == null) {
+				act();
+				return;
+			}
+		} catch (Throwable e) {
+			exc = e;
+		}
+		try {
+			handleException(exc);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+	}
 
-    protected static class ActorTask extends NodeTask {
-        
-        public ActorTask(Executor executor) {
-            super(executor);
-        }
+	private final void loopAct() {
+		execLoop: try {
+			// the loop slightly unrolled to have only one
+			// synchronized statement in the loop
+			lock.lock();
+			try {
+				if (exc != null) {
+					break execLoop; // fired() remains true, preventing subsequent
+									// execution
+				}
+			} finally {
+				lock.unlock();
+			}
+			for (;;) {
+				act();
+				lock.lock();
+				try {
+					// consume tokens
+					for (Pin pin = head; pin != null; pin = pin.next) {
+						if (!pin.consume()) {
+							pin.turnOff();
+						}
+					}
+					if (exc != null) {
+						break execLoop; // fired remains true, preventing
+										// subsequent execution
+					}
+					if (!allInputsReady()) {
+						_unlockFire(); // allow firing
+						return;
+					}
+				} finally {
+					lock.unlock();
+				}
+			}
+		} catch (Throwable e) {
+			exc = e;
+		}
+		try {
+			handleException(exc);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+	}
 
-        /** loops while all pins are ready
-         */
-        @Override
-        public void run() {
-            //System.out.println("ActorTask run");
-            outer.loopAct();
-        }
-    }
+	// ========= backend
 
-    /**
-     * Basic place for input tokens.
-     * Initial state should be empty, to prevent premature firing.
-     */
-    protected abstract class Pin {
-        private Pin next=null; // link to list
-        private final int pinBit; // distinct for all other pins of the node 
+	/**
+	 * reads extracted tokens from places and performs specific calculations
+	 * 
+	 * @throws Exception
+	 */
+	protected abstract void act() throws Exception;
 
-        protected Pin() {
-            lock.lock();
-            try {
-                if (pinCount==32) {
-                  throw new IllegalStateException("only 32 pins could be created");
-                }
-                pinBit = 1<<pinCount;
-                turnOff();
-                pinCount++;
-                // register itself in the pin list
-                if (head==null) {
-                    head=this; 
-                    return;
-                } 
-                Pin prev=head;
-                while (prev.next!=null) {
-                    prev=prev.next;
-                }
-                prev.next=this; 
-            } finally {
-              lock.unlock();
-            }
-        }
+	protected void handleException(Throwable exc) {
+		System.err.println("DataflowNode.handleException:" + exc);
+		exc.printStackTrace();
+	}
 
-        /**
-         * sets pin's bit on and fires task if all pins are on
-         *  @return true if actor became ready and must be fired
-         */
-        final boolean turnOn() {
-            //System.out.print("turnOn "+fired+" "+allReady());
-            pinOn(pinBit);
-            if (allReady()) {
-                fireLock(); // to prevent multiple concurrent firings
-                //System.out.println(" => true");
-                return true;
-            } else {
-                //System.out.println(" => false");
-                return false;
-            }
-        }
+	// ====================== inner classes
+	protected class SyncTask implements Task {
 
-        /**
-         * sets pin's bit off
-         */
-        protected final void turnOff() {
-            //System.out.println("turnOff");
-            pinOff(pinBit);
-        }
+		@Override
+		public void fire() {
+			loopAct();
+		}
+	}
 
-        /** Executed after token processing (method act).
-         * Cleans reference to value, if any.
-         * Signals to set state to off if no more tokens are in the place.
-         * Should return quickly, as is called from the actor's synchronized block.
-         * Default implementation does nothing.
-         * @return true if Pin should remain on
-         */
-        protected boolean consume() {
-            return true;// do not turn off
-        }
-    }
+	private static abstract class NodeTask extends RunnableTask {
+		DataflowVariable outer;
 
+		protected NodeTask(Executor executor) {
+			super(executor);
+		}
 
-    //============== stuff for extending Pin from another package without showing up lock
-    public abstract class PinBase<T> extends Pin {
-        
-        /**
-         * @return true if Pin should be turned on
-         */
-        protected boolean turnedOn(T token) {
-            return true;
-        }
-        
-        /**
-         * @return true if Pin should be turned on
-         */
-        protected boolean turnedOn(long value) {
-            return true;
-        }
-        
-        protected final void checkOn(T token) {
-            boolean doFire;
-            lock.lock();
-            try {
-                if (turnedOn(token)) {
-                    doFire=turnOn();
-                } else {
-                    return;
-                }
-            } finally {
-                lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
-        
-        protected final void checkOn(long value) {
-            boolean doFire;
-            lock.lock();
-            try {
-                if (turnedOn(value)) {
-                    doFire=turnOn();
-                } else {
-                    return;
-                }
-            } finally {
-                lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
-    }
+	}
 
-    /**
-     * A lock is turned on or off permanently 
-     */
-    public class Lockup extends Pin {
-        
-        public void on() {
-            boolean doFire;
-            lock.lock();
-            try {
-                doFire=turnOn();
-            } finally {
-                lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
+	protected static class SingleTask extends NodeTask {
 
-        public void off() {
-            lock.lock();
-            try {
-               turnOff();
-            }
-            finally {
-              lock.unlock();
-            }
-        }
-    }
+		public SingleTask(Executor executor) {
+			super(executor);
+		}
 
-    /**
-     * holds token counter without data
-     * counter can be negative 
-     */
-    public class Semafor extends Pin {
-        private int count;
-        
-        public Semafor() {
-            this.count = 0;
-        }
+		/**
+		 * executes once
+		 */
+		@Override
+		public void run() {
+			outer.singleAct();
+		}
+	}
 
-        public Semafor(int count) {
-            if (count>0) {
-                throw new IllegalArgumentException("initial counter cannot be positive");
-            }
-            this.count = count;
-        }
+	protected static class ActorTask extends NodeTask {
 
-        /** increments resource counter by 1 */
-        public void up() {
-            boolean doFire;
-            lock.lock();
-            try {
-                count++;
-                if (count!=1) {
-                    return;
-                }
-                doFire=turnOn();
-            } finally {
-              lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
+		public ActorTask(Executor executor) {
+			super(executor);
+		}
 
-        /** increments resource counter by delta */
-        public void up(int delta) {
-            boolean doFire;
-            lock.lock();
-            try {
-                boolean wasOff=(count<=0);
-                count+=delta;
-                boolean isOff=(count<=0);
-                if (wasOff == isOff) {
-                    return;
-                }
-                if (isOff) {
-                    turnOff();
-                    return;
-                }
-                doFire=turnOn();
-            } finally {
-              lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
+		/**
+		 * loops while all pins are ready
+		 */
+		@Override
+		public void run() {
+			// System.out.println("ActorTask run");
+			outer.loopAct();
+		}
+	}
 
-        /** decrements resource counter */
-        public void down() {
-            lock.lock();
-            try {
-                consume();
-            }
-            finally {
-              lock.unlock();
-            }
-        }
+	/**
+	 * Basic place for input tokens. Initial state should be empty, to prevent
+	 * premature firing.
+	 */
+	protected abstract class Pin {
+		private Pin next = null; // link to list
+		private final int pinBit; // distinct for all other pins of the node
 
-        @Override
-        protected boolean consume() {
-            return --count>0;
-        }
-    }
+		protected Pin() {
+			lock.lock();
+			try {
+				if (pinCount == 32) {
+					throw new IllegalStateException(
+							"only 32 pins could be created");
+				}
+				pinBit = 1 << pinCount;
+				turnOff();
+				pinCount++;
+				// register itself in the pin list
+				if (head == null) {
+					head = this;
+					return;
+				}
+				Pin prev = head;
+				while (prev.next != null) {
+					prev = prev.next;
+				}
+				prev.next = this;
+			} finally {
+				lock.unlock();
+			}
+		}
 
-    /**
-     * Token storage with standard Port<T> interface.
-     * It has place for only one token, which is not consumed.
-     * @param <T> type of accepted tokens.
-     */
-    public class ConstInput<T> extends Pin implements Port<T> {
-        /** extracted token */
-        T value=null;
+		/**
+		 * sets pin's bit on and fires task if all pins are on
+		 * 
+		 * @return true if actor became ready and must be fired
+		 */
+		final boolean turnOn() {
+			// System.out.print("turnOn "+fired+" "+allReady());
+			pinOn(pinBit);
+			if (allReady()) {
+				_lockFire(); // to prevent multiple concurrent firings
+				// System.out.println(" => true");
+				return true;
+			} else {
+				// System.out.println(" => false");
+				return false;
+			}
+		}
 
-        @Override
-        public void post(T token) {
-            if (token==null) {
-                throw new NullPointerException();
-            }
-            boolean doFire;
-            lock.lock();
-            try {
-                if (value!=null) {
-                    throw new IllegalStateException("token set already");
-                }
-                value=token;
-                doFire=turnOn();
-            } finally {
-              lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
+		/**
+		 * sets pin's bit off
+		 */
+		protected final void turnOff() {
+			// System.out.println("turnOff");
+			pinOff(pinBit);
+		}
 
-        public T get() {
-            return value;
-        }
+		/**
+		 * Executed after token processing (method act). Cleans reference to
+		 * value, if any. Signals to set state to off if no more tokens are in
+		 * the place. Should return quickly, as is called from the actor's
+		 * synchronized block. Default implementation does nothing.
+		 * 
+		 * @return true if Pin should remain on
+		 */
+		protected boolean consume() {
+			return true;// do not turn off
+		}
+	}
 
-        //===================== backend
-        
-        /**
-         * removes token from the storage
-         * @return removed token
-         */
-        protected T poll() {
-            return null;
-        }
-    }
+	// ============== stuff for extending Pin from another package without
+	// showing up lock
+	public abstract class PinBase<T> extends Pin {
 
+		/**
+		 * @return true if Pin should be turned on
+		 */
+		protected boolean turnedOn(T token) {
+			return true;
+		}
 
-    /**
-     * Token storage with standard Port<T> interface.
-     * By default, it has place for only one token.
-     * @param <T> type of accepted tokens.
-     */
-    public class Input<T> extends ConstInput<T> implements Port<T> {
-        boolean pushback=false; // if true, do not consume
+		/**
+		 * @return true if Pin should be turned on
+		 */
+		protected boolean turnedOn(long value) {
+			return true;
+		}
 
-        public T get() {
-            return value;
-        }
+		protected final void checkOn(T token) {
+			boolean doFire;
+			lock.lock();
+			try {
+				if (turnedOn(token)) {
+					doFire = turnOn();
+				} else {
+					return;
+				}
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
 
-        //===================== backend
+		protected final void checkOn(long value) {
+			boolean doFire;
+			lock.lock();
+			try {
+				if (turnedOn(value)) {
+					doFire = turnOn();
+				} else {
+					return;
+				}
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
+	}
 
-        public void pushback() {
-            if (pushback) {
-                throw new IllegalStateException();
-            }
-            pushback=true;
-        }
+	/**
+	 * A lock is turned on or off permanently
+	 */
+	public class Lockup extends Pin {
 
-        protected void pushback(T value) {
-            if (pushback) {
-                throw new IllegalStateException();
-            }
-            pushback=true;
-            this.value=value;
-        }
+		public void on() {
+			boolean doFire;
+			lock.lock();
+			try {
+				doFire = turnOn();
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
 
-        @Override
-        protected boolean consume() {
-            if (pushback) {
-                pushback=false;
-                // value remains the same, the pin remains turned on
-                return true; 
-            }
-            // check closing
-            if ((value==null)) {
-                return false; 
-            } else {
-                // else make one more round with value==null
-                value = null;
-                return true; 
-            }
-        }
-    }
+		public void off() {
+			lock.lock();
+			try {
+				turnOff();
+			} finally {
+				lock.unlock();
+			}
+		}
+	}
 
-    /** A Queue of tokens of type <T>
-     * @param <T> 
-     */
-    public class StreamInput<T> extends Input<T> implements StreamPort<T> {
-        private Deque<T> queue;
-        private boolean closeRequested=false;
+	/**
+	 * holds token counter without data counter can be negative
+	 */
+	public class Semafor extends Pin {
+		private int count;
 
-        public StreamInput() {
-            this.queue = new LinkedList<T>();
-        }
+		public Semafor() {
+			this.count = 0;
+		}
 
-        public StreamInput(Deque<T> queue) {
-            this.queue = queue;
-        }
-        
-        public T get() {
-            return value;
-        }
+		public Semafor(int count) {
+			if (count > 0) {
+				throw new IllegalArgumentException(
+						"initial counter cannot be positive");
+			}
+			this.count = count;
+		}
 
-        @Override
-        public void post(T token) {
-            if (token==null) {
-                throw new NullPointerException();
-            }
-            boolean doFire;
-            lock.lock();
-            try {
-                if (closeRequested) {
-                    overflow(token);
-                }
-                if (value==null) {
-                    value=token;
-                    doFire=turnOn();
-                } else {
-                    add(token);
-                    return; // is On already
-                }
-            } finally {
-              lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
+		/** increments resource counter by 1 */
+		public void up() {
+			boolean doFire;
+			lock.lock();
+			try {
+				count++;
+				if (count != 1) {
+					return;
+				}
+				doFire = turnOn();
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
 
-        protected void overflow(T token) {
-            throw new IllegalStateException("closed already");
-        }
+		/** increments resource counter by delta */
+		public void up(int delta) {
+			boolean doFire;
+			lock.lock();
+			try {
+				boolean wasOff = (count <= 0);
+				count += delta;
+				boolean isOff = (count <= 0);
+				if (wasOff == isOff) {
+					return;
+				}
+				if (isOff) {
+					turnOff();
+					return;
+				}
+				doFire = turnOn();
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
 
-        protected void add(T token) {
-            queue.add(token);
-        }
+		/** decrements resource counter */
+		public void down() {
+			lock.lock();
+			try {
+				consume();
+			} finally {
+				lock.unlock();
+			}
+		}
 
-        @Override
-        public T poll() {
-            return queue.poll();
-        }
+		@Override
+		protected boolean consume() {
+			return --count > 0;
+		}
+	}
 
-        /** Signals the end of the stream. 
-         * Turns this pin on. Removed value is null 
-         * (null cannot be send with StreamInput.add(message)).
-         */
-        @Override
-        public void close() {
-            boolean doFire;
-            lock.lock();
-            try {
-                if (closeRequested) {
-                    return;
-                }
-                closeRequested=true;
-                //System.out.println("close()");
-                doFire=turnOn();
-            } finally {
-                lock.unlock();
-            }
-            if (doFire) {
-                task.fire();
-            }
-        }
+	/**
+	 * Token storage with standard Port<T> interface. It has place for only one
+	 * token, which is not consumed.
+	 * 
+	 * @param <T>
+	 *            type of accepted tokens.
+	 */
+	public class ConstInput<T> extends Pin implements Port<T> {
+		/** extracted token */
+		T value = null;
 
+		@Override
+		public void post(T token) {
+			if (token == null) {
+				throw new NullPointerException();
+			}
+			boolean doFire;
+			lock.lock();
+			try {
+				if (value != null) {
+					throw new IllegalStateException("token set already");
+				}
+				value = token;
+				doFire = turnOn();
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
 
-        @Override
-        public void pushback() {
-            if (pushback) {
-                throw new IllegalStateException();
-            }
-            pushback=true;
-        }
+		public T get() {
+			return value;
+		}
 
-        @Override
-        protected void pushback(T value) {
-            if (value==null) {
-                throw new IllegalArgumentException();
-            }
-            if (!pushback) {
-                pushback=true;
-            } else {
-                if (this.value==null) {
-                    throw new IllegalStateException();
-                }
-                queue.addFirst(this.value);
-                this.value=value;
-            }
-        }
+		// ===================== backend
 
-        /** 
-         * attempt to take next token from the input queue
-         * @return true if next token is available, or if stream is closed
-         *   false if input queue is empty
-         */
-        public boolean moveNext() {
-            lock.lock();
-            try {
-                if (pushback) {
-                    pushback=false;
-                    return true;
-                }
-                boolean wasNotNull=(value!=null);
-                T newValue=queue.poll();
-				if (newValue!=null) {
-					value=newValue;
-                    return true;
+		/**
+		 * removes token from the storage
+		 * 
+		 * @return removed token
+		 */
+		protected T poll() {
+			return null;
+		}
+	}
+
+	/**
+	 * Token storage with standard Port<T> interface. By default, it has place
+	 * for only one token.
+	 * 
+	 * @param <T>
+	 *            type of accepted tokens.
+	 */
+	public class Input<T> extends ConstInput<T> implements Port<T> {
+		boolean pushback = false; // if true, do not consume
+
+		public T get() {
+			return value;
+		}
+
+		// ===================== backend
+
+		public void pushback() {
+			if (pushback) {
+				throw new IllegalStateException();
+			}
+			pushback = true;
+		}
+
+		protected void pushback(T value) {
+			if (pushback) {
+				throw new IllegalStateException();
+			}
+			pushback = true;
+			this.value = value;
+		}
+
+		@Override
+		protected boolean consume() {
+			if (pushback) {
+				pushback = false;
+				// value remains the same, the pin remains turned on
+				return true;
+			}
+			// check closing
+			if ((value == null)) {
+				return false;
+			} else {
+				// else make one more round with value==null
+				value = null;
+				return true;
+			}
+		}
+	}
+
+	/**
+	 * A Queue of tokens of type <T>
+	 * 
+	 * @param <T>
+	 */
+	public class StreamInput<T> extends Input<T> implements StreamPort<T> {
+		private Deque<T> queue;
+		private boolean closeRequested = false;
+
+		public StreamInput() {
+			this.queue = new LinkedList<T>();
+		}
+
+		public StreamInput(Deque<T> queue) {
+			this.queue = queue;
+		}
+
+		public T get() {
+			return value;
+		}
+
+		@Override
+		public void post(T token) {
+			if (token == null) {
+				throw new NullPointerException();
+			}
+			boolean doFire;
+			lock.lock();
+			try {
+				if (closeRequested) {
+					overflow(token);
+				}
+				if (value == null) {
+					value = token;
+					doFire = turnOn();
+				} else {
+					add(token);
+					return; // is On already
+				}
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
+
+		protected void overflow(T token) {
+			throw new IllegalStateException("closed already");
+		}
+
+		protected void add(T token) {
+			queue.add(token);
+		}
+
+		@Override
+		public T poll() {
+			return queue.poll();
+		}
+
+		/**
+		 * Signals the end of the stream. Turns this pin on. Removed value is
+		 * null (null cannot be send with StreamInput.add(message)).
+		 */
+		@Override
+		public void close() {
+			boolean doFire;
+			lock.lock();
+			try {
+				if (closeRequested) {
+					return;
+				}
+				closeRequested = true;
+				// System.out.println("close()");
+				doFire = turnOn();
+			} finally {
+				lock.unlock();
+			}
+			if (doFire) {
+				task.fire();
+			}
+		}
+
+		@Override
+		public void pushback() {
+			if (pushback) {
+				throw new IllegalStateException();
+			}
+			pushback = true;
+		}
+
+		@Override
+		protected void pushback(T value) {
+			if (value == null) {
+				throw new IllegalArgumentException();
+			}
+			if (!pushback) {
+				pushback = true;
+			} else {
+				if (this.value == null) {
+					throw new IllegalStateException();
+				}
+				queue.addFirst(this.value);
+				this.value = value;
+			}
+		}
+
+		/**
+		 * attempt to take next token from the input queue
+		 * 
+		 * @return true if next token is available, or if stream is closed false
+		 *         if input queue is empty
+		 */
+		public boolean moveNext() {
+			lock.lock();
+			try {
+				if (pushback) {
+					pushback = false;
+					return true;
+				}
+				boolean wasNotNull = (value != null);
+				T newValue = queue.poll();
+				if (newValue != null) {
+					value = newValue;
+					return true;
 				} else if (closeRequested) {
-					value=null;
-	                return wasNotNull;// after close, return true once, then false
+					value = null;
+					return wasNotNull;// after close, return true once, then
+										// false
 				} else {
 					return false;
 				}
-            } finally {
-                lock.unlock();
-            }
-        }
-        
-        @Override
-        protected boolean consume() {
-            if (pushback) {
-                pushback=false;
-                // value remains the same, the pin remains turned on
-                return true; 
-            }
-            boolean wasNotNull=(value!=null);
-            value = poll();
-            if (value!=null) {
-                return true; // continue processing
-            }
-            // no more tokens; check closing
-            return wasNotNull && closeRequested;
-            // else process closing: value is null, the pin remains turned on
-        }
+			} finally {
+				lock.unlock();
+			}
+		}
 
-        public boolean isClosed() {
-            lock.lock();
-            try {
-                return closeRequested && (value==null);
-            } finally {
-              lock.unlock();
-            }
-        }
-    }
+		@Override
+		protected boolean consume() {
+			if (pushback) {
+				pushback = false;
+				// value remains the same, the pin remains turned on
+				return true;
+			}
+			boolean wasNotNull = (value != null);
+			value = poll();
+			if (value != null) {
+				return true; // continue processing
+			}
+			// no more tokens; check closing
+			return wasNotNull && closeRequested;
+			// else process closing: value is null, the pin remains turned on
+		}
+
+		public boolean isClosed() {
+			lock.lock();
+			try {
+				return closeRequested && (value == null);
+			} finally {
+				lock.unlock();
+			}
+		}
+	}
 }

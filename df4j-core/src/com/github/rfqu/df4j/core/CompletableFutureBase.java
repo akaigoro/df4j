@@ -157,10 +157,7 @@ public abstract class CompletableFutureBase<R, L>
     public void post(R m) {
         Object listenerLoc;
         synchronized(this) {
-            listenerLoc = listener;
-            if (setHasValue(null)) {
-                return;
-            }
+            listenerLoc = setHasValue();
             value = m;
         }
         if (listenerLoc == null) {
@@ -186,10 +183,7 @@ public abstract class CompletableFutureBase<R, L>
     public void postFailure(Throwable newExc) {
         Object listenerLoc;
         synchronized(this) {
-            listenerLoc = listener;
-            if (setHasValue(newExc)) {
-                return;
-            }
+            listenerLoc = setHasValue();
             this.exc = newExc;
         }
         if (listenerLoc == null) {
@@ -205,7 +199,7 @@ public abstract class CompletableFutureBase<R, L>
         }
     }
     
-    protected boolean setHasValue(Throwable newExc) {
+    private Object setHasValue() {
         if (_hasValue) {
             if (exc == null) {
                 throw new IllegalStateException("value set already: "+value);
@@ -215,8 +209,9 @@ public abstract class CompletableFutureBase<R, L>
         }
         _hasValue = true;
         notifyAll();
+        Object listenerLoc=listener;
         listener = null;
-        return false;
+        return listenerLoc;
     }
     
 
@@ -225,7 +220,7 @@ public abstract class CompletableFutureBase<R, L>
     public void _addListener(L sink) {
         boolean _hasValueLoc = addListenerGetHasValue(sink);
         if (_hasValueLoc) {
-            if (exc != null) {
+            if (exc == null) {
                 passResult(sink);
             } else {
                 passFailure(sink);

@@ -339,7 +339,8 @@ public class DFContext  {
             return hashCode;
         }
         
-        public V get() {
+        @SuppressWarnings("unchecked")
+		public V get() {
             V res;
             synchronized (itemMap) {
                 res=(V) itemMap.get(this);

@@ -27,8 +27,4 @@ public abstract class DataflowNode extends DataflowVariable {
     public DataflowNode() {
         super(new ActorTask(null));
     }
-
-    @Override
-    protected abstract void act();
-    
 }

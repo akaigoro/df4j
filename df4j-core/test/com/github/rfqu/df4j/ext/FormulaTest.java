@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 by Alexei Kaigorodov
+ * Copyright 2011-2014 by Alexei Kaigorodov
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -10,18 +10,16 @@
 package com.github.rfqu.df4j.ext;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.junit.Test;
 
-import com.github.rfqu.df4j.core.Callback;
 import com.github.rfqu.df4j.core.CompletableFuture;
 import com.github.rfqu.df4j.core.Promise;
-import com.github.rfqu.df4j.core.Port;
-import com.github.rfqu.df4j.ext.Function.BinaryOp;
-import com.github.rfqu.df4j.ext.Function.UnaryOp;
 
 /**
  * Demonstration of building functional networks.
@@ -44,51 +42,43 @@ public class FormulaTest {
      */
     @Test
     public void t01() throws InterruptedException, ExecutionException {
-        // typical scenario to run dataflow network is as follows.
-        // instantiate desired network class:
-        Square sq=new Square(); 
-        // push argument values to inputs:
-        sq.post(2.0); 
-
-        // wait for the result
-        Double res = sq.res.get();
-        // alternatively, use this shortcut:
-//      Double res = ListenableFuture.getFrom(sq);
-        // result is obtained 
+        Future<Double> square1 = new Square().setArg(2.0);
+		Double res = square1.get();
         assertEquals(4, res.intValue());
+        
+        square1 = new Square().setArg(2.0);
+        Future<Double> square2 = new Square().setArg(square1);
+		res=square2.get();
+        assertEquals(16, res.intValue());
     }
+
 
     /**
      * checks that execution exception is propagated to ListenableFuture
      */
     @Test
     public void t011() throws InterruptedException {
-        Sqrt sq=new Sqrt(); 
-        sq.post(-2.0); // square root from negative number would cause an error
+    	Future<Double> sq=new Sqrt().setArg(-2.0); // square root from negative number would cause an error
         try {
             // that error manifests itself when the result is pulled from the network
-            sq.res.get();
+            sq.get();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
     }
 
+
     /**
      * checks that execution exception is propagated between actor nodes
      */
     @Test
     public void t012() throws InterruptedException {
-        Sqrt sq=new Sqrt(); 
-        Sum sum=new Sum();
-        sq.res.addListener(sum.p1);
-
-        sq.post(-2.0); // square root from negative number would cause an error
-        //sum.p2.send(1.0);
-
+    	Future<Double> sq=new Sqrt().setArg(-2.0); // square root from negative number would cause an error 
+    	Future<Double> sum=new Sum().setArgs(sq, 0);
         try {
             // that error manifests itself when the result is pulled from the network
-            sum.res.get();
+            sum.get();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
@@ -100,10 +90,8 @@ public class FormulaTest {
      */
     @Test
     public void t02() throws InterruptedException, ExecutionException {
-		Mult node=new Mult();	
-    	node.p1.post(2.0);
-    	node.p2.post(3.0);
-        assertEquals(6, node.res.get().intValue());
+    	Future<Double> node=new Mult().setArgs(2.0, 3.0);
+        assertEquals(6, node.get().intValue());
     }
 
     /**
@@ -113,21 +101,17 @@ public class FormulaTest {
     @Test
     public void t03() throws InterruptedException, ExecutionException {
         // create nodes
-        Square a=new Square();  
-        Square b=new Square();  
-        Sum sum = new Sum();
-        Sqrt sq=new Sqrt(); 
-        // create vertices
-        a.res.addListener(sum.p1);        // a^2+b^2 -> sum
-        b.res.addListener(sum.p2);
-        sum.res.addListener(sq);         // sum -> sqrt
-        // send arguments
-        a.post(3.0);
-        b.post(4.0);
+    	Square a=new Square();  
+    	Square b=new Square();  
+    	Future<Double> sum = new Sum().setArgs(a, b); // a^2+b^2 -> sum
+    	Future<Double> sq=new Sqrt().setArg(sum); // sum -> sqrt 
+        a.setArg(3.0);
+        b.setArg(4.0);
         // wait for the result
-        double res = sq.res.get();
+        double res = sq.get();
         assertEquals(5, res, delta);
     }
+
 
     /**
      * Demonstrates how complex network with single result
@@ -136,20 +120,14 @@ public class FormulaTest {
      * computes the discriminant of a quadratic equation
      *     D= b^2-4*a*c 
      */
-    static class Discr extends CompletableFuture<Double> {
-        // internal nodes
-        private Mult mu2=new Mult();	
-        private Diff diff = new Diff();
-        // inputs
-        MulByConst a=new MulByConst(4.0);   
-        Square b=new Square();
-        Callback<Double> c=mu2.p2;
-		{
-            a.res.addListener(mu2.p1);
-            b.res.addListener(diff.p1);
-            mu2.res.addListener(diff.p2);
-            diff.res.addListener(this);
-        }
+    public static class Discr extends Function<Double> {
+		@Override
+		protected Double eval(Object[] args) {
+			Double a = (Double) args[0];
+			Double b = (Double) args[1];
+			Double c = (Double) args[2];
+			return b*b-4*a*c ;
+		}
 	}
 	
     /**
@@ -157,38 +135,31 @@ public class FormulaTest {
      * can be encapsulated in a class with 2 {@link Promise} members.
      * 
      * compute roots of a quadratic equation
-     *     D  = b^2-4*a*c 
-     *     x1 = (-b + sqrt(D))/(2*a) 
-     *     x2 = (-b - sqrt(D))/(2*a) 
+     *     d  = b^2-4*a*c 
+     *     sd = sqrt(D)
+     *     a2=2*a
+     *     x1 = (-b + sd)/a2
+     *     x2 = (-b - sd)/a2
      */
 	static class QuadEq {
-        // internal nodes
-	    private UnaryMinus mb=new UnaryMinus();
-	    private Discr d =new Discr();
-	    private Sqrt sqrt = new Sqrt();
-	    private MulByConst mul=new MulByConst(2.0);    
-	    private Sum sum = new Sum();
-	    private Diff diff=new Diff();
         // inputs
 	    CompletableFuture<Double> a=new CompletableFuture<Double>(); // a and b used multiple times, require Promise
 	    CompletableFuture<Double> b=new CompletableFuture<Double>();
-		Port<Double> c=d.c; // c is used only once
+	    CompletableFuture<Double> c=new CompletableFuture<Double>();
+        // internal nodes
+		Future<Double> d=new Discr().setArgs(a, b, c);
+		Future<Double> sd=new Sqrt().setArgs(d);
+		Future<Double> a2=new Mult().setArgs(2.0, a);
+		Future<Double> mb=new UnaryMinus().setArg(b);
 		// results
-		Div x1 = new Div();
-		Div x2 = new Div();
-		// connections
-        {
-            a.addListener(d.a).addListener(mul);
-            b.addListener(d.b).addListener(mb);
-            d.addListener(sqrt);
-            
-            mb.res.addListener(sum.p1).addListener(diff.p1);
-            sqrt.res.addListener(sum.p2).addListener(diff.p2);
-            sum.res.addListener(x1.p1);
-            mul.res.addListener(x1.p2).addListener(x2.p2);
-            
-            diff.res.addListener(x2.p1);
-        }
+		Future<Double> x1=new Div().setArgs(
+				new Sum().setArgs(mb, sd),
+				a2
+				);
+		Future<Double> x2=new Div().setArgs(
+				new Diff().setArgs(mb, sd),
+				a2
+				);
 	}
 
 	/** checks evaluation of quadratic equation
@@ -200,8 +171,8 @@ public class FormulaTest {
         node.b.post(3.0);
         node.c.post(-14.0);
 
-        assertEquals(2.0, node.x1.res.get(), delta);
-        assertEquals(-3.5, node.x2.res.get(), delta);
+        assertEquals(2.0, node.x1.get(), delta);
+        assertEquals(-3.5, node.x2.get(), delta);
     }
 
     /**
@@ -215,22 +186,63 @@ public class FormulaTest {
         node.c.post(14.0);
 
         try {
-            node.x1.res.get().intValue();
+            node.x1.get().intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
         try {
-            node.x2.res.get().intValue();
+            node.x2.get().intValue();
             fail("no ExecutionException");
         } catch (ExecutionException e) {
             assertTrue( e.getCause() instanceof IllegalArgumentException);
         }
     }
-    
+
     // functional computing nodes
 
-    static class Sqrt extends UnaryOp<Double> {
+    /**
+     * Unary operation
+     *
+     * @param <T> type of the operand and the result
+     */
+ 	public static abstract class UnaryOp<T> extends Function<T> {
+
+ 		public Function<T> setArg(Object value) {
+ 			return setArgs(new Object[] { value });
+ 		}
+
+ 		@Override
+ 		@SuppressWarnings("unchecked")
+ 		protected T eval(Object[] args) {
+ 			return eval((T) args[0]);
+ 		}
+
+ 		abstract protected T eval(T operand);
+
+ 	}
+    
+    /**
+     * Binary operation: classic dataflow object.
+     * Waits for both operands to arrive,
+     * computes the operation, and sends result to the listeners
+     *
+     * @param <T> the type of operands and the result
+     */
+    public static abstract class BinaryOp<T> extends Function<T> {
+
+		@Override
+		@SuppressWarnings("unchecked")
+		protected T eval(Object[] args) {
+			return eval((T) args[0], (T) args[1]);
+		}
+
+       abstract protected T eval(T opnd, T opnd2);
+
+    }
+
+     static class Sqrt extends UnaryOp<Double> {
+    	 
         public Double eval(Double v) {
             double val = Math.sqrt(v.doubleValue());
             if (Double.isNaN(val)) {
@@ -258,33 +270,6 @@ public class FormulaTest {
         }
     }
 
-    static class MulByConst extends UnaryOp<Double> {
-        private double c;
-        public MulByConst(double c) {
-            this.c = c;
-        }
-        public Double eval(Double v) {
-            return c*v;
-        }
-    }
-    
-    /** another way to implement multiplication by a constant
-     */
-    static class MulByConst1 extends Mult implements Callback<Double>{
-        public MulByConst1(Double c) {
-            super.p1.post(c);
-        }
-        @Override
-        public void post(Double value) {
-            super.p2.post(value);
-        }
-
-        @Override
-        public void postFailure(Throwable exc) {
-            super.p2.postFailure(exc);
-        }
-    }
-    
     static class UnaryMinus extends UnaryOp<Double> {
         public Double eval(Double v) {
             return -v;
@@ -302,12 +287,9 @@ public class FormulaTest {
             return v1 / v2;
         }
     }
-    
+
     public static void main(String args[]) throws InterruptedException, ExecutionException {
     	FormulaTest qt = new FormulaTest();
-        qt.t011();
-        qt.t02();
-        qt.t03();
-        qt.t04();
+        qt.t01();
     }
 }
