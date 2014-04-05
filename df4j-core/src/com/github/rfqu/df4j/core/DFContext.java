@@ -171,7 +171,6 @@ public class DFContext  {
 
         @Override
         public void uncaughtException(Thread t, Throwable e) {
-            // TODO Auto-generated method stub
             super.uncaughtException(t, e);
         }
     }
@@ -339,8 +338,7 @@ public class DFContext  {
             return hashCode;
         }
         
-        @SuppressWarnings("unchecked")
-		public V get() {
+        public V get() {
             V res;
             synchronized (itemMap) {
                 res=(V) itemMap.get(this);
