@@ -1,6 +1,6 @@
 df4j is a basic dataflow library. It can easily be extended for specific needs.
 
-The primary goal is to extend java.util.concurrent package with means to synchronize tasks
+The primary goal is to extend java.util.concurrent package with means to synchronize 
 task submissions to a thread pool. Tasks are treated as procedures with parameters,
 which are calculated asynchronously in other tasks.
 When all parameters are set, the task is submitted to the executor, attached to the task when the task was created.
@@ -8,61 +8,46 @@ For convenience, default executor can be created which can be attached to the ta
 When a task executes, it calculates and passes parameters to other tasks, which eventually causes their execution.
 So the tasks form a directed (but not necessarily acyclic) graph where the tasks are nodes and parameter assignments are arcs.
 This graph is named dataflow graph. It also can be considered as a colored Petri net with some restrictions.
-Transitions are defined together with input places in an instance of core class DataflowVariable,
-so places cannot submit tokens to more than one transition. Also, DataflowVariable contains implicit token loop which
-prevents parallel executions of the transition. Multiple executions can occur when
-parameters are assigned multiple times.    
+Just like a Petri net,  dataflow graph is bipartite: it consists of places (where data tokens are stored until they are consumed),
+and transitions - tasks which take input tokens and issue output tokens to their output places.
+  
+This library support two kinds of places and transitions: for single-time execution and for stream execution.
+
+
+Single-time execution package
+--------------------------------
+Classes and interfaces for single-time execution are collected in org.df4j.core.func package. Main classes are:
+
+ - Promise: a storage for one data token. Token is put explicitly with method post. It then can be distributed to many consumers.
+Consumers can request the data synchronously, via interface java.util.concurrent.Future, or asynchronously via subscriptions.
+Subscribers must implement core interface Listener.
+
+ - Function: it is a transition together with input places for arguments and output place for result. Input places can be connected
+ to Promises or output places of other Functions via subscriptions.
+
+Streame execution package
+--------------------------------
+Classes and interfaces for single-time execution are collected in org.df4j.core.actor package. Main classes are:
+
+- Actor:  it is a transition together with input places for input streams. Since input places are defined together with transitions,
+they can submit tokens to only one transition. Also, Actor contains implicit control token loop which
+prevents parallel executions of the transition.
+
+- Actor1: syntactic sugar for Actor with one predefined input place. This kind of actors are similar to actors in Acca andGPars libraries.
+
+- MultiPortActor: handles one message at a time just like Actor1, but with multiple inputs,
+each input supplied with its own handler. This can be used to model pattern matching in Akka actors,
+and for other purposes.       
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
-If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
+If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j2/issues/new,
 or send email to alexei.kaigorodov($)gmail.com.
 
-Flow based programming approach
------------------
-This library follows the concept of [Flow based programming](https://en.wikipedia.org/wiki/Flow-based_programming).
-Visit that site to see pictures of FBP diagrams and grasp the idea.
-
-Terminilogy notes: here FBP diagram is called dataflow graph, and its component process called a dataflow node, or an actor. Note that the term
-Actor can also denote a dataflow node with single input, as does Akka library.
-
-So, node of a dataflow graph consists of frontend and backend.
-Frontend contains one or more pins (like pins of a microchip), which accept and store input tokens.
-When all pins are ready (have received tokens), then backend procedure is called. Backend procedure reads the input tokens,
-perform calculations and sends that (or new) tokens to pins of other (or the same) nodes.
-
-This idea can be impelmented in many ways, depending of desgn decisions chosed:
-
-- what kinds of tokens are possible
-- how tokens are passed to nodes
-- how backend procedure is called
-- how tokens are deleted from inputs.
-
-In df4j, following decisions were made:
-
-- tokens are either references to arbitrary java objects, or just signals which cannot be denoted but can be counted.
-
-- tokens are passed to pins directly with a simple method call, usually Port.post(token).
-General contract is that this method call should be fast,
-and sender need not bother to organise this call as a separtate task.
-
-- the way the backend procedure is executed is determined at the time of creation of the component, by assigning an executor the the component.
-df4j provides several kinds of executors (and programmer can define custom executor), but most of them require that backend procedure cannot block
-or sleep, avoiding thread starvation.
-In case if the algorithm of the backend procrdure needs, say, to read from network, then another component should be declared, with a pin that receives
-network packets, and asynchronous I/O operation should be started, which eventually passes the result to that component.
-df4j has nonblocking network library, which support both NIO1 and NIO2.
-
- - tokens are deleted from inputs only after the backend procedure completes. This way backend procedure can read tokens 
-directly from inputs during the execution. Invocations of the backend procedure are serialized with respect to the component instance:
-even if all inputs have many tokens, they are processed serially, thus the backend procedure need not synchronize on the component body.
-
-As a result, dataflow graph can contain millions of components, serving thousands of network connections, and using a small number of threads. 
-
-API overview
+Actor tutorial
 ------------
 
-Base class of a graph component is [DataflowNode](df4j-core/src/com/github/rfqu/df4j/core/DataflowNode.java).
+Base class of a graph component is [Actor](src/org/df4j/core/actor/Actor.java).
 To build a component, user have to define pins and backend procedure. Pins are instances of predefined inner classes.
 Backend procedure has signature void act(). Most important pin classes are:
 
@@ -74,7 +59,7 @@ When all resources are exhausted, the excution would not start.
 Hello world for StreamInput:
 ------------------------
 <pre>
-    class Collector extends DataflowNode {
+    class Collector extends Actor {
         StreamInput<String> input=new StreamInput<String>();
         StringBuilder sb=new StringBuilder();
         
@@ -103,16 +88,16 @@ Hello world for StreamInput:
     }
 </pre>
 
-Since Collector has single input, it can be refactored to an Actor.
+Since Collector has single input, it can be refactored to an Actor1.
 Note that this simplifies both access to frontend pins and declaration of backend procedure,
 but adds nothing essential - just a sintactic sugar.
 
 
-Single-input Actor Hello World Example
+Single-input Actor1 Hello World Example
 ------------------------
 
 <pre>
-    class Collector extends Actor<String> {
+    class Collector extends Actor1<String> {
         StringBuilder sb=new StringBuilder();
         
         @Override
@@ -138,11 +123,11 @@ That's it. No additional object creation, like Properties and ActorSystem in Akk
 
 Very often actor have to do some action when input stream of messages ended. In the above example,
 the end of stream is coded as empty string. This is not convenient: the act method have to check each messsage,
-and using a "poison pill" value may not be feasible. So the Actor class has frontend method close and
-corresponding method complete for this cases: 
+and using a "poison pill" value may not be feasible. So the StreamInput interface (and so Actor1 class)
+has frontend method close and corresponding method complete for this cases: 
 
 <pre>
-    class Collector extends Actor<String> {
+    class Collector extends Actor1<String> {
         StringBuilder sb=new StringBuilder();
         
         @Override
@@ -165,8 +150,8 @@ corresponding method complete for this cases:
     }
 </pre>
 
-Note, being an Actor does not preclude a node from adding more inputs, and indeed
-many Actors from the tests and examples are in fact DataflowNodes with several
+Note, being an Actor1 does not preclude a node from adding more inputs, and indeed
+many Actors from the tests and examples are in fact Actors with several
 inputs (and cannot be represented as JetLang or Akka actors).
 
 Actors as tokens
@@ -181,32 +166,32 @@ to receive new assignments, the actor sends itself to the actor's port. Actors a
 be sent as messages (of course, references to actors). The dispatcher acts when both input ports
 are not empty:
 <pre>
-    class Dispatcher extends DataflowNode {
+    class Dispatcher extends Actor {
         Input<Assignment> tasks=new StreamInput<Assignment>();
-        Input<Actor<Assignment>> actors=new StreamInput<<Actor<Assignment>>>();
+        Input<Actor1<Assignment>> actors=new StreamInput<<Actor1<Assignment>>>();
         
         @Override
         protected void act() {
             Assignment task=tasks.get();
-            Actor<Assignment> actor=actor.get();
+            Actor1<Assignment> actor=actor.get();
             actor.post(task);
         }
     }
 </pre>
-In fact, Dispatcher can be build upon Actor:
+In fact, Dispatcher can be build upon Actor1:
 <pre>
-    class Dispatcher extends Actor<Assignment> {
-        Input<Actor<Assignment>> actors=new StreamInput<<Actor<Assignment>>>();
+    class Dispatcher extends Actor1<Assignment> {
+        Input<Actor1<Assignment>> actors=new StreamInput<<Actor1<Assignment>>>();
         
         @Override
         protected void act(Assignment task) {
-        	Actor<Assignment> actor=actors.get();
+        	Actor1<Assignment> actor=actors.get();
             actor.post(task);
         }
     }
 </pre>
-This is because Actor is a simple extension of DataflowNode with one declared StreamInput.
-Actor is convenient to use, as it is itself implements interface Port (shorted to the predefined input),
+This is because Actor1 is a simple extension of Actor with one declared StreamInput.
+Actor1 is convenient to use, as it is itself implements interface StreamPort (shorted to the predefined input),
 and we can write actor.post(m) instead of actor.input.post(m).
 
 Now think how worker actor could know if its node can be given more assignments.
@@ -216,20 +201,20 @@ finishes one task, it sends a message and the number is increased by one.
 
 In multithreaded environment, such a resource counter can be represented with a semaphore.
 In actor environment, actors are not allowed to block on semaphores. Instead, they can use 
-equivalent feature: class DataflowNode.Semafor. It reminds DataflowNode.Input, but does not holds
+equivalent feature: class Actor.Semafor. It reminds Actor.Input, but does not holds
 messages, but only a counter, allowing the dataflow node to execute only when the counter is greater than zero.
-Each execution of the DataflowNode.act() method reduces the counter by one.
+Each execution of the Actor.act() method reduces the counter by one.
 
-To imitate acquiring semaphore, we create an intermediate Actor with Semafor instantiated. Working actor
+To imitate acquiring semaphore, we create an intermediate Actor1 with Semafor instantiated. Working actor
 sends itself to that intermediate actor and, if semaphore is open, working actor is sent further to the dispatcher. 
 
 <pre>
-    class SemaActor extends Actor<Actor<Assignment>> {
+    class SemaActor extends Actor1<Actor1<Assignment>> {
     	Semafor counter=new Semafor();
     	Dispatcher dispatcher; // initialize by IOC or in constructor
         
         @Override
-        protected void act(Actor<Assignment> actor) {
+        protected void act(Actor1<Assignment> actor) {
           	dispatcher.post(actor);
         }
 
@@ -241,7 +226,7 @@ sends itself to that intermediate actor and, if semaphore is open, working actor
         }
     }
 
-    class WorkerActor extends Actor<Assignment> {
+    class WorkerActor extends Actor1<Assignment> {
     	SemaActor semaActor=new SemaActor();
         NetworkConnection conn=new NetworkConnection(clusterNodeAddress, semaActor);
         
@@ -258,24 +243,24 @@ In the above example, network connection only resends outgoing messages without 
 incoming messages of one type (permission to send one more assignment to the cluster node).
 In reality, network communication is much more complicated.
 
-DataflowNode with an Input and Semafor (or an Actor with Semafor inside) 
+Actor with an Input and Semafor (or an Actor1 with Semafor inside) 
 is a powerful facility to represent nested non-blocking services. See program NestedCallbacks in the tutorial package.  
 
 Background Executor
 -------------------
 Executors used in df4j need to implement simple java.util.concurrent.Executor interface. 
-When a Task (including DataflowNode or Actor) is created, it should be assigned an Executor to run on.
+When a Task (including Actor or Actor1) is created, it should be assigned an Executor to run on.
 If Executor argument is null (or parameterless constructor used),  Executor is taken from the thread context.
 If no executor in the thread context found, new default Executor is created (with fixed number of threads
 equal to the number of available processors). If another kind of context executor wanted, create it before
-instantiating any DataflowNode and set in context by DFContex.setCurrentExecutor().
+instantiating any Actor and set in context by DFContex.setCurrentExecutor().
 Take care for executor's threads to have references to that executor.
 Class ContextThreadFactory can be used for this purpose - see DFContext.newFixedThreadPool(nThreads)
 and other similar methods. See also the package df4j.ext for a number of specific executors. PrivateExecutor
 contains a separate thread to serve one actor - this allow that actor to block on monitors or input/outut operations.
 ImmediateExecutor runs tasks on caller's thread and turns your program into sequential one, which helps in debugging.
 
-Thread context is an instance of class DFContext and is stored as a local variable. Besides it main purpose to store
+Thread context is an instance of class DFContext and is stored as a tread-local variable. Besides it main purpose to store
 current executor, it can be used to keep any other values in a fashion similar to Threadlocal.
 Define and use static variables of type DFContext.ItemKey just as you used to use Threadlocals.
 The difference is that when spawning new Thread, you should only care to pass DFContext,
@@ -286,3 +271,5 @@ Version history
 ---------------
 v1.0 2013/09/01
 df4j-core proved to be stable, so version number 1.0 is assigned.  
+v2.0 2014/04/06
+Refactored for more clean design and structure.  
