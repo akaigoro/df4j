@@ -16,7 +16,7 @@ package org.df4j.core;
  */
 public abstract class Actor1<M> extends Actor implements StreamPort<M> {
     /** place for input token(s) */
-    protected final StreamInput<M> input=createInput();
+    protected final StreamInput<M> mainInput=createInput();
 
     /** Override this method if another type of input queue is desired. 
      * @return storage for input tokens
@@ -27,16 +27,16 @@ public abstract class Actor1<M> extends Actor implements StreamPort<M> {
 
     @Override
     public void post(M m) {
-        input.post(m);
+        mainInput.post(m);
     }
 
     @Override
     public void close() {
-        input.close();
+        mainInput.close();
     }
 
     public boolean isClosed() {
-        return input.isClosed();
+        return mainInput.isClosed();
     }
 
     //====================== backend
@@ -47,7 +47,7 @@ public abstract class Actor1<M> extends Actor implements StreamPort<M> {
      */
     @Override
     protected void act() throws Exception {
-        M message=input.value;
+        M message=mainInput.value;
         if (message==null) {
             complete();
         } else {
@@ -57,7 +57,7 @@ public abstract class Actor1<M> extends Actor implements StreamPort<M> {
 
     /** only has sense when called from act(M message) */
     public void pushback() {
-        input.pushback();
+        mainInput.pushback();
     }
     
     /**

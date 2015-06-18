@@ -9,8 +9,8 @@
  */
 package org.df4j.core.ext;
 
-import org.df4j.core.Actor1;
-import org.df4j.core.StreamPort;
+import org.df4j.core.Port;
+import org.df4j.core.SharedPlace;
 
 /**
  * In multithreaded programming, often several identical worker threads are fed with
@@ -20,8 +20,8 @@ import org.df4j.core.StreamPort;
  * Actors work in parallel. 
  * The actor wanting to be fed sends itself to the actors port with {@link #listen(Actor<M>)}.
  */
-public class Dispatcher<M> extends Actor1<M> {
-    private final StreamInput<StreamPort<M>> actors=new StreamInput<StreamPort<M>>();
+public class Dispatcher<R> extends SharedPlace<R> {
+    private final StreamInput<R> resources=new StreamInput<R>();
     
     /** Accepts request from the actor for the next message.
      * The next message will be sent to the actor as soon as it is available.
@@ -31,25 +31,30 @@ public class Dispatcher<M> extends Actor1<M> {
      * The close signal is passed to all actors.
      * @param actor
      */
-    public void listen(Actor1<M> actor) {
+    public void post(Port<R> actor) {
         if (isClosed()) {
-            actor.close();
+       //     actor.close(); TODO
         } else {
-            actors.post(actor);
+            super.post(actor);
         }
     }
 
     @Override
-    protected void act(M message) throws Exception {
-        actors.get().post(message);
+    protected void act(Port<R> request) throws Exception {
+        request.post(resources.get());
     }
-
+/* TODO
     @Override
     protected void complete() throws Exception {
-        actors.get().close();
-        for (StreamPort<M> actor: actors) {
+        resources.close();
+        for (StreamPort<R> actor: actors) {
             actor.close();
         }
+    }
+*/
+    @Override
+    public void ret(R token) {
+        resources.post(token);
     }
 
 }

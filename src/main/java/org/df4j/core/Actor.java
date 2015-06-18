@@ -374,15 +374,15 @@ public abstract class Actor implements Runnable {
         private Deque<T> queue;
         private boolean closeRequested = false;
 
-        protected StreamInput () {
+        public StreamInput () {
             this.queue = new LinkedList<T>();
         }
 
-        protected StreamInput(Deque<T> queue) {
+        public StreamInput(Deque<T> queue) {
             this.queue = queue;
         }
 
-        protected T get() {
+        public T get() {
             return value;
         }
 
@@ -400,7 +400,7 @@ public abstract class Actor implements Runnable {
                     value = token;
                     doFire = turnOn();
                 } else {
-                    add(token);
+                    queue.add(token);
                     return; // is On already
                 }
             }
@@ -411,10 +411,6 @@ public abstract class Actor implements Runnable {
 
         protected void overflow(T token) {
             throw new IllegalStateException("closed already");
-        }
-
-        protected void add(T token) {
-            queue.add(token);
         }
 
         /**
