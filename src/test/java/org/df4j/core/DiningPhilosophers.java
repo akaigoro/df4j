@@ -6,6 +6,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 import org.junit.Test;
 
+/**
+ * Demonstrates usafe if requestibg pins.
+ */
 public class DiningPhilosophers {
     private static final int num = 5;
     PrintStream out=System.out;
@@ -14,7 +17,7 @@ public class DiningPhilosophers {
     Timer timer=new Timer();
     Random rand=new Random();
 
-    public  void delayedUp(Actor.Semafor sema) {
+    public void delayedUp(Actor.Semafor sema) {
         out.println("Pause()");
         timer.schedule(new TimerTask(){
             public void run() {

@@ -1,4 +1,4 @@
-package org.df4j.examples.Monitor;
+package org.df4j.examples.monitor;
 
 import org.df4j.core.*;
 import org.junit.Test;

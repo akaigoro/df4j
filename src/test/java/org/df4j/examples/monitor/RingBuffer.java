@@ -1,4 +1,4 @@
-package org.df4j.examples.Monitor;
+package org.df4j.examples.monitor;
 
 import org.df4j.core.Port;
 
@@ -48,10 +48,7 @@ class RingBuffer<R> extends Monitor<RingBuffer<R>> {
             } else {
                 consumer.post((R) buf[posR]);
                 count--;
-                posR++;
-                if (posR==capacity) {
-                    posR=0;
-                }
+                posR=(posR+1)%capacity;
                 doNotifyAll();
             }
         }

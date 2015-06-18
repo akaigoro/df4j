@@ -1,4 +1,4 @@
-package org.df4j.examples.Monitor;
+package org.df4j.examples.monitor;
 
 import java.util.LinkedList;
 import org.df4j.core.Actor1;
@@ -6,19 +6,26 @@ import org.df4j.core.Actor1;
 /**
  * Demonstrates how such low-level mechanism as java Monitor
  * (with synchronized/wait/notify operators) can be modelled
- * df4j core classes.
+ * by df4j core classes.
  * Below is a typical flowchart of a synchronized method:
-      v--------------------------------------------------------< 
-      >-->||                                                   |
-process-->||-- (state ok?): no--> / wait();                    |
-                   :yes               |>---------------------->|
-                     |                                         |
-                     v                                         |
-                 / change();                                   |
-                 / notifyAll();                                |
-                 / return;                                     |
-                     |                                         |
-                     >---------------------------------------->|
+ * <pre>
+ * {@code
+      v----------------------------------------------<
+      |                                              |
+/ monitorexit /                                      |    
+      |                                              |
+      >-->||                                         |
+process-->||-- (state ok?): no--> / wait(); / >----->|
+                   :yes                              ^
+                     |                               |
+                     v                               |
+                 / change();    /                    |
+                 / notifyAll(); /                    |
+                 / return;      /                    |
+                     |                               |
+                     >------------------------------>^
+ * }
+ * </pre>                    
  *  MonitorEnter and MonitorExit are modelled with the Actor's fire bit.
  *  We may say all Actor's act() methods are synchronized by construction.
  *  Monitor is just an Actor with main input of type Runnable and 

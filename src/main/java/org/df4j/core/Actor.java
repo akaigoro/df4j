@@ -22,14 +22,7 @@ import java.util.concurrent.ForkJoinPool;
  *  - redefine abstract method act()
  */
 public abstract class Actor implements Runnable {
-    public static Port<Runnable> commonExec = new Port<Runnable>() {
-        ForkJoinPool commonPool=ForkJoinPool.commonPool();
-
-        @Override
-        public void post(Runnable r) {
-            commonPool.execute(r);
-        }
-    };
+    protected ForkJoinPool commonPool=ForkJoinPool.commonPool();
 
     private Pin head; // the head of the list of Pins
     private int pinCount = 1; // fire bit allocated
@@ -37,16 +30,16 @@ public abstract class Actor implements Runnable {
     private RequestingInput<?> reqHead;
     
     /** lock pin */
-    final void pinOff(int pinBit) {
+    private final void pinOff(int pinBit) {
         blockedPins |= pinBit;
     }
 
     /** unlock pin */
-    final void pinOn(int pinBit) {
+    private final void pinOn(int pinBit) {
         blockedPins &= ~pinBit;
     }
 
-    final void _lockFire() {
+    private final void _lockFire() {
         pinOff(1);
     }
 
@@ -67,12 +60,12 @@ public abstract class Actor implements Runnable {
         return (blockedPins | 1) == 1;
     }
 
-    final boolean allReady() {
+    private final boolean allReady() {
         return blockedPins == 0;
     }
 
     /** invoked when all transition direct pins ready.
-     * Start requesting pins.
+     *  Starts requesting pins.
      */
     private void fire1() {
         for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
@@ -84,9 +77,29 @@ public abstract class Actor implements Runnable {
         fire();
     }
 
+    /** invoked when all transition pins are ready,
+     *  and method run() is to be invoked.
+     *  Safe way is to submit this instance as a Runnable to an Executor.
+     *  Fast way is to invoke it directly, but make sure the chain of
+     *  direct invocations is short to avoid stack overflow.
+     */
     protected void fire() {
-        commonExec.post(this);
+        commonPool.execute(this);
     }    
+
+    private synchronized boolean consumeTokens() {
+        for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
+            pin.purge();
+        }
+        for (Pin pin = head; pin != null; pin = pin.next) {
+            pin.purge();
+        }
+        boolean doFire = allInputsReady();
+        if (!doFire) {
+            _unlockFire(); // allow firing
+        } 
+        return doFire;
+    }
 
     public String getStatus() {
         StringBuilder sb = new StringBuilder();
@@ -112,19 +125,7 @@ public abstract class Actor implements Runnable {
     public void run() {
         try {
             act();
-            boolean doFire;
-            synchronized(Actor.this) {
-                // consume tokens
-                for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
-                    pin.purge();
-                }
-                for (Pin pin = head; pin != null; pin = pin.next) {
-                    pin.purge();
-                }
-                doFire = allInputsReady();
-                if (!doFire) {
-                    _unlockFire(); // allow firing
-                }            }
+            boolean  doFire = consumeTokens();
             if (doFire) {
                 fire1();
             }
@@ -180,7 +181,7 @@ public abstract class Actor implements Runnable {
          * 
          * @return true if actor became ready and must be fired
          */
-        final boolean turnOn() {
+        protected final boolean turnOn() {
             // System.out.print("turnOn "+fired+" "+allReady());
             pinOn(pinBit);
             if (allReady()) {

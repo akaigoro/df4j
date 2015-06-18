@@ -1,25 +1,112 @@
-df4j is a basic dataflow library. It can easily be extended for specific needs.
+df4j is a minimalistic dataflow actor library. It can easily be extended for specific needs.
 
-The primary goal is to extend java.util.concurrent package with means to synchronize tasks
-task submissions to a thread pool. Tasks are treated as procedures with parameters,
-which are calculated asynchronously in other tasks.
-When all parameters are set, the task is submitted to the executor, attached to the task when the task was created.
-For convenience, default executor can be created which can be attached to the task implicitly.
-When a task executes, it calculates and passes parameters to other tasks, which eventually causes their execution.
-So the tasks form a directed (but not necessarily acyclic) graph where the tasks are nodes and parameter assignments are arcs.
-This graph is named dataflow graph. It also can be considered as a colored Petri net with some restrictions.
-Transitions are defined together with input places in an instance of core class DataflowVariable,
-so places cannot submit tokens to more than one transition. Also, DataflowVariable contains implicit token loop which
-prevents parallel executions of the transition. Multiple executions can occur when
-parameters are assigned multiple times.    
+The primary goal is to extend java.util.concurrent package with means to synchronize
+task submissions to a thread pool. Tasks can be treated as procedures with parameters,
+values of that parameters are calculated asynchronously an concurrently in other tasks.
+The library provides all the nessessary synchronization, so programmer need not use the synchronized operator or ReentranLocks. 
+When all parameters are set, the task is submitted to the executor.
+When a task executes, it calculates and passes actual parameters to other tasks, which eventually causes their execution.
+After task finishes, it can run again after new set of parameters is supplied.
+So the tasks form a directed and, probably, cyclic graph where the tasks are nodes and parameter assignments are arcs.
+This graph is named dataflow graph. 
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
 If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
-or send email to alexei.kaigorodov($)gmail.com.
+or send email to alexei.kaigorodov(at)gmail.com.
 
-Flow based programming approach
------------------
+How it works
+------------
+
+Each task is an instance of class org.df4j.core.Actor. This class contains inner classes
+which represent task parameters. An Actor without parameters can be declared, but has little advantage over plain Runnable.
+
+Most important parameter class is StreamInput. It contains internal storage to keep several
+argument values, so arguments for next task executions can be submitted asynchronously.
+
+Other parameter classes can be considered as specializations of the StreamInput class.
+
+Class Semafor contains no storage for argument values, only counter. It can be used, for example, to control how many resources (memory, internet connections etc) the actor can allocate.
+
+Class Input contains storage for only one argument.
+
+Class ConstInput also contains storage for only one argument. It differs from class Input so that its value can be set only once, and is not cleared after task execution.
+
+[explain Requesting parameters]
+
+To define a user-specific Actor, programmer needs to instantiate its parameters and declare method act() which will be invoked after all parameters are assigned. Inside this method, argument values can be obtained from parameter instances with method parameter.get(). 
+
+After the method act() returns, current argument values are consumed, and next values (if any) are retrieved from parameters of type StreamInput. Values of type Input are just cleared. Counters in Semafores are decreased by 1. If after that all parameters remain active, the actor task is resubmitted to the executor. Note that resubmission is made only after the metod act() returns, even if all arguments for next excution were ready before the method act() exited.
+So the method act() can be considered as synchronized. 
+
+Programmer also can declare other instance fields, like in any other class. They do not affect actor's execution.
+
+Hello world example
+-----------
+<pre>
+
+   /**
+    * collects strings
+    * prints collected strings when argument is an empty string 
+    */
+    class Collector extends Actor {
+        StreamInput<String> input=new StreamInput<String>(); // actor's parameter
+        StringBuilder sb=new StringBuilder(); 
+        
+        @Override
+        protected void act() {
+            String message=input.get();
+            if (message=="") {
+                System.out.println(sb.toString());
+                sb.clear();
+            } else {
+               sb.append(message);
+               sb.append(" ");
+            }
+        }
+    }
+
+    public void test() {
+        Collector coll=new Collector();
+        coll.input.post("Hello");
+        coll.input.post("World");
+        coll.input.post("");
+    }
+    
+</pre>
+
+Since Collector has single input, it can be refactored to an Actor.
+Note that this simplifies both access to frontend pins and declaration of backend procedure,
+but adds nothing essential - just a sintactic sugar.
+
+
+Single-input Actor Hello World Example
+------------------------
+<pre>
+
+    class Collector extends Actor<String> {
+        StringBuilder sb=new StringBuilder();
+        
+        @Override
+        protected void act(String message) {
+            if (message.length()==0) {
+                System.out.println(sb.toString());
+            } else {
+                sb.append(message);
+                sb.append(" ");
+            }
+        }
+    }
+
+    public void test() {
+        Collector coll=new Collector();
+        coll.post("Hello");
+        coll.post("World");
+        coll.post("");
+    }
+</pre>
+
+
 This library follows the concept of [Flow based programming](https://en.wikipedia.org/wiki/Flow-based_programming).
 Visit that site to see pictures of FBP diagrams and grasp the idea.
 
@@ -71,68 +158,6 @@ When all resources are exhausted, the excution would not start.
 
 - StreamPort: a queue of tokens represented as java objects.
 
-Hello world for StreamInput:
-------------------------
-<pre>
-    class Collector extends DataflowNode {
-        StreamInput<String> input=new StreamInput<String>();
-        StringBuilder sb=new StringBuilder();
-        
-        @Override
-        // since dataflow node can have different number of inputs,
-        // the act method have no parameters, values from inputs
-        // has to be extracted manually.
-        protected void act() {
-            String message=input.get();
-            if (message==null) {
-                // StreamInput does not accept null values,
-                // and null value signals that input is closed
-                System.out.println(sb.toString());
-            } else {
-               sb.append(message);
-               sb.append(" ");
-            }
-        }
-    }
-
-    public void test() {
-        Collector coll=new Collector();
-        coll.input.post("Hello");  // there is no predifined input,
-        coll.input.post("World");  // input has to be named explicetly
-        coll.input.close();
-    }
-</pre>
-
-Since Collector has single input, it can be refactored to an Actor.
-Note that this simplifies both access to frontend pins and declaration of backend procedure,
-but adds nothing essential - just a sintactic sugar.
-
-
-Single-input Actor Hello World Example
-------------------------
-
-<pre>
-    class Collector extends Actor<String> {
-        StringBuilder sb=new StringBuilder();
-        
-        @Override
-        protected void act(String message) {
-            if (message.length()==0) {
-                System.out.println(sb.toString());
-            } else {
-                sb.append(message);
-                sb.append(" ");
-            }
-        }
-    }
-
-    public void test() {
-        Collector coll=new Collector();
-        coll.post("Hello");
-        coll.post("World");
-        coll.post("");
-    }
-</pre>
 
 That's it. No additional object creation, like Properties and ActorSystem in Akka, or Fiber in JetLang.
 
@@ -280,7 +305,13 @@ current executor, it can be used to keep any other values in a fashion similar t
 Define and use static variables of type DFContext.ItemKey just as you used to use Threadlocals.
 The difference is that when spawning new Thread, you should only care to pass DFContext,
 and all ItemKeys would be passed with it. 
- 
+=== 
+It also can be considered as a colored Petri net with some restrictions.
+Transitions are defined together with input places in an instance of core class DataflowVariable,
+so places cannot submit tokens to more than one transition. Also, DataflowVariable contains implicit token loop which
+prevents parallel executions of the transition. Multiple executions can occur when
+parameters are assigned multiple times.    
+
 
 Version history
 ---------------
