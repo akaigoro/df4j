@@ -27,5 +27,8 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history
 ---------------
-v1.0 2013/09/01
+2014/04/06
+Refactored for more clean design and structure. Interface cahnged, version numver 2.0  
+
+2013/09/01
 df4j-core proved to be stable, so version number 1.0 is assigned.  
