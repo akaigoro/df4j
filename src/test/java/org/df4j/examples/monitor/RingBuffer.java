@@ -27,7 +27,7 @@ class RingBuffer<R> extends Monitor<RingBuffer<R>> {
             } else {
                 buf[(posR+count)%capacity]=element;
                 count++;
-                doNotify();
+                doNotifyAll();
             }
         }
         

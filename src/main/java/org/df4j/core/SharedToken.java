@@ -22,7 +22,9 @@ public class SharedToken<T extends SharedToken<T>> extends SharedPlace<T> {
 
     @Override
     public void ret(T token) {
-        // TODO Auto-generated method stub
+        if (token!=this) {
+            throw new IllegalArgumentException("wrong token");
+        }
         ret();
     }
     

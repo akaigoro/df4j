@@ -57,17 +57,18 @@ public class DiningPhilosophers {
      */
     class Philosopher extends Actor {
         int id;
-        Chopstick left;
-        Chopstick right;
         Semafor startEat=new Semafor();
         RequestingInput<Chopstick> takeFirst;
         RequestingInput<Chopstick> takeSecond;
-        TakerBack takerBack=new TakerBack();
+        TakerBack takerBack;
         
         public Philosopher(int id) {
             this.id = id;
-            left=sticks[id];
-            right=sticks[(id+1)%num];
+            Chopstick left=sticks[id];
+            Chopstick right=sticks[(id+1)%num];
+            // request to shared places made one by one,
+            // in the order of instantiation of RequestingInputs
+            // so be careful to choose the right order to avoid deadlocks
             if (id==num-1) {
                 takeFirst=new RequestingInput<Chopstick>(right);
                 takeSecond=new RequestingInput<Chopstick>(left);
@@ -75,6 +76,7 @@ public class DiningPhilosophers {
                 takeFirst=new RequestingInput<Chopstick>(left);
                 takeSecond=new RequestingInput<Chopstick>(right);
             }
+            takerBack=new TakerBack(left, right);
         }
 
         /**
@@ -89,10 +91,17 @@ public class DiningPhilosophers {
          */
         class TakerBack extends Actor {
             Semafor endEat=new Semafor();
+            Chopstick left;
+            Chopstick right;
+            
+            public TakerBack(Chopstick left, Chopstick right) {
+                this.left=left;
+                this.right=right;
+            }
 
             @Override
             public void act() {
-                out.println("takerBacl start ");
+                out.println("takerBack start ");
                 left.ret();
                 right.ret();
                 delayedUp(startEat); // now think some time, then eat

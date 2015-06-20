@@ -2,11 +2,11 @@ package org.df4j.core;
 
 /**
  * 
- * R - type of tokens
+ * T - type of tokens
  *
  */
-public abstract class SharedPlace<R> extends Actor1<Port<R>> {
+public abstract class SharedPlace<T> extends Actor1<Port<T>> {
     
-    public abstract void ret(R token);
+    public abstract void ret(T token);
 
 }

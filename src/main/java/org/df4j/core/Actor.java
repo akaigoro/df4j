@@ -30,38 +30,34 @@ public abstract class Actor implements Runnable {
     private RequestingInput<?> reqHead;
     
     /** lock pin */
-    private final void pinOff(int pinBit) {
+    private final void _pinOff(int pinBit) {
         blockedPins |= pinBit;
     }
 
     /** unlock pin */
-    private final void pinOn(int pinBit) {
+    private final void _pinOn(int pinBit) {
         blockedPins &= ~pinBit;
     }
 
     private final void _lockFire() {
-        pinOff(1);
+        _pinOff(1);
     }
 
     private final void _unlockFire() {
-        pinOn(1);
+        _pinOn(1);
     }
 
     /**
      * @return true if the actor has all its input pins on
      * and so is ready for execution
      */
-    private final boolean allInputsReady() {
+    private final boolean _allInputsReady() {
         for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
             if (pin.value==null) {
                 return false;
             }
         }
         return (blockedPins | 1) == 1;
-    }
-
-    private final boolean allReady() {
-        return blockedPins == 0;
     }
 
     /** invoked when all transition direct pins ready.
@@ -92,9 +88,9 @@ public abstract class Actor implements Runnable {
             pin.purge();
         }
         for (Pin pin = head; pin != null; pin = pin.next) {
-            pin.purge();
+            pin._purge();
         }
-        boolean doFire = allInputsReady();
+        boolean doFire = _allInputsReady();
         if (!doFire) {
             _unlockFire(); // allow firing
         } 
@@ -161,7 +157,7 @@ public abstract class Actor implements Runnable {
                             "only 32 pins could be created");
                 }
                 pinBit = 1 << pinCount; // assign next pin number
-                turnOff(); // mark this pin as blocked
+                _turnOff(); // mark this pin as blocked
                 pinCount++;
                 // register itself in the pin list
                 if (head == null) {
@@ -181,10 +177,10 @@ public abstract class Actor implements Runnable {
          * 
          * @return true if actor became ready and must be fired
          */
-        protected final boolean turnOn() {
+        protected final boolean _turnOn() {
             // System.out.print("turnOn "+fired+" "+allReady());
-            pinOn(pinBit);
-            if (allReady()) {
+            _pinOn(pinBit);
+            if (blockedPins == 0) {
                 _lockFire(); // to prevent multiple concurrent firings
                 // System.out.println(" => true");
                 return true;
@@ -197,20 +193,18 @@ public abstract class Actor implements Runnable {
         /**
          * sets pin's bit off
          */
-        protected final void turnOff() {
+        protected final void _turnOff() {
             // System.out.println("turnOff");
-            pinOff(pinBit);
+            _pinOff(pinBit);
         }
 
         /**
          * Executed after token processing (method act). Cleans reference to
          * value, if any. Signals to set state to off if no more tokens are in
          * the place. Should return quickly, as is called from the actor's
-         * synchronized block. Default implementation clears blocking bit.
+         * synchronized block. 
          */
-        protected void purge() {
-            turnOff();
-        }
+        protected abstract void _purge();
     }
     
     //=============================== scalars
@@ -222,7 +216,7 @@ public abstract class Actor implements Runnable {
      * @param <T>
      *     type of accepted tokens.
      */
-    protected class ConstInput<T> extends Pin implements Port<T> {
+    public class ConstInput<T> extends Pin implements Port<T> {
         /** extracted token */
         protected T value = null;
         
@@ -245,7 +239,7 @@ public abstract class Actor implements Runnable {
                     throw new IllegalStateException("token set already");
                 }
                 value = token;
-                doFire = turnOn();
+                doFire = _turnOn();
             }
             if (doFire) {
                 fire1();
@@ -256,7 +250,7 @@ public abstract class Actor implements Runnable {
          * pin bit remains ready 
          */
         @Override
-        protected void purge() {
+        protected void _purge() {
         }
         
     }
@@ -268,7 +262,7 @@ public abstract class Actor implements Runnable {
      * @param <T>
      *            type of accepted tokens.
      */
-    protected class Input<T> extends ConstInput<T> implements Port<T> {
+    public class Input<T> extends ConstInput<T> implements Port<T> {
         protected boolean pushback = false; // if true, do not consume
 
         // ===================== backend
@@ -290,13 +284,13 @@ public abstract class Actor implements Runnable {
 
         // TODO why return boolean result
         @Override
-        protected void purge() {
+        protected void _purge() {
             if (pushback) {
                 pushback = false;
                 // value remains the same, the pin remains turned on
             } else {
                 value = null;
-                turnOff();
+                _turnOff();
             }
         }
     }    
@@ -306,7 +300,7 @@ public abstract class Actor implements Runnable {
      * holds token counter without data.
      * counter can be negative.
      */
-    protected class Semafor extends Pin {
+    public class Semafor extends Pin {
         private int count;
 
         protected Semafor() {
@@ -328,7 +322,7 @@ public abstract class Actor implements Runnable {
                 if (count != 1) {
                     return;
                 }
-                doFire = turnOn();
+                doFire = _turnOn();
             }
             if (doFire) {
                 fire1();
@@ -346,10 +340,10 @@ public abstract class Actor implements Runnable {
                     return;
                 }
                 if (isOff) {
-                    turnOff();
+                    _turnOff();
                     return;
                 }
-                doFire = turnOn();
+                doFire = _turnOn();
             }
             if (doFire) {
                 fire1();
@@ -357,9 +351,9 @@ public abstract class Actor implements Runnable {
         }
 
         @Override
-        protected void purge() {
+        protected void _purge() {
             if (--count == 0) {
-                turnOff();
+                _turnOff();
             }
         }
     }
@@ -371,7 +365,7 @@ public abstract class Actor implements Runnable {
      * 
      * @param <T>
      */
-    protected class StreamInput<T> extends Input<T> implements StreamPort<T>, Iterable<T> {
+    public class StreamInput<T> extends Input<T> implements StreamPort<T>, Iterable<T> {
         private Deque<T> queue;
         private boolean closeRequested = false;
 
@@ -395,11 +389,11 @@ public abstract class Actor implements Runnable {
             boolean doFire;
             synchronized(Actor.this) {
                 if (closeRequested) {
-                    overflow(token);
+                    throw new IllegalStateException("closed already");
                 }
                 if (value == null) {
                     value = token;
-                    doFire = turnOn();
+                    doFire = _turnOn();
                 } else {
                     queue.add(token);
                     return; // is On already
@@ -408,10 +402,6 @@ public abstract class Actor implements Runnable {
             if (doFire) {
                 fire1();
             }
-        }
-
-        protected void overflow(T token) {
-            throw new IllegalStateException("closed already");
         }
 
         /**
@@ -426,8 +416,11 @@ public abstract class Actor implements Runnable {
                     return;
                 }
                 closeRequested = true;
-                // System.out.println("close()");
-                doFire = turnOn();
+                if (value == null) {
+                    doFire = _turnOn();
+                } else {
+                    return; // is On already
+                }
             }
             if (doFire) {
                 fire1();
@@ -486,7 +479,7 @@ public abstract class Actor implements Runnable {
         }
 
         @Override
-        protected void purge() {
+        protected void _purge() {
             if (pushback) {
                 pushback = false;
                 return; // value remains the same, the pin remains turned on 
@@ -498,7 +491,7 @@ public abstract class Actor implements Runnable {
             }
             // no more tokens; check closing
             if (wasNull || !closeRequested) {
-                turnOff();  
+                _turnOff();  
             }
             // else process closing: value is null, the pin remains turned on
         }
@@ -518,7 +511,7 @@ public abstract class Actor implements Runnable {
 
     //=============================== Requesting Pins
     
-    protected class RequestingInput<T> implements Port<T> {
+    public class RequestingInput<T> implements Port<T> {
         protected RequestingInput<?> next = null; // link to pin list
         protected Port<Port<T>> sharedPlace;
         protected boolean pushback = false; // if true, do not consume
