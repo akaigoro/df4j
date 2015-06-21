@@ -21,6 +21,9 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history
 ---------------
+2015/06/21
+Converted to multimodule maven project. Previuos df4j project is now module df4j-core.
+
 2015/06/20
 Further codebase and interface minimization, version number 3.0
 
