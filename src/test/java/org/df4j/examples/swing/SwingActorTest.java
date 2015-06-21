@@ -101,7 +101,7 @@ public class SwingActorTest extends JFrame {
     /**
      * Processes messages on EDT.
      */
-    class PrintingActor extends SwingActor<String> {
+    class PrintingActor extends SwingActor1<String> {
 
         @Override
         protected void act(String m) throws Exception {
