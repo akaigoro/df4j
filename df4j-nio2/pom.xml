@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.df4j.core</groupId>
-	<artifactId>df4j-core</artifactId>
-	<version>3.0</version>
+	<groupId>org.df4j.nio2</groupId>
+	<artifactId>df4j-nio2</artifactId>
+	<version>0.2-SNAPSHOT</version>
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
@@ -11,13 +11,12 @@
 			<version>4.11</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.df4j.core</groupId>
+			<artifactId>df4j-core</artifactId>
+			<version>3.0</version>
+		</dependency>
 	</dependencies>
-	<parent>
-		<groupId>org.df4j</groupId>
-		<artifactId>df4j</artifactId>
-		<version>3.0</version>
-		<relativePath>../</relativePath>
-	</parent>
     <build>
 		<plugins>
 			<plugin>
@@ -30,4 +29,10 @@
 			</plugin>
 		</plugins>
 	</build>
+	<parent>
+		<groupId>org.df4j</groupId>
+		<artifactId>df4j</artifactId>
+		<version>3.0</version>
+		<relativePath>../</relativePath>
+	</parent>
 </project>

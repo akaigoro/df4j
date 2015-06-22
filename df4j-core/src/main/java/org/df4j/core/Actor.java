@@ -28,6 +28,7 @@ public abstract class Actor implements Runnable {
     private int pinCount = 1; // fire bit allocated
     private int blockedPins = 0; // mask with 0 for ready pins, 1 for blocked
     private RequestingInput<?> reqHead;
+    private boolean stopped=false;
     
     /** lock pin */
     private final void _pinOff(int pinBit) {
@@ -90,6 +91,9 @@ public abstract class Actor implements Runnable {
         for (Pin pin = head; pin != null; pin = pin.next) {
             pin._purge();
         }
+        if (stopped) {
+            return false;
+        }
         boolean doFire = _allInputsReady();
         if (!doFire) {
             _unlockFire(); // allow firing
@@ -131,6 +135,10 @@ public abstract class Actor implements Runnable {
         }
     }
 
+    protected synchronized void stop() {
+        stopped=true;
+    }
+    
     // ========= backend
 
     /**
@@ -303,7 +311,7 @@ public abstract class Actor implements Runnable {
     public class Semafor extends Pin {
         private int count;
 
-        protected Semafor() {
+        public Semafor() {
             this.count = 0;
         }
 
@@ -578,5 +586,5 @@ public abstract class Actor implements Runnable {
             }
         }
     }
-    
+
 }

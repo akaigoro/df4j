@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.pipeline.io.net;
+package org.df4j.nio2.net;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -16,8 +16,9 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import org.df4j.pipeline.core.SourceNode;
-import org.df4j.pipeline.df4j.core.Port;
+import java.util.stream.Stream;
+import org.df4j.core.*;
+import org.df4j.pipeline.ReactiveActor;
 
 /**
  * Accepts incoming connections, wraps them in {@link AsyncSocketChannel},
@@ -29,7 +30,7 @@ import org.df4j.pipeline.df4j.core.Port;
  * pipeline.setSource(assc)...
  * </code></pre>
  */
-public class AsyncServerSocketChannel extends SourceNode<AsyncSocketChannel>
+public class AsyncServerSocketChannel extends ReactiveActor
     implements CompletionHandler<AsynchronousSocketChannel, Void>
 {
     protected volatile AsynchronousServerSocketChannel assc;
@@ -37,19 +38,12 @@ public class AsyncServerSocketChannel extends SourceNode<AsyncSocketChannel>
     /** prevents simultaneous channel.accept() */
     protected Semafor channelAccess = new Semafor();
     
-    /** limits the number of active connections */
-    protected Semafor connCount = new Semafor();
-    
-    /**
-     * used {@link AsyncSocketChannel}s return here.
-     * They are not reused, just counted by a Semafore.
+    /** 
+     * limits the number of active connections.
+     * Used {@link AsyncSocketChannel}s return here.
+     * They are not reused, just counted by the connCount Semafore.
      */
-    protected Port<AsyncSocketChannel> returnPort=new Port<AsyncSocketChannel>(){
-        @Override
-        public void post(AsyncSocketChannel message) {
-            connCount.up();
-        }
-    };
+    protected ReactiveSemStreamOutput<AsyncSocketChannel> output = new ReactiveSemStreamOutput<>();
     
     public AsyncServerSocketChannel(SocketAddress addr, int connNumber) throws IOException {
         if (addr==null) {
@@ -58,32 +52,19 @@ public class AsyncServerSocketChannel extends SourceNode<AsyncSocketChannel>
         if (connNumber<=0) {
             throw new IllegalArgumentException("connNumber must be positive");
         }
-        AsynchronousChannelGroup acg=AsyncChannelCroup.getCurrentACGroup();
-        assc=AsynchronousServerSocketChannel.open(acg);
+        assc=AsynchronousServerSocketChannel.open();
         assc.bind(addr);
-        connCount.up(connNumber);
+        output.request(connNumber);
         channelAccess.up();
     }
 
-    /** Sinks need not bother to return connections.
-     *  They return themselves when closing.
-     */
-    @Override
-    public Port<AsyncSocketChannel> getReturnPort() {
-        return null;
-    }
-
-    public synchronized void close() {
+    public synchronized void close() throws IOException {
     	if (assc==null) {
     		return;
     	}
-        try {
-            assc.close();
-            context.post(null);
-        } catch (IOException e) {
-            context.postFailure(e);
-        }
+    	AsynchronousServerSocketChannel asscLock=assc;
         assc = null;
+        asscLock.close();
     }
 
     //====================== Dataflow backend
@@ -98,8 +79,8 @@ public class AsyncServerSocketChannel extends SourceNode<AsyncSocketChannel>
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachment) {
         try {
-            AsyncSocketChannel asc=new AsyncSocketChannel(result, returnPort);
-            sinkPort.post(asc);
+            AsyncSocketChannel asc=new AsyncSocketChannel(result, output);
+            output.post(asc);
             channelAccess.up(); // allow assc.accpt()
         } catch (Throwable e) {
             // TODO Auto-generated catch block

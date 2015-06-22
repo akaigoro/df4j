@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package org.df4j.pipeline.io.net;
+package org.df4j.nio2.net;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -19,12 +19,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.df4j.pipeline.core.SinkNode;
-import org.df4j.pipeline.core.SourceNode;
-import org.df4j.pipeline.df4j.core.CompletableFuture;
-import org.df4j.pipeline.df4j.core.ListenableFuture;
-import org.df4j.pipeline.df4j.core.Port;
+import org.df4j.core.*;
+import org.df4j.core.Actor.StreamInput;
+import org.df4j.pipeline.ReactiveActor;
+import org.df4j.pipeline.ReactiveActor.ReactiveStreamOutput;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -52,7 +53,7 @@ public class AsyncSocketChannel {
     protected volatile AsynchronousSocketChannel channel;
     
     /** after closing, return itself to this port */
-    protected Port<AsyncSocketChannel> returnPort;
+    protected BackPort<AsyncSocketChannel> backPort;
     
     protected final ConnectionCompleter connEvent=new ConnectionCompleter();
     
@@ -66,8 +67,7 @@ public class AsyncSocketChannel {
      * @throws IOException
      */
     public AsyncSocketChannel(SocketAddress addr) throws IOException {
-        AsynchronousSocketChannel channel =
-        		AsynchronousSocketChannel.open(AsyncChannelCroup.getCurrentACGroup());
+        AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open();
     	this.channel=channel;
         channel.connect(addr, null, connEvent);
     }
@@ -77,9 +77,9 @@ public class AsyncSocketChannel {
      * @param channel accepted connection
      * @param returnPort 
      */
-    public AsyncSocketChannel(AsynchronousSocketChannel channel, Port<AsyncSocketChannel> returnPort) {
+    public AsyncSocketChannel(AsynchronousSocketChannel channel, BackPort<AsyncSocketChannel> returnPort) {
     	this.channel=channel;
-    	this.returnPort=returnPort;
+    	this.backPort=returnPort;
         connEvent.completed(null, null);
     }
     
@@ -87,7 +87,7 @@ public class AsyncSocketChannel {
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
 
-    public ListenableFuture<Void> getConnEvent() {
+    public Future<Void> getConnEvent() {
 		return connEvent;
 	}
 
@@ -97,12 +97,12 @@ public class AsyncSocketChannel {
      */
     public synchronized void close() {
         AsynchronousSocketChannel locchannel;
-        Port<AsyncSocketChannel> locreturnPort;
+        BackPort<AsyncSocketChannel> locreturnPort;
         synchronized (this) {
             locchannel = channel;
             channel=null;
-            locreturnPort = returnPort;
-            returnPort=null;
+            locreturnPort = backPort;
+            backPort=null;
         }
     	if (locchannel!=null) {
             try {
@@ -111,7 +111,7 @@ public class AsyncSocketChannel {
             }
     	}
         if (locreturnPort!=null) {
-            locreturnPort.post(this);
+            locreturnPort.takeBack(this);
         }
     }
 
@@ -132,20 +132,18 @@ public class AsyncSocketChannel {
         public void completed(Void result, Void asc) {
             reader.resume();
             writer.resume();
-            super.post(null);
+            super.complete(null);
         }
 
         @Override
         public void failed(Throwable exc, Void channel) {
-            super.postFailure(exc);
+            super.completeExceptionally(exc);
         } 
     }
     
-    public class Reader extends SourceNode<ByteBuffer>
-       implements CompletionHandler<Integer, ByteBuffer>
-    {
+    public class Reader extends ReactiveActor implements CompletionHandler<Integer, ByteBuffer> {
         /** here output messages return */
-        protected StreamInput<ByteBuffer> myOutput=new StreamInput<ByteBuffer>();
+        protected ReactiveStreamOutput<ByteBuffer> output=new ReactiveStreamOutput<>();
         protected Semafor channelAcc = new Semafor(); // channel accessible
         long timeout=0;
 
@@ -153,15 +151,10 @@ public class AsyncSocketChannel {
             channelAcc.up();
         }
 
-        @Override
-        public Port<ByteBuffer> getReturnPort() {
-            return myOutput;
-        }
-
         public void injectBuffers(int count, int bufLen) {
             for (int k=0; k<count; k++) {
             	ByteBuffer buf=ByteBuffer.allocate(bufLen);
-            	myOutput.post(buf);
+            	output.post(buf);
             }
         }
 
@@ -177,7 +170,7 @@ public class AsyncSocketChannel {
                 postFailure(new AsynchronousCloseException());
                 return;
             }
-            ByteBuffer buffer=myOutput.get();
+            ByteBuffer buffer=output.get();
             buffer.clear();
             if (timeout>0) {
                 channel.read(buffer,
@@ -191,11 +184,11 @@ public class AsyncSocketChannel {
 
         public void completed(Integer result, ByteBuffer buffer) {
             if (result==-1) {
-                sinkPort.close();
+                output.close();
                 AsyncSocketChannel.this.close();
             } else {
                 buffer.flip();
-                sinkPort.post(buffer);
+                output.post(buffer);
                 // start next reading only after this reading is posted,
                 // to keep buffer ordering
                 channelAcc.up();
@@ -212,9 +205,8 @@ public class AsyncSocketChannel {
         }
     }
     
-    class Writer extends SinkNode<ByteBuffer>
-       implements CompletionHandler<Integer, ByteBuffer>
-    {
+    class Writer extends ReactiveActor implements CompletionHandler<Integer, ByteBuffer> {
+        protected ReactiveStreamInput<ByteBuffer> input=new ReactiveStreamInput<>();
         protected Semafor channelAcc = new Semafor(); // channel accessible
         long timeout=0;
 
@@ -227,22 +219,25 @@ public class AsyncSocketChannel {
                 postFailure(new AsynchronousCloseException());
                 return;
             }
-            super.post(buffer);
+            input.post(buffer);
         }
 
         //-------------------- start writing
 
-        protected void act(ByteBuffer buffer) {
+        protected void writeBuf(ByteBuffer buffer) {
             if (isClosed()) {
                 postFailure(new AsynchronousCloseException());
                 return;
             }
             if (timeout>0) {
-                channel.write(buffer,
-                        timeout, TimeUnit.MILLISECONDS, buffer, this);
+                channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
             } else {
                 channel.write(buffer, buffer, this);
             }
+        }
+
+        protected void act() {
+            writeBuf(input.get());
         }
 
         @Override
@@ -260,14 +255,14 @@ public class AsyncSocketChannel {
         @Override
         public void completed(Integer result, ByteBuffer buffer) {
             if (result==-1) {
-                free(buffer);
+                input.takeBack(buffer);
                 AsyncSocketChannel.this.close();
             } else if (buffer.hasRemaining()) {
                 // write remaining bytes
-                act(buffer);
+                writeBuf(buffer);
             } else {
-                free(buffer);
-                channelAcc.up();
+                input.takeBack(buffer);
+                channelAcc.up(); // process next buffer
             }
         }
 
