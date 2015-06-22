@@ -4,7 +4,7 @@
 
   <groupId>org.df4j</groupId>
   <artifactId>df4j</artifactId>
-  <version>3.0.1-SNAPSHOT</version>
+  <version>3.0</version>
   <packaging>pom</packaging>
 
   <name>df4j</name>
@@ -22,4 +22,8 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <modules>
+  	<module>df4j-core</module>
+  	<module>pipeline</module>
+  </modules>
 </project>
