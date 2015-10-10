@@ -15,7 +15,8 @@
 			<groupId>org.df4j.core</groupId>
 			<artifactId>df4j-core</artifactId>
 			<version>3.0</version>
-		</dependency>
+     		        <relativePath>../df4j-core</relativePath>
+  		</dependency>
 	</dependencies>
     <build>
 		<plugins>
