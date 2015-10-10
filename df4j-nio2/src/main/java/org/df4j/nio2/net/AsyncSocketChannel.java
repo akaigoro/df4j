@@ -167,14 +167,14 @@ public class AsyncSocketChannel {
 		@Override
         protected void act() {
             if (isClosed()) {
+                output.post(r);
                 postFailure(new AsynchronousCloseException());
                 return;
             }
             ByteBuffer buffer=output.get();
             buffer.clear();
             if (timeout>0) {
-                channel.read(buffer,
-                        timeout, TimeUnit.MILLISECONDS, buffer, this);
+                channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
             } else {
                 channel.read(buffer, buffer, this);
             }

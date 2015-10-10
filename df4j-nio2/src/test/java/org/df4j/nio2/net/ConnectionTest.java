@@ -11,6 +11,7 @@ import org.df4j.nio2.core.SinkNode;
 import org.df4j.nio2.df4j.core.DFContext;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.AsyncSocketChannel;
+import org.df4j.pipeline.ReactiveActor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -20,11 +21,6 @@ public  class ConnectionTest {
     static final int BUF_SIZE = 128;
     static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
 
-    @BeforeClass
-    public static void initClass() {
-        DFContext.setSingleThreadExecutor();
-    }
-
     AsyncServerSocketChannel assc; 
     ClientConnection serverConn;
     ClientConnection clientConn;
@@ -32,8 +28,7 @@ public  class ConnectionTest {
     @Before
     public void init() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assc = new AsyncServerSocketChannel(local9990, 20);
-        Pipeline acceptor=new Pipeline();
-        acceptor.setSource(assc).setSink(new Reactor()).start();
+        assc.output.connect(new Reactor());
         
     	AsyncSocketChannel client=new AsyncSocketChannel(local9990);
     	clientConn=new ClientConnection(client);
@@ -97,14 +92,15 @@ public  class ConnectionTest {
     }
     
     /**
-     * accepted connections, formatted as {@link AsyncSocketChannel}, arrive to {@link myInput}.
+     * accepted connections, formatted as {@link AsyncSocketChannel}, arrive to {@link input}.
      * They should be returned to the peer {@link AsyncServerSocketChannel}.
      * For each connection, an instance of {$link Connection} is created.
      */
-    class Reactor extends SinkNode<AsyncSocketChannel> {
-        
+    class Reactor extends ReactiveActor {
+        ReactiveStreamInput<AsyncSocketChannel> input=new ReactiveStreamInput<>();
         @Override
-        protected void act(AsyncSocketChannel channel) {
+        protected void act() {
+            AsyncSocketChannel channel=input.get();
             ClientConnection connection;
             try {
                 connection = new ClientConnection(channel);
@@ -119,7 +115,6 @@ public  class ConnectionTest {
     
     public static void main(String[] args) {
         ConnectionTest ct = new ConnectionTest();
-        ConnectionTest.initClass();
         try {
             ct.init();
             ct.smokeIOTest();

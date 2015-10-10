@@ -1,4 +1,4 @@
-package org.df4j.nio2.net;
+package org.df4j.pipeline.net.test;
 
 import static org.junit.Assert.assertEquals;
 import java.io.IOException;
@@ -6,11 +6,11 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import org.df4j.nio2.core.Pipeline;
-import org.df4j.nio2.core.SinkNode;
-import org.df4j.nio2.df4j.core.DFContext;
-import org.df4j.nio2.net.AsyncServerSocketChannel;
-import org.df4j.nio2.net.AsyncSocketChannel;
+import org.df4j.pipeline.core.Pipeline;
+import org.df4j.pipeline.core.SinkNode;
+import org.df4j.pipeline.df4j.core.DFContext;
+import org.df4j.pipeline.io.net.AsyncServerSocketChannel;
+import org.df4j.pipeline.io.net.AsyncSocketChannel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -19,6 +19,11 @@ import org.junit.Test;
 public  class EchoTest {
     static final int BUF_SIZE = 128;
     static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
+
+    @BeforeClass
+    public static void initClass() {
+        DFContext.setSingleThreadExecutor();
+    }
 
     AsyncServerSocketChannel assc; 
     ClientConnection clientConn;
@@ -67,19 +72,17 @@ public  class EchoTest {
         @Override
         protected void act(AsyncSocketChannel channel) {
             channel.reader.injectBuffers(2, BUF_SIZE);
-/*
             Pipeline echoPipe=new Pipeline()
             .setSource(channel.reader)
             .setSink(channel.writer)
             .start();
-            */
-            channel.reader.output.connect(channel.writer.input);
         }
         
     }
     
     public static void main(String[] args) {
         EchoTest ct = new EchoTest();
+        EchoTest.initClass();
         try {
             ct.init();
             ct.smokeIOTest();
