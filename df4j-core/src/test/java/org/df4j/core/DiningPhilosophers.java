@@ -17,7 +17,7 @@ public class DiningPhilosophers {
     Timer timer=new Timer();
     Random rand=new Random();
 
-    public void delayedUp(Actor.Semafor sema) {
+    public void delayedUp(final Actor.Semafor sema) {
         out.println("Pause()");
         timer.schedule(new TimerTask(){
             public void run() {
