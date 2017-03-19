@@ -21,7 +21,7 @@ import org.junit.Test;
  *
  */
 public class GraphTest {
-    final static int NUM_ACTORS = 100; // number of nodes
+    final static int NUM_ACTORS = 1000; // number of nodes
     final static int NR_REQUESTS = NUM_ACTORS * 10; // 100; // number of tokens
     final static int TIME_TO_LIVE = 1000; // hops
     final static int times = 8;

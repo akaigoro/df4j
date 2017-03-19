@@ -13,6 +13,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * General dataflow node with several inputs and outputs.
@@ -26,53 +27,8 @@ public abstract class Actor implements Runnable {
 
     private Pin head; // the head of the list of Pins
     private int pinCount = 1; // fire bit allocated
-    private int blockedPins = 0; // mask with 0 for ready pins, 1 for blocked
-    private RequestingInput<?> reqHead;
+    private AtomicInteger blockedPins = new AtomicInteger(0); // mask with 0 for ready pins, 1 for blocked
     
-    /** lock pin */
-    private final void _pinOff(int pinBit) {
-        blockedPins |= pinBit;
-    }
-
-    /** unlock pin */
-    private final void _pinOn(int pinBit) {
-        blockedPins &= ~pinBit;
-    }
-
-    private final void _lockFire() {
-        _pinOff(1);
-    }
-
-    private final void _unlockFire() {
-        _pinOn(1);
-    }
-
-    /**
-     * @return true if the actor has all its input pins on
-     * and so is ready for execution
-     */
-    private final boolean _allInputsReady() {
-        for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
-            if (pin.value==null) {
-                return false;
-            }
-        }
-        return (blockedPins | 1) == 1;
-    }
-
-    /** invoked when all transition direct pins ready.
-     *  Starts requesting pins.
-     */
-    private void fire1() {
-        for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
-            if (pin.value==null) {
-                pin.makeRequest();
-                return;
-            }
-        }
-        fire();
-    }
-
     /** invoked when all transition pins are ready,
      *  and method run() is to be invoked.
      *  Safe way is to submit this instance as a Runnable to an Executor.
@@ -83,35 +39,10 @@ public abstract class Actor implements Runnable {
         commonPool.execute(this);
     }    
 
-    private synchronized boolean consumeTokens() {
-        for (RequestingInput<?> pin = reqHead; pin != null; pin = pin.next) {
-            pin.purge();
-        }
+    protected synchronized void consumeTokens() {
         for (Pin pin = head; pin != null; pin = pin.next) {
             pin._purge();
         }
-        boolean doFire = _allInputsReady();
-        if (!doFire) {
-            _unlockFire(); // allow firing
-        } 
-        return doFire;
-    }
-
-    public String getStatus() {
-        StringBuilder sb = new StringBuilder();
-        synchronized(Actor.this) {
-            sb.append("running:");
-            sb.append(blockedPins & 1);
-            for (Pin pin = head; pin != null; pin = pin.next) {
-                sb.append(", ");
-                sb.append(pin.getClass().getSimpleName());
-                sb.append("(bit:");
-                sb.append(pin.pinBit);
-                sb.append(", blocked:");
-                sb.append((blockedPins & pin.pinBit) == 0 ? "0)" : "1)");
-            }
-        }
-        return sb.toString();
     }
 
     /**
@@ -120,11 +51,22 @@ public abstract class Actor implements Runnable {
     @Override
     public void run() {
         try {
-            act();
-            boolean  doFire = consumeTokens();
-            if (doFire) {
-                fire1();
-            }
+        	for (;;) {
+                act();
+                consumeTokens();
+                for (;;) {
+                	int prevPins = blockedPins.get();
+                	if (prevPins == 1) {
+                		break; // and continue outer loop
+                	}
+                	// looks like we have to quit because some pins are not ready
+                	// try to return control token to the transition 
+                    int newPins = prevPins & ~1;
+                	if (blockedPins.compareAndSet(prevPins, newPins)) {
+                		return;
+                	}
+                }
+        	}
         } catch (Throwable e) {
             System.err.println("Actor.act():" + e);
             e.printStackTrace();
@@ -146,7 +88,7 @@ public abstract class Actor implements Runnable {
      * Basic place for input tokens. Initial state should be empty, to prevent
      * premature firing.
      */
-    protected abstract class Pin {
+    protected  abstract class Pin {
         Pin next = null; // link to pin list
         final int pinBit; // distinct for all other pins of the node
 
@@ -172,30 +114,38 @@ public abstract class Actor implements Runnable {
             }
         }
 
-        /**
-         * sets pin's bit on and fires task if all pins are on
-         * 
-         * @return true if actor became ready and must be fired
+        /** unlock pin by setting it to 0
+         * @return true if transition fired emitting control token
          */
         protected final boolean _turnOn() {
-            // System.out.print("turnOn "+fired+" "+allReady());
-            _pinOn(pinBit);
-            if (blockedPins == 0) {
-                _lockFire(); // to prevent multiple concurrent firings
-                // System.out.println(" => true");
-                return true;
-            } else {
-                // System.out.println(" => false");
-                return false;
+            for (;;) {
+            	int prevPins = blockedPins.get();
+                int newPins = prevPins & ~pinBit;
+                boolean res;
+                if (newPins == 0) {
+                	newPins = 1;
+                	res = true;
+                } else {
+                	res = false;
+                }
+            	if (blockedPins.compareAndSet(prevPins, newPins)) {
+            		return res;
+            	}
             }
         }
 
         /**
-         * sets pin's bit off
+         * lock pin by setting it to 1
+         * called when a token is consumed and the pin become empty
          */
         protected final void _turnOff() {
-            // System.out.println("turnOff");
-            _pinOff(pinBit);
+            for (;;) {
+            	int prevPins = blockedPins.get();
+                int newPins = prevPins | pinBit;
+            	if (blockedPins.compareAndSet(prevPins, newPins)) {
+            		return;
+            	}
+            }
         }
 
         /**
@@ -218,9 +168,9 @@ public abstract class Actor implements Runnable {
      */
     public class ConstInput<T> extends Pin implements Port<T> {
         /** extracted token */
-        protected T value = null;
+        public T value = null;
         
-        protected T get() {
+        public T get() {
             return value;
         }
 
@@ -234,7 +184,7 @@ public abstract class Actor implements Runnable {
                 throw new NullPointerException();
             }
             boolean doFire;
-            synchronized(Actor.this) {
+            synchronized(this) {
                 if (value != null) {
                     throw new IllegalStateException("token set already");
                 }
@@ -242,7 +192,7 @@ public abstract class Actor implements Runnable {
                 doFire = _turnOn();
             }
             if (doFire) {
-                fire1();
+                fire();
             }
         }
 
@@ -274,7 +224,7 @@ public abstract class Actor implements Runnable {
             pushback = true;
         }
 
-        protected void pushback(T value) {
+        protected synchronized void pushback(T value) {
             if (pushback) {
                 throw new IllegalStateException();
             }
@@ -284,7 +234,7 @@ public abstract class Actor implements Runnable {
 
         // TODO why return boolean result
         @Override
-        protected void _purge() {
+        protected synchronized void _purge() {
             if (pushback) {
                 pushback = false;
                 // value remains the same, the pin remains turned on
@@ -303,11 +253,11 @@ public abstract class Actor implements Runnable {
     public class Semafor extends Pin {
         private int count;
 
-        protected Semafor() {
+        public Semafor() {
             this.count = 0;
         }
 
-        protected Semafor(int count) {
+        public Semafor(int count) {
             if (count > 0) {
                 throw new IllegalArgumentException("initial counter cannot be positive");
             }
@@ -317,7 +267,7 @@ public abstract class Actor implements Runnable {
         /** increments resource counter by 1 */
         public void up() {
             boolean doFire;
-            synchronized(Actor.this) {
+            synchronized(this) {
                 count++;
                 if (count != 1) {
                     return;
@@ -325,14 +275,14 @@ public abstract class Actor implements Runnable {
                 doFire = _turnOn();
             }
             if (doFire) {
-                fire1();
+                fire();
             }
         }
 
         /** increments resource counter by delta */
         public void up(int delta) {
             boolean doFire;
-            synchronized(Actor.this) {
+            synchronized(this) {
                 boolean wasOff = (count <= 0);
                 count += delta;
                 boolean isOff = (count <= 0);
@@ -346,7 +296,7 @@ public abstract class Actor implements Runnable {
                 doFire = _turnOn();
             }
             if (doFire) {
-                fire1();
+                fire();
             }
         }
 
@@ -365,7 +315,7 @@ public abstract class Actor implements Runnable {
      * 
      * @param <T>
      */
-    public class StreamInput<T> extends Input<T> implements StreamPort<T>, Iterable<T> {
+    public class StreamInput<T> extends Input<T> implements StreamPort<T> {
         private Deque<T> queue;
         private boolean closeRequested = false;
 
@@ -377,17 +327,13 @@ public abstract class Actor implements Runnable {
             this.queue = queue;
         }
 
-        public T get() {
-            return value;
-        }
-
         @Override
         public void post(T token) {
             if (token == null) {
                 throw new NullPointerException();
             }
             boolean doFire;
-            synchronized(Actor.this) {
+            synchronized(this) {
                 if (closeRequested) {
                     throw new IllegalStateException("closed already");
                 }
@@ -400,7 +346,7 @@ public abstract class Actor implements Runnable {
                 }
             }
             if (doFire) {
-                fire1();
+                fire();
             }
         }
 
@@ -411,7 +357,7 @@ public abstract class Actor implements Runnable {
         @Override
         public void close() {
             boolean doFire;
-            synchronized(Actor.this) {
+            synchronized(this) {
                 if (closeRequested) {
                     return;
                 }
@@ -423,7 +369,7 @@ public abstract class Actor implements Runnable {
                 }
             }
             if (doFire) {
-                fire1();
+                fire();
             }
         }
 
@@ -436,7 +382,7 @@ public abstract class Actor implements Runnable {
         }
 
         @Override
-        protected void pushback(T value) {
+        protected synchronized void pushback(T value) {
             if (value == null) {
                 throw new IllegalArgumentException();
             }
@@ -458,7 +404,7 @@ public abstract class Actor implements Runnable {
          *         if input queue is empty
          */
         public boolean moveNext() {
-            synchronized(Actor.this) {
+            synchronized(this) {
                 if (pushback) {
                     pushback = false;
                     return true;
@@ -479,7 +425,7 @@ public abstract class Actor implements Runnable {
         }
 
         @Override
-        protected void _purge() {
+        protected synchronized void _purge() {
             if (pushback) {
                 pushback = false;
                 return; // value remains the same, the pin remains turned on 
@@ -496,87 +442,8 @@ public abstract class Actor implements Runnable {
             // else process closing: value is null, the pin remains turned on
         }
 
-        public boolean isClosed() {
-            synchronized(Actor.this) {
-                return closeRequested && (value == null);
-            }
-        }
-
-        @Override
-        public Iterator<T> iterator() {
-            // TODO Auto-generated method stub
-            return queue.iterator();
+        public synchronized boolean  isClosed() {
+            return closeRequested && (value == null);
         }
     }
-
-    //=============================== Requesting Pins
-    
-    public class RequestingInput<T> implements Port<T> {
-        protected RequestingInput<?> next = null; // link to pin list
-        protected Port<Port<T>> sharedPlace;
-        protected boolean pushback = false; // if true, do not consume
-        protected T value;
-
-        public RequestingInput(Port<Port<T>> sharedPlace) {
-            this.sharedPlace=sharedPlace;
-            synchronized(Actor.this) {
-                // register itself in the pin list
-                if (reqHead == null) {
-                    reqHead = this;
-                    return;
-                }
-                RequestingInput<?> prev = reqHead;
-                while (prev.next != null) {
-                    prev = prev.next;
-                }
-                prev.next = this;
-            }
-        }
-
-        private void makeRequest() {
-            sharedPlace.post(this);
-        }
-
-        public T get() {
-            // TODO Auto-generated method stub
-            return value;
-        }
-
-        // ===================== backend
-
-        protected void pushback() {
-            if (pushback) {
-                throw new IllegalStateException();
-            }
-            pushback = true;
-        }
-
-        protected void pushback(T value) {
-            if (pushback) {
-                throw new IllegalStateException();
-            }
-            pushback = true;
-            this.value = value;
-        }
-
-        protected void purge() {
-            if (pushback) {
-                pushback = false;
-                // value remains the same, the pin remains turned on
-            } else {
-                value = null;
-            }
-        }
-
-        @Override
-        public void post(T message) {
-            value=message;
-            if (next==null) {
-                fire1();
-            } else {
-                next.makeRequest();
-            }
-        }
-    }
-    
 }

@@ -1,6 +1,5 @@
 package org.df4j.examples.tutorial;
 
-import org.df4j.core.Actor;
 import org.df4j.core.Actor1;
 import org.junit.Test;
 

@@ -24,7 +24,7 @@ public class ThreadRing {
     final static int NUM_ACTORS = 503; // number of nodes
     final static int TIME_TO_LIVE = 1000000; // hops
     final static PrintStream out = System.out;
-    final static int times = 1;
+    final static int times = 4;
     
     @Test
     public void runTest() throws InterruptedException {
