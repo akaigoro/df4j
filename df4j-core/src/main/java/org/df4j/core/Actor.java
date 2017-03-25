@@ -10,7 +10,6 @@
 package org.df4j.core;
 
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,18 +53,9 @@ public abstract class Actor implements Runnable {
         	for (;;) {
                 act();
                 consumeTokens();
-                for (;;) {
-                	int prevPins = blockedPins.get();
-                	if (prevPins == 1) {
-                		break; // and continue outer loop
-                	}
-                	// looks like we have to quit because some pins are not ready
-                	// try to return control token to the transition 
-                    int newPins = prevPins & ~1;
-                	if (blockedPins.compareAndSet(prevPins, newPins)) {
-                		return;
-                	}
-                }
+                if (blockedPins.updateAndGet(pins -> pins==1? 1: pins & ~1) != 1) {
+            		return;
+            	}
         	}
         } catch (Throwable e) {
             System.err.println("Actor.act():" + e);
@@ -117,35 +107,22 @@ public abstract class Actor implements Runnable {
         /** unlock pin by setting it to 0
          * @return true if transition fired emitting control token
          */
-        protected final boolean _turnOn() {
-            for (;;) {
-            	int prevPins = blockedPins.get();
-                int newPins = prevPins & ~pinBit;
-                boolean res;
-                if (newPins == 0) {
-                	newPins = 1;
-                	res = true;
-                } else {
-                	res = false;
-                }
-            	if (blockedPins.compareAndSet(prevPins, newPins)) {
-            		return res;
-            	}
-            }
-        }
+		protected final boolean _turnOn() {
+			return blockedPins.updateAndGet(pins -> {
+				int newPins = pins & ~pinBit;
+				if (newPins == 0) {
+					newPins = 1;
+				}
+				return newPins;
+			}) == 1;
+		}
 
         /**
          * lock pin by setting it to 1
          * called when a token is consumed and the pin become empty
          */
         protected final void _turnOff() {
-            for (;;) {
-            	int prevPins = blockedPins.get();
-                int newPins = prevPins | pinBit;
-            	if (blockedPins.compareAndSet(prevPins, newPins)) {
-            		return;
-            	}
-            }
+        	blockedPins.updateAndGet(pins -> pins | pinBit);
         }
 
         /**
