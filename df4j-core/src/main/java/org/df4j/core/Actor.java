@@ -11,6 +11,7 @@ package org.df4j.core;
 
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -22,20 +23,28 @@ import java.util.concurrent.atomic.AtomicInteger;
  *  - redefine abstract method act()
  */
 public abstract class Actor implements Runnable {
-    protected ForkJoinPool commonPool=ForkJoinPool.commonPool();
+    protected Executor executor;
 
     private Pin head; // the head of the list of Pins
     private int pinCount = 1; // fire bit allocated
     private AtomicInteger blockedPins = new AtomicInteger(0); // mask with 0 for ready pins, 1 for blocked
     
-    /** invoked when all transition pins are ready,
+    public Actor(Executor executor) {
+		this.executor = executor;
+	}
+
+    public Actor() {
+		this(ForkJoinPool.commonPool());
+	}
+
+	/** invoked when all transition pins are ready,
      *  and method run() is to be invoked.
      *  Safe way is to submit this instance as a Runnable to an Executor.
      *  Fast way is to invoke it directly, but make sure the chain of
      *  direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
-        commonPool.execute(this);
+        executor.execute(this);
     }    
 
     protected synchronized void consumeTokens() {
@@ -109,6 +118,7 @@ public abstract class Actor implements Runnable {
          */
 		protected final boolean _turnOn() {
 			return blockedPins.updateAndGet(pins -> {
+//			return blockedPins.accumulateAndGet(pinBit, (pins, pinBit) -> {
 				int newPins = pins & ~pinBit;
 				if (newPins == 0) {
 					newPins = 1;
@@ -123,6 +133,7 @@ public abstract class Actor implements Runnable {
          */
         protected final void _turnOff() {
         	blockedPins.updateAndGet(pins -> pins | pinBit);
+//			blockedPins.accumulateAndGet(pinBit, (pins, pinBit) -> pins | pinBit);
         }
 
         /**

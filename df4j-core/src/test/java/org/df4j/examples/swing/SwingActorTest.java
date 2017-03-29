@@ -14,20 +14,25 @@ import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
+import java.util.concurrent.Executor;
+
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
+
 import org.df4j.core.Actor1;
 
 /**
- * Interaction between GUI and Actors.
+ * To include GUI into dataflow graph, the only requirement is:
+ *   GUI actors should run on a SwingExecutor.
+ * 
  * EDT (JTextField) -> Executor (computing actor) -> EDT (printing actor)
  */
 @SuppressWarnings("serial")
 public class SwingActorTest extends JFrame {
-    JTextField jTextField = new javax.swing.JTextField();
+	JTextField jTextField = new javax.swing.JTextField();
     JTextArea jlist = new javax.swing.JTextArea();
     JLabel jLabel2 = new javax.swing.JLabel();
     int workCount;
@@ -101,9 +106,13 @@ public class SwingActorTest extends JFrame {
     /**
      * Processes messages on EDT.
      */
-    class PrintingActor extends SwingActor1<String> {
+    class PrintingActor extends Actor1<String> {
 
-        @Override
+        public PrintingActor() {
+			super(SwingExecutor.swingExecutor );
+		}
+
+		@Override
         protected void act(String m) throws Exception {
             jlist.append(m);
             workCount--;
