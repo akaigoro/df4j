@@ -10,7 +10,7 @@
 package org.df4j.core;
 
 import java.util.Deque;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -117,14 +117,17 @@ public abstract class Actor implements Runnable {
          * @return true if transition fired emitting control token
          */
 		protected final boolean _turnOn() {
-			return blockedPins.updateAndGet(pins -> {
-//			return blockedPins.accumulateAndGet(pinBit, (pins, pinBit) -> {
-				int newPins = pins & ~pinBit;
-				if (newPins == 0) {
-					newPins = 1;
-				}
-				return newPins;
-			}) == 1;
+            int prev, next;
+            boolean res = false;
+            do {
+                prev = blockedPins.get();
+                next = prev & ~pinBit;
+                if (next == 0) {
+                    next = 1;
+                    res = true;
+                }
+            } while (!blockedPins.compareAndSet(prev, next));
+            return res;
 		}
 
         /**
@@ -239,7 +242,7 @@ public abstract class Actor implements Runnable {
      * counter can be negative.
      */
     public class Semafor extends Pin {
-        private int count;
+        private long count;
 
         public Semafor() {
             this.count = 0;
@@ -268,7 +271,7 @@ public abstract class Actor implements Runnable {
         }
 
         /** increments resource counter by delta */
-        public void up(int delta) {
+        public void up(long delta) {
             boolean doFire;
             synchronized(this) {
                 boolean wasOff = (count <= 0);
@@ -308,7 +311,7 @@ public abstract class Actor implements Runnable {
         private boolean closeRequested = false;
 
         public StreamInput () {
-            this.queue = new LinkedList<T>();
+            this.queue = new ArrayDeque<T>();
         }
 
         public StreamInput(Deque<T> queue) {

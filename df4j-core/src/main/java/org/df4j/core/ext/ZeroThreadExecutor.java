@@ -2,6 +2,7 @@ package org.df4j.core.ext;
 
 import java.util.concurrent.Executor;
 
+import org.df4j.core.Actor;
 import org.df4j.core.Actor1;
 
 /**
@@ -13,8 +14,9 @@ import org.df4j.core.Actor1;
  * Just create an instanse of ZeroThreadExecutor and use it as an executor 
  * in all Actors belonging to the set.
  */
-public class ZeroThreadExecutor extends Actor1<Runnable> implements Executor{
-    
+public class ZeroThreadExecutor extends Actor implements Executor {
+	protected final StreamInput<Runnable> mainInput = new Actor.StreamInput<>();
+
 	public ZeroThreadExecutor() {
 	}
 
@@ -24,12 +26,13 @@ public class ZeroThreadExecutor extends Actor1<Runnable> implements Executor{
 
 	@Override
 	public void execute(Runnable task) {
-		this.post(task);
+        mainInput.post(task);
 	}
 
 	@Override
-	protected void act(Runnable task) throws Exception {
+	protected void act() throws Exception {
 		try {
+            Runnable task = mainInput.get();
 			task.run();
 		} catch (Throwable e) {
 			e.printStackTrace();

@@ -16,7 +16,7 @@ import org.df4j.test.util.Token;
 import org.junit.Test;
 
 /**
- * see http://shootout.alioth.debian.org/u32/performance.php?test=threadring
+ * see http://benchmarksgame.alioth.debian.org/u64q/threadring-description.html#threadring
  * @author rfq
  *
  */
