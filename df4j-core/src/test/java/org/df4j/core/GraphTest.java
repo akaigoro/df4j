@@ -15,6 +15,8 @@ import org.df4j.test.util.IntValue;
 import org.df4j.test.util.MessageSink;
 import org.junit.Test;
 
+import static java.util.concurrent.Executors.newFixedThreadPool;
+
 /**
  * A set of identical Actors, passing packets to a randomly selected peer actor.
  * A packet dies after passing predefined number of hops.

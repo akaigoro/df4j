@@ -4,8 +4,11 @@ import org.df4j.core.Actor;
 import org.df4j.core.Port;
 
 public class Dispatcher<T> extends Actor {
-    protected StreamInput<T> resources = new StreamInput<>();
-    protected StreamInput<Port<T>> requests = new StreamInput<>();
+    protected final StreamInput<T> resources = new StreamInput<>();
+    protected final StreamInput<Port<T>> requests = new StreamInput<>();
+	{
+		setExecutor(directExecutor);
+	}
     
     public void postResource(T resource) {
     	resources.post(resource);

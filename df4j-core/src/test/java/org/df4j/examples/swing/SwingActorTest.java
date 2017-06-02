@@ -109,7 +109,7 @@ public class SwingActorTest extends JFrame {
     class PrintingActor extends Actor1<String> {
 
         public PrintingActor() {
-			super(SwingExecutor.swingExecutor );
+			setExecutor(SwingExecutor.swingExecutor );
 		}
 
 		@Override

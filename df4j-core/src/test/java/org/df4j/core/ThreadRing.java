@@ -10,9 +10,7 @@
 package org.df4j.core;
 import java.io.IOException;
 import java.io.PrintStream;
-import org.df4j.core.Port;
 import org.df4j.test.util.MessageSink;
-import org.df4j.test.util.Token;
 import org.junit.Test;
 
 /**
@@ -67,6 +65,14 @@ public class ThreadRing {
                 " messages/mks/core/us; mean hop time=" + 
                 delay + " us");
         return delay;
+    }
+
+    static class Token {//extends Request<Token, Void> {
+        public int hops_remained;
+
+        public Token(int hops_remained) {
+            this.hops_remained = hops_remained;
+        }
     }
 
     /**

@@ -9,23 +9,15 @@
  */
 package org.df4j.core;
 
-import java.util.concurrent.Executor;
-
 /**
- * A dataflow node with single input stream port.
- * This is classic Actor type.
+ * A dataflow Actor with one predefined input stream port.
+ * This type of Actor mimics the Actors described by Carl Hewitt.
+ * This class, however, still can have other (named) ports.
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor1<M> extends Actor implements StreamPort<M> {
     /** place for input token(s) */
     protected final StreamInput<M> mainInput=createInput();
-
-    public Actor1() {
-	}
-
-	public Actor1(Executor executor) {
-		super(executor);
-	}
 
 	/** Override this method if another type of input queue is desired. 
      * @return storage for input tokens

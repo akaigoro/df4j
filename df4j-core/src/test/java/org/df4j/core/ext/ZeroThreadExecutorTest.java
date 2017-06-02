@@ -24,7 +24,7 @@ public class ZeroThreadExecutorTest {
 		};
 		
 		public CyclingActor() {
-			super(executor0);
+			setExecutor(executor0);
 		}
 
 		@Override

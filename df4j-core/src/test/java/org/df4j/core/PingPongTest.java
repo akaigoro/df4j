@@ -9,109 +9,72 @@
  */
 package org.df4j.core;
 
-import java.io.PrintStream;
-import java.util.Random;
-import org.df4j.test.util.MessageSink;
-import org.df4j.test.util.Packet;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
+
 /**
- * A set of identical Ping Actors, passing tokens to a single Pong actor, which
+ * A set of identical PingPong Actors, passing tokens to a single Pong actor, which
  * returns tokens back to sender. A tokens dies after predefined number of hops.
  * 
  */
 public class PingPongTest {
-    final static int NUM_ACTORS = 1000; // number of Ping nodes
-    final static int NUM_TOKENS = NUM_ACTORS; // number of tokens
-    final static int TIME_TO_LIVE = 1000; // hops
-    final static int times = 5;
-    PrintStream out = System.out;
 
     @Test
     public void runTest() throws InterruptedException {
-        out.println("Network with " + NUM_ACTORS + " nodes, " + NUM_TOKENS + " tokens, with " + TIME_TO_LIVE + " each");
-		for (int i = 0; i < times; i++) {
-            runPingPong();
+        PingPong ping = new PingPong();
+        PingPong pong = new PingPong();
+        CountDownLatch sink = new CountDownLatch(1);
+        int hops_remained = 2000000;
+        Ball ball = new Ball(hops_remained, sink);
+        long start = System.currentTimeMillis();
+        ball.send(ping, pong);
+        sink.await();
+        long period = System.currentTimeMillis() - start;
+        double hopTime = period * 1000000.0 / hops_remained;
+        System.out.printf("period = %d ms; Mean hop time = %f ns", period, hopTime);
+    }
+
+    /**
+     * the type of messages floating between nodes
+     */
+    static class Ball {
+        int hops_remained;
+        CountDownLatch sink;
+        Port<Ball> sender;
+
+        public Ball(int hops_remained, CountDownLatch sink) {
+            this.hops_remained = hops_remained;
+            this.sink = sink;
         }
-	}
+
+        public void send(Port<Ball> from, Port<Ball> to) {
+            sender=from;
+            to.post(this);
+        }
+
+        public void reflect(Port<Ball> from) {
+            if (--hops_remained <= 0) {
+                sink.countDown();
+            } else {
+                send(from, sender);
+            }
+        }
+    }
 
     /**
      * The pinging actor
-     * 
+     *
      */
-    static class Ping extends Actor1<Packet> {
-        Pong pong;
-
-        public Ping(Pong pong) {
-            this.pong = pong;
-        }
+    static class PingPong extends Actor1<Ball> {
 
         /**
          * Handle incoming messages. For each received packet, decrease the
          * number of remaining hops. If number of hops become zero, send it to
          * sink, otherwise send to the Pong actor.
          */
-        protected void act(Packet token) throws Exception {
-            token.send(this, pong);
+        protected void act(Ball token) throws Exception {
+            token.reflect(this);
         }
     }
-
-    /**
-     * The ponging actor
-     * 
-     */
-    static class Pong extends Actor1<Packet> {
-
-        /**
-         * the method to handle incoming messages for each received packet,
-         * decrease the number of remaining hops. If number of hops become zero,
-         * send it to sink, otherwise send it back to the Ping actor.
-         */
-        @Override
-        protected void act(Packet token) throws Exception {
-            token.reply();
-        }
-    }
-
-    /**
-     * the core of the test
-     */
-    float runPingPong() throws InterruptedException {
-        long startTime = System.currentTimeMillis();
-
-        MessageSink<Packet> sink = new MessageSink<Packet>(NUM_TOKENS);
-        Ping[] pings = new Ping[NUM_ACTORS];
-        Random rand = new Random(1);
-
-        // create Pong actor
-        Pong pong = new Pong();
-        // create Ping actors
-        for (int i = 0; i < pings.length; i++) {
-            pings[i] = new Ping(pong);
-        }
-        // create tokens, send them to randomly chosen actors
-        for (int i = 0; i < NUM_TOKENS; i++) {
-            pings[rand.nextInt(pings.length)].post(new Packet(TIME_TO_LIVE, sink));
-        }
-
-        // wait for all packets to die.
-        sink.await();
-
-        // report timings
-        long etime = (System.currentTimeMillis() - startTime);
-        float switchnum = NUM_TOKENS * ((long) TIME_TO_LIVE);
-        int nThreads=Runtime.getRuntime().availableProcessors();
-        float delay = etime * 1000 * nThreads / switchnum;
-        out.println("Elapsed=" + etime / 1000f
-                + " sec; rate=" + (1 / delay)
-                + " messages/mks/core; mean hop time="
-                + (delay * 1000) + " ns");
-        return delay;
-    }
-
-    public static void main(String args[]) throws InterruptedException {
-        PingPongTest nt = new PingPongTest();
-        nt.runTest();
-    }
-
 }

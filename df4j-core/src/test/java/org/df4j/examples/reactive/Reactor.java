@@ -3,20 +3,12 @@ package org.df4j.examples.reactive;
 import org.df4j.core.Actor;
 import org.df4j.core.StreamPort;
 
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * an actor with input and output pins which implement Subscriber and Publisher
+ * an actor with input and output transition which implement Subscriber and Publisher
  */
 public abstract class Reactor extends Actor {
-
-    public Reactor() {
-    }
-
-    public Reactor(Executor executor) {
-        super(executor);
-    }
 
     protected class StreamSubscriber<T> extends AbstractSubscriber<T> implements Flow.Subscriber<T> {
         protected final StreamInput<T> input = new StreamInput<>();
@@ -63,12 +55,12 @@ public abstract class Reactor extends Actor {
          */
         protected AtomicLong allowed = new AtomicLong(0);
 
-        public SingleStreamPublisher() {
-            this.reserv = 1;
-        }
-
         public SingleStreamPublisher(long reserv) {
             this.reserv = reserv;
+        }
+
+        public SingleStreamPublisher() {
+            this(1);
         }
 
         /**
@@ -99,7 +91,7 @@ public abstract class Reactor extends Actor {
                 doFire = _turnOn();
             }
             if (doFire) {
-                fire();
+                transition.fire();
             }
         }
 

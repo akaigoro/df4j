@@ -17,11 +17,8 @@ import org.df4j.core.Actor1;
 public class ZeroThreadExecutor extends Actor implements Executor {
 	protected final StreamInput<Runnable> mainInput = new Actor.StreamInput<>();
 
-	public ZeroThreadExecutor() {
-	}
-
 	public ZeroThreadExecutor(Executor executor) {
-		super(executor);
+		setExecutor(executor);
 	}
 
 	@Override
