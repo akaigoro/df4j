@@ -2,11 +2,11 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>df4j-core</artifactId>
-	<version>3.0</version>
+	<version>2.0</version>
 	<parent>
 		<groupId>org.df4j</groupId>
 		<artifactId>df4j</artifactId>
-		<version>3.0</version>
+		<version>2.0</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 </project>

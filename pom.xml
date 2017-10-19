@@ -4,7 +4,7 @@
 
     <groupId>org.df4j</groupId>
     <artifactId>df4j</artifactId>
-    <version>3.0</version>
+    <version>2.0</version>
     <packaging>pom</packaging>
 
     <name>df4j</name>
