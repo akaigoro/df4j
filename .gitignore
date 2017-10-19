@@ -1,4 +1,7 @@
 .settings
-*/doc/
-*/target/
-*/bin/
+.idea
+*.iml/*
+*/*.iml/*
+*/doc/*
+target/
+*/bin/*

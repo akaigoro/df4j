@@ -12,7 +12,6 @@ package org.df4j.examples.reactive;
 import org.df4j.core.Actor1;
 import org.df4j.core.Port;
 import org.df4j.test.util.MessageSink;
-import org.df4j.test.util.Token;
 import org.junit.Test;
 
 import java.io.IOException;
