@@ -21,6 +21,9 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history
 ---------------
+2017/10/20
+pom.xml files corrected. Branch API-3 and tag ver3.1 created.
+
 2015/06/21
 Converted to multimodule maven project. Previuos df4j project is now module df4j-core.
 
