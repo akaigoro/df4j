@@ -14,6 +14,8 @@ import java.util.Deque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
+import org.df4j.core.Transition.Pin;
+
 /**
  * a Transition for heavy computations
  */
@@ -27,7 +29,7 @@ public abstract class Actor implements Runnable {
 
     /** can be overriden to use user defined Transition extention */
     protected Transition createTransition() {
-        return new Transition(this);
+        return new Transition();
     }
 
     /** assigns Executor
@@ -51,6 +53,12 @@ public abstract class Actor implements Runnable {
     protected void fire() {
         Executor executor = transition.getExecutorNotNull();
         executor.execute(this);
+    }
+
+    protected void checkFire(boolean doFire) {
+        if (doFire) {
+            fire();
+        }
     }
 
     /**
@@ -80,47 +88,63 @@ public abstract class Actor implements Runnable {
     // ====================== inner classes
 
     /**
-     * Basic place for for places for input tokens.
+     * Counting semaphore
+     * holds token counter without data.
+     * counter can be negative.
      */
-    public abstract class Pin  {
+    public class Semafor extends Pin {
+        private long count;
 
-        final int pinBit; // distinct for all other transition of the node
-        Pin next = null; // link to next pin
-
-        protected Pin() {
-            pinBit = transition.registerPin(this);
-            _turnOff(); // mark this pin as blocked, to prevent premature firing.
+        public Semafor(int count) {
+            transition.super();
+            if (count > 0) {
+                throw new IllegalArgumentException("initial counter cannot be positive");
+            }
+            this.count = count;
         }
 
-
-        /** unlock pin by setting it to 0
-         * @return true if transition fired emitting control token
-         */
-        protected boolean _turnOn() {
-            return transition._turnOn(pinBit);
+        public Semafor() {
+            this(0);
         }
 
-        /**
-         * lock pin by setting it to 1
-         * called when a token is consumed and the pin become empty
-         */
-        protected final void _turnOff() {
-            transition._turnOff(pinBit);
+        /** increments resource counter by 1 */
+        public void up() {
+            checkFire(doUp());
         }
 
-        protected void checkFire(boolean doFire) {
-            if (doFire) {
-                fire();
+        protected synchronized boolean doUp() {
+            count++;
+            if (count != 1) {
+                return false;
+            }
+            return turnOn();
+        }
+
+        /** increments resource counter by delta */
+        public void up(long delta) {
+            checkFire(doUp(delta));
+        }
+
+        protected synchronized boolean doUp(long delta) {
+            boolean wasOff = (count <= 0);
+            count += delta;
+            boolean isOff = (count <= 0);
+            if (wasOff == isOff) {
+                return false;
+            }
+            if (isOff) {
+                turnOff();
+                return false;
+            }
+            return turnOn();
+        }
+
+        @Override
+        protected synchronized void _purge() {
+            if (--count == 0) {
+                turnOff();
             }
         }
-
-        /**
-         * Executed after token processing (method act). Cleans reference to
-         * value, if any. Signals to set state to off if no more tokens are in
-         * the place. Should return quickly, as is called from the actor's
-         * synchronized block.
-         */
-        protected abstract void _purge();
     }
 
     //=============================== scalars
@@ -133,6 +157,11 @@ public abstract class Actor implements Runnable {
      *     type of accepted tokens.
      */
     public class ConstInput<T> extends Pin implements Port<T> {
+
+        public ConstInput() {
+            transition.super();
+        }
+
         /** extracted token */
         public T value = null;
 
@@ -157,7 +186,7 @@ public abstract class Actor implements Runnable {
                 throw new IllegalStateException("token set already");
             }
             value = token;
-            return _turnOn();
+            return turnOn();
         }
 
         /**
@@ -166,7 +195,6 @@ public abstract class Actor implements Runnable {
         @Override
         protected void _purge() {
         }
-
     }
 
     /**
@@ -203,66 +231,7 @@ public abstract class Actor implements Runnable {
                 // value remains the same, the pin remains turned on
             } else {
                 value = null;
-                _turnOff();
-            }
-        }
-    }
-
-    /**
-     * Counting semaphore
-     * holds token counter without data.
-     * counter can be negative.
-     */
-    public class Semafor extends Pin {
-        private long count;
-
-        public Semafor(int count) {
-            if (count > 0) {
-                throw new IllegalArgumentException("initial counter cannot be positive");
-            }
-            this.count = count;
-        }
-
-        public Semafor() {
-            this(0);
-        }
-
-        /** increments resource counter by 1 */
-        public void up() {
-            checkFire(doUp());
-        }
-
-        protected synchronized boolean doUp() {
-            count++;
-            if (count != 1) {
-                return false;
-            }
-            return _turnOn();
-        }
-
-        /** increments resource counter by delta */
-        public void up(long delta) {
-            checkFire(doUp(delta));
-        }
-
-        protected synchronized boolean doUp(long delta) {
-            boolean wasOff = (count <= 0);
-            count += delta;
-            boolean isOff = (count <= 0);
-            if (wasOff == isOff) {
-                return false;
-            }
-            if (isOff) {
-                _turnOff();
-                return false;
-            }
-            return _turnOn();
-        }
-
-        @Override
-        protected void _purge() {
-            if (--count == 0) {
-                _turnOff();
+                turnOff();
             }
         }
     }
@@ -300,7 +269,7 @@ public abstract class Actor implements Runnable {
             }
             if (value == null) {
                 value = token;
-                return _turnOn();
+                return turnOn();
             } else {
                 queue.add(token);
                 return false; // is On already
@@ -322,7 +291,7 @@ public abstract class Actor implements Runnable {
             }
             closeRequested = true;
             if (value == null) {
-                return _turnOn();
+                return turnOn();
             } else {
                 return false; // is On already
             }
@@ -392,7 +361,7 @@ public abstract class Actor implements Runnable {
             }
             // no more tokens; check closing
             if (wasNull || !closeRequested) {
-                _turnOff();
+                turnOff();
             }
             // else process closing: value is null, the pin remains turned on
         }

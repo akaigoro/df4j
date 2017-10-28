@@ -2,6 +2,7 @@ package org.df4j.core;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -11,21 +12,19 @@ import java.util.function.Consumer;
 public class Transition {
     protected static final int CONTROL_BIT = 1;
 
-    private Actor actor;
-    private Executor exec;
-    private int pinBits = 0;
+    /**
+     * main scale of bits, one bit per pin
+     * when pinBits==0, transition fires
+     */
+    private AtomicInteger pinBits = new AtomicInteger();
     private int pinCount = 1; // control bit allocated
 
     /**
-     * the head and the tail of the list of Transition
+     * the head and the tail of the list of Pins
      */
-    private Actor.Pin head, tail;
+    private Pin head, tail;
 
     protected final AtomicReference<Executor> executor = new AtomicReference<>();
-
-    public Transition(Actor actor) {
-        this.actor = actor;
-    }
 
     /**
      * assigns Executor
@@ -48,7 +47,7 @@ public class Transition {
         return exec;
     }
 
-    synchronized int registerPin(Actor.Pin pin) {
+    int registerPin(Pin pin) {
         if (pinCount == 32) {
             throw new IllegalStateException("only 32 transition could be created");
         }
@@ -68,8 +67,8 @@ public class Transition {
      *
      * @param pinBit
      */
-    protected synchronized void _turnOff(int pinBit) {
-        pinBits |= pinBit;
+    protected void _turnOff(int pinBit) {
+        pinBits.updateAndGet(pinBits -> pinBits | pinBit);
     }
 
     /**
@@ -79,29 +78,66 @@ public class Transition {
      * @param pinBit
      * @return true if all transition ready
      */
-    protected synchronized boolean _turnOn(int pinBit) {
-        int next = pinBits & ~pinBit;
-        boolean res = (next == 0);
-        if (res) {
-            pinBits = CONTROL_BIT;
-        } else {
-            pinBits = next;
-        }
-        return res;
+    protected boolean _turnOn(int pinBit) {
+        int next = pinBits.updateAndGet(pinBits -> {
+            pinBits = pinBits & ~pinBit;
+            if (pinBits == 0) {
+                pinBits = CONTROL_BIT;
+            }
+            return pinBits;
+        });
+        return next == CONTROL_BIT;
     }
 
     /**
      * @return true if all data transition are ready
      */
     protected synchronized boolean consumeTokens() {
-        for (Actor.Pin pin1 = head; pin1 != null; pin1 = pin1.next) {
+        for (Pin pin1 = head; pin1 != null; pin1 = pin1.next) {
             pin1._purge();
         }
-        if (pinBits == 1) {
-            return true;
-        } else {
-            _turnOn(CONTROL_BIT);
-            return false;
+        int next = pinBits.updateAndGet(pinBits -> pinBits == CONTROL_BIT ? CONTROL_BIT : pinBits & ~CONTROL_BIT);
+        return next == CONTROL_BIT;
+    }
+
+    /**
+     * Basic place for for places for input tokens.
+     * Asynchronous version of binary semaphore.
+     */
+    public class Pin  {
+
+        private final int pinBit; // distinct for all other transition of the node
+        protected Pin next = null; // link to next pin
+
+        protected Pin() {
+            pinBit = registerPin(this);
+            turnOff(); // mark this pin as blocked, to prevent premature firing.
+        }
+
+        /** unlock pin by setting it to 0
+         * @return true if transition fired emitting control token
+         */
+        public boolean turnOn() {
+            return _turnOn(pinBit);
+        }
+
+        /**
+         * lock pin by setting it to 1
+         * called when a token is consumed and the pin become empty
+         */
+        public void turnOff() {
+            _turnOff(pinBit);
+        }
+
+        /**
+         * Executed after token processing (method act). Cleans reference to
+         * value, if any. Signals to set state to off if no more tokens are in
+         * the place. Should return quickly, as is called from the actor's
+         * synchronized block.
+         */
+        protected void _purge() {
+            turnOff();
         }
     }
+
 }

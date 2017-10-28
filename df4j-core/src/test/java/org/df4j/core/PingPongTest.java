@@ -12,6 +12,9 @@ package org.df4j.core;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * A set of identical PingPong Actors, passing tokens to a single Pong actor, which
@@ -29,7 +32,7 @@ public class PingPongTest {
         Ball ball = new Ball(hops_remained, sink);
         long start = System.currentTimeMillis();
         ball.send(ping, pong);
-        sink.await();
+        assertTrue(sink.await(10000, TimeUnit.MILLISECONDS));
         long period = System.currentTimeMillis() - start;
         double hopTime = period * 1000000.0 / hops_remained;
         System.out.printf("period = %d ms; Mean hop time = %f ns", period, hopTime);

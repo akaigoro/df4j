@@ -11,11 +11,14 @@ package org.df4j.core;
 
 import java.io.PrintStream;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
 import org.df4j.test.util.IntValue;
 import org.df4j.test.util.MessageSink;
 import org.junit.Test;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A set of identical Actors, passing packets to a randomly selected peer actor.
@@ -93,7 +96,7 @@ public class GraphTest {
         }
 
         // wait for all packets to die.
-        sink.await();
+        assertTrue(sink.await(10000, TimeUnit.MILLISECONDS));
 
         // report timings
         long etime = (System.currentTimeMillis() - startTime);

@@ -10,8 +10,12 @@
 package org.df4j.core;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
+
 import org.df4j.test.util.MessageSink;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * see http://benchmarksgame.alioth.debian.org/u64q/threadring-description.html#threadring
@@ -53,7 +57,7 @@ public class ThreadRing {
         nodes[0].post(new Token(TIME_TO_LIVE));
 
         // wait for all packets to die.
-        sink.await();
+        assertTrue(sink.await(10000, TimeUnit.MILLISECONDS));
 
         // report timings
         long etime = (System.currentTimeMillis() - startTime);
