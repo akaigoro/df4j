@@ -4,20 +4,21 @@
 
     <groupId>org.df4j</groupId>
     <artifactId>df4j</artifactId>
-    <version>2.0</version>
+    <version>3.1</version>
     <packaging>pom</packaging>
 
     <name>df4j</name>
     <url>http://maven.apache.org</url>
 
     <properties>
-        <df4j-version>3.0</df4j-version>
+        <df4j-version>3.1</df4j-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
     <modules>
-    <module>df4j-core</module>
+        <module>df4j-core</module>
+        <module>reactive</module>
     </modules>
     <build>
         <plugins>

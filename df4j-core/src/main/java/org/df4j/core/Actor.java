@@ -12,23 +12,15 @@ package org.df4j.core;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * a Transition for heavy computations
  */
-public abstract class Actor {
+public abstract class Actor implements Runnable {
 
-    public static final Executor directExecutor = (Runnable command)->command.run();
-
-    private static final ThreadLocal<Executor> threadLocalExec = new ThreadLocal<>();
-
-    public static void setDefaultExecutor(Executor exec) {
-        threadLocalExec.set(exec);
-    }
-
-    public static Executor getDefaultExecutor() {
-        return threadLocalExec.get();
-    }
+ //   public static final Executor directExecutor = (Runnable command)->command.run();
+    public static final Executor directExecutor = (Runnable command)-> ForkJoinPool.commonPool().execute(command);
 
     /** mask with 0 for ready pin, 1 for blocked */
     protected final Transition transition = createTransition();
@@ -47,6 +39,33 @@ public abstract class Actor {
 
     protected Executor getExecutor() {
         return transition.getExecutor();
+    }
+
+    /**
+     * invoked when all transition transition are ready,
+     * and method run() is to be invoked.
+     * Safe way is to submit this instance as a Runnable to an Executor.
+     * Fast way is to invoke it directly, but make sure the chain of
+     * direct invocations is short to avoid stack overflow.
+     */
+    protected void fire() {
+        Executor executor = transition.getExecutorNotNull();
+        executor.execute(this);
+    }
+
+    /**
+     * loops while all transition are ready
+     */
+    @Override
+    public void run() {
+        try {
+            do {
+                act();
+            } while (transition.consumeTokens());
+        } catch (Throwable e) {
+            System.err.println("Actor.act():" + e);
+            e.printStackTrace();
+        }
     }
 
     // ========= backend
@@ -91,7 +110,7 @@ public abstract class Actor {
 
         protected void checkFire(boolean doFire) {
             if (doFire) {
-                transition.fire();
+                fire();
             }
         }
 

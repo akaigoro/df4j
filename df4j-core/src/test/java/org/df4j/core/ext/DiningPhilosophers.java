@@ -1,143 +1,139 @@
 package org.df4j.core.ext;
 
-import java.io.PrintStream;
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import org.df4j.core.Actor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.df4j.core.Port;
 import org.junit.Test;
 
 /**
- * Demonstrates usage if common places for tokens.
+ * Demonstrates usage of class {@link Dispatcher} to model common places for tokens.
  */
 public class DiningPhilosophers {
     private static final int num = 5;
-    PrintStream out=System.out;
-    Timer timer=new Timer();
-    Random rand=new Random();
-    
-    ChopstickPlace[] stickPlaces = new ChopstickPlace[num];
 
-    void delayedGoTo (State next) {
-    	out.println("Pause()");
-		timer.schedule(new TimerTask(){
-		    public void run() {
-		        out.println("Pause End()");
-		        next.start();
-		    }
-		 }, (long) (rand.nextFloat()*1000));
+    ScheduledExecutorService timer = Executors.newScheduledThreadPool(2);
+    Random rand=new Random();
+    ForkPlace[] forkPlaces = new ForkPlace[num];
+
+    void delayedRun(Runnable next) {
+		timer.schedule(next, (long) (rand.nextFloat()*100), TimeUnit.MILLISECONDS);
     }
 
     @Test
     public void test() throws InterruptedException {
-    	// create 5 places for sticks with 1 stick in each
+        Philosopher[] philosophers = new Philosopher[num];
+    	// create places for forks with 1 fork in each
         for (int k=0; k<num; k++) {
-        	ChopstickPlace stickPlace = new ChopstickPlace();
-            stickPlaces[k]=stickPlace;
-            stickPlace.postResource(new Chopstick(k));
+            ForkPlace forkPlace = new ForkPlace(k);
+            forkPlaces[k]=forkPlace;
+            forkPlace.postResource(new Fork(k));
         }
-        // animate all phiosophers
+        // create philosophers
         for (int k=0; k<num; k++) {
-        	new Philosopher(k).thinker.start();
+            philosophers[k] = new Philosopher(k);
         }
-        Thread.sleep(3000);
+        // animate all philosophers
+        for (int k=0; k<num; k++) {
+            philosophers[k].think();
+        }
+        Thread.sleep(300);
     }
 
-    static class Chopstick  {
+    static class Fork  {
         int id;
         
-        public Chopstick(int k) {
+        public Fork(int k) {
             id=k;
         }
-
-        @Override
-        public String toString() {
-            return "Chopstick["+id+"]";
-        }
-        
     }
     
-    static class ChopstickPlace extends Dispatcher<Chopstick>  {
-    }
+    static class ForkPlace extends Dispatcher<Fork>  {
+        int id;
 
-    abstract class StickRequest extends State implements Port<Chopstick>  {
-    	Input<Chopstick> inp = new Input<>();
-    	
-		@Override
-		public void post(Chopstick message) {
-			inp.post(message);
-		}
-
-		@Override
-		protected void act() throws Exception {
-			reply(inp.value);
-		}
-		
-		protected abstract void reply(Chopstick chopstick);
+        public ForkPlace(int k) {
+            id = k;
+        }
     }
 
     /**
-     * when startEat semafor is up, aquires chopsticks
+     * think -> requestFirst -> getFirstRequestSecond -> getSecondEat -> returnForks -> think
      */
     class Philosopher {
         int id;
-        int leftId, rightId;
-        Chopstick left, right;
+		ForkPlace firstPlace, secondPlace;
+        Fork first, second;
+        String indent;
         
         public Philosopher(int id) {
 			this.id = id;
-			leftId = id;
-			rightId = (id+1)%num;
+			// to avoid deadlocks, allocate resource with lower number first
+			if (id == num-1) {
+                firstPlace = forkPlaces[0];
+                secondPlace= forkPlaces[id];
+            } else {
+                firstPlace = forkPlaces[id];
+                secondPlace = forkPlaces[id+1];
+            }
+            StringBuffer sb = new StringBuffer();
+			for (int k = 0; k<id; k++) sb.append("  ");
+            indent = sb.toString();
+            println("first place ("+firstPlace.id+") second place ("+secondPlace.id+")");
 		}
 
-		// think some time
-		State thinker = new State(){
-			@Override
-			protected void act() throws Exception {
-				delayedGoTo(firstStick);
-			}
-		};
-	    
-		StickRequest firstStick = new StickRequest(){
-			@Override
-			protected void reply(Chopstick chopstick){
-				stickPlaces[leftId].postRequest(secondStick);
-				left = chopstick;
-				stickPlaces[rightId].postRequest(secondStick);
-				secondStick.start();
-			}
-	    };
-	
-	    StickRequest secondStick = new StickRequest(){
-			@Override
-			protected void reply(Chopstick chopstick){
-				right = chopstick;
-				delayedGoTo(eater);
-			}
-	    };
-
-        State eater = new State(){
-			@Override
-			protected void act() throws Exception {
-				stickPlaces[leftId].postResource(left);
-				stickPlaces[rightId].postResource(right);
-				delayedGoTo(thinker);
-			}
-		};
-    }
-
-	/**
-     * represents a stage of a sequential execution process,
-     * where stages are active one by one, and explicitly pass
-     * control from one to another
-     */
-    abstract static class State extends Actor {
-        Semafor control = new Semafor(0);
-
-        public void start () {
-            control.up();
+        private void println(String s) {
+            System.out.println(indent+s+" /"+id);
         }
+
+		/* states are represented as callbacks, executed on caller's stack
+		 * this is safe because chain of calls is short - it breaks when the timer is accessed
+		 */
+
+        // think some time, then request the first fork
+        void think () {
+            println("Thinking");
+            delayedRun (requestFirst);
+        };
+
+        // request the first fork
+        Runnable requestFirst = new Runnable() {
+            @Override
+            public void run() {
+                println("Request first ("+firstPlace.id+")");
+                firstPlace.postRequest(getFirstRequestSecond);
+            }
+        };
+
+        // get the first fork and request the second one
+        Port<Fork> getFirstRequestSecond = new Port<Fork>() {
+            @Override
+            public void post(Fork fork) {
+                println("Got first ("+fork.id+"), request second ("+secondPlace.id+")");
+                first = fork;
+                secondPlace.postRequest(getSecondEat);
+            }
+        };
+
+        // get the second fork and start eating
+        Port<Fork> getSecondEat = new Port<Fork>() {
+            @Override
+            public void post(Fork fork) {
+                println("Got second ("+fork.id+"), eating");
+                second = fork;
+                delayedRun (returnForks);
+            }
+        };
+
+        // return both forks in reverse order and start thinking
+        Runnable returnForks =new Runnable() {
+            @Override
+            public void run() {
+                println("Return second ("+second.id+"), return first ("+first.id+")");
+                secondPlace.postResource(second);
+                firstPlace.postResource(first);
+                think();
+            }
+        };
     }
 }

@@ -15,6 +15,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -32,6 +33,9 @@ import org.df4j.core.Actor1;
  */
 @SuppressWarnings("serial")
 public class SwingActorTest extends JFrame {
+    static Executor swingExecutor = command -> EventQueue.invokeLater(command);
+    static Executor commonExecutor = ForkJoinPool.commonPool();
+
 	JTextField jTextField = new javax.swing.JTextField();
     JTextArea jlist = new javax.swing.JTextArea();
     JLabel jLabel2 = new javax.swing.JLabel();
@@ -68,7 +72,13 @@ public class SwingActorTest extends JFrame {
         });
     }
 
+    /**
+     * works out of EDT
+     */
     class ComputingActor extends Actor1<String> implements ActionListener{
+        {
+            setExecutor(commonExecutor);
+        }
 
         /**
          * handles messages on EDT.
@@ -107,9 +117,8 @@ public class SwingActorTest extends JFrame {
      * Processes messages on EDT.
      */
     class PrintingActor extends Actor1<String> {
-
-        public PrintingActor() {
-			setExecutor(SwingExecutor.swingExecutor );
+        {
+            setExecutor(swingExecutor);
 		}
 
 		@Override
@@ -123,7 +132,6 @@ public class SwingActorTest extends JFrame {
     }
 
     public static void main(String[] args) throws Exception {
-        EventQueue.invokeLater(()->new SwingActorTest().setVisible(true));
+        swingExecutor.execute(()->new SwingActorTest().setVisible(true));
     }
-
 }

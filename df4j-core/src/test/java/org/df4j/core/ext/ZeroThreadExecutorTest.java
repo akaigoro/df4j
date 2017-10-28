@@ -11,8 +11,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class ZeroThreadExecutorTest {
-	ScheduledExecutorService sheduler = Executors.newScheduledThreadPool(2);
-	ZeroThreadExecutor executor0 = new ZeroThreadExecutor(sheduler);
+	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+	ZeroThreadExecutor executor0 = new ZeroThreadExecutor(scheduler);
 	int count = 0;
 	AtomicInteger atomicCount = new AtomicInteger(0);
 
@@ -38,7 +38,7 @@ public class ZeroThreadExecutorTest {
 				return;
 			}
 			millis = 10+rand.nextInt(20);
-			sheduler.schedule(command, millis, TimeUnit.MILLISECONDS);
+			scheduler.schedule(command, millis, TimeUnit.MILLISECONDS);
 		}
 
 	}
@@ -52,8 +52,8 @@ public class ZeroThreadExecutorTest {
 			actor.post(1);
 		}
 		Thread.sleep(500);
-		sheduler.shutdown();
-		sheduler.awaitTermination(1, TimeUnit.HOURS);
+		scheduler.shutdown();
+		scheduler.awaitTermination(1, TimeUnit.HOURS);
 		int expected = atomicCount.get();
 		System.out.println("expected="+expected+" count="+count);
 		Assert.assertEquals(expected, count);
