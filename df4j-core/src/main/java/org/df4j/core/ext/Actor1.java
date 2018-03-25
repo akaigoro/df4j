@@ -7,7 +7,10 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.core;
+package org.df4j.core.ext;
+
+import org.df4j.core.Actor;
+import org.df4j.core.StreamPort;
 
 /**
  * A dataflow Actor with one predefined input stream port.
@@ -56,11 +59,6 @@ public abstract class Actor1<M> extends Actor implements StreamPort<M> {
         }
     }
 
-    /** only has sense when called from act(M message) */
-    public void pushback() {
-        mainInput.pushback();
-    }
-    
     /**
      * processes one incoming message
      * @param message the message to process

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
+import org.df4j.core.ext.Actor1;
 import org.df4j.test.util.MessageSink;
 import org.junit.Test;
 

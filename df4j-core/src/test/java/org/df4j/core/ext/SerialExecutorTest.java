@@ -6,13 +6,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.df4j.core.Actor1;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ZeroThreadExecutorTest {
+public class SerialExecutorTest {
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
-	ZeroThreadExecutor executor0 = new ZeroThreadExecutor(scheduler);
+	SerialExecutor executor0 = new SerialExecutor(scheduler);
 	int count = 0;
 	AtomicInteger atomicCount = new AtomicInteger(0);
 
@@ -40,7 +39,6 @@ public class ZeroThreadExecutorTest {
 			millis = 10+rand.nextInt(20);
 			scheduler.schedule(command, millis, TimeUnit.MILLISECONDS);
 		}
-
 	}
 	
 	@Test

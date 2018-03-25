@@ -1,10 +1,7 @@
 package org.df4j.core;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 /**
  * Created by Jim on 02-Jun-17.
@@ -20,46 +17,9 @@ public class Transition {
     private int pinCount = 1; // control bit allocated
 
     /**
-     * the head and the tail of the list of Pins
+     * the list of all Pins
      */
-    private Pin head, tail;
-
-    protected final AtomicReference<Executor> executor = new AtomicReference<>();
-
-    /**
-     * assigns Executor
-     */
-    public Executor setExecutor(Executor exec) {
-        Executor res = this.executor.getAndUpdate((prev)->exec);
-        return res;
-    }
-
-    protected Executor getExecutor() {
-        Executor exec = executor.get();
-        return exec;
-    }
-
-    protected Executor getExecutorNotNull() {
-        Executor exec = executor.get();
-        if (exec == null) {
-            exec = executor.updateAndGet((prev)->prev==null?ForkJoinPool.commonPool():prev);
-        }
-        return exec;
-    }
-
-    int registerPin(Pin pin) {
-        if (pinCount == 32) {
-            throw new IllegalStateException("only 32 transition could be created");
-        }
-        int pinBit = 1 << (pinCount++); // assign next pin number
-        if (head == null) {
-            head = pin;
-        } else {
-            tail.next = pin;
-        }
-        tail = pin;
-        return pinBit;
-    }
+    private ArrayList<Pin> pins = new ArrayList<>(4);
 
     /**
      * locks pin by setting it to 1
@@ -76,26 +36,30 @@ public class Transition {
      * if pin scale makes all zeros, blocks control pin
      *
      * @param pinBit
-     * @return true if all transition ready
+     * @return true if all transition become ready
      */
     protected boolean _turnOn(int pinBit) {
-        int next = pinBits.updateAndGet(pinBits -> {
-            pinBits = pinBits & ~pinBit;
+        int res =  pinBits.updateAndGet(pinBits -> {
             if (pinBits == 0) {
-                pinBits = CONTROL_BIT;
+                return 1;
             }
+            pinBits = pinBits & ~pinBit;
             return pinBits;
         });
-        return next == CONTROL_BIT;
+        return res == 0;
     }
 
     /**
      * @return true if all data transition are ready
      */
-    protected synchronized boolean consumeTokens() {
-        for (Pin pin1 = head; pin1 != null; pin1 = pin1.next) {
-            pin1._purge();
+    protected synchronized void consumeTokens() {
+        for (int k=0; k<pins.size(); k++) {
+            Pin pin = pins.get(k);
+            pin.purge();
         }
+    }
+
+    protected boolean turnOnCB() {
         int next = pinBits.updateAndGet(pinBits -> pinBits == CONTROL_BIT ? CONTROL_BIT : pinBits & ~CONTROL_BIT);
         return next == CONTROL_BIT;
     }
@@ -104,20 +68,23 @@ public class Transition {
      * Basic place for for places for input tokens.
      * Asynchronous version of binary semaphore.
      */
-    public class Pin  {
+    public abstract class Pin  {
 
         private final int pinBit; // distinct for all other transition of the node
-        protected Pin next = null; // link to next pin
 
         protected Pin() {
-            pinBit = registerPin(this);
-            turnOff(); // mark this pin as blocked, to prevent premature firing.
+            if (pinCount == 32) {
+                throw new IllegalStateException("only 32 transition could be created");
+            }
+            pinBit = 1 << (pinCount++); // assign next pin number
+            pins.add(this);
+            turnOff();
         }
 
         /** unlock pin by setting it to 0
          * @return true if transition fired emitting control token
          */
-        public boolean turnOn() {
+        protected boolean turnOn1() {
             return _turnOn(pinBit);
         }
 
@@ -125,7 +92,7 @@ public class Transition {
          * lock pin by setting it to 1
          * called when a token is consumed and the pin become empty
          */
-        public void turnOff() {
+        protected void turnOff() {
             _turnOff(pinBit);
         }
 
@@ -135,9 +102,6 @@ public class Transition {
          * the place. Should return quickly, as is called from the actor's
          * synchronized block.
          */
-        protected void _purge() {
-            turnOff();
-        }
+        protected abstract  void purge();
     }
-
 }

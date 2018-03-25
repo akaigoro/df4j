@@ -23,7 +23,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 
-import org.df4j.core.Actor1;
+import org.df4j.core.ext.Actor1;
 
 /**
  * To include GUI into dataflow graph, the only requirement is:

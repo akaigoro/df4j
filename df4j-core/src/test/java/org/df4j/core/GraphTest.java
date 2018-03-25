@@ -9,15 +9,15 @@
  */
 package org.df4j.core;
 
-import java.io.PrintStream;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
-
+import org.df4j.core.ext.Actor1;
 import org.df4j.test.util.IntValue;
 import org.df4j.test.util.MessageSink;
 import org.junit.Test;
 
-import static java.util.concurrent.Executors.newFixedThreadPool;
+import java.io.PrintStream;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.Assert.assertTrue;
 
 /**

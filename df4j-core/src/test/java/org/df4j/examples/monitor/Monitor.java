@@ -1,7 +1,7 @@
 package org.df4j.examples.monitor;
 
 import java.util.LinkedList;
-import org.df4j.core.Actor1;
+import org.df4j.core.ext.Actor1;
 
 /**
  * Demonstrates how such low-level mechanism as java Monitor

@@ -9,12 +9,8 @@
  */
 package org.df4j.core;
 
-import java.io.Closeable;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * An actor is like a Petri Net trasnsition with own places for tokens.
@@ -25,35 +21,13 @@ import java.util.concurrent.atomic.AtomicReference;
  * like Starter and Semafor, and and carrying colored tokens, which are references to arbitrary objects.
  *
  * Actor is started when all its places are not empty (contain tokens). Excecution means execution
- * its (@link {@link Actor#act()} method on the executor set by {@link #setExecutor} method.
+ * its (@link {@link BaseActor#act()} method on the executor set by {@link #setExecutor} method.
  */
-public abstract class Actor extends BaseActor implements Runnable {
+public abstract class BaseActor {
 
-    public static final Executor directExecutor = (Runnable command)->command.run();
+    protected final Transition transition = new Transition();
 
-    protected final AtomicReference<Executor> executor = new AtomicReference<>();
-
-    /**
-     * assigns Executor
-     * returns previous executor
-     */
-    public Executor setExecutor(Executor exec) {
-        Executor res = this.executor.getAndUpdate((prev)->exec);
-        return res;
-    }
-
-    protected Executor getExecutor() {
-        Executor exec = executor.get();
-        return exec;
-    }
-
-    protected Executor getExecutorNotNull() {
-        Executor exec = executor.get();
-        if (exec == null) {
-            exec = executor.updateAndGet((prev)->prev==null?ForkJoinPool.commonPool():prev);
-        }
-        return exec;
-    }
+ //   private Pin controlPin = new Pin();
 
     /**
      * invoked when all transition transition are ready,
@@ -62,82 +36,93 @@ public abstract class Actor extends BaseActor implements Runnable {
      * Fast way is to invoke it directly, but make sure the chain of
      * direct invocations is short to avoid stack overflow.
      */
-    protected void fire() {
-        Executor executor = getExecutorNotNull();
-        executor.execute(this);
-    }
+    protected abstract void fire();
 
-    /**
-     * loops while all transition are ready
-     */
-    @Override
-    public void run() {
-        try {
-            do {
-                act();
-                transition.consumeTokens();
-                boolean cont = transition.turnOnCB();
-                if (!cont) {
-                    break;
-                }
-            } while (true);
-        } catch (Throwable e) {
-            System.err.println("Error in actor " + getClass().getName());
-            e.printStackTrace();
+    // ========= backend
+    // ====================== inner classes
+
+    public class Pin extends Transition.Pin {
+        protected Pin() {
+            transition.super();
+        }
+
+        public void turnOn() {
+            boolean on = super.turnOn1();
+            if (on) {
+                transition._turnOff(Transition.CONTROL_BIT);
+                fire();
+            }
+        }
+
+        @Override
+        protected void purge() {
         }
     }
 
-    // ========= backend
-
     /**
-     * reads extracted tokens from places and performs specific calculations
-     *
-     * @throws Exception
+     * Binary semaphore
+     * can be in 2 states: on and off
+     * initial state is off
+     * does not change state after execution od (@link #act} method
      */
-    protected abstract void act() throws Exception;
+    public class Starter extends Pin {
 
-    // ====================== inner classes
+        public synchronized void start() {
+            turnOn();
+        }
 
+        protected synchronized void stop() {
+            turnOff();
+        }
+
+        /** does nothing */
+        @Override
+        protected synchronized void purge() {
+        }
+    }
     /**
      * Counting semaphore
      * holds token counter without data.
      * counter can be negative.
      */
-    public class Semafor extends Pin implements Closeable {
-        private volatile boolean closed = false;
-        private long count = 0;
+    public class Semafor extends Pin {
+        private long count;
+
+        /** initial counter can be of any sign
+         *
+         * @param count
+         */
+        public Semafor(int count) {
+            if (count > 0) {
+                throw new IllegalArgumentException("initial count cannot be >0");
+            }
+            this.count = count;
+        }
 
         public Semafor() {
+            this(0);
         }
 
-        public boolean isClosed() {
-            return closed;
-        }
-
-        public long getCount() {
-            return count;
-        }
-
-        @Override
-        public synchronized void close() {
-            closed = true;
-            count = 0;
-            turnOff(); // and cannot be turned on
+        /** increments resource counter by 1 */
+        public void release() {
+            release(1);
         }
 
         /** increments resource counter by delta */
         public synchronized void release(long delta) {
-            if (closed) {
-                throw new IllegalStateException("closed already");
-            }
             if (delta < 0) {
-                throw new IllegalArgumentException("resource counter delta must be >= 0");
+                throw  new IllegalArgumentException("resource counter delta must be >= 0");
             }
             long prev = count;
             count+= delta;
             if (prev <= 0 && count > 0 ) {
                 turnOn();
             }
+        }
+
+        /** decrements resource counter by 1 */
+        public void aquire() {
+            aquire(1);
         }
 
         /** increments resource counter by delta */

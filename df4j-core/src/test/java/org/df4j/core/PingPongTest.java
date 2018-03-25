@@ -9,6 +9,7 @@
  */
 package org.df4j.core;
 
+import org.df4j.core.ext.Actor1;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
