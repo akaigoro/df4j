@@ -96,7 +96,7 @@ public class GraphTest {
         }
 
         // wait for all packets to die.
-        assertTrue(sink.await(10000, TimeUnit.MILLISECONDS));
+        assertTrue(sink.await(2000, TimeUnit.MILLISECONDS));
 
         // report timings
         long etime = (System.currentTimeMillis() - startTime);

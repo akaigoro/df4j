@@ -7,14 +7,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Jim on 02-Jun-17.
  */
 public class Transition {
-    protected static final int CONTROL_BIT = 1;
 
     /**
      * main scale of bits, one bit per pin
-     * when pinBits==0, transition fires
+     * when pinBits becomes 0, transition fires
      */
     private AtomicInteger pinBits = new AtomicInteger();
-    private int pinCount = 1; // control bit allocated
+    private int pinCount = 0;
 
     /**
      * the list of all Pins
@@ -49,19 +48,11 @@ public class Transition {
         return res == 0;
     }
 
-    /**
-     * @return true if all data transition are ready
-     */
     protected synchronized void consumeTokens() {
         for (int k=0; k<pins.size(); k++) {
             Pin pin = pins.get(k);
             pin.purge();
         }
-    }
-
-    protected boolean turnOnCB() {
-        int next = pinBits.updateAndGet(pinBits -> pinBits == CONTROL_BIT ? CONTROL_BIT : pinBits & ~CONTROL_BIT);
-        return next == CONTROL_BIT;
     }
 
     /**
@@ -84,7 +75,7 @@ public class Transition {
         /** unlock pin by setting it to 0
          * @return true if transition fired emitting control token
          */
-        protected boolean turnOn1() {
+        protected boolean turnOn() {
             return _turnOn(pinBit);
         }
 

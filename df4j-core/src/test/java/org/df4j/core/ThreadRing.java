@@ -8,13 +8,13 @@
  * specific language governing permissions and limitations under the License.
  */
 package org.df4j.core;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.concurrent.TimeUnit;
-
 import org.df4j.core.ext.Actor1;
 import org.df4j.test.util.MessageSink;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
 
@@ -58,7 +58,7 @@ public class ThreadRing {
         nodes[0].post(new Token(TIME_TO_LIVE));
 
         // wait for all packets to die.
-        assertTrue(sink.await(10000, TimeUnit.MILLISECONDS));
+        assertTrue(sink.await(2000, TimeUnit.MILLISECONDS));
 
         // report timings
         long etime = (System.currentTimeMillis() - startTime);

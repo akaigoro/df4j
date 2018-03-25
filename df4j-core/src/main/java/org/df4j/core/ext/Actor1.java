@@ -20,14 +20,7 @@ import org.df4j.core.StreamPort;
  */
 public abstract class Actor1<M> extends Actor implements StreamPort<M> {
     /** place for input token(s) */
-    protected final StreamInput<M> mainInput=createInput();
-
-	/** Override this method if another type of input queue is desired. 
-     * @return storage for input tokens
-     */
-    protected StreamInput<M> createInput() {
-        return new StreamInput<M>();
-    }
+    protected final StreamInput<M> mainInput= new StreamInput<M>();
 
     @Override
     public void post(M m) {

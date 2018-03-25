@@ -33,7 +33,7 @@ public class PingPongTest {
         Ball ball = new Ball(hops_remained, sink);
         long start = System.currentTimeMillis();
         ball.send(ping, pong);
-        assertTrue(sink.await(10000, TimeUnit.MILLISECONDS));
+        assertTrue(sink.await(2000, TimeUnit.MILLISECONDS));
         long period = System.currentTimeMillis() - start;
         double hopTime = period * 1000000.0 / hops_remained;
         System.out.printf("period = %d ms; Mean hop time = %f ns", period, hopTime);

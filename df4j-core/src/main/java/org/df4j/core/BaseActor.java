@@ -9,6 +9,7 @@
  */
 package org.df4j.core;
 
+import java.io.Closeable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -27,7 +28,11 @@ public abstract class BaseActor {
 
     protected final Transition transition = new Transition();
 
- //   private Pin controlPin = new Pin();
+    protected Pin controlPin = new Pin();
+
+    {
+        controlPin.turnOn();
+    }
 
     /**
      * invoked when all transition transition are ready,
@@ -46,10 +51,10 @@ public abstract class BaseActor {
             transition.super();
         }
 
-        public void turnOn() {
-            boolean on = super.turnOn1();
+        public void turnOnAndFire() {
+            boolean on = super.turnOn();
             if (on) {
-                transition._turnOff(Transition.CONTROL_BIT);
+                controlPin.turnOff();
                 fire();
             }
         }
@@ -60,69 +65,45 @@ public abstract class BaseActor {
     }
 
     /**
-     * Binary semaphore
-     * can be in 2 states: on and off
-     * initial state is off
-     * does not change state after execution od (@link #act} method
-     */
-    public class Starter extends Pin {
-
-        public synchronized void start() {
-            turnOn();
-        }
-
-        protected synchronized void stop() {
-            turnOff();
-        }
-
-        /** does nothing */
-        @Override
-        protected synchronized void purge() {
-        }
-    }
-    /**
      * Counting semaphore
      * holds token counter without data.
      * counter can be negative.
      */
-    public class Semafor extends Pin {
-        private long count;
-
-        /** initial counter can be of any sign
-         *
-         * @param count
-         */
-        public Semafor(int count) {
-            if (count > 0) {
-                throw new IllegalArgumentException("initial count cannot be >0");
-            }
-            this.count = count;
-        }
+    public class Semafor extends Pin implements Closeable {
+        private volatile boolean closed = false;
+        private long count = 0;
 
         public Semafor() {
-            this(0);
         }
 
-        /** increments resource counter by 1 */
-        public void release() {
-            release(1);
+        public boolean isClosed() {
+            return closed;
+        }
+
+        public long getCount() {
+            return count;
+        }
+
+        @Override
+        public synchronized void close() {
+            closed = true;
+            count = 0;
+            turnOff(); // and cannot be turned on
         }
 
         /** increments resource counter by delta */
         public synchronized void release(long delta) {
+            if (closed) {
+                throw new IllegalStateException("closed already");
+            }
             if (delta < 0) {
-                throw  new IllegalArgumentException("resource counter delta must be >= 0");
+                throw new IllegalArgumentException("resource counter delta must be >= 0");
             }
             long prev = count;
             count+= delta;
             if (prev <= 0 && count > 0 ) {
-                turnOn();
+                turnOnAndFire();
             }
-        }
-
-        /** decrements resource counter by 1 */
-        public void aquire() {
-            aquire(1);
         }
 
         /** increments resource counter by delta */
@@ -174,7 +155,7 @@ public abstract class BaseActor {
                 throw new IllegalStateException("token set already");
             }
             value = token;
-            turnOn();
+            turnOnAndFire();
         }
 
         /**
@@ -261,7 +242,7 @@ public abstract class BaseActor {
             }
             if (value == null) {
                 value = token;
-                turnOn();
+                turnOnAndFire();
             } else {
                 queue.add(token);
             }
@@ -278,7 +259,7 @@ public abstract class BaseActor {
             }
             closeRequested = true;
             if (value == null) {
-                turnOn();
+                turnOnAndFire();
             }
         }
 
