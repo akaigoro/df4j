@@ -93,7 +93,7 @@ public class DiningPhilosophers {
             @Override
             protected void act() {
                 println("Request first ("+firstPlace.id+")");
-                firstPlace.postRequest(hungry1);
+                firstPlace.postTo(hungry1);
             }
         };
 
@@ -102,7 +102,7 @@ public class DiningPhilosophers {
             protected void act(Fork fork) {
                 println("Got first ("+firstPlace.id+"), request second ("+secondPlace.id+")");
                 first = fork;
-                secondPlace.postRequest(hungry2);
+                secondPlace.postTo(hungry2);
             }
         };
 
