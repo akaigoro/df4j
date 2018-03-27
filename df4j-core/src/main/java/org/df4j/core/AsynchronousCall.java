@@ -10,46 +10,34 @@
 package org.df4j.core;
 
 import java.io.Closeable;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * AsynchronousCall is like a Petri Net trasnsition with own places for tokens,
  * where places can keep at most one token, and which is not reused: after firing,
  * another arguments cannot be supplied and another firing cannot occur.
  *
- * Actor is started when all its places are not empty (contain tokens). Excecution means execution
+ * Own places can be of 2 sorts: carrying colorless tokens (without information,
+ * like Starter and Semafor, and and carrying colored tokens, which are references to arbitrary objects.
+ *
+ * AsynchronousCall is started when all its places are not empty (contain tokens). Excecution means execution
  * its (@link {@link AsynchronousCall#act()} method on the executor set by {@link #setExecutor} method.
  */
 public abstract class AsynchronousCall implements Runnable {
     public static final Executor directExecutor = task->task.run();
 
     protected final Transition transition = new Transition();
-    protected final AtomicReference<Executor> executor = new AtomicReference<>();
 
     /**
      * assigns Executor
      * returns previous executor
      */
     public Executor setExecutor(Executor exec) {
-        Executor res = this.executor.getAndUpdate((prev)->exec);
-        return res;
+        return transition.setExecutor(exec);
     }
 
     protected Executor getExecutor() {
-        Executor exec = executor.get();
-        return exec;
-    }
-
-    protected Executor getExecutorNotNull() {
-        Executor exec = executor.get();
-        if (exec == null) {
-            exec = executor.updateAndGet((prev)->prev==null? ForkJoinPool.commonPool():prev);
-        }
-        return exec;
+        return transition.getExecutor();
     }
 
     public void useDirectExecutor() {
@@ -64,9 +52,28 @@ public abstract class AsynchronousCall implements Runnable {
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
-        Executor executor = getExecutorNotNull();
+        Executor executor = getExecutor();
         executor.execute(this);
     }
+
+    @Override
+    public void run() {
+        try {
+            act();
+        } catch (Throwable e) {
+            System.err.println("Error in actor " + getClass().getName());
+            e.printStackTrace();
+        }
+    }
+
+    // ========= backend
+
+    /**
+     * reads extracted tokens from places and performs specific calculations
+     *
+     * @throws Exception
+     */
+    protected abstract void act() throws Exception;
 
     /**
      * initially in non-blocing state

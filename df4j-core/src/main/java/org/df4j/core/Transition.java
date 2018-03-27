@@ -1,7 +1,10 @@
 package org.df4j.core;
 
 import java.util.ArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by Jim on 02-Jun-17.
@@ -14,11 +17,26 @@ public class Transition {
      */
     private AtomicInteger pinBits = new AtomicInteger();
     private int pinCount = 0;
+    /** the list of all Pins */
+    private ArrayList<Pin> pins = new ArrayList<>(4);
+    protected final AtomicReference<Executor> executor = new AtomicReference<>();
 
     /**
-     * the list of all Pins
+     * assigns Executor
+     * returns previous executor
      */
-    private ArrayList<Pin> pins = new ArrayList<>(4);
+    public Executor setExecutor(Executor exec) {
+        Executor res = this.executor.getAndUpdate((prev)->exec);
+        return res;
+    }
+
+    protected Executor getExecutor() {
+        Executor exec = executor.get();
+        if (exec == null) {
+            exec = executor.updateAndGet((prev)->prev==null? ForkJoinPool.commonPool():prev);
+        }
+        return exec;
+    }
 
     /**
      * locks pin by setting it to 1

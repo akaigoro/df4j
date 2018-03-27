@@ -13,15 +13,11 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
+ * Actor is reusable AsynchronousCall: after execution, it executes again as soon as new array of arguments is ready
+ *
  * An actor is like a Petri Net trasnsition with own places for tokens.
  * Shared places cannot be represented directly. To some extent, the role
  * of shared places is played by {@link org.df4j.core.ext.Dispatcher}
- *
- * Own places can be of 2 sorts: carrying colorless tokens (without information,
- * like Starter and Semafor, and and carrying colored tokens, which are references to arbitrary objects.
- *
- * Actor is started when all its places are not empty (contain tokens). Excecution means execution
- * its (@link {@link Actor#act()} method on the executor set by {@link #setExecutor} method.
  */
 public abstract class Actor extends AsynchronousCall implements Runnable {
     private OpenPin controlPin = new OpenPin();
@@ -50,14 +46,6 @@ public abstract class Actor extends AsynchronousCall implements Runnable {
         }
     }
 
-    // ========= backend
-
-    /**
-     * reads extracted tokens from places and performs specific calculations
-     *
-     * @throws Exception
-     */
-    protected abstract void act() throws Exception;
     //=============================== streams
 
     /*******************************************************
