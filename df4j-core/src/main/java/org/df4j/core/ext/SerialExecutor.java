@@ -13,6 +13,9 @@ import java.util.concurrent.Executor;
  */
 public class SerialExecutor extends Actor1<Runnable> implements Executor {
 
+	public SerialExecutor() {
+	}
+
 	public SerialExecutor(Executor executor) {
 		setExecutor(executor);
 	}
@@ -23,11 +26,7 @@ public class SerialExecutor extends Actor1<Runnable> implements Executor {
 	}
 
 	@Override
-	protected void act(Runnable task) throws Exception {
-		try {
-			task.run();
-		} catch (Throwable e) {
-			e.printStackTrace();
-		}
+	protected void act(Runnable task) {
+		task.run();
 	}
 }

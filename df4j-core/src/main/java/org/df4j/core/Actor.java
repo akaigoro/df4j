@@ -9,9 +9,8 @@
  */
 package org.df4j.core;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * An actor is like a Petri Net trasnsition with own places for tokens.
@@ -24,31 +23,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * Actor is started when all its places are not empty (contain tokens). Excecution means execution
  * its (@link {@link Actor#act()} method on the executor set by {@link #setExecutor} method.
  */
-public abstract class Actor extends BaseActor implements Runnable {
-
-    protected final AtomicReference<Executor> executor = new AtomicReference<>();
-
-    /**
-     * assigns Executor
-     * returns previous executor
-     */
-    public Executor setExecutor(Executor exec) {
-        Executor res = this.executor.getAndUpdate((prev)->exec);
-        return res;
-    }
-
-    protected Executor getExecutor() {
-        Executor exec = executor.get();
-        return exec;
-    }
-
-    protected Executor getExecutorNotNull() {
-        Executor exec = executor.get();
-        if (exec == null) {
-            exec = executor.updateAndGet((prev)->prev==null?ForkJoinPool.commonPool():prev);
-        }
-        return exec;
-    }
+public abstract class Actor extends AsynchronousCall implements Runnable {
+    private OpenPin controlPin = new OpenPin();
 
     /**
      * invoked when all transition transition are ready,
@@ -58,8 +34,8 @@ public abstract class Actor extends BaseActor implements Runnable {
      * direct invocations is limited to avoid stack overflow.
      */
     protected void fire() {
-        Executor executor = getExecutorNotNull();
-        executor.execute(this);
+        controlPin.turnOff();
+        super.fire();
     }
 
     @Override
@@ -67,7 +43,7 @@ public abstract class Actor extends BaseActor implements Runnable {
         try {
             act();
             transition.consumeTokens();
-            controlPin.turnOnAndFire();
+            controlPin.turnOn();
         } catch (Throwable e) {
             System.err.println("Error in actor " + getClass().getName());
             e.printStackTrace();
@@ -82,4 +58,135 @@ public abstract class Actor extends BaseActor implements Runnable {
      * @throws Exception
      */
     protected abstract void act() throws Exception;
+    //=============================== streams
+
+    /*******************************************************
+     * A Queue of tokens of type <T>
+     *
+     * @param <T>
+     */
+    public class StreamInput<T> extends Input<T> implements StreamPort<T> {
+        protected Deque<T> queue;
+        private boolean closeRequested = false;
+
+        public StreamInput () {
+            this.queue = new ArrayDeque<T>();
+        }
+
+        public StreamInput (int capacity) {
+            this.queue = new ArrayDeque<T>(capacity);
+        }
+
+        public StreamInput(Deque<T> queue) {
+            this.queue = queue;
+        }
+
+        protected int size() {
+            return queue.size();
+        }
+
+        @Override
+        public synchronized void post(T token) {
+            if (token == null) {
+                throw new NullPointerException();
+            }
+            if (closeRequested) {
+                throw new IllegalStateException("closed already");
+            }
+            if (value == null) {
+                value = token;
+                turnOn();
+            } else {
+                queue.add(token);
+            }
+        }
+
+        /**
+         * Signals the end of the stream. Turns this pin on. Removed value is
+         * null (null cannot be send with StreamInput.add(message)).
+         */
+        @Override
+        public synchronized void close() {
+            if (closeRequested) {
+                return;
+            }
+            closeRequested = true;
+            if (value == null) {
+                turnOn();
+            }
+        }
+
+        @Override
+        protected void pushback() {
+            if (pushback) {
+                throw new IllegalStateException();
+            }
+            pushback = true;
+        }
+
+        @Override
+        protected synchronized void pushback(T value) {
+            if (value == null) {
+                throw new IllegalArgumentException();
+            }
+            if (!pushback) {
+                pushback = true;
+            } else {
+                if (this.value == null) {
+                    throw new IllegalStateException();
+                }
+                queue.addFirst(this.value);
+                this.value = value;
+            }
+        }
+
+        /**
+         * attempt to take next token from the input queue
+         *
+         * @return true if next token is available, or if stream is closed false
+         *         if input queue is empty
+         */
+        public boolean moveNext() {
+            synchronized(this) {
+                if (pushback) {
+                    pushback = false;
+                    return true;
+                }
+                boolean wasNotNull = (value != null);
+                T newValue = queue.poll();
+                if (newValue != null) {
+                    value = newValue;
+                    return true;
+                } else if (closeRequested) {
+                    value = null;
+                    return wasNotNull;// after close, return true once, then
+                    // false
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        @Override
+        protected synchronized void purge() {
+            if (pushback) {
+                pushback = false;
+                return; // value remains the same, the pin remains turned on
+            }
+            boolean wasNull = (value == null);
+            value = queue.poll();
+            if (value != null) {
+                return; // the pin remains turned on
+            }
+            // no more tokens; check closing
+            if (wasNull || !closeRequested) {
+                turnOff();
+            }
+            // else process closing: value is null, the pin remains turned on
+        }
+
+        public synchronized boolean  isClosed() {
+            return closeRequested && (value == null);
+        }
+    }
 }

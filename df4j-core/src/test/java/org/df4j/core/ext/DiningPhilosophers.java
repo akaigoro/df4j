@@ -1,11 +1,13 @@
 package org.df4j.core.ext;
 
+import org.df4j.core.Actor;
+import org.junit.Test;
+
 import java.util.Random;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import org.df4j.core.Port;
-import org.junit.Test;
 
 /**
  * Demonstrates usage of class {@link Dispatcher} to model common places for tokens.
@@ -13,13 +15,13 @@ import org.junit.Test;
 public class DiningPhilosophers {
     private static final int num = 5;
 
-    ScheduledExecutorService timer = Executors.newScheduledThreadPool(2);
+    ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     Random rand=new Random();
-    ForkPlace[] forkPlaces = new ForkPlace[num];
+    Executor delayingExecutor = (Runnable next) -> {
+        timer.schedule(next, (long)(rand.nextFloat()*50), TimeUnit.MILLISECONDS);
+    };
 
-    void delayedRun(Runnable next) {
-		timer.schedule(next, (long) (rand.nextFloat()*100), TimeUnit.MILLISECONDS);
-    }
+    ForkPlace[] forkPlaces = new ForkPlace[num];
 
     @Test
     public void test() throws InterruptedException {
@@ -27,8 +29,8 @@ public class DiningPhilosophers {
     	// create places for forks with 1 fork in each
         for (int k=0; k<num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
+            forkPlace.postResource(new Fork());
             forkPlaces[k]=forkPlace;
-            forkPlace.postResource(new Fork(k));
         }
         // create philosophers
         for (int k=0; k<num; k++) {
@@ -36,18 +38,12 @@ public class DiningPhilosophers {
         }
         // animate all philosophers
         for (int k=0; k<num; k++) {
-            philosophers[k].think();
+            philosophers[k].think.start();
         }
         Thread.sleep(300);
     }
 
-    static class Fork  {
-        int id;
-        
-        public Fork(int k) {
-            id=k;
-        }
-    }
+    static class Fork  { }
     
     static class ForkPlace extends Dispatcher<Fork>  {
         int id;
@@ -57,83 +53,81 @@ public class DiningPhilosophers {
         }
     }
 
-    /**
-     * think -> requestFirst -> getFirstRequestSecond -> getSecondEat -> returnForks -> think
-     */
+    abstract class Stage extends Actor {
+        Semafor canRun = new Semafor();
+
+        {
+            setExecutor(delayingExecutor);
+        }
+
+        public void start() {
+            canRun.release(1);
+        }
+    }
+
     class Philosopher {
         int id;
 		ForkPlace firstPlace, secondPlace;
         Fork first, second;
         String indent;
-        
+
         public Philosopher(int id) {
-			this.id = id;
-			// to avoid deadlocks, allocate resource with lower number first
-			if (id == num-1) {
+            this.id = id;
+            // to avoid deadlocks, allocate resource with lower number first
+            if (id == num-1) {
                 firstPlace = forkPlaces[0];
                 secondPlace= forkPlaces[id];
             } else {
                 firstPlace = forkPlaces[id];
                 secondPlace = forkPlaces[id+1];
             }
+
             StringBuffer sb = new StringBuffer();
-			for (int k = 0; k<id; k++) sb.append("  ");
+            sb.append(id).append(":");
+            for (int k = 0; k<=id; k++) sb.append("  ");
             indent = sb.toString();
             println("first place ("+firstPlace.id+") second place ("+secondPlace.id+")");
-		}
-
-        private void println(String s) {
-            System.out.println(indent+s+" /"+id);
         }
 
-		/* states are represented as callbacks, executed on caller's stack
-		 * this is safe because chain of calls is short - it breaks when the timer is accessed
-		 */
-
-        // think some time, then request the first fork
-        void think () {
-            println("Thinking");
-            delayedRun (requestFirst);
-        };
-
-        // request the first fork
-        Runnable requestFirst = new Runnable() {
+        Stage think = new Stage(){
             @Override
-            public void run() {
+            protected void act() {
                 println("Request first ("+firstPlace.id+")");
-                firstPlace.postRequest(getFirstRequestSecond);
+                firstPlace.postRequest(hungry1);
             }
         };
 
-        // get the first fork and request the second one
-        Port<Fork> getFirstRequestSecond = new Port<Fork>() {
+        Actor1<Fork> hungry1 = new Actor1<Fork>() {
             @Override
-            public void post(Fork fork) {
-                println("Got first ("+fork.id+"), request second ("+secondPlace.id+")");
+            protected void act(Fork fork) {
+                println("Got first ("+firstPlace.id+"), request second ("+secondPlace.id+")");
                 first = fork;
-                secondPlace.postRequest(getSecondEat);
+                secondPlace.postRequest(hungry2);
             }
         };
 
-        // get the second fork and start eating
-        Port<Fork> getSecondEat = new Port<Fork>() {
+        Actor1<Fork> hungry2 = new Actor1<Fork>() {
             @Override
-            public void post(Fork fork) {
-                println("Got second ("+fork.id+"), eating");
+            protected void act(Fork fork) {
+                println("Got second ("+secondPlace.id+"), eating");
                 second = fork;
-                delayedRun (returnForks);
+                eat.start();
             }
         };
 
-        // return both forks in reverse order and start thinking
-        Runnable returnForks =new Runnable() {
+        Stage eat = new Stage() {
             @Override
-            public void run() {
-                println("Return second ("+second.id+"), return first ("+first.id+")");
-                secondPlace.postResource(second);
+            protected void act() throws Exception {
+                println("Return first ("+firstPlace.id+"), return second ("+secondPlace.id+")");
                 firstPlace.postResource(first);
-                think();
+                secondPlace.postResource(second);
+                first = second = null;
+                think.start();
             }
         };
+
+        private void println(String s) {
+            System.out.println(indent+s);
+        }
     }
 }

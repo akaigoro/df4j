@@ -69,14 +69,13 @@ public class Transition {
             }
             pinBit = 1 << (pinCount++); // assign next pin number
             pins.add(this);
-            turnOff();
         }
 
         /** unlock pin by setting it to 0
          * @return true if transition fired emitting control token
          */
-        protected boolean turnOn() {
-            return _turnOn(pinBit);
+        protected boolean _turnOn() {
+            return Transition.this._turnOn(pinBit);
         }
 
         /**
