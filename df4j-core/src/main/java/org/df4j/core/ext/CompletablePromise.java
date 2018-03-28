@@ -2,10 +2,10 @@ package org.df4j.core.ext;
 
 import org.df4j.core.Port;
 
-public class CompletablePromise<T> extends AbstractPromise<T> {
+public class CompletablePromise<T> extends AbstractPromise<T> implements Port<T> {
     protected final ConstInput<T> resources = new ConstInput<>();
 
-    public void postResource(T resource) {
+    public void post(T resource) {
     	resources.post(resource);
     }
 
