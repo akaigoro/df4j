@@ -5,8 +5,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 class StreamSubscriber<T> extends Actor.StreamInput<T> implements Subscriber<T> {
-    final int buffSize;
-    Subscription subscription;
+    protected final int buffSize;
+    protected Subscription subscription;
 
     public StreamSubscriber(Actor base, int bufsize) {
         base.super(bufsize);
@@ -22,6 +22,9 @@ class StreamSubscriber<T> extends Actor.StreamInput<T> implements Subscriber<T> 
     @Override
     protected synchronized void purge() {
         super.purge();
+        if (closeRequested) {
+            return;
+        }
         int size = size();
         if (size <= buffSize/2) {
             subscription.request(buffSize - size);
@@ -38,8 +41,7 @@ class StreamSubscriber<T> extends Actor.StreamInput<T> implements Subscriber<T> 
 
     @Override
     public void onError(Throwable throwable) {
-        // TODO implemet
-        throw new RuntimeException("onError not implemented");
+        super.postFailure(throwable);
     }
 
     @Override

@@ -17,7 +17,7 @@ import java.util.concurrent.Future;
 public interface Promise<T> {
     void postTo(Port<T> request);
 
-    default Future<T> toFuture() {
+    default Future<T> asFuture() {
         CompletableFuture<T> f = new CompletableFuture<>();
         postTo(m->f.complete(m));
         return f;

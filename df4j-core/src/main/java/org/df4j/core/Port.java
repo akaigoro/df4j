@@ -16,6 +16,10 @@ package org.df4j.core;
  */
 public interface Port<M> {
 
-	public void post(M message);
-	
+	void post(M message);
+
+	default void postFailure(Throwable ex) {
+		throw new RuntimeException(ex);
+	}
+
 }

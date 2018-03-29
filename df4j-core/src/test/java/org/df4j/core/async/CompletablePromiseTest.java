@@ -17,7 +17,7 @@ public class CompletablePromiseTest {
 
     public void computeQuadratic(double a, double b, double c, double... expectedRoots) throws InterruptedException, TimeoutException, ExecutionException {
         QuadraticRoots equation = new QuadraticRoots(a, b, c);
-        double[] roots = equation.toFuture().get(1, TimeUnit.SECONDS);
+        double[] roots = equation.asFuture().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expectedRoots.length, roots.length);
         if (expectedRoots.length == 2) {
             Assert.assertEquals(expectedRoots[0], roots[0], 0.001);
@@ -87,7 +87,7 @@ public class CompletablePromiseTest {
 
     public void computeDiscr(double a, double b, double c, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         Promise<Double> res = promiseDiscr(Promise.completedPromise(a), Promise.completedPromise(b), Promise.completedPromise(c));
-        double result = res.toFuture().get(1, TimeUnit.SECONDS);
+        double result = res.asFuture().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
 
@@ -109,7 +109,7 @@ public class CompletablePromiseTest {
 
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         Mult mult = new Mult(Promise.completedPromise(a), Promise.completedPromise(b));
-        double result = mult.toFuture().get(1, TimeUnit.SECONDS);
+        double result = mult.asFuture().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
 

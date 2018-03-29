@@ -18,10 +18,15 @@ class Source extends Actor {
     @Override
     protected void act() {
         ReactorTest.println("pub.post("+val+")");
+        checkClose();
         pub.post(val);
         sent++;
         val++;
-        if (val == totalNumber) {
+        checkClose();
+    }
+
+    private void checkClose() {
+        if (val >= totalNumber) {
             pub.close();
             ReactorTest.println("pub.close()");
         }

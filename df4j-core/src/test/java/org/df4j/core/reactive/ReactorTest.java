@@ -26,15 +26,15 @@ public class ReactorTest {
         Source from = new Source(sourceNumber);
         Sink to = new Sink(sinkNumber);
         from.pub.subscribe(to.sub);
-        assertTrue(to.fin.await(10000, TimeUnit.MILLISECONDS));
+        assertTrue(to.fin.await(2, TimeUnit.SECONDS));
         assertEquals(totalNumber, from.sent);
         assertEquals(totalNumber, to.received);
     }
 
     @Test
     public void testSourceFirst() throws InterruptedException {
+        testSourceToSink(2, 1);
         testSourceToSink(0, 1);
-        testSourceToSink(10, 9);
     }
 
     @Test

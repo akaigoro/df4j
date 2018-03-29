@@ -55,7 +55,7 @@ public abstract class Actor extends AsynchronousCall implements Runnable {
      */
     public class StreamInput<T> extends Input<T> implements StreamPort<T> {
         protected Deque<T> queue;
-        private boolean closeRequested = false;
+        protected boolean closeRequested = false;
 
         public StreamInput () {
             this.queue = new ArrayDeque<T>();
