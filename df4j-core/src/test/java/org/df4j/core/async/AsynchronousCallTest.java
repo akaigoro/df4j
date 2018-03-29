@@ -1,8 +1,7 @@
-package org.df4j.examples.async;
+package org.df4j.core.async;
 
 import org.df4j.core.AsynchronousCall;
 import org.df4j.core.Port;
-import org.df4j.core.ext.CompletablePromise;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -18,7 +17,7 @@ public class AsynchronousCallTest {
 
     public void computeQuadratic(double a, double b, double c, double... expectedRoots) throws InterruptedException {
         BlockingQueuePort<Double> res = new BlockingQueuePort<>();
-        Quadratic equation = new Quadratic(res);
+        QuadraticRoots equation = new QuadraticRoots(res);
         equation.a.post(a);
         equation.b.post(b);
         equation.c.post(c);
@@ -28,9 +27,7 @@ public class AsynchronousCallTest {
         } else {
             double root2 = res.poll(1, TimeUnit.SECONDS);
             if (root1>root2)             {
-                double root = root1;
-                root1 = root2;
-                root2 = root;
+                double root = root1; root1 = root2; root2 = root;
             }
             Assert.assertEquals(expectedRoots[0], root1, 0.001);
             Assert.assertEquals(expectedRoots[1], root2, 0.001);
@@ -38,22 +35,23 @@ public class AsynchronousCallTest {
     }
 
     /**
-     * (-b +/- D)/2*a
+     * D = sqrt(b^2-4*a*c)
+     * roots = (-b +/- D)/2*a
      */
-    static class Quadratic {
+    static class QuadraticRoots {
         // parameters
         CompletablePromise<Double> a = new CompletablePromise<>();
         CompletablePromise<Double> b = new CompletablePromise<>();
         CompletablePromise<Double> c = new CompletablePromise<>();
 
-        public Quadratic(Port<Double> out){
+        public QuadraticRoots(Port<Double> roots){
             CompletablePromise<Double> d = new CompletablePromise<>();
             Discr discr = new Discr(d);
             a.postTo(discr.a);
             b.postTo(discr.b);
             c.postTo(discr.c);
             CompletablePromise<Double> d2 = new CompletablePromise<>();
-            Condition cond = new Condition(out, d2);
+            isNaN cond = new isNaN(roots, d2);
             d.postTo(cond.d);
             Minus minusB = new Minus(new CompletablePromise<>());
             minusB.a.post(0.0);
@@ -62,13 +60,13 @@ public class AsynchronousCallTest {
             a.postTo(aa.a);
             aa.b.post(2.0);
 
-            Div div1 = new Div(out);
+            Div div1 = new Div(roots);
             Plus plus = new Plus(div1.a);
             ((CompletablePromise)minusB.out).postTo(plus.a);
             d.postTo(plus.b);
             ((CompletablePromise)aa.out).postTo(div1.b);
 
-            Div div2 = new Div(out);
+            Div div2 = new Div(roots);
             Minus minus = new Minus(div2.a);
             ((CompletablePromise)minusB.out).postTo(minus.a);
             d.postTo(minus.b);
@@ -76,11 +74,11 @@ public class AsynchronousCallTest {
         }
     }
 
-    static class Condition extends AsynchronousCall {
+    static class isNaN extends AsynchronousCall {
         ConstInput<Double> d = new ConstInput<>();
         Port d1, d2;
 
-        Condition(Port d1, Port d2){
+        isNaN(Port d1, Port d2){
             this.d1 = d1;
             this.d2 = d2;
         }
@@ -98,23 +96,37 @@ public class AsynchronousCallTest {
 
     @Test
     public void runDiscrTest() throws InterruptedException, ExecutionException, TimeoutException {
-        double d = computeDiscr(3.0, 4.0, 1.0);
-        Assert.assertEquals(2.0, d, 0.001);
-        d = computeDiscr(3.0, 2.0, 1.0);
-        Assert.assertTrue(Double.isNaN(d));
+        computeDiscr(3.0, 4.0, 1.0, 2.0);
+        computeDiscr(3.0, 2.0, 1.0, Double.NaN);
     }
 
-    public Double computeDiscr(double a, double b, double c) throws InterruptedException, ExecutionException, TimeoutException {
+    public void computeDiscr(double a, double b, double c, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         CompletablePort<Double> res = new CompletablePort<>();
         Discr discr = new Discr(res);
         discr.a.post(a);
         discr.b.post(b);
         discr.c.post(c);
-        return res.get(1, TimeUnit.SECONDS);
+        double result = res.get(1, TimeUnit.SECONDS);
+        Assert.assertEquals(expected, result, 0.001);
+    }
+
+    @Test
+    public void runMultTest() throws InterruptedException, ExecutionException, TimeoutException {
+        computeMult(3.0, 4.0, 12.0);
+        computeMult(-1.0, -2.0, 2.0);
+    }
+
+    public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
+        CompletablePort<Double> res = new CompletablePort<>();
+        Mult mult = new Mult(res);
+        mult.a.post(a);
+        mult.b.post(b);
+        double result = res.get(1, TimeUnit.SECONDS);
+        Assert.assertEquals(expected, result, 0.001);
     }
 
     /**
-     * sqrt(b^2-4*a*c)
+     * sqrt(b^2-4*d*c)
      */
     static class Discr  {
         // parameters
@@ -181,8 +193,6 @@ public class AsynchronousCallTest {
     }
 
     static class Minus extends BinaryFunc<Double> {
-        Minus(){}
-
         Minus(Port out){
             super(out);
         }
@@ -194,8 +204,6 @@ public class AsynchronousCallTest {
     }
 
     static class Plus extends BinaryFunc<Double> {
-        Plus(){}
-
         Plus(Port out){
             super(out);
         }
@@ -207,8 +215,6 @@ public class AsynchronousCallTest {
     }
 
     static class Sqrt extends UnaryFunc<Double> {
-        Sqrt(){}
-
         Sqrt(Port out){
             super(out);
         }
@@ -232,8 +238,6 @@ public class AsynchronousCallTest {
     }
 
     static class Mult extends BinaryFunc<Double> {
-        Mult(){}
-
         Mult(Port out){
             super(out);
         }
@@ -245,8 +249,6 @@ public class AsynchronousCallTest {
     }
 
     static class Div extends BinaryFunc<Double> {
-        Div(){}
-
         Div(Port out){
             super(out);
         }

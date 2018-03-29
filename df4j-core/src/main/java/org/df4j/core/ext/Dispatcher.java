@@ -1,6 +1,6 @@
 package org.df4j.core.ext;
 
-import org.df4j.core.Port;
+import org.df4j.core.async.AbstractPromise;
 
 public class Dispatcher<T> extends AbstractPromise<T> {
     protected final StreamInput<T> resources = new StreamInput<>();
@@ -9,11 +9,7 @@ public class Dispatcher<T> extends AbstractPromise<T> {
     	resources.post(resource);
     }
 
-	@Override
-	protected void act() {
-		T resource = resources.value;
-		Port<T> request = requests.value;
-		request.post(resource);
+	protected T getValue() {
+		return resources.get();
 	}
-
 }

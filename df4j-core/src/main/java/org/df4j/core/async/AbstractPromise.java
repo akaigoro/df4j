@@ -1,8 +1,7 @@
-package org.df4j.core.ext;
+package org.df4j.core.async;
 
 import org.df4j.core.Actor;
 import org.df4j.core.Port;
-import org.df4j.core.Promise;
 
 public abstract class AbstractPromise<T> extends Actor implements Promise<T> {
     protected final StreamInput<Port<T>> requests = new StreamInput<>();
@@ -15,4 +14,12 @@ public abstract class AbstractPromise<T> extends Actor implements Promise<T> {
     	requests.post(request);
     }
 
+    @Override
+    protected final void act() {
+        T resource = getValue();
+        Port<T> request = requests.value;
+        request.post(resource);
+    }
+
+    protected abstract T getValue();
 }

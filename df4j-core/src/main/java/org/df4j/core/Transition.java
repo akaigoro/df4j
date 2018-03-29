@@ -3,19 +3,19 @@ package org.df4j.core;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by Jim on 02-Jun-17.
  */
-public class Transition {
+class Transition {
 
     /**
      * main scale of bits, one bit per pin
      * when pinBits becomes 0, transition fires
      */
-    private AtomicInteger pinBits = new AtomicInteger();
+    private AtomicLong pinBits = new AtomicLong();
     private int pinCount = 0;
     /** the list of all Pins */
     private ArrayList<Pin> pins = new ArrayList<>(4);
@@ -56,7 +56,7 @@ public class Transition {
      * @return true if all transition become ready
      */
     protected boolean _turnOn(int pinBit) {
-        int res =  pinBits.updateAndGet(pinBits -> {
+        long res =  pinBits.updateAndGet(pinBits -> {
             if (pinBits == 0) {
                 return 1;
             }
@@ -82,8 +82,8 @@ public class Transition {
         private final int pinBit; // distinct for all other transition of the node
 
         protected Pin() {
-            if (pinCount == 32) {
-                throw new IllegalStateException("only 32 transition could be created");
+            if (pinCount == 64) {
+                throw new IllegalStateException("only 64 transition could be created");
             }
             pinBit = 1 << (pinCount++); // assign next pin number
             pins.add(this);
