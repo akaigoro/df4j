@@ -47,7 +47,7 @@ class OneShotPublisher<T> extends Actor.Semafor implements Publisher<T>, Subscri
     }
 
     @Override
-    public synchronized void close() {
+    public void close() {
         super.close();
         subscriber.onComplete();
     }
@@ -55,6 +55,7 @@ class OneShotPublisher<T> extends Actor.Semafor implements Publisher<T>, Subscri
     @Override
     public synchronized void request(long n) {
         super.release(n);
+        System.out.println("request:"+n+"; count ="+getCount());
     }
 
     @Override

@@ -6,17 +6,20 @@ import org.reactivestreams.Subscription;
 
 class StreamSubscriber<T> extends Actor.StreamInput<T> implements Subscriber<T> {
     protected final int buffSize;
+    protected int freeCount;
     protected Subscription subscription;
 
     public StreamSubscriber(Actor base, int bufsize) {
         base.super(bufsize);
         this.buffSize = bufsize;
+        this.freeCount = bufsize;
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
+    public synchronized void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
         subscription.request(buffSize);
+        freeCount -= buffSize;
     }
 
     @Override
@@ -25,9 +28,10 @@ class StreamSubscriber<T> extends Actor.StreamInput<T> implements Subscriber<T> 
         if (closeRequested) {
             return;
         }
-        int size = size();
-        if (size <= buffSize/2) {
-            subscription.request(buffSize - size);
+        freeCount++;
+        if (freeCount >= buffSize/2) {
+            subscription.request(freeCount);
+            freeCount = 0;
         }
     }
 

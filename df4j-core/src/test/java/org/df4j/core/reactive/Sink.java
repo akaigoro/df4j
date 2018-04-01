@@ -14,6 +14,11 @@ class Sink extends Actor {
     int received = 0;
 
     public Sink(int totalNumber) {
+        if (totalNumber==0) {
+            sub = new StreamSubscriber<Integer>(this, 0);
+            sub.close();
+            return;
+        }
         sub = new StreamSubscriber<Integer>(this, 5);
         this.totalNumber = totalNumber;
     }
@@ -21,7 +26,7 @@ class Sink extends Actor {
     @Override
     protected void act() {
         Integer val = sub.get();
-        ReactorTest.println("  Sink.get()="+val);
+   //     ReactorTest.println("  Sink.get()="+val);
         if (val != null) {
             received++;
             if (received >= totalNumber) {
