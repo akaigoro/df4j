@@ -1,4 +1,4 @@
-package org.df4j.core.impl.messagescalar;
+package org.df4j.core.impl.messagescalar.promisefuncs;
 
 import org.df4j.core.spi.messagescalar.Promise;
 
@@ -9,7 +9,7 @@ public class BinaryPromiseFunc<T,U,R> extends PromiseFunc<R> {
     ConstInput<T> a = new ConstInput<>();
     ConstInput<U> b = new ConstInput<>();
 
-    BinaryPromiseFunc(BiFunction<? super T,? super U,? extends R> fn, Promise<T> pa, Promise<U> pb) {
+    protected BinaryPromiseFunc(BiFunction<? super T, ? super U, ? extends R> fn, Promise<T> pa, Promise<U> pb) {
         this.fn = fn;
         pa.postTo(a);
         pb.postTo(b);

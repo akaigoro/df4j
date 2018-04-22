@@ -1,5 +1,6 @@
 package org.df4j.core.impl.messagescalar;
 
+import org.df4j.core.impl.messagescalar.promisefuncs.*;
 import org.df4j.core.spi.messagescalar.Promise;
 import org.junit.Assert;
 import org.junit.Test;
@@ -8,7 +9,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class PortPromiseTest {
+/**
+ * this is how the df4j library is supposed to be used:
+ *  a) user creats his own library for his problem domain - here, package promisefuncs
+ *  b) using this library and df4j itself, computational graph created (here class {@link QuadraticRoots}
+ *    if this class is big, parts of the graph are described as separate classes (here {@link SortedRoots} and  {@link SortedRoots} )
+ *  c) the graph is run with different arguments.
+ */
+public class PromiseFuncTest {
     @Test
     public void runQuadraticTest() throws InterruptedException, ExecutionException, TimeoutException {
         computeQuadratic(3.0, 4.0, 1.0, -1.0, -0.3333);
@@ -17,7 +25,8 @@ public class PortPromiseTest {
     }
 
     public void computeQuadratic(double a, double b, double c, double... expectedRoots) throws InterruptedException, TimeoutException, ExecutionException {
-        QuadraticRoots equation = new QuadraticRoots(a, b, c);
+        QuadraticRoots equation = new QuadraticRoots(new CompletedPromise<>(a), new CompletedPromise<>(b), new CompletedPromise<>(c));
+
         double[] roots = equation.asFuture().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expectedRoots.length, roots.length);
         if (expectedRoots.length == 2) {
@@ -32,24 +41,22 @@ public class PortPromiseTest {
      * roots[1] = (-b - D)/2*a
      */
     static class QuadraticRoots extends PromiseFunc<double[]> {
-        Promise<Double> pa, pb, pc;
-        Promise<Double> pd;
+        Promise<Double> pa, pb;
         ConstInput<Double> discr=new ConstInput<Double>();
 
-        QuadraticRoots(double a, double b, double c) {
-            pa = new CompletedPromise<>(a);
-            pb = new CompletedPromise<>(b);
-            pc = new CompletedPromise<>(c);
-            pd = promiseDiscr(pa, pb, pc);
-            pd.postTo(discr);
+        QuadraticRoots(Promise<Double> pa, Promise<Double> pb, Promise<Double> pc) {
+            this.pa = pa;
+            this.pb = pb;
+            new Discr(pa, pb, pc).postTo(discr);
         }
 
         @Override
         public void act() {
-            Double dval = discr.get();
-            if (Double.isNaN(dval)) {
+            Double d = discr.get();
+            if (d <0) {
                 out.post(new double[0]);
             } else {
+                Promise<Double> pd = new Sqrt(new CompletedPromise<>(d));
                 Promise<Double> mb = new Minus(new CompletedPromise<>(0.0), pb);
                 Promise<Double> a2 = new Mult(new CompletedPromise<>(2.0), pa);
                 new SortedRoots(
@@ -82,24 +89,25 @@ public class PortPromiseTest {
 
     @Test
     public void runDiscrTest() throws InterruptedException, ExecutionException, TimeoutException {
-        computeDiscr(3.0, 4.0, 1.0, 2.0);
-        computeDiscr(3.0, 2.0, 1.0, Double.NaN);
+        computeDiscr(3.0, 4.0, 1.0, 4.0);
+        computeDiscr(3.0, 2.0, 1.0, -8.0);
     }
 
     public void computeDiscr(double a, double b, double c, double expected) throws InterruptedException, ExecutionException, TimeoutException {
-        Promise<Double> res = promiseDiscr(new CompletedPromise<>(a), new CompletedPromise<>(b), new CompletedPromise<>(c));
+        Promise<Double> res = new Discr(new CompletedPromise<>(a), new CompletedPromise<>(b), new CompletedPromise<>(c));
         double result = res.asFuture().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
 
-    public static Promise<Double> promiseDiscr(Promise<Double> pa, Promise<Double> pb, Promise<Double> pc) {
-        return new Sqrt(
-                new Minus(new Square(pb),
-                    new Mult(new CompletedPromise<>(4.0),
-                        new Mult(pa, pc)
-                    )
-                )
-        );
+    static class Discr extends Minus {
+
+        Discr(Promise<Double> pa, Promise<Double> pb, Promise<Double> pc) {
+            super(new Square(pb),
+                  new Mult(new CompletedPromise<>(4.0),
+                          new Mult(pa, pc)
+                  )
+            );
+        }
     }
 
     @Test
@@ -116,7 +124,7 @@ public class PortPromiseTest {
 
     static class Mult extends BinaryPromiseFunc<Double,Double,Double> {
         Mult(Promise<Double> pa, Promise<Double> pb) {
-            super((a,b)-> a*b, pa, pb);
+            super((Double a,Double b)-> a*b, pa, pb);
         }
     }
 

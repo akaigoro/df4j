@@ -1,4 +1,4 @@
-package org.df4j.core.impl.messagescalar;
+package org.df4j.core.impl.messagescalar.promisefuncs;
 
 
 import org.df4j.core.spi.messagescalar.Promise;
@@ -9,7 +9,7 @@ public class UnaryPromiseFunc<T,R> extends PromiseFunc<R> {
     Function<? super T,? extends R> fn;
     ConstInput<T> a = new ConstInput<>();
 
-    UnaryPromiseFunc(Function<? super T,? extends R> fn, Promise<T> pa) {
+    protected UnaryPromiseFunc(Function<? super T, ? extends R> fn, Promise<T> pa) {
         this.fn = fn;
         pa.postTo(a);
     }
