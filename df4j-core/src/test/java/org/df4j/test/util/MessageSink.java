@@ -1,7 +1,7 @@
 package org.df4j.test.util;
 
 import java.util.concurrent.CountDownLatch;
-import org.df4j.core.Port;
+import org.df4j.core.spi.messagescalar.Port;
 
 /**
  * The ending node. This is Port rather than actor, to be accessed outside
