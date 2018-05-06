@@ -21,6 +21,9 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history
 ---------------
+2018/06/05
+Branch API-4 and tag ver4.0 created.
+
 2017/10/20
 pom.xml files corrected. Branch API-3 and tag ver3.1 created.
 
