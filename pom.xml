@@ -11,13 +11,16 @@
     <url>http://maven.apache.org</url>
 
     <properties>
-        <df4j-version>3.1</df4j-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
     <modules>
         <module>df4j-core</module>
+        <module>df4j-nio2</module>
+        <!--module>connect-netty</module>
+        <module>connect-nio</module>
+        <module>pipeline</module-->
     </modules>
     <build>
         <plugins>
@@ -35,11 +38,11 @@
             <version>1.0.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams-examples -->
-        <dependency>
+        <!--dependency>
             <groupId>org.reactivestreams</groupId>
             <artifactId>reactive-streams-examples</artifactId>
             <version>1.0.1</version>
-        </dependency>
+        </dependency-->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

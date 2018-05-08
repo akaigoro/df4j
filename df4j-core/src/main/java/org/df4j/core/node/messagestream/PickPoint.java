@@ -1,14 +1,16 @@
 package org.df4j.core.node.messagestream;
 
+import org.df4j.core.connector.messagescalar.SimpleSubscription;
 import org.df4j.core.connector.messagestream.StreamCollector;
 import org.df4j.core.connector.messagestream.StreamInput;
+import org.df4j.core.connector.messagestream.StreamSubscriber;
 import org.df4j.core.connector.reactivestream.Subscription;
 import org.df4j.core.node.messagescalar.AbstractPromise;
 
-public class PickPoint<M> extends AbstractPromise implements StreamCollector<M> {
+public class PickPoint<M> extends AbstractPromise<M> implements StreamSubscriber<M> {
 	/** place for input token(s) */
     protected final StreamInput<M> resources = new StreamInput<>(this);
-    protected Subscription subscription;
+    protected SimpleSubscription subscription;
 
 	@Override
 	public void post(M resource) {
@@ -26,7 +28,12 @@ public class PickPoint<M> extends AbstractPromise implements StreamCollector<M> 
 	}
 
 	@Override
-    protected Object getToken() {
+    protected M getToken() {
         return this.resources.current();
     }
+
+	@Override
+	public void onSubscribe(SimpleSubscription subscription) {
+		this.subscription = subscription;
+	}
 }

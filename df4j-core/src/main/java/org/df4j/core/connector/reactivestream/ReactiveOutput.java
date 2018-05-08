@@ -27,10 +27,11 @@ public class ReactiveOutput<M> extends AsyncTask.Connector implements Publisher<
     }
 
     @Override
-    public synchronized void subscribe(Subscriber<? super M> subscriber) {
+    public <S extends Subscriber<? super M>> S subscribe(S subscriber) {
         SimpleSubscriptionImpl newSubscription = new SimpleSubscriptionImpl(subscriber);
         subscriptions.add(newSubscription);
         subscriber.onSubscribe(newSubscription);
+        return subscriber;
     }
 
     public synchronized void close() {

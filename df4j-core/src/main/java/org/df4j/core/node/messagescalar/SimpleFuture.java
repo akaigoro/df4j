@@ -71,13 +71,18 @@ public class SimpleFuture<T> implements ScalarSubscriber<T>, Future<T> {
 
     @Override
     public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        long end = System.currentTimeMillis()+ unit.toMillis(timeout);
         for (;;) {
             if (value != null) {
                 return value;
             } else if (ex != null) {
                 throw new ExecutionException(ex);
             } else {
-                wait(unit.toMillis(timeout));
+                long timeout1 = end - System.currentTimeMillis();
+                if (timeout1 <= 0) {
+                    throw new TimeoutException();
+                }
+                wait(timeout1);
             }
         }
     }

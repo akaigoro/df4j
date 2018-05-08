@@ -20,7 +20,7 @@ import org.df4j.core.connector.messagestream.StreamInput;
  * @param <M> the type of accepted messages.
  */
 public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
-    protected final StreamInput<M> mainInput= new StreamInput<M>(this);
+    protected final StreamInput<M> mainInput = new StreamInput<M>(this);
     protected SimpleSubscription subscription;
 
     @Override

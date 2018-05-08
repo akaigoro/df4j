@@ -79,8 +79,9 @@ public class ReactivePublisherExample {
         }
 
         @Override
-        public void subscribe(Subscriber<? super Integer> subscriber) {
+        public <S extends Subscriber<? super Integer>> S subscribe(S subscriber) {
             pub.subscribe(subscriber);
+            return subscriber;
         }
 
         @Override
