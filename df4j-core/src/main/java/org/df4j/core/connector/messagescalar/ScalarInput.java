@@ -12,7 +12,7 @@ import java.util.Iterator;
  *            type of accepted tokens.
  */
 public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
-    private AsyncTask asyncTask;
+    protected AsyncTask asyncTask;
     protected boolean pushback = false; // if true, do not consume
 
     public ScalarInput(AsyncTask asyncTask) {

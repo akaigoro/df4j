@@ -32,12 +32,11 @@
         </plugins>
     </build>
     <dependencies>
-        <dependency>
+        <!--dependency>
             <groupId>org.reactivestreams</groupId>
             <artifactId>reactive-streams</artifactId>
             <version>1.0.0</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams-examples -->
+        </dependency-->
         <!--dependency>
             <groupId>org.reactivestreams</groupId>
             <artifactId>reactive-streams-examples</artifactId>

@@ -14,6 +14,7 @@ import org.df4j.core.connector.reactivestream.ReactiveInput;
 import org.df4j.core.connector.reactivestream.Subscriber;
 import org.df4j.core.connector.reactivestream.Subscription;
 import org.df4j.core.node.Actor;
+import org.df4j.core.util.Logger;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -26,10 +27,12 @@ import java.nio.channels.CompletionHandler;
  * Accepts incoming connections
  */
 public class AsyncServerSocketChannel extends Actor
-        implements Subscriber<BaseServerConnection>,
-        CompletionHandler<AsynchronousSocketChannel, BaseServerConnection>
+        implements Subscriber<ServerConnection>
+        ,CompletionHandler<AsynchronousSocketChannel, ServerConnection>
 {
-    protected final ReactiveInput<BaseServerConnection> mainInput = new ReactiveInput<BaseServerConnection>(this);
+    protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
+
+    protected final ReactiveInput<ServerConnection> mainInput = new ReactiveInput<ServerConnection>(this);
     /**
      * prevents simultaneous channel.accept()
      */
@@ -43,8 +46,6 @@ public class AsyncServerSocketChannel extends Actor
     /** max number of connections in input queue */
     int connCount;
 
-    protected Subscription subscription;
-
     public AsyncServerSocketChannel(SocketAddress addr, int connCount) throws IOException {
         if (addr == null) {
             throw new NullPointerException();
@@ -53,6 +54,7 @@ public class AsyncServerSocketChannel extends Actor
         assc = AsynchronousServerSocketChannel.open();
         assc.bind(addr);
         acceptAllowed.release();
+        LOG.config("AsyncServerSocketChannel("+connCount+") created");
     }
 
     public synchronized void close() {
@@ -72,12 +74,12 @@ public class AsyncServerSocketChannel extends Actor
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        this.subscription = subscription;
+        mainInput.onSubscribe(subscription);
         subscription.request(connCount);
     }
 
     @Override
-    public void post(org.df4j.nio2.net.BaseServerConnection m) {
+    public void post(ServerConnection m) {
         mainInput.post(m);
     }
 
@@ -112,13 +114,12 @@ public class AsyncServerSocketChannel extends Actor
      */
     @Override
     protected void act() {
-        BaseServerConnection message = mainInput.current();
+        ServerConnection message = mainInput.current();
         if (message==null) {
             onCompleted();
         } else {
             try {
                 assc.accept(message, this);
-                subscription.request(1);
             } catch (Exception e) {
                 close();
             }
@@ -128,8 +129,9 @@ public class AsyncServerSocketChannel extends Actor
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel result, BaseServerConnection conn) {
-        conn.post(result);
+    public void completed(AsynchronousSocketChannel result, ServerConnection conn) {
+        LOG.info("AsynchronousServerSocketChannel: accepted "+conn);
+        conn.init(result);
         acceptAllowed.release(); // allow assc.accpt()
     }
 
@@ -138,7 +140,7 @@ public class AsyncServerSocketChannel extends Actor
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, BaseServerConnection conn) {
+    public void failed(Throwable exc, ServerConnection conn) {
         conn.postFailure(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.

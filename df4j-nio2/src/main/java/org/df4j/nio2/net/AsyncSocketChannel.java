@@ -14,6 +14,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.connector.messagescalar.ScalarCollector;
 import org.df4j.core.connector.permitstream.Semafor;
+import org.df4j.core.util.Logger;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;
@@ -40,7 +41,10 @@ import java.util.concurrent.TimeUnit;
  * If interested in the moment when connection is established,
  * add a listener to connEvent.
  */
-public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketChannel> {
+public class AsyncSocketChannel //implements ScalarCollector<AsynchronousSocketChannel>
+{
+    protected static final Logger LOG = Logger.getLogger(AsyncSocketChannel.class.getName());
+
     private final ScalarCollector backPort;
 
 	/** read requests queue */
@@ -50,27 +54,30 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
 
     protected volatile AsynchronousSocketChannel channel;
 
+    public String name;
+
     public AsyncSocketChannel(ScalarCollector backPort) {
         this.backPort = backPort;
+        LOG.config(getClass().getName()+" created");
     }
 
     public AsyncSocketChannel() {
-        this.backPort = null;
+        this(null);
     }
 
     public void setTcpNoDelay(boolean on) throws IOException {
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
 
-    @Override
-    public void post(AsynchronousSocketChannel channel) {
+    public void init(AsynchronousSocketChannel channel) {
+        LOG.info("conn "+name+": init()");
         this.channel=channel;
-        start();
+        reader.start();
+        writer.start();
     }
 
-    @Override
     public void postFailure(Throwable ex) {
-
+        LOG.info("conn "+name+": postFailure()");
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -98,11 +105,6 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
         return channel==null;
     }
 
-    protected void start() {
-        reader.start();
-        writer.start();
-    }
-
     //===================== inner classes
     
     /**
@@ -111,15 +113,8 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
      */
     
     public class Reader extends BuffProcessor implements CompletionHandler<Integer, ByteBuffer> {
-        Semafor blockReading = new Semafor(this);
+        Semafor blockReading = new Semafor(this, 1);
         long timeout=0;
-
-        public void injectBuffers(int count, int bufLen) {
-            for (int k=0; k<count; k++) {
-            	ByteBuffer buf=ByteBuffer.allocate(bufLen);
-            	output.post(buf);
-            }
-        }
 
 		public void close() {
             AsyncSocketChannel.this.close();
@@ -132,10 +127,12 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
             if (input.isClosed()) {
                 output.close();
                 postFailure(new AsynchronousCloseException());
+                LOG.info("conn "+name+": input.isClosed()");
                 return;
             }
             ByteBuffer buffer=input.current();
             buffer.clear();
+            LOG.info("conn "+name+": read() started");
             if (timeout>0) {
                 channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
             } else {
@@ -145,6 +142,7 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
         
         // ------------- reading finished
         public void completed(Integer result, ByteBuffer buffer) {
+            LOG.info("conn "+name+": read() completed "+result);
             if (result==-1) {
                 output.complete();
                 AsyncSocketChannel.this.close();
@@ -158,6 +156,7 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
         }
 
         public void failed(Throwable exc, ByteBuffer attach) {
+            LOG.info("conn "+name+": read() failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
                 AsyncSocketChannel.this.close();
             } else {
@@ -168,7 +167,7 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
     }
     
     public class Writer extends BuffProcessor implements CompletionHandler<Integer, ByteBuffer> {
-        Semafor blockWriting = new Semafor(this);
+        Semafor blockWriting = new Semafor(this, 1);
         long timeout=0;
 
         public void post(ByteBuffer buffer) {
@@ -197,10 +196,12 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
             if (input.isClosed()) {
                 output.close();
                 postFailure(new AsynchronousCloseException());
+                LOG.info("conn "+name+": input.isClosed()");
                 return;
             }
             ByteBuffer buffer=input.current();
             buffer.clear();
+            LOG.info("conn "+name+": write() started.");
             if (timeout>0) {
                 channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
             } else {
@@ -222,6 +223,7 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
 
         @Override
         public void completed(Integer result, ByteBuffer buffer) {
+            LOG.info("conn "+name+": write() completed.");
             if (result==-1) {
                 output.complete();
                 AsyncSocketChannel.this.close();
@@ -236,6 +238,7 @@ public class AsyncSocketChannel implements ScalarCollector<AsynchronousSocketCha
 
         @Override
         public void failed(Throwable exc, ByteBuffer attach) {
+            LOG.info("conn "+name+": write() failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
                 AsyncSocketChannel.this.close();
             } else {

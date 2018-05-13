@@ -13,9 +13,14 @@ public class Semafor extends AsyncTask.Connector implements PermitSubscriber {
     private long count = 0;
     protected SimpleSubscription subscription;
 
-    public Semafor(AsyncTask asyncTask) {
-        asyncTask.super();
+    public Semafor(AsyncTask asyncTask, int count) {
+        asyncTask.super(count <= 0);
         this.asyncTask = asyncTask;
+        this.count = count;
+    }
+
+    public Semafor(AsyncTask asyncTask) {
+        this(asyncTask, 0);
     }
 
     public long getCount() {

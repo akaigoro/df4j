@@ -29,10 +29,11 @@ import java.nio.channels.AsynchronousSocketChannel;
  * If interested in the moment when connection is established,
  * add a listener to connEvent.
  */
-public class BaseServerConnection extends AsyncSocketChannel {
+public class ServerConnection extends AsyncSocketChannel {
 
-    public BaseServerConnection(ScalarCollector backport) {
+    public ServerConnection(ScalarCollector backport) {
         super(backport);
+        name = "ServerConnection";
     }
 
 }

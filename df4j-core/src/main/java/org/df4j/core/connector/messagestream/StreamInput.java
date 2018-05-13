@@ -13,25 +13,21 @@ import java.util.Iterator;
  * @param <T>
  */
 public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T>, Iterator<T> {
-    private AsyncTask asyncTask;
     protected Deque<T> queue;
     protected boolean closeRequested = false;
 
     public StreamInput(AsyncTask asyncTask) {
         super(asyncTask);
-        this.asyncTask = asyncTask;
         this.queue = new ArrayDeque<>();
     }
 
     public StreamInput(AsyncTask asyncTask, int capacity) {
         super(asyncTask);
-        this.asyncTask = asyncTask;
         this.queue = new ArrayDeque<>(capacity);
     }
 
     public StreamInput(AsyncTask asyncTask, Deque<T> queue) {
         super(asyncTask);
-        this.asyncTask = asyncTask;
         this.queue = queue;
     }
 

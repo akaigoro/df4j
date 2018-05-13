@@ -5,7 +5,7 @@ import java.net.SocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-public class BaseClientConnection extends AsyncSocketChannel
+public class ClientConnection extends AsyncSocketChannel
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
     /**
@@ -14,16 +14,17 @@ public class BaseClientConnection extends AsyncSocketChannel
      *
      * @throws IOException
      */
-    public BaseClientConnection(SocketAddress addr) throws IOException {
+    public ClientConnection(SocketAddress addr) throws IOException, InterruptedException {
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open();
         channel.connect(addr, channel, this);
+        name = "ClientConnection";
     }
 
     //=====================  CompletionHandler callbacks
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        super.post(channel);
+        super.init(channel);
     }
 
     @Override
