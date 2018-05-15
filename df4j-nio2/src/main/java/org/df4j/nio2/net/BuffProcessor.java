@@ -5,12 +5,13 @@ import org.df4j.core.connector.messagestream.StreamInput;
 import org.df4j.core.connector.messagestream.StreamOutput;
 import org.df4j.core.connector.messagestream.StreamPublisher;
 import org.df4j.core.connector.messagestream.StreamSubscriber;
-import org.df4j.core.node.Actor;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncTask;
 import org.df4j.core.util.Logger;
 
 import java.nio.ByteBuffer;
 
-public abstract class BuffProcessor extends Actor implements StreamPublisher<ByteBuffer>, StreamSubscriber<ByteBuffer> {
+public abstract class BuffProcessor extends AsyncTask implements StreamPublisher<ByteBuffer>, StreamSubscriber<ByteBuffer> {
     protected static final Logger LOG = Logger.getLogger(BuffProcessor.class.getName());
 
     protected final StreamInput<ByteBuffer> input = new StreamInput<ByteBuffer>(this);
@@ -57,4 +58,6 @@ public abstract class BuffProcessor extends Actor implements StreamPublisher<Byt
         input.complete();
     }
 
+    @Action
+    abstract protected void act(ByteBuffer inpBuffer) throws Exception;
 }

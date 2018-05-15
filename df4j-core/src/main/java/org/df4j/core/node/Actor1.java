@@ -14,8 +14,8 @@ import org.df4j.core.connector.messagestream.StreamSubscriber;
 import org.df4j.core.connector.messagestream.StreamInput;
 
 /**
- * A dataflow Actor with one predefined input stream port.
- * This type of Actor mimics the Actors described by Carl Hewitt.
+ * A dataflow AsyncTask with one predefined input stream port.
+ * This type of AsyncTask mimics the Actors described by Carl Hewitt.
  * This class, however, still can have other (named) ports.
  * @param <M> the type of accepted messages.
  */
@@ -50,33 +50,4 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
     public boolean isClosed() {
         return mainInput.isClosed();
     }
-
-    //====================== backend
-    
-    /** 
-     * process the retrieved tokens.
-     * @throws Exception 
-     */
-    @Override
-    protected void act() throws Exception {
-        M message=mainInput.current();
-        if (message==null) {
-            onCompleted();
-        } else {
-            act(message);
-        }
-    }
-
-    /**
-     * processes one incoming message
-     * @param message the message to process
-     * @throws Exception
-     */
-    protected abstract void act(M message) throws Exception;
-
-    /**
-     * the input stream completed
-     */
-    protected void onCompleted() {}
-
 }

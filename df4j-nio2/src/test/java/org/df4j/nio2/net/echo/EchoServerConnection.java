@@ -1,6 +1,7 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.connector.messagescalar.ScalarCollector;
+import org.df4j.core.node.Action;
 import org.df4j.nio2.net.ServerConnection;
 import org.df4j.nio2.net.BuffProcessor;
 
@@ -19,9 +20,8 @@ public class EchoServerConnection extends ServerConnection {
 
     class EchoProcessor extends BuffProcessor {
 
-        @Override
-        protected void act() throws Exception {
-            ByteBuffer buf = input.current();
+        @Action
+        protected void act(ByteBuffer buf) throws Exception {
             output.post(buf);
         }
     }

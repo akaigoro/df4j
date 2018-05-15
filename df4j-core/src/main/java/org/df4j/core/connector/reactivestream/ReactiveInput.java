@@ -18,14 +18,14 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T>, I
     protected int capacity;
     protected Subscription subscription;
 
-    public ReactiveInput(AsyncTask asyncTask, int capacity) {
-        super(asyncTask);
+    public ReactiveInput(AsyncTask actor, int capacity) {
+        super(actor);
         this.queue = new ArrayDeque<>(capacity);
         this.capacity = capacity;
     }
 
-    public ReactiveInput(AsyncTask asyncTask) {
-        this(asyncTask, 8);
+    public ReactiveInput(AsyncTask actor) {
+        this(actor, 8);
     }
 
     protected int size() {
@@ -50,9 +50,9 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T>, I
     }
 
     @Override
-    public synchronized void purge() {
-        super.purge();
+    public synchronized T next() {
         subscription.request(1);
+        return super.next();
     }
 
     public synchronized boolean  isClosed() {

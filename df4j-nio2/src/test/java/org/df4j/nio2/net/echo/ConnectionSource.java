@@ -5,10 +5,11 @@ import org.df4j.core.connector.permitstream.Semafor;
 import org.df4j.core.connector.reactivestream.Publisher;
 import org.df4j.core.connector.reactivestream.ReactiveOutput;
 import org.df4j.core.connector.reactivestream.Subscriber;
-import org.df4j.core.node.Actor;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncTask;
 import org.df4j.nio2.net.ServerConnection;
 
-public class ConnectionSource extends Actor implements Publisher<ServerConnection>, ScalarCollector<ServerConnection> {
+public class ConnectionSource extends AsyncTask implements Publisher<ServerConnection>, ScalarCollector<ServerConnection> {
     Semafor allowedConnections = new Semafor(this);
     ReactiveOutput<ServerConnection> output = new ReactiveOutput<>(this);
     int serialnum=0;
@@ -28,7 +29,7 @@ public class ConnectionSource extends Actor implements Publisher<ServerConnectio
         allowedConnections.release();
     }
 
-    @Override
+    @Action
     protected void act() {
         ServerConnection conn = new EchoServerConnection(this);
         conn.name = "EchoServerConnection"+(serialnum++);

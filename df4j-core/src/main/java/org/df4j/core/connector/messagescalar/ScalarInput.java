@@ -12,12 +12,12 @@ import java.util.Iterator;
  *            type of accepted tokens.
  */
 public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
-    protected AsyncTask asyncTask;
+    protected AsyncTask actor;
     protected boolean pushback = false; // if true, do not consume
 
-    public ScalarInput(AsyncTask asyncTask) {
-        super(asyncTask);
-        this.asyncTask = asyncTask;
+    public ScalarInput(AsyncTask actor) {
+        super(actor);
+        this.actor = actor;
     }
 
     // ===================== backend
@@ -38,17 +38,6 @@ public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
     }
 
     @Override
-    public synchronized void purge() {
-        if (pushback) {
-            pushback = false;
-            // value remains the same, the pin remains turned on
-        } else {
-            value = null;
-            turnOff();
-        }
-    }
-
-    @Override
     public boolean hasNext() {
         return !isDone();
     }
@@ -62,7 +51,13 @@ public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
             throw new IllegalStateException();
         }
         T res = value;
-        purge();
+        if (pushback) {
+            pushback = false;
+            // value remains the same, the pin remains turned on
+        } else {
+            value = null;
+            turnOff();
+        }
         return res;
     }
 }

@@ -16,18 +16,18 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
     protected Deque<T> queue;
     protected boolean closeRequested = false;
 
-    public StreamInput(AsyncTask asyncTask) {
-        super(asyncTask);
+    public StreamInput(AsyncTask actor) {
+        super(actor);
         this.queue = new ArrayDeque<>();
     }
 
-    public StreamInput(AsyncTask asyncTask, int capacity) {
-        super(asyncTask);
+    public StreamInput(AsyncTask actor, int capacity) {
+        super(actor);
         this.queue = new ArrayDeque<>(capacity);
     }
 
-    public StreamInput(AsyncTask asyncTask, Deque<T> queue) {
-        super(asyncTask);
+    public StreamInput(AsyncTask actor, Deque<T> queue) {
+        super(actor);
         this.queue = queue;
     }
 
@@ -94,43 +94,26 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
     }
 
     @Override
-    public synchronized void purge() {
+    public synchronized T next() {
         if (pushback) {
             pushback = false;
-            return; // value remains the same, the pin remains turned on
+            return value; // value remains the same, the pin remains turned on
         }
+        T res = value;
         boolean wasNull = (value == null);
         value = queue.poll();
-        if (value != null) {
-            return; // the pin remains turned on
+        if (value == null) {
+            // no more tokens; check closing
+            if (wasNull || !closeRequested) {
+                turnOff();
+            }
         }
-        // no more tokens; check closing
-        if (wasNull || !closeRequested) {
-            turnOff();
-        }
-        // else process closing: value is null, the pin remains turned on
+        return res;
     }
 
     @Override
     public boolean hasNext() {
         return value != null;
-    }
-
-    /**
-     * attempt to take next token from the input queue
-     *
-     * @return true if next token is available, or if stream is closed false
-     *         if input queue is empty
-     */
-    public synchronized boolean moveNext() {
-        purge();
-        return hasNext();
-    }
-
-    @Override
-    public T next() {
-        purge();
-        return current();
     }
 
     public synchronized boolean  isClosed() {

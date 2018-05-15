@@ -12,16 +12,14 @@ package org.df4j.core.node.messagescalar;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 import org.df4j.core.connector.messagestream.StreamInput;
-import org.df4j.core.util.SameThreadExecutor;
 import org.df4j.core.node.Actor;
+import org.df4j.core.util.SameThreadExecutor;
 
 public abstract class AbstractPromise<M> extends Actor implements ScalarPublisher<M> {
     /** place for input token(s) */
     protected final StreamInput<ScalarSubscriber<? super M>> requests = new StreamInput<>(this);
-
     {
         setExecutor(new SameThreadExecutor());
-        start();
     }
 
     @Override
@@ -29,14 +27,5 @@ public abstract class AbstractPromise<M> extends Actor implements ScalarPublishe
         requests.post(subscriber);
         return subscriber;
     }
-
-    @Override
-    protected void act() {
-        ScalarSubscriber<? super M> request = this.requests.current();
-        M result = getToken();
-        request.post(result);
-    }
-
-    protected abstract M getToken();
 
 }

@@ -14,6 +14,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.connector.messagescalar.ScalarCollector;
 import org.df4j.core.connector.permitstream.Semafor;
+import org.df4j.core.node.Action;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -122,15 +123,14 @@ public class AsyncSocketChannel //implements ScalarCollector<AsynchronousSocketC
 
         //-------------------- start reading
 
-		@Override
-        protected void act() {
+		@Action
+        protected void act(ByteBuffer buffer) {
             if (input.isClosed()) {
                 output.close();
                 postFailure(new AsynchronousCloseException());
                 LOG.info("conn "+name+": input.isClosed()");
                 return;
             }
-            ByteBuffer buffer=input.current();
             buffer.clear();
             LOG.info("conn "+name+": read() started");
             if (timeout>0) {
@@ -192,14 +192,14 @@ public class AsyncSocketChannel //implements ScalarCollector<AsynchronousSocketC
             }
         }
 
-        protected void act() {
+        @Override
+        protected void act(ByteBuffer buffer) {
             if (input.isClosed()) {
                 output.close();
                 postFailure(new AsynchronousCloseException());
                 LOG.info("conn "+name+": input.isClosed()");
                 return;
             }
-            ByteBuffer buffer=input.current();
             buffer.clear();
             LOG.info("conn "+name+": write() started.");
             if (timeout>0) {

@@ -2,6 +2,7 @@ package org.df4j.core.messagescalar;
 
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
+import org.df4j.core.node.Action;
 import org.df4j.core.node.messagescalar.CompletedPromise;
 import org.df4j.core.node.messagescalar.SimplePromise;
 import org.junit.Assert;
@@ -28,6 +29,37 @@ public class AsyncTaskTest {
         computeMult(-1.0, -2.0, 2.0);
     }
 
+    public static class Blocker<T,R> extends AsyncFunction<R> {
+        ConstInput<T> arg = new ConstInput<>(this);
+    }
+
+    class Mult2 extends Mult {
+        SimplePromise<Double> pa = new SimplePromise<>();
+        SimplePromise<Double> pb = new SimplePromise<>();
+
+        protected Mult2() {
+            SimplePromise<Double> sp = new SimplePromise<>();
+            Blocker<Double, Double> blocker = new Blocker<>();
+            pa.subscribe(blocker.arg);
+            new CompletedPromise<Double>(1.0).subscribe(arg1);
+            new Mult(pa, pb).subscribe(arg2);
+        }
+    }
+
+    public void computeMult2(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
+        Mult2 mult = new Mult2();
+        mult.pa.post(a);
+        mult.pb.post(b);
+        double result = mult.asFuture().get(1, TimeUnit.SECONDS);
+        Assert.assertEquals(expected, result, 0.001);
+    }
+
+    @Test
+    public void runMultTest2() throws InterruptedException, ExecutionException, TimeoutException {
+        computeMult2(3.0, 4.0, 12.0);
+        computeMult2(-1.0, -2.0, 2.0);
+    }
+
     /* D = b^2 - 4ac */
     class Discr extends Minus {
         SimplePromise<Double> pa = new SimplePromise<>();
@@ -35,13 +67,9 @@ public class AsyncTaskTest {
         SimplePromise<Double> pc = new SimplePromise<>();
 
         protected Discr() {
-            new AsyncFunction.UnaryAsyncFunction<Double, Double>(pb){
-                @Override
-                protected Double apply(Double arg) {
-                    return arg * arg;
-                }
-            }.subscribe(arg1);
-            new Mult(new CompletedPromise<Double>(4.0),
+            new Mult(pb, pb).subscribe(arg1);
+            new Mult(
+                    new CompletedPromise<Double>(4.0),
                     new Mult(pa, pc)
             ).subscribe(arg2);
         }
@@ -71,9 +99,8 @@ public class AsyncTaskTest {
         SimplePromise<Double> pb = new SimplePromise<>();
         ConstInput<Double> pd = new ConstInput<>(this);
 
-        @Override
-        public void act() {
-            double d = this.pd.current();
+        @Action
+        public void act(Double d) {
             ScalarPublisher<Double> sqrt_d;
             if (d < 0) {
                 result.post(new double[0]);
@@ -83,15 +110,16 @@ public class AsyncTaskTest {
             }
             ScalarPublisher<Double> minus_b = new Minus(new CompletedPromise<Double>(0.0), pb);
             ScalarPublisher<Double> a_twice = new Mult(new CompletedPromise<Double>(2.0), pa);
-            new BinaryAsyncFunction<Double,Double,double[]>(
+            BinaryAsyncFunction<Double, Double, double[]> calcRoots = new BinaryAsyncFunction<Double, Double, double[]>(
                     new Div(new Minus(minus_b, sqrt_d), a_twice),
-                    new Div(new Plus(minus_b, sqrt_d),  a_twice)
-            ){
+                    new Div(new Plus(minus_b, sqrt_d), a_twice)
+            ) {
                 @Override
                 protected double[] apply(Double val1, Double val2) {
                     return new double[]{val1.doubleValue(), val2.doubleValue()};
                 }
-            }.subscribe(result);
+            };
+            calcRoots.subscribe(result);
         }
     }
 
@@ -100,6 +128,8 @@ public class AsyncTaskTest {
         rc.pa.post(a);
         rc.pb.post(b);
         rc.pd.post(d);
+        rc.start();
+
         double[] result = rc.asFuture().get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }
@@ -127,8 +157,9 @@ public class AsyncTaskTest {
         equ.pa.post(a);
         equ.pb.post(b);
         equ.pc.post(c);
+        equ.start();
 
-        double[] result = equ.asFuture().get(3, TimeUnit.SECONDS);
+        double[] result = equ.asFuture().get(2, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }
 
@@ -152,8 +183,7 @@ public class AsyncTaskTest {
         }
     }
 
-    static class
-    Minus extends AsyncFunction.BinaryAsyncFunction<Double,Double,Double> {
+    static class Minus extends AsyncFunction.BinaryAsyncFunction<Double,Double,Double> {
         protected Minus(ScalarPublisher pa, ScalarPublisher pb) {
             super(pa, pb);
         }

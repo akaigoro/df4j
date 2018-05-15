@@ -9,7 +9,7 @@ import org.df4j.core.node.AsyncTask;
  * @param <T>
  *     type of accepted tokens.
  */
-public class ConstInput<T> extends AsyncTask.Connector implements ScalarSubscriber<T> {
+public class ConstInput<T> extends AsyncTask.Connector<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;
     protected boolean closeRequested = false;
     protected boolean cancelled = false;
@@ -18,8 +18,8 @@ public class ConstInput<T> extends AsyncTask.Connector implements ScalarSubscrib
     protected T value = null;
     protected Throwable exception;
 
-    public ConstInput(AsyncTask asyncTask) {
-        asyncTask.super();
+    public ConstInput(AsyncTask actor) {
+        actor.super();
     }
 
     @Override
@@ -50,7 +50,8 @@ public class ConstInput<T> extends AsyncTask.Connector implements ScalarSubscrib
      * pin bit remains ready
      */
     @Override
-    public void purge() {
+    public T next() {
+        return current();
     }
 
     @Override

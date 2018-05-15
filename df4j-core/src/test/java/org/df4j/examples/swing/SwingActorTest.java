@@ -9,6 +9,7 @@
  */
 package org.df4j.examples.swing;
 
+import org.df4j.core.node.Action;
 import org.df4j.core.node.Actor1;
 
 import java.awt.Color;
@@ -82,7 +83,7 @@ public class SwingActorTest extends JFrame {
         /**
          * Processes message asynchronously out of EDT.
          */
-        @Override
+        @Action
         protected void act(String str) throws Exception {
             Thread.sleep(2000); // imitate working hard
             try {
@@ -106,7 +107,7 @@ public class SwingActorTest extends JFrame {
      */
     class PrintingActor extends SwingActor1<String> {
 
-        @Override
+        @Action
         protected void act(String m) throws Exception {
             jlist.append(m);
             workCount--;

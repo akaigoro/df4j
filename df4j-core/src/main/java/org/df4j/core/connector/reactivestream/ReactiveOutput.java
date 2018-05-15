@@ -2,7 +2,6 @@ package org.df4j.core.connector.reactivestream;
 
 import org.df4j.core.connector.messagestream.StreamCollector;
 import org.df4j.core.connector.permitstream.Semafor;
-import org.df4j.core.node.Actor;
 import org.df4j.core.node.AsyncTask;
 
 import java.util.HashSet;
@@ -11,17 +10,17 @@ import java.util.function.Consumer;
 
 /**
  * serves multiple subscribers
- * demonstrates usage of class Actor.Semafor for handling back pressure
+ * demonstrates usage of class AsyncTask.Semafor for handling back pressure
  *
  * An equivalent to java.util.concurrent.SubmissionPublisher
  *
  * @param <M>
  */
-public class ReactiveOutput<M> extends AsyncTask.Connector implements Publisher<M>, StreamCollector<M> {
-    protected Actor base;
+public class ReactiveOutput<M> extends AsyncTask.Lock implements Publisher<M>, StreamCollector<M> {
+    protected AsyncTask base;
     protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
 
-    public ReactiveOutput(Actor base) {
+    public ReactiveOutput(AsyncTask base) {
         base.super(false);
         this.base = base;
     }

@@ -10,7 +10,8 @@
 package org.df4j.core.reactivestream;
 
 import org.df4j.core.connector.reactivestream.*;
-import org.df4j.core.node.Actor;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncTask;
 import org.junit.Test;
 
 import java.io.PrintStream;
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class ReactivePublisherExample {
+public class ReactiveStreamExample {
 
     public void testSourceToSink(int sourceNumber, int sinkNumber) throws InterruptedException {
         CountDownLatch fin = new CountDownLatch(3);
@@ -30,9 +31,8 @@ public class ReactivePublisherExample {
         Sink to2 = new Sink(sinkNumber, fin);
         from.subscribe(to2);
         from.start();
-        assertTrue(fin.await(2, TimeUnit.SECONDS));
+        assertTrue(fin.await(6, TimeUnit.SECONDS));
         // publisher always sends all tokens, even if all subscribers unsubscribed.
-        assertEquals(sourceNumber, from.sent);
         sinkNumber = Math.min(sourceNumber, sinkNumber);
         assertEquals(sinkNumber, to1.received);
         assertEquals(sinkNumber, to2.received);
@@ -53,8 +53,10 @@ public class ReactivePublisherExample {
     @Test
     public void testSameTime() throws InterruptedException {
         testSourceToSink(0, 0);
+        testSourceToSink(0, 1);
+        testSourceToSink(1, 0);
+        testSourceToSink(1, 1);
         testSourceToSink(5, 5);
-        testSourceToSink(50, 50);
     }
 
     static PrintStream out = System.out;
@@ -66,15 +68,13 @@ public class ReactivePublisherExample {
     /**
      * emits totalNumber of Integers and closes the stream
      */
-    static class Source extends Actor implements Publisher<Integer> {
+    static class Source extends AsyncTask implements Publisher<Integer> {
         ReactiveOutput<Integer> pub = new ReactiveOutput<>(this);
-        int totalNumber;
         int val = 0;
-        public int sent = 0;
         CountDownLatch fin;
 
         public Source(int totalNumber, CountDownLatch fin) {
-            this.totalNumber = totalNumber;
+            this.val = totalNumber;
             this.fin = fin;
         }
 
@@ -84,18 +84,17 @@ public class ReactivePublisherExample {
             return subscriber;
         }
 
-        @Override
-        protected void act() {
-            if (val >= totalNumber) {
+        @Action
+        public void act() {
+            if (val == 0) {
                 pub.complete();
-                println("pub.complete()");
+                println("Source.pub.complete()");
                 fin.countDown();
                 stop();
             } else {
                 //          ReactorTest.println("pub.post("+val+")");
                 pub.post(val);
-                sent++;
-                val++;
+                val--;
             }
         }
     }
@@ -103,7 +102,7 @@ public class ReactivePublisherExample {
     /**
      * receives totalNumber of Integers and cancels the subscription
      */
-    static class Sink extends Actor implements Subscriber<Integer> {
+    static class Sink extends AsyncTask implements Subscriber<Integer> {
         int totalNumber;
         ReactiveInput<Integer> subscriber;
         final CountDownLatch fin;
@@ -116,11 +115,11 @@ public class ReactivePublisherExample {
                 subscriber.cancel();
                 println("  sink: countDown");
                 fin.countDown();
-                return;
+            } else {
+                subscriber = new ReactiveInput<Integer>(this);
+                this.totalNumber = totalNumber;
+                start();
             }
-            subscriber = new ReactiveInput<Integer>(this);
-            this.totalNumber = totalNumber;
-            start();
         }
 
         @Override
@@ -143,9 +142,8 @@ public class ReactivePublisherExample {
             subscriber.complete();
         }
 
-        @Override
-        protected void act() {
-            Integer val = subscriber.current();
+        @Action
+        public void act(Integer val) {
             //     ReactorTest.println("  Sink.current()="+val);
             if (val != null) {
                 println("  sink: received "+val);

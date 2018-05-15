@@ -3,6 +3,7 @@ package org.df4j.core.node.messagestream;
 import org.df4j.core.connector.messagestream.StreamOutput;
 import org.df4j.core.connector.messagestream.StreamPublisher;
 import org.df4j.core.connector.messagestream.StreamSubscriber;
+import org.df4j.core.node.Action;
 import org.df4j.core.node.Actor1;
 
 public abstract class StreamProcessor<M, R> extends Actor1<M> implements StreamPublisher<R> {
@@ -14,15 +15,14 @@ public abstract class StreamProcessor<M, R> extends Actor1<M> implements StreamP
         return subscriber;
     }
 
-    @Override
+    @Action
     protected void act(M message) {
-        R res = process(message);
-        output.post(res);
-    }
-
-    @Override
-    protected void onCompleted() {
-        output.complete();
+        if (message == null) {
+            output.complete();
+        } else {
+            R res = process(message);
+            output.post(res);
+        }
     }
 
     protected abstract R process(M message);

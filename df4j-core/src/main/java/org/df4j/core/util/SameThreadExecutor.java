@@ -13,7 +13,7 @@ public class SameThreadExecutor implements Executor {
         if (queue == null) {
             queue = new ArrayDeque<>();
             myThreadLocal.set(queue);
-            queue.add(command);
+            command.run();
             while ((command = queue.poll()) != null) {
                 try {
                     command.run();

@@ -13,7 +13,8 @@ import org.df4j.core.connector.permitstream.Semafor;
 import org.df4j.core.connector.reactivestream.ReactiveInput;
 import org.df4j.core.connector.reactivestream.Subscriber;
 import org.df4j.core.connector.reactivestream.Subscription;
-import org.df4j.core.node.Actor;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncTask;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections
  */
-public class AsyncServerSocketChannel extends Actor
+public class AsyncServerSocketChannel extends AsyncTask
         implements Subscriber<ServerConnection>
         ,CompletionHandler<AsynchronousSocketChannel, ServerConnection>
 {
@@ -112,9 +113,8 @@ public class AsyncServerSocketChannel extends Actor
      * process the retrieved tokens.
      * @throws Exception
      */
-    @Override
-    protected void act() {
-        ServerConnection message = mainInput.current();
+    @Action
+    protected void act(ServerConnection message) {
         if (message==null) {
             onCompleted();
         } else {

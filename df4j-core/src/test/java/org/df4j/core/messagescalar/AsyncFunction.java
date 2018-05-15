@@ -3,11 +3,16 @@ package org.df4j.core.messagescalar;
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
+import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagescalar.SimplePromise;
+import org.df4j.core.util.SameThreadExecutor;
 
 public abstract class AsyncFunction<R> extends AsyncTask implements ScalarPublisher<R> {
     protected SimplePromise<R> result = new SimplePromise<>();
+    {
+        setExecutor(new SameThreadExecutor());
+    }
 
     @Override
     public <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
@@ -30,9 +35,9 @@ public abstract class AsyncFunction<R> extends AsyncTask implements ScalarPublis
             pa.subscribe(arg);
         }
 
-        @Override
-        protected void act() {
-            R res = apply(arg.current());
+        @Action
+        protected void act(T argValue) {
+            R res = apply(argValue);
             setResult(res);
         }
 
@@ -42,6 +47,9 @@ public abstract class AsyncFunction<R> extends AsyncTask implements ScalarPublis
     public static abstract class BinaryAsyncFunction<T,U,R> extends AsyncFunction<R> {
         ConstInput<T> arg1 = new ConstInput<>(this);
         ConstInput<U> arg2 = new ConstInput<>(this);
+        {
+            start();
+        }
 
         public BinaryAsyncFunction() {
         }
@@ -51,9 +59,9 @@ public abstract class AsyncFunction<R> extends AsyncTask implements ScalarPublis
             pb.subscribe(arg2);
         }
 
-        @Override
-        public void act() {
-            R res = apply(arg1.current(), arg2.current());
+        @Action
+        public void act(T arg1, U arg2) {
+            R res = apply(arg1, arg2);
             setResult(res);
         }
 

@@ -1,6 +1,7 @@
 package org.df4j.core.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
+import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagestream.PickPoint;
 import org.junit.Test;
@@ -16,16 +17,9 @@ import static org.junit.Assert.assertTrue;
 public class DiningPhilosophers {
     private static final int num = 5;
 
-    ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
-    Random rand=new Random();
-    Executor delayingExecutor = (Runnable next) -> {
-        timer.schedule(next, (long)(rand.nextFloat()*50), TimeUnit.MILLISECONDS);
-    };
-
-    ForkPlace[] forkPlaces = new ForkPlace[num];
-
     @Test
     public void test() throws InterruptedException {
+        ForkPlace[] forkPlaces = new ForkPlace[num];
         CountDownLatch counter = new CountDownLatch(num);
         Philosopher[] philosophers = new Philosopher[num];
     	// create places for forks with 1 fork in each
@@ -36,13 +30,13 @@ public class DiningPhilosophers {
         }
         // create philosophers
         for (int k=0; k<num; k++) {
-            philosophers[k] = new Philosopher(k, counter);
+            philosophers[k] = new Philosopher(k, forkPlaces, counter);
         }
         // animate all philosophers
         for (int k=0; k<num; k++) {
-            philosophers[k].think();
+            philosophers[k].start();
         }
-        assertTrue(counter.await(9000, TimeUnit.MILLISECONDS));
+        assertTrue(counter.await(2000, TimeUnit.MILLISECONDS));
     }
 
     static class Fork  {
@@ -84,14 +78,21 @@ public class DiningPhilosophers {
         }
     }
 
-    class Philosopher {
+    /**
+     * while ordinary {@link org.df4j.core.node.Actor} is a single {@link AsyncTask}
+     * which restarts itself,
+     * this class comprises of several {@link AsyncTask}s which activate each other cyclically.
+     */
+    static class Philosopher {
+        Random rand=new Random();
         int id;
         CountDownLatch counter;
 		ForkPlace firstPlace, secondPlace;
         Fork first, second;
         String indent;
+        int rounds = 0;
 
-        public Philosopher(int id, CountDownLatch counter) {
+        public Philosopher(int id, ForkPlace[] forkPlaces, CountDownLatch counter) {
             this.id = id;
             this.counter = counter;
             // to avoid deadlocks, allocate resource with lower number first
@@ -110,47 +111,86 @@ public class DiningPhilosophers {
             println("first place ("+firstPlace.id+") second place ("+secondPlace.id+")");
         }
 
-        void think() {
-            delayingExecutor.execute(
-            new AsyncTask() {
-                ScalarInput<Fork> inp = new ScalarInput<>(this);
-
-                @Override
-                protected void act() {
-                    if (inp.current() == null) {
-                        println("Request first (" + firstPlace.id + ")");
-                        firstPlace.subscribe(inp);
-                    } else if (first == null) {
-                        first = inp.current(); inp.purge();
-                        println("Request second (" + secondPlace.id + ")");
-                        secondPlace.subscribe(inp);
-                    } else  {
-                        second = inp.current(); inp.purge();
-                        eat();
-                    }
-                }
-            });
+        void randomDelay(){
+            try {
+                Thread.sleep(rand.nextLong()%11+11);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        int rounds = 0;
+        Hungry hungry = new Hungry();
+        Replete replete = new Replete();
+        AsyncTask think = new DelayedAsyncTask(hungry);
+        AsyncTask eat = new DelayedAsyncTask(replete);
 
-        void eat() {
-            delayingExecutor.execute(() ->{
+        public void start() {
+            think.start();
+        }
+
+        private void println(String s) {
+            System.out.println(indent+s);
+        }
+
+        private class DelayedAsyncTask extends AsyncTask {
+            final AsyncTask next;
+
+            private DelayedAsyncTask(AsyncTask next) {
+                this.next = next;
+            }
+
+            @Action
+            public void act() {
+                randomDelay();
+                next.start();
+            }
+        }
+
+        /**
+         * collects forks
+         */
+        private class Hungry extends AsyncTask {
+            ScalarInput<Fork> input = new ScalarInput<>(this);
+
+            @Override
+            public void start() {
+                println("Request first (" + firstPlace.id + ")");
+                firstPlace.subscribe(input);
+                super.start();
+            }
+
+            @Action
+            protected void act(Fork fork) {
+                if (first == null) {
+                    first = fork;
+                    println("Request second (" + secondPlace.id + ")");
+                    secondPlace.subscribe(input);
+                    super.start();
+                } else  {
+                    second = fork;
+                    eat.start();
+                }
+            }
+        }
+
+        /** return forks
+         *
+         */
+        private class Replete extends AsyncTask {
+
+            @Action
+            protected void act() {
                 println("Release first (" + firstPlace.id + ")");
                 firstPlace.post(first);
                 println("Release second (" + secondPlace.id + ")");
                 secondPlace.post(second);
                 rounds++;
                 if (rounds <10) {
-                    think();
+                    think.start();
                 } else {
                     counter.countDown();
                 }
-            });
-        }
-
-        private void println(String s) {
-            System.out.println(indent+s);
+            }
         }
     }
 }

@@ -1,8 +1,7 @@
 package org.df4j.core.connector.messagestream;
 
 import org.df4j.core.connector.messagescalar.SimpleSubscription;
-import org.df4j.core.node.Actor;
-import org.df4j.core.node.AsyncTask.Connector;
+import org.df4j.core.node.AsyncTask;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -10,15 +9,15 @@ import java.util.function.Consumer;
 
 /**
  * serves multiple subscribers
- * demonstrates usage of class Actor.Semafor for handling back pressure
+ * demonstrates usage of class AsyncTask.Semafor for handling back pressure
  *
  * @param <M>
  */
-public class StreamOutput<M> extends Connector implements StreamPublisher<M>, StreamCollector<M> {
-    protected Actor base;
+public class StreamOutput<M> extends AsyncTask.Lock implements StreamPublisher<M>, StreamCollector<M> {
+    protected AsyncTask base;
     protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
 
-    public StreamOutput(Actor base) {
+    public StreamOutput(AsyncTask base) {
         base.super(false);
         this.base = base;
     }
@@ -49,6 +48,9 @@ public class StreamOutput<M> extends Connector implements StreamPublisher<M>, St
 
     @Override
     public void post(M item) {
+        if (item == null) {
+            throw new NullPointerException();
+        }
         forEachSubscription((subscription) -> subscription.post(item));
     }
 
