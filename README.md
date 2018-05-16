@@ -1,7 +1,7 @@
 Simplicity is prerequisite for reliability. - Edsger W. Dijkstra
 
 -------------------------
-df4j is a compact dataflow actor library. It can easily be extended for specific needs.
+df4j is a library to support asynchronous computations.
 
 The primary goal is to provide means to synchronize task submissions to a thread pool.
 Tasks can be treated as procedures with parameters, values of that parameters are calculated asynchronously and concurrently in other tasks.
@@ -12,11 +12,11 @@ After task finishes, it can run again after new set of parameters is supplied.
 So the tasks form a directed and, probably, cyclic graph where the tasks are nodes and parameter assignments are arcs.
 This graph is named dataflow graph. 
 
-Look at the documentation at https://github.com/rfqu/df4j/wiki
+Look at the documentation at <https://github.com/akaigoro/df4j/wiki>
 
 See examples and test directories for various custom-made dataflow objects and their usage.
 
-If you find a bug or have a proposal, create an issue at https://github.com/rfqu/df4j/issues/new,
+If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history

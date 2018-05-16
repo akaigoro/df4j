@@ -14,7 +14,7 @@ Source<T1> => Transformer<T1,T2> => Transformer<T2,T3> => Sink<T3>
 All nodes in the pipeline can perform in parallel,
 provided that they are created with parallel-capable Executor.
  
-All subprojects rely on [df4j-core](https://github.com/rfqu/df4j/tree/master/df4j-core) project.
+All subprojects rely on [df4j-core](https://github.com/akaigoro/df4j/tree/API-4/df4j-core) project.
 
 Subprojects:
 ------------
