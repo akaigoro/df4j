@@ -111,14 +111,6 @@ public class DiningPhilosophers {
             println("first place ("+firstPlace.id+") second place ("+secondPlace.id+")");
         }
 
-        void randomDelay(){
-            try {
-                Thread.sleep(rand.nextLong()%11+11);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
         Hungry hungry = new Hungry();
         Replete replete = new Replete();
         AsyncTask think = new DelayedAsyncTask(hungry);
@@ -140,14 +132,14 @@ public class DiningPhilosophers {
             }
 
             @Action
-            public void act() {
-                randomDelay();
+            public void act() throws InterruptedException {
+                Thread.sleep(rand.nextLong()%11+11);
                 next.start();
             }
         }
 
         /**
-         * collects forks
+         * collects forks one by one
          */
         private class Hungry extends AsyncTask {
             ScalarInput<Fork> input = new ScalarInput<>(this);
@@ -185,7 +177,7 @@ public class DiningPhilosophers {
                 println("Release second (" + secondPlace.id + ")");
                 secondPlace.post(second);
                 rounds++;
-                if (rounds <10) {
+                if (rounds < 10) {
                     think.start();
                 } else {
                     counter.countDown();

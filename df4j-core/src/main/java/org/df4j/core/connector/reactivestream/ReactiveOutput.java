@@ -69,14 +69,23 @@ public class ReactiveOutput<M> extends AsyncTask.Lock implements Publisher<M>, S
 
         public SimpleSubscriptionImpl(Subscriber<? super M> subscriber) {
             super(base);
+            if (subscriber == null) {
+                throw new NullPointerException();
+            }
             this.subscriber = subscriber;
         }
 
         public void post(M message) {
+            if (isCompleted()) {
+                throw new IllegalStateException("post to completed connector");
+            }
             subscriber.post(message);
         }
 
         public void postFailure(Throwable throwable) {
+            if (isCompleted()) {
+                throw new IllegalStateException("postFailure to completed connector");
+            }
             subscriber.postFailure(throwable);
             cancel();
         }
@@ -93,8 +102,15 @@ public class ReactiveOutput<M> extends AsyncTask.Lock implements Publisher<M>, S
          * unregistering not needed
          */
         public void complete() {
+            if (isCompleted()) {
+                return;
+            }
             subscriber.complete();
             subscriber = null;
+        }
+
+        private boolean isCompleted() {
+            return subscriber == null;
         }
 
         /**

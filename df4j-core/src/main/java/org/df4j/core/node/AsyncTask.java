@@ -58,22 +58,25 @@ public abstract class AsyncTask implements Runnable {
      */
     private ControlLock controlLock = new ControlLock();
 
-    private Method action;
+    private Method actionMethod;
 
     public boolean initialized() {
-        return action != null;
+        return actionMethod != null;
     }
 
-    public void start() {
+    public synchronized void start() {
+        if (stopped) {
+            return;
+        }
         controlLock.turnOn();
     }
 
-    public void start(Executor executor) {
+    public synchronized void start(Executor executor) {
         setExecutor(executor);
         start();
     }
 
-    public void stop() {
+    public synchronized void stop() {
         stopped = true;
         controlLock.turnOff();
     }
@@ -87,6 +90,17 @@ public abstract class AsyncTask implements Runnable {
 
     public Executor getExecutor() {
         return executor;
+    }
+
+    /**
+     * invoked when all asyncTask asyncTask are ready,
+     * and method run() is to be invoked.
+     * Safe way is to submit this instance as a Runnable to an Executor.
+     * Fast way is to invoke it directly, but make sure the chain of
+     * direct invocations is short to avoid stack overflow.
+     */
+    protected void fire() {
+        getExecutor().execute(this);
     }
 
     static private Method findActionMethod(Class<?> startClass, int argCount) throws NoSuchMethodException {
@@ -111,11 +125,11 @@ public abstract class AsyncTask implements Runnable {
     }
 
     public synchronized Object[] consumeTokens() {
-        Object[] args = new Object[connectors.size()];
         if (!initialized()) {
             throw new IllegalStateException("not started");
         }
         locks.forEach(lock -> lock.purge());
+        Object[] args = new Object[connectors.size()];
         for (int k=0; k<connectors.size(); k++) {
             Connector connector = connectors.get(k);
             args[k] = connector.next();
@@ -127,13 +141,13 @@ public abstract class AsyncTask implements Runnable {
         controlLock.turnOff();
         if (!initialized()) {
             try {
-                action = findActionMethod(getClass(), connectors.size());
+                actionMethod = findActionMethod(getClass(), connectors.size());
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }
         }
         Object[] args = consumeTokens();
-        action.invoke(this, args);
+        actionMethod.invoke(this, args);
     }
 
     @Override
@@ -146,17 +160,6 @@ public abstract class AsyncTask implements Runnable {
             System.err.println("Error in async task " + getClass().getName());
             e.printStackTrace();
         }
-    }
-
-    /**
-     * invoked when all asyncTask asyncTask are ready,
-     * and method run() is to be invoked.
-     * Safe way is to submit this instance as a Runnable to an Executor.
-     * Fast way is to invoke it directly, but make sure the chain of
-     * direct invocations is short to avoid stack overflow.
-     */
-    protected void fire() {
-        getExecutor().execute(this);
     }
 
     /**
