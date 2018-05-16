@@ -42,7 +42,7 @@ public class ReactiveStreamExample {
 
     @Test
     public void testSourceFirst() throws InterruptedException {
-  //      testSourceToSink(0, 1);
+        testSourceToSink(0, 1);
         testSourceToSink(2, 1);
     }
 
@@ -54,9 +54,8 @@ public class ReactiveStreamExample {
 
     @Test
     public void testSameTime() throws InterruptedException {
-/*        testSourceToSink(0, 0);
+        testSourceToSink(0, 0);
         testSourceToSink(0, 1);
-        */
         testSourceToSink(1, 0);
         testSourceToSink(1, 1);
         testSourceToSink(5, 5);

@@ -21,7 +21,10 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history
 ---------------
-2018/06/05
+2018/05/16
+Tag ver4.1 in branch API-4 created.
+
+2018/05/06
 Branch API-4 and tag ver4.0 created.
 
 2017/10/20
