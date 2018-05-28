@@ -19,9 +19,9 @@ All subprojects rely on [df4j-core](https://github.com/akaigoro/df4j/tree/API-4/
 Subprojects:
 ------------
 
-pipeline-core: basic implementations of Source and Sync interfaces. 
-
-pipeline-nio: asyncronous network I/O, based on NIO2, provides two basic classes:
+pipeline-nio: 
+--------------
+asyncronous network I/O, based on NIO2, provides two basic classes:
 
  - AsyncServerSocketChannel - implements Source<AsyncSocketChannel>. 
 Generates accepted connections to clients on server side.
@@ -34,8 +34,7 @@ AsyncSocketChannel can be used both on client and server sides.
 
 codec* projects
 ---------------
-
-provide popular coding and encoding procedures.
+provides popular coding and encoding procedures.
 All codecs can be used in asynchronous (push) way, and some also in synchronous (pull) way.
 
 codec-charbyte: coding and decoding streams of character buffers in/from streams of byte buffers.
@@ -48,12 +47,3 @@ adding true java-like objects, while JSON objects still are converted to java.ut
 codec-xml
 ---------
 in progress
-
-Motivation
-----------
-Create a library which is able to replace Netty in many projects but is an order of magnitude smaller.
-A couple of facts about Netty:
-
-- volume of source code to build minimal echo server is about 2 megabytes
-- 82 classes and interfaces implement/extend io.netty.util.concurrent.Future interface.
-

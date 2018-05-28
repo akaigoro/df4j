@@ -1,9 +1,11 @@
 Simplicity is prerequisite for reliability. - Edsger W. Dijkstra
 
 -------------------------
-df4j is a library to support asynchronous computations.
+df4j is an abbreviation of "Data Flow for Java". It is a library to support asynchronous computations. 
+For those interested in history of dataflow programming, I recommend to start with short introductory article
+"Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
 
-The primary goal is to provide means to synchronize task submissions to a thread pool.
+The primary goal of this library is to provide means to synchronize task submissions to a thread pool.
 Tasks can be treated as procedures with parameters, values of that parameters are calculated asynchronously and concurrently in other tasks.
 The library provides all the nessessary synchronization, so programmer need not use the synchronized operator or ReentranLocks. 
 When all parameters are computed, the task is submitted to the executor.
