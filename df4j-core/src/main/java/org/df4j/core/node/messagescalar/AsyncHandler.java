@@ -2,10 +2,11 @@ package org.df4j.core.node.messagescalar;
 
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
+import org.df4j.core.node.AsyncResult;
 
 import java.util.function.*;
 
-public class AsyncHandler<T, R> extends AsyncResult<R>  implements ScalarSubscriber<T> {
+public class AsyncHandler<T, R> extends AsyncResult<R> implements ScalarSubscriber<T> {
     protected final ConstInput<T> argument = new ConstInput<>(this);
     protected BiFunction<? super T, Throwable, ? extends R> handler;
 

@@ -17,6 +17,7 @@ import static org.df4j.core.util.SameThreadExecutor.sameThreadExecutor;
 public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     /** place for demands */
     private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
+    protected boolean cancelled = false;
     protected boolean completed = false;
     protected T result = null;
     protected Throwable exception;
@@ -45,13 +46,19 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     }
 
     public synchronized boolean completeExceptionally(Throwable exception) {
+        if (exception == null) {
+            throw new IllegalArgumentException("CompletablePromise::completeExceptionally(): argument may not be null");
+        }
         boolean wasDone = isDone();
+        if (wasDone) {
+            return false;
+        }
         this.exception = exception;
         for (ScalarSubscriber<? super T> subscriber: requests) {
             subscriber.postFailure(exception);
         }
         requests = null;
-        return wasDone != isDone();
+        return true;
     }
 
     /**
@@ -60,13 +67,14 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      * @return
      */
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
+    public synchronized boolean cancel(boolean mayInterruptIfRunning) {
+        cancelled = true;
+        return completeExceptionally(new CancellationException());
     }
 
     @Override
     public boolean isCancelled() {
-        return false;
+        return cancelled;
     }
 
     public boolean isDone() {
@@ -79,11 +87,21 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
             if (result != null) {
                 return result;
             } else if (exception != null) {
-                throw new ExecutionException(exception);
+                return throwStoredException();
             } else {
                 wait();
             }
         }
+    }
+
+    private T throwStoredException() throws ExecutionException {
+        Throwable x=exception, cause;
+        if (x instanceof CancellationException)
+            throw (CancellationException)x;
+        if ((x instanceof CompletionException) &&
+                (cause = x.getCause()) != null)
+            x = cause;
+        throw new ExecutionException(x);
     }
 
     @Override
@@ -93,7 +111,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
             if (result != null) {
                 return result;
             } else if (exception != null) {
-                throw new ExecutionException(exception);
+                throwStoredException();
             } else {
                 long timeout1 = end - System.currentTimeMillis();
                 if (timeout1 <= 0) {
@@ -166,6 +184,20 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
         AsyncFunction asyncTask = new AsyncFunction(runnable);
         asyncTask.start(executor);
         return asyncTask.asyncResult();
+    }
+
+    /**
+     * Returns a new CompletableFuture that is already completed with
+     * the given value.
+     *
+     * @param value the value
+     * @param <U> the type of the value
+     * @return the completed CompletableFuture
+     */
+    public static <U> CompletablePromise<U> completedFuture(U value) {
+        CompletablePromise<U> res = new CompletablePromise<>();
+        res.complete(value);
+        return res;
     }
 
     public <U> CompletablePromise<U> thenApply(Function<? super T,? extends U> fn) {
@@ -503,6 +535,9 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      * @return the number of dependent CompletableFutures
      */
     public synchronized int getNumberOfDependents() {
+        if (requests == null) {
+            return 0;
+        }
         return requests.size();
     }
 

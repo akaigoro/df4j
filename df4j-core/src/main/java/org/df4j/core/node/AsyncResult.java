@@ -1,9 +1,8 @@
-package org.df4j.core.node.messagescalar;
+package org.df4j.core.node;
 
 import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.node.AsyncTask;
 
 /**
  * a node with an output parameter

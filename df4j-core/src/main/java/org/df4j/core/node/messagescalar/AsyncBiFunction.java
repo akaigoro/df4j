@@ -2,11 +2,13 @@ package org.df4j.core.node.messagescalar;
 
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncActionTask;
+import org.df4j.core.node.AsyncResult;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
-public class AsyncBiFunction<U, V, R> extends AsyncResult<R> {
+public class AsyncBiFunction<U, V, R> extends AsyncActionTask<R> {
     public final ConstInput<U> arg1 = new ConstInput<>(this);
     public final ConstInput<V> arg2 = new ConstInput<>(this);
     protected final BiFunction<? super U,? super V,? extends R> fn;
@@ -23,7 +25,8 @@ public class AsyncBiFunction<U, V, R> extends AsyncResult<R> {
         this.fn = (a1, a2)->{action.run(); return null;};
     }
 
-    public void runFunction(U arg1, V arg2) {
+@Action
+public void runFunction(U arg1, V arg2) {
         try {
             R res = fn.apply(arg1, arg2);
             complete(res);

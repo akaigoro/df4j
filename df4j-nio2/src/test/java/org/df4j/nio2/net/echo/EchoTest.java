@@ -54,12 +54,5 @@ public  class EchoTest {
         clientConn.writer.post(buf);
         ByteBuffer buf2=ByteBuffer.allocate(128);
         clientConn.reader.post(buf);
-
-        PickPoint<ByteBuffer> pickPoint = new PickPoint<>();
-        clientConn.reader.subscribe(pickPoint);
-        Future<ByteBuffer> future = pickPoint.asFuture();
-        ByteBuffer buf3 = future.get(2000, TimeUnit.SECONDS);
-        String reply=new String(buf3.array(), 0, src.length, charset);
-        assertEquals(message, reply);
     }
 }

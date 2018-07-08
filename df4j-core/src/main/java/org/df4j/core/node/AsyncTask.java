@@ -16,7 +16,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * AsyncTask is a reusable Asynchronous Procedure Call: after execution, it executes again as soon as new array of arguments is ready.
+ * AsyncTask is an Asynchronous Procedure Call.
  *
  * It consists of asynchronous connectors, implemented as inner classes,
  * user-defined asynchronous procedure, and a asyncTask mechanism to call that procedure
@@ -63,6 +63,10 @@ public class AsyncTask implements Runnable {
     }
 
     public AsyncTask(Runnable target) {
+        this.target = target;
+    }
+
+    public void setTarget(Runnable target) {
         this.target = target;
     }
 
@@ -116,6 +120,19 @@ public class AsyncTask implements Runnable {
         if (target != null) {
             target.run();
         }
+    }
+
+    public synchronized Object[] consumeTokens() {
+        if (!isStarted()) {
+            throw new IllegalStateException("not started");
+        }
+        locks.forEach(lock -> lock.purge());
+        Object[] args = new Object[connectors.size()];
+        for (int k=0; k<connectors.size(); k++) {
+            AsyncTask.Connector connector = connectors.get(k);
+            args[k] = connector.next();
+        }
+        return args;
     }
 
     /**

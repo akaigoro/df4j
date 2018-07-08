@@ -2,13 +2,13 @@ package org.df4j.core.node.messagescalar;
 
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
+import org.df4j.core.node.AsyncResult;
 
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class AsyncFunction<T, R> extends AsyncResult<R>  implements ScalarSubscriber<T> {
+public class AsyncFunction<T, R> extends AsyncResult<R> implements ScalarSubscriber<T> {
     protected final ConstInput<T> argument = new ConstInput<>(this);
     protected Function<? super T,? extends R> fn;
 
