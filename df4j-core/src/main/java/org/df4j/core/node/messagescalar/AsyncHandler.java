@@ -5,7 +5,7 @@ import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 
 import java.util.function.*;
 
-public class AsyncHandler<T, R> extends AsyncResultFuture<R>  implements ScalarSubscriber<T> {
+public class AsyncHandler<T, R> extends AsyncResult<R>  implements ScalarSubscriber<T> {
     protected final ConstInput<T> argument = new ConstInput<>(this);
     protected BiFunction<? super T, Throwable, ? extends R> handler;
 

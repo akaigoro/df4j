@@ -1,7 +1,4 @@
-package org.df4j.core.node.messagescalar;
-
-import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.connector.messagescalar.SimpleSubscription;
+package org.df4j.core.connector.messagescalar;
 
 public class SubscriberPromise<T> extends CompletablePromise<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;

@@ -1,7 +1,5 @@
 package org.df4j.core.connector.messagescalar;
 
-import org.df4j.core.node.messagescalar.SubscriberFuture;
-
 import java.util.concurrent.Future;
 
 /**

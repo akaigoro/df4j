@@ -1,7 +1,6 @@
 package org.df4j.core.messagescalar;
 
-import org.df4j.core.node.messagescalar.CompletablePromise;
-import org.df4j.core.node.messagescalar.SubscriberPromise;
+import org.df4j.core.connector.messagescalar.SubscriberPromise;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -1,4 +1,4 @@
-package org.df4j.core.node.messagescalar;
+package org.df4j.core.connector.messagescalar;
 
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;

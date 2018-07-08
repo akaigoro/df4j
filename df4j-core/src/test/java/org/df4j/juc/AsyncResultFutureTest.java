@@ -1,7 +1,6 @@
 package org.df4j.juc;
 
-import org.df4j.core.node.messagescalar.AsyncResult;
-import org.df4j.core.node.messagescalar.AsyncResultFuture;
+import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -13,9 +12,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
+import static org.df4j.core.connector.messagescalar.CompletablePromise.supplyAsync;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.df4j.core.node.messagescalar.AsyncResultFuture.supplyAsync;
 
 /**
  * made from CompletableFutureTest https://gist.github.com/spullara/5897605
@@ -36,14 +35,14 @@ public class AsyncResultFutureTest {
     @Test
     public void testExceptions() {
 
-        AsyncResultFuture<Object> future = new AsyncResultFuture<>();
+        CompletablePromise<Object> future = new CompletablePromise<>();
         future.completeExceptionally(new RuntimeException());
         future.exceptionally(t -> {
             t.printStackTrace();
             throw new CompletionException(t);
         });
 
-        AsyncResultFuture<Object> future2 = supplyAsync(() -> {
+        CompletablePromise<Object> future2 = supplyAsync(() -> {
             throw new RuntimeException();
         });
         future2.exceptionally(t -> {
@@ -51,7 +50,7 @@ public class AsyncResultFutureTest {
             throw new CompletionException(t);
         });
 
-        AsyncResultFuture<String> future3 = supplyAsync(() -> "test");
+        CompletablePromise<String> future3 = supplyAsync(() -> "test");
         future3.thenAccept(t -> {
             throw new RuntimeException();
         }).exceptionally(t -> {
@@ -65,8 +64,8 @@ public class AsyncResultFutureTest {
         AtomicBoolean cancelled = new AtomicBoolean();
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
-        AsyncResultFuture<String> other = supplyAsync(() -> "Doomed value");
-        AsyncResultFuture<String> future = supplyAsync(() -> {
+        CompletablePromise<String> other = supplyAsync(() -> "Doomed value");
+        CompletablePromise<String> future = supplyAsync(() -> {
             sleep(1000);
             return "Doomed value";
         }).exceptionally(t -> {
@@ -101,8 +100,8 @@ public class AsyncResultFutureTest {
         AtomicBoolean cancelled = new AtomicBoolean();
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
-        AsyncResultFuture<String> other = supplyAsync(() -> "Doomed value");
-        AsyncResultFuture<String> future = supplyAsync(() -> {
+        CompletablePromise<String> other = supplyAsync(() -> "Doomed value");
+        CompletablePromise<String> future = supplyAsync(() -> {
             sleep(1000);
             return "Doomed value";
         }).exceptionally(t -> {
@@ -133,7 +132,7 @@ public class AsyncResultFutureTest {
     @Test
     public void testExceptionally() {
         AtomicBoolean called = new AtomicBoolean();
-        AsyncResultFuture<Object> future = new AsyncResultFuture<>().exceptionally(t -> {
+        CompletablePromise<Object> future = new CompletablePromise<>().exceptionally(t -> {
             called.set(true);
             return null;
         });
@@ -148,29 +147,29 @@ public class AsyncResultFutureTest {
     @Test
     public void testCompletableFutures() throws Exception {
         AtomicBoolean executed = new AtomicBoolean(false);
-        AsyncResultFuture<String> future = supplyAsync(() -> {
+        CompletablePromise<String> future = supplyAsync(() -> {
             sleep(1000);
             return "Done.";
         });
-        AsyncResultFuture<String> future1 = supplyAsync(() -> {
+        CompletablePromise<String> future1 = supplyAsync(() -> {
             sleep(900);
             return "Done2.";
         });
-        AsyncResultFuture<String> future2 = supplyAsync(() -> "Constant");
-        AsyncResultFuture<String> future3 = supplyAsync(() -> {
+        CompletablePromise<String> future2 = supplyAsync(() -> "Constant");
+        CompletablePromise<String> future3 = supplyAsync(() -> {
             sleep(500);
             throw new RuntimeException("CompletableFuture4");
         });
-        AsyncResultFuture<String> future4 = new AsyncResultFuture<>();
+        CompletablePromise<String> future4 = new CompletablePromise<>();
         future4.completeExceptionally(new RuntimeException("CompletableFuture5"));
-        AsyncResultFuture<String> future5 = supplyAsync(() -> {
+        CompletablePromise<String> future5 = supplyAsync(() -> {
             executed.set(true);
             sleep(1000);
             return "Done.";
         });
         future5.cancel(true);
 
-        AsyncResultFuture<String> selected = select(future, future1, future3, future4);
+        CompletablePromise<String> selected = select(future, future1, future3, future4);
 
         try {
             junit.framework.Assert.assertTrue(future5.isCancelled());
@@ -183,7 +182,7 @@ public class AsyncResultFutureTest {
             }
         }
 
-        AsyncResultFuture<String> result10 = new AsyncResultFuture<>();
+        CompletablePromise<String> result10 = new CompletablePromise<>();
         try {
             onFailure(future3, e -> {
                 result10.complete("Failed");
@@ -198,20 +197,20 @@ public class AsyncResultFutureTest {
         } catch (ExecutionException ee) {
         }
 
-        AsyncResultFuture<String> result3 = new AsyncResultFuture<>();
+        CompletablePromise<String> result3 = new CompletablePromise<>();
         future.applyToEither(future1, v -> result3.complete("Selected: " + v));
-        final AsyncResultFuture<String> result4 = new AsyncResultFuture<>();
+        final CompletablePromise<String> result4 = new CompletablePromise<>();
         future1.applyToEither(future, v -> result4.complete("Selected: " + v));
         assertEquals("Selected: Done2.", result3.get());
         assertEquals("Selected: Done2.", result4.get());
         assertEquals("Done2.", selected.get());
 
-        AsyncResultFuture<String> map1 = future.thenCombine(future1, (value1, value2) -> value1 + ", " + value2);
-        AsyncResultFuture<String> map2 = future1.thenCombine(future, (value1, value2) -> value1 + ", " + value2);
+        CompletablePromise<String> map1 = future.thenCombine(future1, (value1, value2) -> value1 + ", " + value2);
+        CompletablePromise<String> map2 = future1.thenCombine(future, (value1, value2) -> value1 + ", " + value2);
         assertEquals("Done., Done2.", map1.get());
         assertEquals("Done2., Done.", map2.get());
 
-        final AsyncResultFuture<String> result1 = new AsyncResultFuture<>();
+        final CompletablePromise<String> result1 = new CompletablePromise<>();
         future.acceptEither(future3, s -> result1.complete("Selected: " + s));
         assertEquals("Selected: Done.", result1.get());
         assertEquals("Failed", result10.get());
@@ -226,18 +225,18 @@ public class AsyncResultFutureTest {
         }
 
 //        final CountDownLatch monitor = new CountDownLatch(2);
-//        AsyncResultFuture<String> onraise = supplyAsync(() -> {
+//        CompletablePromise<String> onraise = supplyAsync(() -> {
 //            try {
 //                monitor.await();
 //            } catch (InterruptedException e) {
 //            }
 //            return "Interrupted";
 //        });
-//        AsyncResultFuture<String> join = future2.thenCombine(onraise, (a, b) -> null);
+//        CompletablePromise<String> join = future2.thenCombine(onraise, (a, b) -> null);
 //        onraise.onRaise(e -> monitor.countDown());
 //        onraise.onRaise(e -> monitor.countDown());
 
-//        AsyncResultFuture<String> map = future.map(v -> "Set1: " + v).map(v -> {
+//        CompletablePromise<String> map = future.map(v -> "Set1: " + v).map(v -> {
 //            join.raise(new CancellationException());
 //            return "Set2: " + v;
 //        });
@@ -253,7 +252,7 @@ public class AsyncResultFutureTest {
 
         assertEquals("Flatmapped: Constant", future1.thenCompose(v -> future2).thenApply(v -> "Flatmapped: " + v).get());
 
-        AsyncResultFuture<String> result11 = new AsyncResultFuture<>();
+        CompletablePromise<String> result11 = new CompletablePromise<>();
         try {
             onFailure(future1.thenApply(v -> future3), e -> {
                 result11.complete("Failed");
@@ -262,7 +261,7 @@ public class AsyncResultFutureTest {
             assertEquals("Failed", result11.get());
         }
 
-        AsyncResultFuture<String> result2 = new AsyncResultFuture<>();
+        CompletablePromise<String> result2 = new CompletablePromise<>();
         onFailure(future3.thenCompose(v -> future1), e -> {
             result2.complete("Flat map failed: " + e);
         });
@@ -282,16 +281,16 @@ public class AsyncResultFutureTest {
         } catch (ExecutionException e) {
         }
 
-        AsyncResultFuture<String> result5 = new AsyncResultFuture<>();
-        AsyncResultFuture<String> result6 = new AsyncResultFuture<>();
+        CompletablePromise<String> result5 = new CompletablePromise<>();
+        CompletablePromise<String> result6 = new CompletablePromise<>();
         onFailure(future.thenAccept(s -> result5.complete("onSuccess: " + s)),
                 e -> result5.complete("onFailure: " + e))
                 .thenRun(() -> result6.complete("Ensured"));
         assertEquals("onSuccess: Done.", result5.get());
         assertEquals("Ensured", result6.get());
 
-        AsyncResultFuture<String> result7 = new AsyncResultFuture<>();
-        AsyncResultFuture<String> result8 = new AsyncResultFuture<>();
+        CompletablePromise<String> result7 = new CompletablePromise<>();
+        CompletablePromise<String> result8 = new CompletablePromise<>();
         ensure(onFailure(future3.thenAccept(s -> result7.complete("onSuccess: " + s)), e -> {
             result7.complete("onFailure: " + e);
         }), () -> result8.complete("Ensured"));
@@ -309,19 +308,19 @@ public class AsyncResultFutureTest {
         } catch (ExecutionException ee) {
         }
 
-        AsyncResultFuture<String> result9 = new AsyncResultFuture<>();
+        CompletablePromise<String> result9 = new CompletablePromise<>();
         future.thenAccept(v -> result9.complete("onSuccess: " + v));
         assertEquals("onSuccess: Done.", result9.get());
     }
 
-    private AsyncResultFuture<List<String>> collect(List<AsyncResultFuture<String>> completableFutures) {
-        AsyncResultFuture<List<String>> result = new AsyncResultFuture<>();
+    private CompletablePromise<List<String>> collect(List<CompletablePromise<String>> completableFutures) {
+        CompletablePromise<List<String>> result = new CompletablePromise<>();
         int size = completableFutures.size();
         List<String> list = new ArrayList<>();
         if (size == 0) {
             result.complete(list);
         } else {
-            for (AsyncResultFuture<String> completableFuture : completableFutures) {
+            for (CompletablePromise<String> completableFuture : completableFutures) {
                 completableFuture.handle((s, t) -> {
                     if (t == null) {
                         list.add(s);
@@ -338,8 +337,8 @@ public class AsyncResultFutureTest {
         return result;
     }
 
-    private static <T> AsyncResultFuture<T> onFailure(AsyncResultFuture<T> future, Consumer<Throwable> call) {
-        AsyncResultFuture<T> completableFuture = new AsyncResultFuture<>();
+    private static <T> CompletablePromise<T> onFailure(CompletablePromise<T> future, Consumer<Throwable> call) {
+        CompletablePromise<T> completableFuture = new CompletablePromise<>();
         future.handle((v, t) -> {
             if (t == null) {
                 completableFuture.complete(v);
@@ -352,8 +351,8 @@ public class AsyncResultFutureTest {
         return completableFuture;
     }
 
-    private static <T> AsyncResultFuture<T> ensure(AsyncResultFuture<T> future, Runnable call) {
-        AsyncResultFuture<T> completableFuture = new AsyncResultFuture<>();
+    private static <T> CompletablePromise<T> ensure(CompletablePromise<T> future, Runnable call) {
+        CompletablePromise<T> completableFuture = new CompletablePromise<>();
         future.handle((v, t) -> {
             if (t == null) {
                 call.run();
@@ -368,9 +367,9 @@ public class AsyncResultFutureTest {
     }
 
     @SafeVarargs
-    private final AsyncResultFuture<String> select(AsyncResultFuture<String>... completableFutures) {
-        AsyncResultFuture<String> future = new AsyncResultFuture<>();
-        for (AsyncResultFuture<String> completableFuture : completableFutures) {
+    private final CompletablePromise<String> select(CompletablePromise<String>... completableFutures) {
+        CompletablePromise<String> future = new CompletablePromise<>();
+        for (CompletablePromise<String> completableFuture : completableFutures) {
             completableFuture.thenAccept(future::complete);
         }
         return future;

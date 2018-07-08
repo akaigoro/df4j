@@ -6,7 +6,7 @@ import org.df4j.core.node.Action;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
-public class AsyncBiFunction<U, V, R> extends AsyncResultFuture<R> {
+public class AsyncBiFunction<U, V, R> extends AsyncResult<R> {
     public final ConstInput<U> arg1 = new ConstInput<>(this);
     public final ConstInput<V> arg2 = new ConstInput<>(this);
     protected final BiFunction<? super U,? super V,? extends R> fn;
