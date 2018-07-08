@@ -1,10 +1,11 @@
 package org.df4j.core.connector.messagescalar;
 
-import org.df4j.core.node.messagescalar.SimpleFuture;
+import org.df4j.core.node.messagescalar.SubscriberFuture;
 
 import java.util.concurrent.Future;
 
 /**
+ * this is a Promise interface
  * @param <T> the published item type
  */
 @FunctionalInterface
@@ -21,7 +22,7 @@ public interface ScalarPublisher<T> {
     <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber);
 
     default Future<T> asFuture() {
-        return subscribe(new SimpleFuture<T>());
+        return subscribe(new SubscriberFuture<T>());
     }
 
 }

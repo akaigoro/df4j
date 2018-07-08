@@ -13,6 +13,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -56,7 +57,8 @@ public  class EchoTest {
 
         PickPoint<ByteBuffer> pickPoint = new PickPoint<>();
         clientConn.reader.subscribe(pickPoint);
-        ByteBuffer buf3 = pickPoint.asFuture().get(2000, TimeUnit.SECONDS);
+        Future<ByteBuffer> future = pickPoint.asFuture();
+        ByteBuffer buf3 = future.get(2000, TimeUnit.SECONDS);
         String reply=new String(buf3.array(), 0, src.length, charset);
         assertEquals(message, reply);
     }

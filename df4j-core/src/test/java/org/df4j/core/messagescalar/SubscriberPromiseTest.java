@@ -1,7 +1,7 @@
 package org.df4j.core.messagescalar;
 
-import org.df4j.core.node.messagescalar.CompletedPromise;
-import org.df4j.core.node.messagescalar.SimplePromise;
+import org.df4j.core.node.messagescalar.CompletablePromise;
+import org.df4j.core.node.messagescalar.SubscriberPromise;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -9,13 +9,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class SimplePromiseTest {
+public class SubscriberPromiseTest {
 
     @Test
     public void singleSubscriberTest() throws InterruptedException, ExecutionException, TimeoutException {
-        SimplePromise<Double> sp0 = new SimplePromise<>();
-        SimplePromise<Double> sp1 = new SimplePromise<>();
-        SimplePromise<Double> sp2 = new SimplePromise<>();
+        SubscriberPromise<Double> sp0 = new SubscriberPromise<>();
+        SubscriberPromise<Double> sp1 = new SubscriberPromise<>();
+        SubscriberPromise<Double> sp2 = new SubscriberPromise<>();
         sp0.subscribe(sp1);
         sp0.subscribe(sp2);
         double v = 4.0;

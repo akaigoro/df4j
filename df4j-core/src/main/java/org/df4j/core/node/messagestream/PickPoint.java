@@ -1,45 +1,27 @@
 package org.df4j.core.node.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.connector.messagescalar.SimpleSubscription;
-import org.df4j.core.connector.messagestream.StreamCollector;
 import org.df4j.core.connector.messagestream.StreamInput;
+import org.df4j.core.connector.messagestream.StreamPublisher;
 import org.df4j.core.connector.messagestream.StreamSubscriber;
-import org.df4j.core.connector.reactivestream.Subscription;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.messagescalar.AbstractPromise;
+import org.df4j.core.node.Actor1;
 
-public class PickPoint<M> extends AbstractPromise<M> implements StreamSubscriber<M> {
-	/** place for input token(s) */
-    protected final StreamInput<M> resources = new StreamInput<>(this);
-    protected SimpleSubscription subscription;
+public class PickPoint<M> extends Actor1<M> implements StreamPublisher<M> {
+	/** place for input demands */
+	protected final StreamInput<StreamSubscriber<? super M>> requests = new StreamInput<>(this);
 	{
 		start();
 	}
 
 	@Override
-	public void post(M resource) {
-    	resources.post(resource);
-    }
-
-	@Override
-	public void postFailure(Throwable t) {
-		resources.postFailure(t);
-	}
-
-	@Override
-	public void complete() {
-		stop();
-	}
-
-	@Override
-	public void onSubscribe(SimpleSubscription subscription) {
-		this.subscription = subscription;
+	public <S extends StreamSubscriber<? super M>> S subscribe(S subscriber) {
+		requests.post(subscriber);
+		return subscriber;
 	}
 
 	@Action
 	protected void act(ScalarSubscriber<? super M> request, M resource) {
 		request.post(resource);
 	}
-
 }

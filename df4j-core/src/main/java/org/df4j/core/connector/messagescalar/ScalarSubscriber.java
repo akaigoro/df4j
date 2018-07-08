@@ -16,6 +16,6 @@ package org.df4j.core.connector.messagescalar;
  */
 public interface ScalarSubscriber<M>  extends ScalarCollector<M> {
 
-    void onSubscribe(SimpleSubscription subscription);
+    default void onSubscribe(SimpleSubscription subscription){}
 
 }

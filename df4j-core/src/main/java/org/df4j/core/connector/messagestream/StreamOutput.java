@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 
 /**
  * serves multiple subscribers
- * demonstrates usage of class AsyncTask.Semafor for handling back pressure
  *
  * @param <M>
  */

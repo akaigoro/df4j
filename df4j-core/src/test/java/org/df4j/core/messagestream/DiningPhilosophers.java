@@ -2,6 +2,7 @@ package org.df4j.core.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
 import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncAction;
 import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagestream.PickPoint;
 import org.junit.Test;
@@ -124,7 +125,7 @@ public class DiningPhilosophers {
             System.out.println(indent+s);
         }
 
-        private class DelayedAsyncTask extends AsyncTask {
+        private class DelayedAsyncTask extends AsyncAction {
             final AsyncTask next;
 
             private DelayedAsyncTask(AsyncTask next) {
@@ -141,7 +142,7 @@ public class DiningPhilosophers {
         /**
          * collects forks one by one
          */
-        private class Hungry extends AsyncTask {
+        private class Hungry extends AsyncAction {
             ScalarInput<Fork> input = new ScalarInput<>(this);
 
             @Override
@@ -168,7 +169,7 @@ public class DiningPhilosophers {
         /** return forks
          *
          */
-        private class Replete extends AsyncTask {
+        private class Replete extends AsyncAction {
 
             @Action
             protected void act() {

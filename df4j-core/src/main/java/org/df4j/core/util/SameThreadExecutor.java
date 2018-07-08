@@ -6,6 +6,7 @@ import java.util.concurrent.Executor;
 
 public class SameThreadExecutor implements Executor {
     static private ThreadLocal<Queue<Runnable>> myThreadLocal = new ThreadLocal<>();
+    static public final SameThreadExecutor sameThreadExecutor = new SameThreadExecutor();
 
     @Override
     public void execute(Runnable command) {

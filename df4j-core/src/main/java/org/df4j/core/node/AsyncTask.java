@@ -9,8 +9,6 @@
  */
 package org.df4j.core.node;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.Executor;
@@ -29,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *  - message stream (without back pressure)
  *  - permit stream
  */
-public abstract class AsyncTask implements Runnable {
+public class AsyncTask implements Runnable {
 
     /**
      * the set of all b/w Pins
@@ -48,26 +46,31 @@ public abstract class AsyncTask implements Runnable {
      */
     protected AtomicInteger blockedPinCount = new AtomicInteger();
 
+    protected volatile boolean started = false;
     protected volatile boolean stopped = false;
 
     protected Executor executor = ForkJoinPool.commonPool();
+
+    protected Runnable target = null;
 
     /**
      * blocked initially, until {@link #start} called.
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
-    private ControlLock controlLock = new ControlLock();
+    protected ControlLock controlLock = new ControlLock();
 
-    private Method actionMethod;
+    public AsyncTask() {
+    }
 
-    public boolean initialized() {
-        return actionMethod != null;
+    public AsyncTask(Runnable target) {
+        this.target = target;
     }
 
     public synchronized void start() {
         if (stopped) {
             return;
         }
+        started = true;
         controlLock.turnOn();
     }
 
@@ -100,65 +103,18 @@ public abstract class AsyncTask implements Runnable {
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
-        getExecutor().execute(this);
+ //       getExecutor().execute(this);
+        run();
     }
 
-    static private Method findActionMethod(Class<?> startClass, int argCount) throws NoSuchMethodException {
-        Class actionAnnotation = Action.class;
-        Method result = null;
-        for (Class<?> clazz = startClass; !Object.class.equals(clazz) ;clazz = clazz.getSuperclass()) {
-            Method[] methods = clazz.getDeclaredMethods();
-            for (Method m: methods) {
-                if (m.isAnnotationPresent(actionAnnotation) && (m.getParameterTypes().length == argCount)) {
-                    if (result != null) {
-                        throw new NoSuchMethodException("in class "+startClass.getName()+" more than one method annotated as Action with "+argCount+" paramenters found");
-                    }
-                    result = m;
-                }
-            }
-            if (result != null) {
-                result.setAccessible(true);
-                return result;
-            }
-        }
-        throw new NoSuchMethodException("in class "+startClass.getName()+" no one method annotated as Action with "+argCount+" paramenters found");
-    }
-
-    public synchronized Object[] consumeTokens() {
-        if (!initialized()) {
-            throw new IllegalStateException("not started");
-        }
-        locks.forEach(lock -> lock.purge());
-        Object[] args = new Object[connectors.size()];
-        for (int k=0; k<connectors.size(); k++) {
-            Connector connector = connectors.get(k);
-            args[k] = connector.next();
-        }
-        return args;
-    }
-
-    protected void runAction() throws IllegalAccessException, InvocationTargetException {
-        controlLock.turnOff();
-        if (!initialized()) {
-            try {
-                actionMethod = findActionMethod(getClass(), connectors.size());
-            } catch (NoSuchMethodException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-        Object[] args = consumeTokens();
-        actionMethod.invoke(this, args);
+    public boolean isStarted() {
+        return started;
     }
 
     @Override
     public void run() {
-        try {
-            runAction();
-        } catch (Throwable e) {
-            stop();
-            // TODO move to failed state
-            System.err.println("Error in async task " + getClass().getName());
-            e.printStackTrace();
+        if (target != null) {
+            target.run();
         }
     }
 
@@ -270,14 +226,14 @@ public abstract class AsyncTask implements Runnable {
 
         @Override
         protected void register() {
-            if (initialized()) {
+            if (isStarted()) {
                 throw new IllegalStateException("cannot register connector after start");
             }
             connectors.add(this);
         }
 
         protected void unRegister() {
-            if (initialized()) {
+            if (isStarted()) {
                 throw new IllegalStateException("cannot unregister connector after start");
             }
             if (blocked) {

@@ -15,6 +15,7 @@ public class ConstInput<T> extends AsyncTask.Connector<T> implements ScalarSubsc
     protected boolean cancelled = false;
 
     /** extracted token */
+    protected boolean completed = false;
     protected T value = null;
     protected Throwable exception;
 
@@ -38,12 +39,16 @@ public class ConstInput<T> extends AsyncTask.Connector<T> implements ScalarSubsc
         return value;
     }
 
+    public T getValue() {
+        return value;
+    }
+
     public Throwable getException() {
         return exception;
     }
 
     public boolean isDone() {
-        return value != null || exception != null;
+        return completed || exception != null;
     }
 
     /**
