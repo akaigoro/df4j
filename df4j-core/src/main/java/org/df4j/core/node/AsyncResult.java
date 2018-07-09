@@ -32,13 +32,21 @@ public class AsyncResult<R> extends AsyncTask implements ScalarPublisher<R> {
     }
 
     protected boolean complete(R res) {
-        result.complete(res);
-        return false; // TODO FIX
+        return result.complete(res);
     }
 
     protected boolean completeExceptionally(Throwable ex) {
-        result.completeExceptionally(ex);
-        return false; // TODO FIX
+        return result.completeExceptionally(ex);
+    }
+
+    @Override
+    public void run() {
+        try {
+            super.run();
+            result.complete(null);
+        } catch (Exception e) {
+            result.completeExceptionally(e);
+        }
     }
 
     public String toString() {

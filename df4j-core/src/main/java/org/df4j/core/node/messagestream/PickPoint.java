@@ -1,27 +1,59 @@
 package org.df4j.core.node.messagestream;
 
+import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.connector.messagestream.StreamInput;
-import org.df4j.core.connector.messagestream.StreamPublisher;
-import org.df4j.core.connector.messagestream.StreamSubscriber;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.Actor1;
+import org.df4j.core.connector.messagestream.StreamCollector;
 
-public class PickPoint<M> extends Actor1<M> implements StreamPublisher<M> {
-	/** place for input demands */
-	protected final StreamInput<StreamSubscriber<? super M>> requests = new StreamInput<>(this);
-	{
-		start();
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+public class PickPoint<T> implements StreamCollector<T>, ScalarPublisher<T> {
+    private boolean completed = false;
+	/** place for demands */
+	private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
+	/** place for resources */
+	private Queue<T> resources = new ArrayDeque<>();
+
+    public synchronized boolean isCompleted() {
+        return completed;
+    }
+
+    @Override
+	public synchronized void post(T token) {
+        if (completed) {
+            throw new IllegalStateException();
+        }
+	    if (requests.isEmpty()) {
+	        resources.add(token);
+        } else {
+	        requests.poll().post(token);
+        }
 	}
 
 	@Override
-	public <S extends StreamSubscriber<? super M>> S subscribe(S subscriber) {
-		requests.post(subscriber);
-		return subscriber;
+	public synchronized void complete() {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        resources = null;
+        for (ScalarSubscriber<? super T> subscriber: requests) {
+            subscriber.postFailure(new StreamCompletedException());
+        }
+        requests = null;
 	}
 
-	@Action
-	protected void act(ScalarSubscriber<? super M> request, M resource) {
-		request.post(resource);
+	@Override
+	public <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber) {
+        if (completed) {
+            throw new IllegalStateException();
+        }
+		if (resources.isEmpty()) {
+			requests.add(subscriber);
+		} else {
+			subscriber.post(resources.poll());
+		}
+        return subscriber;
 	}
+
 }

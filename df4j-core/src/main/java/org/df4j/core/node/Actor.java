@@ -1,15 +1,19 @@
 package org.df4j.core.node;
 
-import java.lang.reflect.InvocationTargetException;
-
 /**
  * Actor is a reusable AsyncTask: after execution, it executes again as soon as new array of arguments is ready.
  */
-public class Actor extends AsyncActionTask {
-
+public class Actor<R> extends AsyncActionTask<R> {
     @Override
-    protected void runAction() throws IllegalAccessException, InvocationTargetException {
-        super.runAction();
-        start();
+    public void run() {
+        try {
+            R res = runAction();
+  //          complete(res);
+            start();
+        } catch (Throwable e) {
+            stop();
+            completeExceptionally(e);
+        }
     }
+
 }

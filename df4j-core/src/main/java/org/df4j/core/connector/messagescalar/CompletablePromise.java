@@ -1,5 +1,7 @@
 package org.df4j.core.connector.messagescalar;
 
+import org.df4j.core.node.AsyncResult;
+import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagescalar.*;
 
 import java.util.ArrayDeque;
@@ -35,22 +37,23 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     }
 
     public synchronized boolean complete(T result) {
-        boolean wasDone = isDone();
+        if (isDone()) {
+            return false;
+        }
         this.result = result;
         this.completed = true;
         for (ScalarSubscriber<? super T> subscriber: requests) {
             subscriber.post(result);
         }
         requests = null;
-        return wasDone != isDone();
+        return true;
     }
 
     public synchronized boolean completeExceptionally(Throwable exception) {
         if (exception == null) {
             throw new IllegalArgumentException("CompletablePromise::completeExceptionally(): argument may not be null");
         }
-        boolean wasDone = isDone();
-        if (wasDone) {
+        if (isDone()) {
             return false;
         }
         this.exception = exception;
@@ -181,7 +184,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable,
                                                    Executor executor) {
-        AsyncFunction asyncTask = new AsyncFunction(runnable);
+        AsyncResult asyncTask = new AsyncResult<>(runnable);
         asyncTask.start(executor);
         return asyncTask.asyncResult();
     }

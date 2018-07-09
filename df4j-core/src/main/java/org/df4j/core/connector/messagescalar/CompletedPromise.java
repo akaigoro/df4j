@@ -14,7 +14,7 @@ public class CompletedPromise<M> implements ScalarPublisher<M> {
 
 	public CompletedPromise(M value, Throwable exception) {
 	    if (value != null) {
-	        throw new IllegalArgumentException("firsta argument must be null in the two-argument constructor");
+	        throw new IllegalArgumentException("first argument must be null in the two-argument constructor");
         }
 		this.value = null;
 		this.exception = exception;

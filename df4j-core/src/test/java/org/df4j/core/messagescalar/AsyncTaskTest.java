@@ -68,7 +68,7 @@ public class AsyncTaskTest {
 
         @Action
         public void act(Double a, Double b, Double c) {
-            double d = b*b -4*a*c;
+            double d = b*b - 4*a*c;
             complete(d);
         }
     }

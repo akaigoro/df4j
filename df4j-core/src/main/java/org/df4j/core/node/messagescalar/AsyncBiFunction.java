@@ -11,6 +11,7 @@ import java.util.function.BiFunction;
 public class AsyncBiFunction<U, V, R> extends AsyncActionTask<R> {
     public final ConstInput<U> arg1 = new ConstInput<>(this);
     public final ConstInput<V> arg2 = new ConstInput<>(this);
+    @Action
     protected final BiFunction<? super U,? super V,? extends R> fn;
 
     public AsyncBiFunction(BiFunction<? super U, ? super V, ? extends R> fn) {

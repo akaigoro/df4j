@@ -1,16 +1,15 @@
 package org.df4j.core.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
-import org.df4j.core.connector.messagestream.StreamSubscriber;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncActionTask;
 import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagestream.PickPoint;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
 
@@ -20,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 public class DiningPhilosophers {
     private static final int num = 5;
 
-    @Ignore // TODO implement state machine with AsyncTask.controlLock
+//    @Ignore
     @Test
     public void test() throws InterruptedException {
         ForkPlace[] forkPlaces = new ForkPlace[num];
@@ -63,11 +62,6 @@ public class DiningPhilosophers {
         public ForkPlace(int k) {
             id = k;
             label="Forkplace_"+id;
-        }
-
-        @Override
-        protected void fire() {
-            super.fire();
         }
 
         @Override
@@ -151,8 +145,7 @@ public class DiningPhilosophers {
             @Override
             public void start() {
                 println("Request first (" + firstPlace.id + ")");
-                StreamSubscriber<? super Fork> input= (StreamSubscriber<? super Fork>) this.input;
-                firstPlace.subscribe(input);
+                firstPlace.subscribe(this.input);
                 super.start();
             }
 
@@ -161,8 +154,7 @@ public class DiningPhilosophers {
                 if (first == null) {
                     first = fork;
                     println("Request second (" + secondPlace.id + ")");
-                    StreamSubscriber<? super Fork> input= (StreamSubscriber<? super Fork>) this.input;
-                    secondPlace.subscribe(input);
+                    secondPlace.subscribe(this.input);
                     super.start();
                 } else  {
                     second = fork;
