@@ -9,7 +9,7 @@ import java.util.concurrent.*;
 import java.util.function.*;
 
 /**
- * an unblocking single-shot output parameter
+ * an unblocking single-shot output connector
  *
  * @param <T>
  */
@@ -410,7 +410,9 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     public CompletablePromise<T> whenCompleteAsync(
             BiConsumer<? super T, ? super Throwable> action,
             Executor executor) {
-        AsyncHandlerBC<T> asyncHandler = new AsyncHandlerBC<T>(action);
+        BiFunction<? super T, ? super Throwable, ? extends T> action1
+                = (arg, ex)->{action.accept(arg, ex);return arg;};
+        AsyncHandler<T,T> asyncHandler = new AsyncHandler<T,T>(action1);
         this.subscribe(asyncHandler);
         asyncHandler.start(executor);
         return asyncHandler.asyncResult();
@@ -428,11 +430,10 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public <U> CompletablePromise<U> handleAsync(
             BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
-        AsyncHandler<T, Object> handler = new AsyncHandler<>(fn);
-        AsyncHandler<T,U> asyncHandler = (AsyncHandler<T, U>) handler;
-        this.subscribe(asyncHandler);
-        asyncHandler.start(executor);
-        CompletablePromise<U> promise = asyncHandler.asyncResult();
+        AsyncHandler<T, U> handler = new AsyncHandler<>(fn);
+        this.subscribe(handler);
+        handler.start(executor);
+        CompletablePromise<U> promise = handler.asyncResult();
         return promise;
     }
 

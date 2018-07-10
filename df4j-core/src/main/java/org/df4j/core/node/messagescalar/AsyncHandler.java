@@ -9,10 +9,10 @@ import java.util.function.*;
 
 public class AsyncHandler<T,R> extends AsyncResult<R> implements ScalarSubscriber<T> {
     private final ConstInput<Pair<T, Throwable>> argument = new ConstInput<>(this);
-    private final BiFunction<? super T, ? super Throwable, ? extends R> handler;
+    private final BiFunction<? super T, ? super Throwable, ? extends R> action;
 
-    public AsyncHandler(BiFunction<? super T, ? super Throwable, ? extends R> handler) {
-        this.handler = handler;
+    public AsyncHandler(BiFunction<? super T, ? super Throwable, ? extends R> action) {
+        this.action = action;
     }
 
     @Override
@@ -27,7 +27,7 @@ public class AsyncHandler<T,R> extends AsyncResult<R> implements ScalarSubscribe
 
     @Action
     public void act(Pair<T, Throwable> arg) {
-        R res = handler.apply(arg.t, arg.u);
+        R res = action.apply(arg.t, arg.u);
         complete(res);
     }
 
