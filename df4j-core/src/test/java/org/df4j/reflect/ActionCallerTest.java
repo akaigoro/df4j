@@ -2,6 +2,8 @@ package org.df4j.reflect;
 
 import org.df4j.core.node.Action;
 import org.df4j.core.util.ActionCaller;
+import org.df4j.core.util.invoker.FunctionInvoker;
+import org.df4j.core.util.invoker.Invoker;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,28 +17,28 @@ public class ActionCallerTest {
 
     @Test(expected = NoSuchMethodException.class)
     public void emptyClass_0() throws NoSuchMethodException {
-        new ActionCaller<>(new Empty(), 0);
+        ActionCaller.findAction(new Empty(), 0);
     }
 
     @Test(expected = NoSuchMethodException.class)
     public void emptyClass_1() throws NoSuchMethodException {
-        new ActionCaller<>(new Empty(), 1);
+        ActionCaller.findAction(new Empty(), 1);
     }
 
     @Test(expected = NoSuchMethodException.class)
     public void manyFields() throws NoSuchMethodException {
-        new ActionCaller<>(new WithField_2(), 1);
+        ActionCaller.findAction(new WithField_2(), 1);
     }
 
     @Test(expected = NoSuchMethodException.class)
     public void nullField() throws NoSuchMethodException {
-        new ActionCaller<>(new WithField_1(null), 1);
+        ActionCaller.findAction(new WithField_1(null), 1);
     }
 
     @Test
     public void notNullField() throws Exception {
         Function<Integer, Integer> f = (v)->v*2;
-        ActionCaller<Object> ac = new ActionCaller<>(new WithField_1(f), 1);
+        Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
         Integer res1 = (Integer) ac.apply(ONE);
         Assert.assertEquals(TWO, res1);
         Integer res2 = (Integer) ac.apply(TWO);
@@ -47,7 +49,7 @@ public class ActionCallerTest {
     public void fieldWithAlienMethod() throws Exception {
         WithFieldAndMethod wfm = new WithFieldAndMethod(null);
         Function<Integer, Integer> f = wfm::dec;
-        ActionCaller<Object> ac = new ActionCaller<>(new WithField_1(f), 1);
+        Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
         Integer res1 = (Integer) ac.apply(TWO);
         Assert.assertEquals(ONE, res1);
         res1 = (Integer) ac.apply(FOUR);
@@ -57,7 +59,7 @@ public class ActionCallerTest {
     @Test
     public void fieldWithStaticMethod() throws Exception {
         Function<Integer, Integer> f = WithFieldAndMethod::inc;
-        ActionCaller<Object> ac = new ActionCaller<>(new WithField_1(f), 1);
+        Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
         Integer res1 = (Integer) ac.apply(ONE);
         Assert.assertEquals(TWO, res1);
         Integer res2 = (Integer) ac.apply(TWO);
@@ -66,7 +68,7 @@ public class ActionCallerTest {
 
     @Test
     public void nullFieldAndMethod() throws Exception {
-        ActionCaller<Object> ac = new ActionCaller<>(new WithFieldAndMethod(null), 1);
+        Invoker ac = ActionCaller.findAction(new WithFieldAndMethod(null), 1);
         Integer res1 = (Integer) ac.apply(TWO);
         Assert.assertEquals(ONE, res1);
         res1 = (Integer) ac.apply(FOUR);
@@ -76,7 +78,7 @@ public class ActionCallerTest {
     @Test
     public void notNullFieldAndMethod() throws Exception {
         Function<Integer, Integer> f = (v)->v*2;
-        ActionCaller<Object> ac = new ActionCaller<>(new WithFieldAndMethod(f), 1);
+        Invoker ac = ActionCaller.findAction(new WithFieldAndMethod(f), 1);
         Integer res1 = (Integer) ac.apply(ONE);
         Assert.assertEquals(TWO, res1);
         Integer res2 = (Integer) ac.apply(TWO);
@@ -87,10 +89,10 @@ public class ActionCallerTest {
 
     static class WithField_1 {
         @Action
-        final Function function;
+        final FunctionInvoker invoker;
 
         WithField_1(Function function) {
-            this.function = function;
+            this.invoker = new FunctionInvoker(function);
         }
     }
 
@@ -103,10 +105,10 @@ public class ActionCallerTest {
 
     static class WithFieldAndMethod {
         @Action
-        final Function function;
+        final FunctionInvoker invoker;
 
         WithFieldAndMethod(Function function) {
-            this.function = function;
+            this.invoker = new FunctionInvoker(function);
         }
 
         @Action

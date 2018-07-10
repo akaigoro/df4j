@@ -3,11 +3,10 @@ package org.df4j.core.node.messagescalar;
 import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 
-public class AllOf extends AsyncResult<Void> {
+public class AllOf extends AsyncResult<Object[]> {
     Object[] results;
 
-    public AllOf() {
-    }
+    public AllOf() { }
 
     public AllOf(CompletablePromise<?>... sources) {
         results = new Object[sources.length];
@@ -20,7 +19,7 @@ public class AllOf extends AsyncResult<Void> {
 
     @Override
     protected void fire() {
-        complete(null);
+        complete(results);
     }
 
     class Enter extends Lock implements ScalarSubscriber<Object> {

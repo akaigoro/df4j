@@ -1,53 +1,42 @@
 package org.df4j.core.util;
 
 import org.df4j.core.node.Action;
+import org.df4j.core.util.invoker.AbstractInvoker;
+import org.df4j.core.util.invoker.Invoker;
+import org.df4j.core.util.invoker.MethodInvoker;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 
 public class ActionCaller<R> {
     private final static Class actionAnnotation = Action.class;
-    private final Object actionObject;
-    private final Method actionMethod;
 
-    public ActionCaller(Object objectWithAction, int argCount) throws NoSuchMethodException {
+    public static Invoker findAction(Object objectWithAction, int argCount) throws NoSuchMethodException {
         Class<?> startClass = objectWithAction.getClass();
-        Object resultObject = null;
+        Invoker actionInvoker = null;
         Method resultMethod = null;
+        classScan:
         for (Class<?> clazz = startClass; !Object.class.equals(clazz) ;clazz = clazz.getSuperclass()) {
             Field[] fields = clazz.getDeclaredFields();
             for (Field field: fields) {
                 if (!field.isAnnotationPresent(actionAnnotation)) continue;
+                if (!AbstractInvoker.class.isAssignableFrom(field.getType())) {
+                    throw new NoSuchMethodException("variable annotated with @Action must have type "+AbstractInvoker.class.getSimpleName());
+                }
                 field.setAccessible(true);
-                Object lambda;
+                AbstractInvoker invoker;
                 try {
-                    lambda = field.get(objectWithAction);
+                    invoker = (AbstractInvoker) field.get(objectWithAction);
                 } catch (IllegalAccessException e) {
                     continue;
                 }
-                if (lambda == null) continue;
-                resultObject = lambda;
-                //     Object v = field.get(this);
-                //&& (field.getParameterTypes().length == argCount)
-                for (Class<?> fieldType = field.getType(); fieldType != null && !Object.class.equals(fieldType) ;fieldType = fieldType.getSuperclass()) {
-                    Method[] methods = fieldType.getDeclaredMethods();
-                    for (Method m: methods) {
-                        int modifiers = m.getModifiers();
-                        if(!Modifier.isStatic(modifiers) && Modifier.isPublic(modifiers) && !m.isDefault()) {
-                            if (resultMethod != null) {
-                                throw new NoSuchMethodException("class "+fieldType.getName()+" has more than one method; cannot be type of a field annotated with @Action.");
-                            }
-                            resultMethod=m;
-                        }
-                    }
+                if (invoker == null) continue;
+                if (invoker.isEmpty()) continue;
+                if (actionInvoker != null) {
+                    throw new NoSuchMethodException("class "+startClass.getName()+" has more than one non-null field annotated with @Action");
                 }
-            }
-            if (resultMethod != null) {
-                if (resultMethod.getParameterTypes().length != argCount) {
-                    throw new NoSuchMethodException("class "+startClass.getName()+" has a field annotated with @Action but with wrong numbers of parameters");
-                }
-                break;
+                actionInvoker = invoker;
+                break classScan;
             }
             Method[] methods = clazz.getDeclaredMethods();
             for (Method m: methods) {
@@ -62,21 +51,14 @@ public class ActionCaller<R> {
                 if (resultMethod.getParameterTypes().length != argCount) {
                     throw new NoSuchMethodException("class "+startClass.getName()+" has a method annotated with @Action but with wrong numbers of parameters");
                 }
-                resultObject = objectWithAction;
+                resultMethod.setAccessible(true);
+                actionInvoker = new MethodInvoker(objectWithAction, resultMethod);
                 break;
             }
         }
-        if (resultMethod == null) {
+        if (actionInvoker == null) {
             throw new NoSuchMethodException("class "+startClass.getName()+" has no field or method annotated with @Action");
         }
-        actionObject = resultObject;
-        resultMethod.setAccessible(true);
-        actionMethod = resultMethod;
+        return actionInvoker;
     }
-
-    public R apply(Object... args) throws Exception {
-        Object res = actionMethod.invoke(actionObject, args);
-        return (R) res;
-    }
-
 }

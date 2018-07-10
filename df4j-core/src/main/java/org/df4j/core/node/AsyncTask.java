@@ -1,6 +1,7 @@
 package org.df4j.core.node;
 
 import org.df4j.core.util.ActionCaller;
+import org.df4j.core.util.invoker.Invoker;
 
 import java.util.concurrent.Executor;
 
@@ -13,7 +14,7 @@ import java.util.concurrent.Executor;
  */
 public class AsyncTask<R> extends AsyncTaskBase {
 
-    private ActionCaller<R> actionMethod;
+    private Invoker<R> actionMethod;
     protected volatile boolean started = false;
     protected volatile boolean stopped = false;
 
@@ -22,6 +23,13 @@ public class AsyncTask<R> extends AsyncTaskBase {
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
     protected ControlLock controlLock = new ControlLock();
+
+    public AsyncTask() {
+    }
+
+    public AsyncTask(Invoker<R> actionMethod) {
+        this.actionMethod = actionMethod;
+    }
 
     public boolean isStarted() {
         return started;
@@ -62,7 +70,7 @@ public class AsyncTask<R> extends AsyncTaskBase {
         controlLock.turnOff();
         if (actionMethod == null) {
             try {
-                actionMethod = new ActionCaller(this, connectors.size());
+                actionMethod = ActionCaller.findAction(this, connectors.size());
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }

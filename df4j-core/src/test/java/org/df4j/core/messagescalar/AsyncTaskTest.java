@@ -4,7 +4,6 @@ import org.df4j.core.connector.messagescalar.*;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.messagescalar.AsyncBiFunction;
 import org.df4j.core.node.messagescalar.AsyncResult;
-import org.df4j.core.node.messagescalar.AsyncSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,7 +28,7 @@ public class AsyncTaskTest {
         computeMult(-1.0, -2.0, 2.0);
     }
 
-    public static class Blocker<T,R> extends AsyncSupplier<R> {
+    public static class Blocker<T,R> extends AsyncResult<R> {
         ConstInput<T> arg = new ConstInput<>(this);
     }
 

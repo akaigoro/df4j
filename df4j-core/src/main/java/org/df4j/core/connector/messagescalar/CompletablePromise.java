@@ -1,14 +1,12 @@
 package org.df4j.core.connector.messagescalar;
 
-import org.df4j.core.node.messagescalar.AsyncSupplier;
 import org.df4j.core.node.messagescalar.*;
+import org.df4j.core.util.SameThreadExecutor;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.function.*;
-
-import static org.df4j.core.util.SameThreadExecutor.sameThreadExecutor;
 
 /**
  * an unblocking single-shot output parameter
@@ -16,6 +14,9 @@ import static org.df4j.core.util.SameThreadExecutor.sameThreadExecutor;
  * @param <T>
  */
 public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
+    private static Executor syncExec = SameThreadExecutor.sameThreadExecutor;
+    private static Executor asyncExec = ForkJoinPool.commonPool();
+
     /** place for demands */
     private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
     protected boolean cancelled = false;
@@ -137,7 +138,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      * @return the new CompletablePromise
      */
     public static <U> CompletablePromise<U> supplyAsync(Supplier<U> supplier) {
-        return supplyAsync(supplier, null);
+        return supplyAsync(supplier, asyncExec);
     }
 
     /**
@@ -168,7 +169,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      * @return the new CompletablePromise
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable) {
-        return runAsync(runnable, null);
+        return runAsync(runnable, asyncExec);
     }
 
     /**
@@ -183,7 +184,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable,
                                                    Executor executor) {
-        AsyncSupplier asyncTask = new AsyncSupplier<>(runnable);
+        AsyncResult asyncTask = new AsyncResult<>(runnable);
         asyncTask.start(executor);
         return asyncTask.asyncResult();
     }
@@ -203,28 +204,28 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     }
 
     public <U> CompletablePromise<U> thenApply(Function<? super T,? extends U> fn) {
-        return thenApplyAsync(fn, sameThreadExecutor);
+        return thenApplyAsync(fn, syncExec);
     }
 
     public <U> CompletablePromise<U> thenApplyAsync(
             Function<? super T,? extends U> fn) {
-        return thenApplyAsync(fn, null);
+        return thenApplyAsync(fn, asyncExec);
     }
 
     public <U> CompletablePromise<U> thenApplyAsync(
             Function<? super T,? extends U> fn, Executor executor) {
-        AsyncFunction<T,U> asyncFunc =  new AsyncFunction<>(fn);
+        AsyncFunction<? super T,? extends U> asyncFunc =  new AsyncFunction<>(fn);
         this.subscribe(asyncFunc);
         asyncFunc.start(executor);
-        return asyncFunc.asyncResult();
+        return (CompletablePromise<U>) asyncFunc.asyncResult();
     }
 
     public CompletablePromise<Void> thenAccept(Consumer<? super T> action) {
-        return thenAcceptAsync(action, sameThreadExecutor);
+        return thenAcceptAsync(action, syncExec);
     }
 
     public CompletablePromise<Void> thenAcceptAsync(Consumer<? super T> action) {
-        return thenAcceptAsync(action, null);
+        return thenAcceptAsync(action, asyncExec);
     }
 
     public CompletablePromise<Void> thenAcceptAsync(Consumer<? super T> action,
@@ -236,11 +237,11 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     }
 
     public CompletablePromise<Void> thenRun(Runnable action) {
-        return thenRunAsync(action, sameThreadExecutor);
+        return thenRunAsync(action, syncExec);
     }
 
     public CompletablePromise<Void> thenRunAsync(Runnable action) {
-        return thenRunAsync(action, null);
+        return thenRunAsync(action, asyncExec);
     }
 
     public CompletablePromise<Void> thenRunAsync(Runnable action,
@@ -254,13 +255,13 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     public <U,V> CompletablePromise<V> thenCombine(CompletablePromise<? extends U> other,
                                                         BiFunction<? super T,? super U,? extends V> fn
     ) {
-        return thenCombineAsync(other, fn, sameThreadExecutor);
+        return thenCombineAsync(other, fn, syncExec);
     }
 
     public <U,V> CompletablePromise<V> thenCombineAsync(CompletablePromise<? extends U> other,
                                                         BiFunction<? super T,? super U,? extends V> fn
     ) {
-        return thenCombineAsync(other, fn, null);
+        return thenCombineAsync(other, fn, asyncExec);
     }
 
     public <U,V> CompletablePromise<V> thenCombineAsync(CompletablePromise<? extends U> other,
@@ -278,13 +279,13 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     public <U> CompletablePromise<Void> thenAcceptBoth(
             CompletablePromise<? extends U> other,
             BiConsumer<? super T, ? super U> action) {
-        return thenAcceptBothAsync(other, action, sameThreadExecutor);
+        return thenAcceptBothAsync(other, action, syncExec);
     }
 
     public <U> CompletablePromise<Void> thenAcceptBothAsync(
             CompletablePromise<? extends U> other,
             BiConsumer<? super T, ? super U> action) {
-        return thenAcceptBothAsync(other, action, null);
+        return thenAcceptBothAsync(other, action, asyncExec);
     }
 
     public <U> CompletablePromise<Void> thenAcceptBothAsync(
@@ -299,18 +300,19 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public <U> CompletablePromise<Void> runAfterBoth(CompletablePromise<? extends  U> other,
                                                     Runnable action) {
-        return runAfterBothAsync(other, action, sameThreadExecutor);
+        return runAfterBothAsync(other, action, syncExec);
     }
 
     public <U> CompletablePromise<Void> runAfterBothAsync(CompletablePromise<? extends  U> other,
                                                          Runnable action) {
-        return runAfterBothAsync(other, action, null);
+        return runAfterBothAsync(other, action, asyncExec);
     }
 
     public <U> CompletablePromise<Void> runAfterBothAsync(CompletablePromise<? extends  U> other,
                                                          Runnable action,
                                                          Executor executor) {
-        AsyncBiFunction<? super T,? super U, Void> asyncBiConsumer = new AsyncBiFunction<>(action);
+        BiConsumer<T, U> fn = (t,u)->action.run();
+        AsyncBiFunction<? super T,? super U, Void> asyncBiConsumer = new AsyncBiFunction<>(fn);
         this.subscribe(asyncBiConsumer.arg1);
         other.subscribe(asyncBiConsumer.arg2);
         asyncBiConsumer.start(executor);
@@ -319,12 +321,12 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public <U> CompletablePromise<U> applyToEither(
             CompletablePromise<? extends T> other, Function<? super T, U> fn) {
-        return applyToEitherAsync(other, fn, sameThreadExecutor);
+        return applyToEitherAsync(other, fn, syncExec);
     }
 
     public <U> CompletablePromise<U> applyToEitherAsync(
             CompletablePromise<? extends T> other, Function<? super T, U> fn) {
-        return applyToEitherAsync(other, fn, null);
+        return applyToEitherAsync(other, fn, asyncExec);
     }
 
     public <U> CompletablePromise<U> applyToEitherAsync(
@@ -333,7 +335,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
             Executor executor
     ) {
         AnyOf<T> either = new AnyOf<T>(this, other);
-        AsyncFunction<T,U> asyncFunc =  new AsyncFunction<>(fn);
+        AsyncFunction<? super T,U> asyncFunc =  new AsyncFunction<>(fn);
         either.subscribe(asyncFunc);
         asyncFunc.start(executor);
         return asyncFunc.asyncResult();
@@ -341,12 +343,12 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public CompletablePromise<Void> acceptEither(
             CompletablePromise<? extends T> other, Consumer<? super T> action) {
-        return acceptEitherAsync(other, action, sameThreadExecutor);
+        return acceptEitherAsync(other, action, syncExec);
     }
 
     public CompletablePromise<Void> acceptEitherAsync(
             CompletablePromise<? extends T> other, Consumer<? super T> action) {
-        return acceptEitherAsync(other, action, null);
+        return acceptEitherAsync(other, action, asyncExec);
     }
 
     public CompletablePromise<Void> acceptEitherAsync(
@@ -361,12 +363,12 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public CompletablePromise<Void> runAfterEither(CompletablePromise<? extends T> other,
                                                   Runnable action) {
-        return runAfterEitherAsync(other, action, sameThreadExecutor);
+        return runAfterEitherAsync(other, action, syncExec);
     }
 
     public CompletablePromise<Void> runAfterEitherAsync(CompletablePromise<? extends T> other,
                                                        Runnable action) {
-        return runAfterEitherAsync(other, action, null);
+        return runAfterEitherAsync(other, action, asyncExec);
     }
 
     public CompletablePromise<Void> runAfterEitherAsync(CompletablePromise<? extends T> other,
@@ -381,12 +383,12 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public <U> CompletablePromise<U> thenCompose(
             Function<? super T, ? extends CompletablePromise<U>> fn) {
-        return thenComposeAsync(fn, sameThreadExecutor);
+        return thenComposeAsync(fn, syncExec);
     }
 
     public <U> CompletablePromise<U> thenComposeAsync(
             Function<? super T, ? extends CompletablePromise<U>> fn) {
-        return thenComposeAsync(fn, null);
+        return thenComposeAsync(fn, asyncExec);
     }
 
     public <U> CompletablePromise<U> thenComposeAsync(
@@ -397,17 +399,18 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public CompletablePromise<T> whenComplete(
             BiConsumer<? super T, ? super Throwable> action) {
-        return whenCompleteAsync(action, sameThreadExecutor);
+        return whenCompleteAsync(action, syncExec);
     }
 
     public CompletablePromise<T> whenCompleteAsync(
             BiConsumer<? super T, ? super Throwable> action) {
-        return whenCompleteAsync(action, null);
+        return whenCompleteAsync(action, asyncExec);
     }
 
     public CompletablePromise<T> whenCompleteAsync(
-            BiConsumer<? super T, ? super Throwable> action, Executor executor) {
-        AsyncHandler<? super T, T> asyncHandler = new AsyncHandler<>(action);
+            BiConsumer<? super T, ? super Throwable> action,
+            Executor executor) {
+        AsyncHandlerBC<T> asyncHandler = new AsyncHandlerBC<T>(action);
         this.subscribe(asyncHandler);
         asyncHandler.start(executor);
         return asyncHandler.asyncResult();
@@ -415,20 +418,22 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
 
     public <U> CompletablePromise<U> handle(
             BiFunction<? super T, Throwable, ? extends U> fn) {
-        return handleAsync(fn, sameThreadExecutor);
+        return handleAsync(fn, syncExec);
     }
 
     public <U> CompletablePromise<U> handleAsync(
             BiFunction<? super T, Throwable, ? extends U> fn) {
-        return handleAsync(fn, null);
+        return handleAsync(fn, asyncExec);
     }
 
     public <U> CompletablePromise<U> handleAsync(
-            BiFunction<? super T, Throwable, ? extends U> handler, Executor executor) {
-        AsyncHandler<T,U> asyncHandler =  new AsyncHandler<>(handler);
+            BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
+        AsyncHandler<T, Object> handler = new AsyncHandler<>(fn);
+        AsyncHandler<T,U> asyncHandler = (AsyncHandler<T, U>) handler;
         this.subscribe(asyncHandler);
         asyncHandler.start(executor);
-        return asyncHandler.asyncResult();
+        CompletablePromise<U> promise = asyncHandler.asyncResult();
+        return promise;
     }
 
     /**

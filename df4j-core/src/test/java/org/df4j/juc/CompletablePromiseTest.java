@@ -1,6 +1,7 @@
 package org.df4j.juc;
 
 import org.df4j.core.connector.messagescalar.CompletablePromise;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -20,10 +21,10 @@ import static org.junit.Assert.fail;
 /**
  * made from CompletableFutureTest https://gist.github.com/spullara/5897605
  */
-public class AsyncSupplierFutureTest {
+public class CompletablePromiseTest {
 
     public static void main(String[] args) throws Exception {
-        AsyncSupplierFutureTest pt = new AsyncSupplierFutureTest();
+        CompletablePromiseTest pt = new CompletablePromiseTest();
         setup();
         pt.testCompletableFutures();
         System.out.println("Success.");
@@ -176,8 +177,8 @@ public class AsyncSupplierFutureTest {
         CompletablePromise<String> selected = select(future, future1, future3, future4);
 
         try {
-            junit.framework.Assert.assertTrue(future5.isCancelled());
-            junit.framework.Assert.assertTrue(future5.isDone());
+            Assert.assertTrue(future5.isCancelled());
+            Assert.assertTrue(future5.isDone());
             future5.get();
             fail("Was not cancelled");
         } catch (CancellationException ce) {

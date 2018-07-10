@@ -9,6 +9,8 @@
  */
 package org.df4j.core.node;
 
+import org.df4j.core.util.SameThreadExecutor;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.Executor;
@@ -52,7 +54,11 @@ public abstract class AsyncTaskBase implements Runnable {
      * assigns Executor
      */
     public void setExecutor(Executor exec) {
-        this.executor = exec;
+        if (exec == null) {
+            this.executor = SameThreadExecutor.sameThreadExecutor;
+        } else {
+            this.executor = exec;
+        }
     }
 
     public Executor getExecutor() {

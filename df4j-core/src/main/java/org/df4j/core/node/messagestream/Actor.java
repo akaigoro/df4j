@@ -5,11 +5,11 @@ import org.df4j.core.node.AsyncTask;
 /**
  * Actor is a reusable AsyncTask: after execution, it executes again as soon as new array of arguments is ready.
  */
-public class Actor<R> extends AsyncTask<R> {
+public class Actor extends AsyncTask<Void> {
     @Override
     public void run() {
         try {
-            R res = runAction();
+            runAction();
             start(); // restart execution
         } catch (Throwable e) {
             stop();
