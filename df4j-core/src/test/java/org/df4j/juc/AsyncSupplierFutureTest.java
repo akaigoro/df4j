@@ -20,10 +20,10 @@ import static org.junit.Assert.fail;
 /**
  * made from CompletableFutureTest https://gist.github.com/spullara/5897605
  */
-public class AsyncResultFutureTest {
+public class AsyncSupplierFutureTest {
 
     public static void main(String[] args) throws Exception {
-        AsyncResultFutureTest pt = new AsyncResultFutureTest();
+        AsyncSupplierFutureTest pt = new AsyncSupplierFutureTest();
         setup();
         pt.testCompletableFutures();
         System.out.println("Success.");

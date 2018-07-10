@@ -2,9 +2,9 @@ package org.df4j.core.messagescalar;
 
 import org.df4j.core.connector.messagescalar.*;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncActionTask;
 import org.df4j.core.node.messagescalar.AsyncBiFunction;
-import org.df4j.core.node.AsyncResult;
+import org.df4j.core.node.messagescalar.AsyncResult;
+import org.df4j.core.node.messagescalar.AsyncSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,7 +29,7 @@ public class AsyncTaskTest {
         computeMult(-1.0, -2.0, 2.0);
     }
 
-    public static class Blocker<T,R> extends AsyncResult<R> {
+    public static class Blocker<T,R> extends AsyncSupplier<R> {
         ConstInput<T> arg = new ConstInput<>(this);
     }
 
@@ -61,7 +61,7 @@ public class AsyncTaskTest {
     }
 
     /* D = b^2 - 4ac */
-    class Discr extends AsyncActionTask<Double> {
+    class Discr extends AsyncResult<Double> {
         ConstInput<Double> pa = new ConstInput<>(this);
         ConstInput<Double> pb = new ConstInput<>(this);
         ConstInput<Double> pc = new ConstInput<>(this);
@@ -98,7 +98,7 @@ public class AsyncTaskTest {
     /**
      * (-b +/- sqrt(D))/2a
      */
-    class RootCalc extends AsyncActionTask<double[]> {
+    class RootCalc extends AsyncResult<double[]> {
         ConstInput<Double> pa = new ConstInput<>(this);
         ConstInput<Double> pb = new ConstInput<>(this);
         ConstInput<Double> pd = new ConstInput<>(this);

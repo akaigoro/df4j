@@ -1,7 +1,6 @@
 package org.df4j.core.connector.messagescalar;
 
-import org.df4j.core.node.AsyncResult;
-import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.messagescalar.AsyncSupplier;
 import org.df4j.core.node.messagescalar.*;
 
 import java.util.ArrayDeque;
@@ -184,7 +183,7 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable,
                                                    Executor executor) {
-        AsyncResult asyncTask = new AsyncResult<>(runnable);
+        AsyncSupplier asyncTask = new AsyncSupplier<>(runnable);
         asyncTask.start(executor);
         return asyncTask.asyncResult();
     }

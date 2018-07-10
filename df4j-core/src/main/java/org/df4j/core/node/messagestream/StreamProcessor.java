@@ -4,7 +4,6 @@ import org.df4j.core.connector.messagestream.StreamOutput;
 import org.df4j.core.connector.messagestream.StreamPublisher;
 import org.df4j.core.connector.messagestream.StreamSubscriber;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.Actor1;
 
 public abstract class StreamProcessor<M, R> extends Actor1<M> implements StreamPublisher<R> {
 	protected final StreamOutput<R> output = new StreamOutput<>(this);

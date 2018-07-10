@@ -11,9 +11,7 @@ package org.df4j.core.reactivestream;
 
 import org.df4j.core.connector.reactivestream.*;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.Actor;
-import org.df4j.core.node.AsyncTask;
-import org.df4j.core.util.DirectExecutor;
+import org.df4j.core.node.messagestream.Actor;
 import org.junit.Test;
 
 import java.io.PrintStream;

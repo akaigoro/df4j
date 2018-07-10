@@ -1,6 +1,6 @@
 package org.df4j.core.connector.messagescalar;
 
-import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.AsyncTaskBase;
 
 /**
  * Token storage with standard Subscriber<T> interface. It has place for only one
@@ -9,7 +9,7 @@ import org.df4j.core.node.AsyncTask;
  * @param <T>
  *     type of accepted tokens.
  */
-public class ConstInput<T> extends AsyncTask.Connector<T> implements ScalarSubscriber<T> {
+public class ConstInput<T> extends AsyncTaskBase.Connector<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;
     protected boolean closeRequested = false;
     protected boolean cancelled = false;
@@ -19,7 +19,7 @@ public class ConstInput<T> extends AsyncTask.Connector<T> implements ScalarSubsc
     protected T value = null;
     protected Throwable exception;
 
-    public ConstInput(AsyncTask actor) {
+    public ConstInput(AsyncTaskBase actor) {
         actor.super();
     }
 

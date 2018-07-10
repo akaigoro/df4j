@@ -3,7 +3,6 @@ package org.df4j.core.node.messagescalar;
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncResult;
 
 import java.util.function.*;
 

@@ -10,7 +10,7 @@
 package org.df4j.examples.swing;
 
 import org.df4j.core.node.Action;
-import org.df4j.core.node.Actor1;
+import org.df4j.core.node.messagestream.Actor1;
 
 import java.awt.Color;
 import java.awt.EventQueue;

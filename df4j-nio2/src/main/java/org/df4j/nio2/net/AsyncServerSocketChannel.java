@@ -14,7 +14,7 @@ import org.df4j.core.connector.reactivestream.ReactiveInput;
 import org.df4j.core.connector.reactivestream.Subscriber;
 import org.df4j.core.connector.reactivestream.Subscription;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncActionTask;
+import org.df4j.core.node.AsyncTask;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -27,7 +27,7 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections
  */
-public class AsyncServerSocketChannel extends AsyncActionTask
+public class AsyncServerSocketChannel extends AsyncTask
         implements Subscriber<ServerConnection>
         ,CompletionHandler<AsynchronousSocketChannel, ServerConnection>
 {

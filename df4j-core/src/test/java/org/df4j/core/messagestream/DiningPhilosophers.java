@@ -2,8 +2,9 @@ package org.df4j.core.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncActionTask;
 import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.AsyncTaskBase;
+import org.df4j.core.node.messagestream.Actor;
 import org.df4j.core.node.messagestream.PickPoint;
 import org.junit.Test;
 
@@ -77,9 +78,9 @@ public class DiningPhilosophers {
     }
 
     /**
-     * while ordinary {@link org.df4j.core.node.Actor} is a single {@link AsyncTask}
+     * while ordinary {@link Actor} is a single {@link AsyncTaskBase}
      * which restarts itself,
-     * this class comprises of several {@link AsyncTask}s which activate each other cyclically.
+     * this class comprises of several {@link AsyncTaskBase}s which activate each other cyclically.
      */
     static class Philosopher {
         Random rand=new Random();
@@ -122,7 +123,7 @@ public class DiningPhilosophers {
             System.out.println(indent+s);
         }
 
-        private class DelayedAsyncTask extends AsyncActionTask {
+        private class DelayedAsyncTask extends AsyncTask<Void> {
             final AsyncTask next;
 
             private DelayedAsyncTask(AsyncTask next) {
@@ -130,16 +131,17 @@ public class DiningPhilosophers {
             }
 
             @Action
-            public void act() throws InterruptedException {
+            protected Void act() throws InterruptedException {
                 Thread.sleep(rand.nextLong()%11+11);
                 next.start();
+                return null;
             }
         }
 
         /**
          * collects forks one by one
          */
-        private class Hungry extends AsyncActionTask {
+        private class Hungry extends AsyncTask<Void> {
             ScalarInput<Fork> input = new ScalarInput<>(this);
 
             @Override
@@ -166,10 +168,10 @@ public class DiningPhilosophers {
         /** return forks
          *
          */
-        private class Replete extends AsyncActionTask {
+        private class Replete extends AsyncTask<Void> {
 
             @Action
-            protected void act() {
+            protected Void act() {
                 println("Release first (" + firstPlace.id + ")");
                 firstPlace.post(first);
                 println("Release second (" + secondPlace.id + ")");
@@ -180,6 +182,7 @@ public class DiningPhilosophers {
                 } else {
                     counter.countDown();
                 }
+                return null;
             }
         }
     }

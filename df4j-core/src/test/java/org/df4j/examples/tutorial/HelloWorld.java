@@ -2,7 +2,7 @@ package org.df4j.examples.tutorial;
 
 import org.df4j.core.connector.messagestream.StreamInput;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.Actor;
+import org.df4j.core.node.messagestream.Actor;
 import org.junit.Test;
 
 public class HelloWorld {

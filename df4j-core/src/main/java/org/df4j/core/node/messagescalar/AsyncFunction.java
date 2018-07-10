@@ -3,7 +3,6 @@ package org.df4j.core.node.messagescalar;
 import org.df4j.core.connector.messagescalar.ConstInput;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncResult;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -42,18 +41,4 @@ public class AsyncFunction<T, R> extends AsyncResult<R> implements ScalarSubscri
     public void postFailure(Throwable throwable) {
         argument.postFailure(throwable);
     }
-/*
-    public void run() {
-        runFunction(argument.next());
-    }
-
-    protected void runFunction(T argument) {
-        try {
-            R res = fn.apply(argument);
-            result.complete(res);
-        } catch (Throwable e) {
-            result.completeExceptionally(e);
-        }
-    }
-*/
 }

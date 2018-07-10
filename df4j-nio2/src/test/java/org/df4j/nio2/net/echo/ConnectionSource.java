@@ -6,10 +6,10 @@ import org.df4j.core.connector.reactivestream.Publisher;
 import org.df4j.core.connector.reactivestream.ReactiveOutput;
 import org.df4j.core.connector.reactivestream.Subscriber;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncActionTask;
+import org.df4j.core.node.AsyncTask;
 import org.df4j.nio2.net.ServerConnection;
 
-public class ConnectionSource extends AsyncActionTask implements Publisher<ServerConnection>, ScalarCollector<ServerConnection> {
+public class ConnectionSource extends AsyncTask implements Publisher<ServerConnection>, ScalarCollector<ServerConnection> {
     Semafor allowedConnections = new Semafor(this);
     ReactiveOutput<ServerConnection> output = new ReactiveOutput<>(this);
     int serialnum=0;
