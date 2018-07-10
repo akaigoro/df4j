@@ -44,6 +44,27 @@ public class ActionCallerTest {
     }
 
     @Test
+    public void fieldWithAlienMethod() throws Exception {
+        WithFieldAndMethod wfm = new WithFieldAndMethod(null);
+        Function<Integer, Integer> f = wfm::dec;
+        ActionCaller<Object> ac = new ActionCaller<>(new WithField_1(f), 1);
+        Integer res1 = (Integer) ac.apply(TWO);
+        Assert.assertEquals(ONE, res1);
+        res1 = (Integer) ac.apply(FOUR);
+        Assert.assertEquals(THREE, res1);
+    }
+
+    @Test
+    public void fieldWithStaticMethod() throws Exception {
+        Function<Integer, Integer> f = WithFieldAndMethod::inc;
+        ActionCaller<Object> ac = new ActionCaller<>(new WithField_1(f), 1);
+        Integer res1 = (Integer) ac.apply(ONE);
+        Assert.assertEquals(TWO, res1);
+        Integer res2 = (Integer) ac.apply(TWO);
+        Assert.assertEquals(THREE, res2);
+    }
+
+    @Test
     public void nullFieldAndMethod() throws Exception {
         ActionCaller<Object> ac = new ActionCaller<>(new WithFieldAndMethod(null), 1);
         Integer res1 = (Integer) ac.apply(TWO);
@@ -90,5 +111,6 @@ public class ActionCallerTest {
 
         @Action
         public int dec(int arg) {return arg-1;}
+        public static int inc(int arg) {return arg+1;}
     }
 }

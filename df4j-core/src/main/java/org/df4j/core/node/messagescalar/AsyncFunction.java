@@ -42,7 +42,7 @@ public class AsyncFunction<T, R> extends AsyncResult<R> implements ScalarSubscri
     public void postFailure(Throwable throwable) {
         argument.postFailure(throwable);
     }
-
+/*
     public void run() {
         runFunction(argument.next());
     }
@@ -55,5 +55,5 @@ public class AsyncFunction<T, R> extends AsyncResult<R> implements ScalarSubscri
             result.completeExceptionally(e);
         }
     }
-
+*/
 }

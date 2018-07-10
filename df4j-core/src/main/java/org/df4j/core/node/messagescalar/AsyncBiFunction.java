@@ -26,14 +26,4 @@ public class AsyncBiFunction<U, V, R> extends AsyncActionTask<R> {
         this.fn = (a1, a2)->{action.run(); return null;};
     }
 
-@Action
-public void runFunction(U arg1, V arg2) {
-        try {
-            R res = fn.apply(arg1, arg2);
-            complete(res);
-        } catch (Throwable e) {
-            completeExceptionally(e);
-        }
-    }
-
 }

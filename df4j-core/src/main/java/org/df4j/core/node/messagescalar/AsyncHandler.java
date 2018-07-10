@@ -32,7 +32,7 @@ public class AsyncHandler<T, R> extends AsyncResult<R> implements ScalarSubscrib
     public void postFailure(Throwable throwable) {
         argument.postFailure(throwable);
     }
-
+/*
     public void run() {
         try {
             R res = handler.apply(argument.getValue(), argument.getException());
@@ -41,5 +41,5 @@ public class AsyncHandler<T, R> extends AsyncResult<R> implements ScalarSubscrib
             result.completeExceptionally(e);
         }
     }
-
+*/
 }
