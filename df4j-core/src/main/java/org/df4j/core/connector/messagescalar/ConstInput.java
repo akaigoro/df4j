@@ -32,7 +32,7 @@ public class ConstInput<T> extends AsyncTaskBase.Connector<T> implements ScalarS
         }
     }
 
-    public T current() {
+    public synchronized T current() {
         if (exception != null) {
             throw new IllegalStateException(exception);
         }

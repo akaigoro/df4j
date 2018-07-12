@@ -15,6 +15,7 @@ import org.df4j.core.connector.reactivestream.Subscriber;
 import org.df4j.core.connector.reactivestream.Subscription;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -27,13 +28,11 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections
  */
-public class AsyncServerSocketChannel extends AsyncTask
+public class AsyncServerSocketChannel extends Actor1<ServerConnection>
         implements Subscriber<ServerConnection>
         ,CompletionHandler<AsynchronousSocketChannel, ServerConnection>
 {
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
-
-    protected final ReactiveInput<ServerConnection> mainInput = new ReactiveInput<ServerConnection>(this);
     /**
      * prevents simultaneous channel.accept()
      */
@@ -72,34 +71,10 @@ public class AsyncServerSocketChannel extends AsyncTask
         }
     }
 
-
     @Override
     public void onSubscribe(Subscription subscription) {
-        mainInput.onSubscribe(subscription);
+        super.onSubscribe(subscription);
         subscription.request(connCount);
-    }
-
-    @Override
-    public void post(ServerConnection m) {
-        mainInput.post(m);
-    }
-
-    @Override
-    public void postFailure(Throwable ex) {
-        mainInput.postFailure(ex);
-    }
-
-    /**
-     * processes closing signal
-     * @throws Exception
-     */
-    @Override
-    public void complete() {
-        mainInput.complete();
-    }
-
-    public boolean isClosed() {
-        return mainInput.isClosed();
     }
 
     /**

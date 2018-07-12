@@ -14,18 +14,17 @@ import org.df4j.core.connector.messagestream.StreamSubscriber;
 import org.df4j.core.connector.messagestream.StreamInput;
 
 /**
- * A dataflow AsyncTask with one predefined input stream port.
- * This type of AsyncTask mimics the Actors described by Carl Hewitt.
+ * A dataflow Actor with one predefined input stream port.
+ * It mimics the Actors described by Carl Hewitt.
  * This class, however, still can have other (named) ports.
- * @param <M> the type of accepted messages.
+ * @param <M> the type of messages, accepted via predefined port.
  */
 public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
     protected final StreamInput<M> mainInput = new StreamInput<M>(this);
-    protected SimpleSubscription subscription;
 
     @Override
-    public void onSubscribe(SimpleSubscription subscription) {
-        this.subscription = subscription;
+    public synchronized void onSubscribe(SimpleSubscription subscription) {
+        mainInput.onSubscribe(subscription);
     }
 
     @Override

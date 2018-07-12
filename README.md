@@ -36,12 +36,26 @@ but a combination of two more simple protocols.
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
 
-Look at the (outdated) documentation at <https://github.com/akaigoro/df4j/wiki>
-
 See examples and test directories for various custom-made dataflow objects and their usage.
 
 If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
+
+How to write parallel programs
+----------------------------------
+First, represent your design as a dataflow graph, with nodes representing computations, and arcs representing data transitions. 
+The nodes of that graph will be called here "activities". 
+Activities can be of two kinds: threads and asynchronous procedures, otherwise named actors.
+Threads are more capable, but require much more core memory.
+The hard part ofparallel programming is communications between activities, so creating a parallel program is mainly creating communications.
+The nature of activities (threads or actors) is not that important.
+
+Communication between synchronous (ordinary) procedures is donr=e by mere writing and reading parameters and return values, mapped on memory cells.
+Communication between parallel activities is complicated because reader activity can be ready to accept value which writer activity has not yet computed.
+In this cases, threads block until value is available. 
+Actors cannot block, as blocking switches off the thread, occupied by the actor, out of service, and the advantage of actors as consuming little memory is lost.
+Instead, every point of the algorithm where new data are awaited, must be shaped as a separate actor.  
+
 
 Version history
 ---------------

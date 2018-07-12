@@ -8,7 +8,7 @@ import java.util.concurrent.Executor;
 /**
  * this class contains components, likely useful in each async node:
  *  - control pin
- *  - action Caller
+ *  - action caller
  *
  * @param <R>
  */
