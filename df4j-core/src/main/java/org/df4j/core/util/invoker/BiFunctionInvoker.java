@@ -13,4 +13,8 @@ public class BiFunctionInvoker<U,V,R> extends AbstractInvoker<BiFunction<U,V,R>,
         return function.apply((U) args[0], (V) args[1]);
     }
 
+    @Override
+    public boolean returnsValue() {
+        return true;
+    }
 }

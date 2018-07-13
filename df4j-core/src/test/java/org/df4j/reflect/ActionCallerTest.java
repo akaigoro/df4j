@@ -39,6 +39,7 @@ public class ActionCallerTest {
     public void notNullField() throws Exception {
         Function<Integer, Integer> f = (v)->v*2;
         Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
+        Assert.assertTrue(ac.returnsValue());
         Integer res1 = (Integer) ac.apply(ONE);
         Assert.assertEquals(TWO, res1);
         Integer res2 = (Integer) ac.apply(TWO);
@@ -50,6 +51,7 @@ public class ActionCallerTest {
         WithFieldAndMethod wfm = new WithFieldAndMethod(null);
         Function<Integer, Integer> f = wfm::dec;
         Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
+        Assert.assertTrue(ac.returnsValue());
         Integer res1 = (Integer) ac.apply(TWO);
         Assert.assertEquals(ONE, res1);
         res1 = (Integer) ac.apply(FOUR);
@@ -60,6 +62,7 @@ public class ActionCallerTest {
     public void fieldWithStaticMethod() throws Exception {
         Function<Integer, Integer> f = WithFieldAndMethod::inc;
         Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
+        Assert.assertTrue(ac.returnsValue());
         Integer res1 = (Integer) ac.apply(ONE);
         Assert.assertEquals(TWO, res1);
         Integer res2 = (Integer) ac.apply(TWO);
@@ -69,6 +72,7 @@ public class ActionCallerTest {
     @Test
     public void nullFieldAndMethod() throws Exception {
         Invoker ac = ActionCaller.findAction(new WithFieldAndMethod(null), 1);
+        Assert.assertTrue(ac.returnsValue());
         Integer res1 = (Integer) ac.apply(TWO);
         Assert.assertEquals(ONE, res1);
         res1 = (Integer) ac.apply(FOUR);
@@ -84,6 +88,19 @@ public class ActionCallerTest {
         Integer res2 = (Integer) ac.apply(TWO);
         Assert.assertEquals(FOUR, res2);
     }
+
+    @Test
+    public void methodOnly() throws Exception {
+        Invoker p = ActionCaller.findAction(new WithProc(), 0);
+        Assert.assertFalse(p.returnsValue());
+        Object res = p.apply();
+        Assert.assertNull(res);
+        Invoker<Integer> f = ActionCaller.findAction(new WithFunc(), 0);
+        Assert.assertTrue(f.returnsValue());
+        Object res2 = f.apply();
+        Assert.assertEquals(137, res2);
+    }
+
 
     static class Empty {}
 
@@ -113,6 +130,21 @@ public class ActionCallerTest {
 
         @Action
         public int dec(int arg) {return arg-1;}
+
         public static int inc(int arg) {return arg+1;}
+    }
+
+    static class WithProc {
+        @Action
+        public void proc() {
+
+        }
+    }
+
+    static class WithFunc {
+        @Action
+        public int func() {
+            return 137;
+        }
     }
 }

@@ -26,9 +26,8 @@ public class AsyncHandler<T,R> extends AsyncResult<R> implements ScalarSubscribe
     }
 
     @Action
-    public void act(Pair<T, Throwable> arg) {
-        R res = action.apply(arg.t, arg.u);
-        complete(res);
+    public R act(Pair<T, Throwable> arg) {
+        return action.apply(arg.t, arg.u);
     }
 
 }

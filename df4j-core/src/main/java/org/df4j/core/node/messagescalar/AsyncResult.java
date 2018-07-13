@@ -51,14 +51,10 @@ public class AsyncResult<R> extends AsyncTask<R> implements ScalarPublisher<R> {
     }
 
     @Override
-    public void run() {
-        try {
-            R res = runAction();
-            complete(res); // wrong
-        } catch (Throwable e) {
-            stop();
-            completeExceptionally(e);
-        }
+    protected R runAction() throws Exception {
+        R value = super.runAction();
+        result.complete(value);
+        return value;
     }
 
     public String toString() {

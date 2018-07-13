@@ -5,10 +5,13 @@ import java.lang.reflect.Method;
 public class MethodInvoker<R> implements Invoker<R> {
     private final Object actionObject;
     private final Method actionMethod;
+    private final boolean returnsValue;
 
     public MethodInvoker(Object actionObject, Method actionMethod) {
         this.actionObject = actionObject;
         this.actionMethod = actionMethod;
+        Class<?> rt = actionMethod.getReturnType();
+        returnsValue = !rt.equals(void.class);
     }
 
     @Override
@@ -21,4 +24,8 @@ public class MethodInvoker<R> implements Invoker<R> {
         return (R) res;
     }
 
+    @Override
+    public boolean returnsValue() {
+        return returnsValue;
+    }
 }

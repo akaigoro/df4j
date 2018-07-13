@@ -66,9 +66,8 @@ public class AsyncTaskTest {
         ConstInput<Double> pc = new ConstInput<>(this);
 
         @Action
-        public void act(Double a, Double b, Double c) {
-            double d = b*b - 4*a*c;
-            complete(d);
+        public double act(Double a, Double b, Double c) {
+            return b*b - 4*a*c;
         }
     }
 
@@ -103,17 +102,15 @@ public class AsyncTaskTest {
         ConstInput<Double> pd = new ConstInput<>(this);
 
         @Action
-        public void act(Double a, Double b, Double d) {
-            double[] res;
+        public double[] act(Double a, Double b, Double d) {
             if (d < 0) {
-                res = new double[0];
+                return new double[0];
             } else {
                 double sqrt_d = Math.sqrt(d);
                 double root1 = (-b - sqrt_d)/(2*a);
                 double root2 = (-b + sqrt_d)/(2*a);
-                res = new double[]{root1, root2};
+                return new double[]{root1, root2};
             }
-            this.result.complete(res);
         }
     }
 

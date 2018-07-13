@@ -9,6 +9,7 @@ public class Actor extends AsyncTask<Void> {
     @Override
     public void run() {
         try {
+            controlLock.turnOff();
             runAction();
             start(); // restart execution
         } catch (Throwable e) {

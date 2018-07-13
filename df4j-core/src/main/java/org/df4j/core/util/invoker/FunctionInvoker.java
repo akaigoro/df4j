@@ -13,4 +13,9 @@ public class FunctionInvoker<U,R> extends AbstractInvoker<Function<U,R>, R> {
         return function.apply((U) args[0]);
     }
 
+    @Override
+    public boolean returnsValue() {
+        return true;
+    }
+
 }

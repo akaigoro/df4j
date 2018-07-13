@@ -14,7 +14,7 @@ import java.util.concurrent.Executor;
  */
 public class AsyncTask<R> extends AsyncTaskBase {
 
-    private Invoker<R> actionMethod;
+    protected Invoker<R> actionMethod;
     protected volatile boolean started = false;
     protected volatile boolean stopped = false;
 
@@ -67,7 +67,6 @@ public class AsyncTask<R> extends AsyncTaskBase {
     }
 
     protected R runAction() throws Exception {
-        controlLock.turnOff();
         if (actionMethod == null) {
             try {
                 actionMethod = ActionCaller.findAction(this, connectors.size());
@@ -83,7 +82,8 @@ public class AsyncTask<R> extends AsyncTaskBase {
     @Override
     public void run() {
         try {
-            R res = runAction();
+            controlLock.turnOff();
+            runAction();
         } catch (Throwable e) {
             stop();
         }
