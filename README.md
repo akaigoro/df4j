@@ -14,13 +14,21 @@ and add new ones.
 
 The main results of this work are listed below. Some of them look evident, but listed for completeness.
 
-1. Asynchronous computation consists of asynchronous (and likely parallel) procedure calls.
-2. Dataflow graph consists of asynchronous procedures.
-3. Asynchronous procedure consists of parameters, user-defined synchronous procedure, reference to an Executor and an object that glues all that components together.
+1. Parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
+Activities compute tokens (values and signals), connectors pass them between activities.
+2. Activities can be of two kinds: threads and asynchronous procedures.
+3. Connectors can be bound to a specific async node and defer node's execution until feed with a token. 
+Such connectors plays role of parameters for the asynchronous procedure thay are bounded to.
+3. Asynchronous procedure consists of:
+  - asynchronous parameters (bound connectors),
+  - user-defined synchronous procedure,
+  - reference to an Executor, and
+  - an object that glues all that components together.
+  
 Below this object is referenced as a "node of dataflow graph", or just a "node".
-4. Parameters, or, better say, connectors, can be used for input and output.
+4. Parameters can be used for input and output.
 Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output parameters are necessary. 
-A node can have multiple output parameters.
+A node can have multiple input and multiple output parameters.
 5. Nodes are connected by their connectors: output connector of one node is connected to input connector of another node.
 It is also possible for single connector to serve both as an output connector for one node and input connector for another node.
 6. Connectors can implement different exchange protocols. Connected connectors must implement the same protocol.
@@ -43,7 +51,7 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 [df4j-core tutorial](/df4j-core/README.md)
 
-[df4j-nio tutorial](/df4j-nio/README.md)
+[df4j-nio2 tutorial](/df4j-nio2/README.md)
 
 Version history
 ---------------

@@ -1,12 +1,12 @@
 package org.df4j.core.connector.permitstream;
 
 import org.df4j.core.connector.messagescalar.SimpleSubscription;
-import org.df4j.core.connector.reactivestream.Subscription;
+import org.df4j.core.connector.reactivestream.ReactiveSubscription;
 
 /**
  *  inlet for permits.
  *
- *  method descriptions are taken from description of class {@link Subscription}.
+ *  method descriptions are taken from description of class {@link ReactiveSubscription}.
  */
 public interface PermitSubscriber {
     /**

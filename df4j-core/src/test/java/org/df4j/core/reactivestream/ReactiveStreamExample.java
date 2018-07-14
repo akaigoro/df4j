@@ -68,7 +68,7 @@ public class ReactiveStreamExample {
     /**
      * emits totalNumber of Integers and closes the stream
      */
-    static class Source extends Actor implements Publisher<Integer> {
+    static class Source extends Actor implements ReactivePublisher<Integer> {
         ReactiveOutput<Integer> pub = new ReactiveOutput<>(this);
         int val = 0;
         CountDownLatch fin;
@@ -79,7 +79,7 @@ public class ReactiveStreamExample {
         }
 
         @Override
-        public <S extends Subscriber<? super Integer>> S subscribe(S subscriber) {
+        public <S extends ReactiveSubscriber<? super Integer>> S subscribe(S subscriber) {
             pub.subscribe(subscriber);
             return subscriber;
         }
@@ -102,7 +102,7 @@ public class ReactiveStreamExample {
     /**
      * receives totalNumber of Integers and cancels the subscription
      */
-    static class Sink extends Actor implements Subscriber<Integer> {
+    static class Sink extends Actor implements ReactiveSubscriber<Integer> {
         int totalNumber;
         ReactiveInput<Integer> subscriber;
         final CountDownLatch fin;
@@ -123,7 +123,7 @@ public class ReactiveStreamExample {
         }
 
         @Override
-        public void onSubscribe(Subscription subscription) {
+        public void onSubscribe(ReactiveSubscription subscription) {
             subscriber.onSubscribe(subscription);
         }
 

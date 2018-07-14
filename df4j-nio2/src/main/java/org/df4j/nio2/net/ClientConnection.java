@@ -24,7 +24,7 @@ public class ClientConnection extends AsyncSocketChannel
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        super.init(channel);
+        super.post(channel);
     }
 
     @Override

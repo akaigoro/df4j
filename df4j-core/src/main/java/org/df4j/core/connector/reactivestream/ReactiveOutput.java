@@ -16,9 +16,9 @@ import java.util.function.Consumer;
  *
  * @param <M>
  */
-public class ReactiveOutput<M> extends AsyncTaskBase.Lock implements Publisher<M>, StreamCollector<M> {
+public class ReactiveOutput<M> extends AsyncTaskBase.Lock implements ReactivePublisher<M>, StreamCollector<M> {
     protected AsyncTaskBase base;
-    protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
+    protected Set<SimpleReactiveSubscriptionImpl> subscriptions = new HashSet<>();
 
     public ReactiveOutput(AsyncTaskBase base) {
         base.super(false);
@@ -26,8 +26,8 @@ public class ReactiveOutput<M> extends AsyncTaskBase.Lock implements Publisher<M
     }
 
     @Override
-    public <S extends Subscriber<? super M>> S subscribe(S subscriber) {
-        SimpleSubscriptionImpl newSubscription = new SimpleSubscriptionImpl(subscriber);
+    public <S extends ReactiveSubscriber<? super M>> S subscribe(S subscriber) {
+        SimpleReactiveSubscriptionImpl newSubscription = new SimpleReactiveSubscriptionImpl(subscriber);
         subscriptions.add(newSubscription);
         subscriber.onSubscribe(newSubscription);
         return subscriber;
@@ -42,7 +42,7 @@ public class ReactiveOutput<M> extends AsyncTaskBase.Lock implements Publisher<M
         return super.isBlocked();
     }
 
-    public void forEachSubscription(Consumer<? super SimpleSubscriptionImpl> operator) {
+    public void forEachSubscription(Consumer<? super SimpleReactiveSubscriptionImpl> operator) {
         if (closed()) {
             return; // completed already
         }
@@ -60,14 +60,14 @@ public class ReactiveOutput<M> extends AsyncTaskBase.Lock implements Publisher<M
     }
 
     public synchronized void complete() {
-        forEachSubscription(SimpleSubscriptionImpl::complete);
+        forEachSubscription(SimpleReactiveSubscriptionImpl::complete);
     }
 
-    class SimpleSubscriptionImpl extends Semafor implements Subscription {
-        protected Subscriber<? super M> subscriber;
+    class SimpleReactiveSubscriptionImpl extends Semafor implements ReactiveSubscription {
+        protected ReactiveSubscriber<? super M> subscriber;
         private volatile boolean closed = false;
 
-        public SimpleSubscriptionImpl(Subscriber<? super M> subscriber) {
+        public SimpleReactiveSubscriptionImpl(ReactiveSubscriber<? super M> subscriber) {
             super(base);
             if (subscriber == null) {
                 throw new NullPointerException();

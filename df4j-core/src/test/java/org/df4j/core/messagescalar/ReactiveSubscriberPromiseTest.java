@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class SubscriberPromiseTest {
+public class ReactiveSubscriberPromiseTest {
 
     @Test
     public void singleSubscriberTest() throws InterruptedException, ExecutionException, TimeoutException {

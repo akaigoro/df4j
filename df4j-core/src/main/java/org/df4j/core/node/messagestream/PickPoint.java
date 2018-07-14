@@ -1,30 +1,39 @@
 package org.df4j.core.node.messagestream;
 
+import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
+import org.df4j.core.connector.messagescalar.SimpleSubscription;
 import org.df4j.core.connector.messagestream.StreamCollector;
+import org.df4j.core.connector.messagestream.StreamSubscriber;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.function.Function;
 
 /**
  * An asynchronous analogue of BlockingQueue
  *  (only on output end, while from the input side it does not block)
  * @param <T>
  */
-public class PickPoint<T> implements StreamCollector<T>, ScalarPublisher<T>, BlockingQueue<T> {
+public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, BlockingQueue<T> {
     private boolean completed = false;
 	/** place for demands */
 	private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
 	/** place for resources */
 	private Queue<T> resources = new ArrayDeque<>();
 
+	private SimpleSubscription subscription;
+
     public synchronized boolean isCompleted() {
         return completed;
+    }
+
+    public void onSubscribe(SimpleSubscription subscription){
+        this.subscription = subscription;
     }
 
     @Override
@@ -111,19 +120,35 @@ public class PickPoint<T> implements StreamCollector<T>, ScalarPublisher<T>, Blo
     }
 
     @Override
-    public synchronized T take() throws InterruptedException {
-        while (resources.isEmpty()) {
-            wait();
+    public T take() throws InterruptedException {
+        synchronized(this) {
+            if (!resources.isEmpty() && requests.isEmpty()) {
+                return resources.remove();
+            }
         }
-        return resources.remove();
+        CompletablePromise<T> future = new CompletablePromise<>();
+        subscribe(future);
+        try {
+            return future.get();
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
-    public synchronized T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        while (resources.isEmpty()) {
-            wait(unit.toMillis(timeout));
+    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
+        synchronized(this) {
+            if (!resources.isEmpty() && requests.isEmpty()) {
+                return resources.remove();
+            }
         }
-        return resources.poll();
+        CompletablePromise<T> future = new CompletablePromise<>();
+        subscribe(future);
+        try {
+            return future.get(timeout, unit);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -201,4 +226,7 @@ public class PickPoint<T> implements StreamCollector<T>, ScalarPublisher<T>, Blo
         throw new UnsupportedOperationException();
     }
 
+    static class ThreadSupscriber {
+
+    }
 }

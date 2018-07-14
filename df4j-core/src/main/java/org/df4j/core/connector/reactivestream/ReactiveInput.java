@@ -12,11 +12,11 @@ import java.util.Iterator;
  *
  * @param <T>
  */
-public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T>, Iterator<T> {
+public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscriber<T>, Iterator<T> {
     protected Deque<T> queue;
     protected boolean closeRequested = false;
     protected int capacity;
-    protected Subscription subscription;
+    protected ReactiveSubscription subscription;
 
     public ReactiveInput(AsyncTaskBase actor, int capacity) {
         super(actor);
@@ -33,7 +33,7 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T>, I
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
+    public void onSubscribe(ReactiveSubscription subscription) {
         this.subscription = subscription;
         subscription.request(capacity);
     }

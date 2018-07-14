@@ -9,13 +9,14 @@
  */
 package org.df4j.nio2.net;
 
+import org.df4j.core.connector.messagescalar.ScalarPublisher;
+import org.df4j.core.connector.messagescalar.ScalarSubscriber;
+import org.df4j.core.connector.messagestream.StreamInput;
 import org.df4j.core.connector.permitstream.Semafor;
 import org.df4j.core.connector.reactivestream.ReactiveInput;
-import org.df4j.core.connector.reactivestream.Subscriber;
-import org.df4j.core.connector.reactivestream.Subscription;
+import org.df4j.core.connector.reactivestream.ReactiveSubscription;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncTask;
-import org.df4j.core.node.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -24,37 +25,43 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
- * Accepts incoming connections
+ * Accepts incoming connections, pushes them pu subscribers
+ *
+ * though it extends AsyncTask, it is effectively an Actor
  */
-public class AsyncServerSocketChannel extends Actor1<ServerConnection>
-        implements Subscriber<ServerConnection>
-        ,CompletionHandler<AsynchronousSocketChannel, ServerConnection>
+public class AsyncServerSocketChannel
+        extends AsyncTask<AsynchronousSocketChannel>
+        implements ScalarPublisher<AsynchronousSocketChannel>,
+        CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel>
 {
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
-    /**
-     * prevents simultaneous channel.accept()
-     */
-    protected Semafor acceptAllowed = new Semafor(this);
 
-    /**
-     * limits the total number of active connections.
-     * protected Semafor allowedCnnections = new Semafor(this);
-     */
+    /** place for demands */
+    private StreamInput<ScalarSubscriber<? super AsynchronousSocketChannel>> requests = new StreamInput<>(this);
+    
     protected volatile AsynchronousServerSocketChannel assc;
     /** max number of connections in input queue */
-    int connCount;
+    ReactiveSubscription subscription;
 
-    public AsyncServerSocketChannel(SocketAddress addr, int connCount) throws IOException {
+    public AsyncServerSocketChannel(SocketAddress addr) throws IOException {
         if (addr == null) {
             throw new NullPointerException();
         }
-        this.connCount = connCount;
         assc = AsynchronousServerSocketChannel.open();
         assc.bind(addr);
-        acceptAllowed.release();
-        LOG.config("AsyncServerSocketChannel("+connCount+") created");
+        this.start();
+        LOG.config("AsyncServerSocketChannel("+addr+") created");
+    }
+
+
+    @Override
+    public <S extends ScalarSubscriber<? super AsynchronousSocketChannel>> S subscribe(S subscriber) {
+        requests.post(subscriber);
+        return subscriber;
     }
 
     public synchronized void close() {
@@ -71,43 +78,24 @@ public class AsyncServerSocketChannel extends Actor1<ServerConnection>
         }
     }
 
-    @Override
-    public void onSubscribe(Subscription subscription) {
-        super.onSubscribe(subscription);
-        subscription.request(connCount);
-    }
-
-    /**
-     * the input stream completed
-     */
-    protected void onCompleted() {}
-
     //====================== Dataflow backend
 
-    /**
-     * process the retrieved tokens.
-     * @throws Exception
-     */
     @Action
-    protected void act(ServerConnection message) {
-        if (message==null) {
-            onCompleted();
-        } else {
-            try {
-                assc.accept(message, this);
-            } catch (Exception e) {
-                close();
-            }
+    public void accept(AsyncSocketChannel connection) {
+        try {
+            assc.accept(connection, this);
+        } catch (Exception e) {
+            close();
         }
     }
 
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel result, ServerConnection conn) {
-        LOG.info("AsynchronousServerSocketChannel: accepted "+conn);
-        conn.init(result);
-        acceptAllowed.release(); // allow assc.accpt()
+    public void completed(AsynchronousSocketChannel result, AsyncSocketChannel connection) {
+        LOG.info("AsynchronousServerSocketChannel: accepted "+connection.toString());
+        connection.post(result);
+        this.start(); // allow  next assc.accpt()
     }
 
     /**
@@ -115,13 +103,13 @@ public class AsyncServerSocketChannel extends Actor1<ServerConnection>
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, ServerConnection conn) {
-        conn.postFailure(exc);
+    public void failed(Throwable exc, AsyncSocketChannel connection) {
+        connection.postFailure(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.
             close();
         } else {
-            acceptAllowed.release();
+            this.start(); // TODO should we allow  next assc.accpt()?
         }
     }
 }

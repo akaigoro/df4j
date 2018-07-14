@@ -13,16 +13,40 @@ import java.util.function.*;
  *
  * @param <T>
  */
-public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
+public class CompletablePromise<T> implements ScalarSubscriber<T>,
+        ScalarPublisher<T>, Future<T> {
     private static Executor syncExec = SameThreadExecutor.sameThreadExecutor;
     private static Executor asyncExec = ForkJoinPool.commonPool();
 
+    protected SimpleSubscription subscription;
     /** place for demands */
     private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
     protected boolean cancelled = false;
     protected boolean completed = false;
     protected T result = null;
     protected Throwable exception;
+
+    @Override
+    public void post(T message) {
+        complete(message);
+    }
+
+    @Override
+    public void postFailure(Throwable ex) {
+        completeExceptionally(ex);
+    }
+
+    @Override
+    public void onSubscribe(SimpleSubscription subscription) {
+        if (cancelled) {
+            throw new IllegalStateException("cancelled already");
+        }
+        if (completed) {
+            throw new IllegalStateException("completed already");
+        }
+        this.subscription = subscription;
+    }
+
 
     @Override
     public synchronized <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber) {
@@ -72,6 +96,9 @@ public class CompletablePromise<T> implements ScalarPublisher<T>, Future<T> {
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
         cancelled = true;
+        if (subscription != null) {
+            subscription.cancel();
+        }
         return completeExceptionally(new CancellationException());
     }
 

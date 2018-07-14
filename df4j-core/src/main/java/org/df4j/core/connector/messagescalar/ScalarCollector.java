@@ -14,6 +14,7 @@ package org.df4j.core.connector.messagescalar;
  * scalar inlet for messages
  * @param <M> the type of the message
  */
+@FunctionalInterface
 public interface ScalarCollector<M> {
 
     /**

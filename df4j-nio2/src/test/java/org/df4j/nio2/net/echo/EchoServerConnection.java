@@ -1,28 +1,16 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.connector.messagescalar.ScalarCollector;
-import org.df4j.core.node.Action;
+import org.df4j.nio2.net.AsyncSocketChannel;
 import org.df4j.nio2.net.ServerConnection;
-import org.df4j.nio2.net.BuffProcessor;
-
-import java.nio.ByteBuffer;
 
 public class EchoServerConnection extends ServerConnection {
-    EchoProcessor echoProcessor = new EchoProcessor();
 
-    public EchoServerConnection(ScalarCollector backport) {
+    public EchoServerConnection(ScalarCollector<AsyncSocketChannel> backport) {
         super(backport);
-        reader.subscribe(echoProcessor).subscribe(writer).subscribe(reader);
-        reader.injectBuffers(1, 128);
-        echoProcessor.start();
+        reader.output.subscribe(writer.input);
+        writer.output.subscribe(reader.input);
+        reader.injectBuffers(2, 128);
         LOG.config(getClass().getName()+" created");
-    }
-
-    class EchoProcessor extends BuffProcessor {
-
-        @Action
-        protected void act(ByteBuffer buf) throws Exception {
-            output.post(buf);
-        }
     }
 }
