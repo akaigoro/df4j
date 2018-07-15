@@ -14,10 +14,10 @@ public class ClientConnection extends AsyncSocketChannel
      *
      * @throws IOException
      */
-    public ClientConnection(SocketAddress addr) throws IOException, InterruptedException {
+    public ClientConnection(String name, SocketAddress addr) throws IOException, InterruptedException {
+        super(name);
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open();
         channel.connect(addr, channel, this);
-        name = "ClientConnection";
     }
 
     //=====================  CompletionHandler callbacks

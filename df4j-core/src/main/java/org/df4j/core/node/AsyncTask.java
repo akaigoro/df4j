@@ -14,7 +14,7 @@ import java.util.concurrent.Executor;
  */
 public class AsyncTask<R> extends AsyncTaskBase {
 
-    protected Invoker<R> actionMethod;
+    protected Invoker<R> actionCaller;
     protected volatile boolean started = false;
     protected volatile boolean stopped = false;
 
@@ -27,8 +27,8 @@ public class AsyncTask<R> extends AsyncTaskBase {
     public AsyncTask() {
     }
 
-    public AsyncTask(Invoker<R> actionMethod) {
-        this.actionMethod = actionMethod;
+    public AsyncTask(Invoker<R> actionCaller) {
+        this.actionCaller = actionCaller;
     }
 
     public boolean isStarted() {
@@ -67,15 +67,15 @@ public class AsyncTask<R> extends AsyncTaskBase {
     }
 
     protected R runAction() throws Exception {
-        if (actionMethod == null) {
+        if (actionCaller == null) {
             try {
-                actionMethod = ActionCaller.findAction(this, connectors.size());
+                actionCaller = ActionCaller.findAction(this, connectors.size());
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }
         }
         Object[] args = consumeTokens();
-        R  res = actionMethod.apply(args);
+        R  res = actionCaller.apply(args);
         return res;
     }
 

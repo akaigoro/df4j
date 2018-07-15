@@ -53,7 +53,7 @@ public class AsyncServerSocketChannel
         }
         assc = AsynchronousServerSocketChannel.open();
         assc.bind(addr);
-        this.start();
+        this.start(directExecutor);
         LOG.config("AsyncServerSocketChannel("+addr+") created");
     }
 
@@ -93,7 +93,7 @@ public class AsyncServerSocketChannel
 
     @Override
     public void completed(AsynchronousSocketChannel result, AsyncSocketChannel connection) {
-        LOG.info("AsynchronousServerSocketChannel: accepted "+connection.toString());
+        LOG.finest("AsynchronousServerSocketChannel: request accepted");
         connection.post(result);
         this.start(); // allow  next assc.accpt()
     }
@@ -109,7 +109,7 @@ public class AsyncServerSocketChannel
             // channel closed.
             close();
         } else {
-            this.start(); // TODO should we allow  next assc.accpt()?
+            this.start(); // TODO should we allow  next assc.accpt() after call to failed()?
         }
     }
 }

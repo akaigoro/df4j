@@ -1,21 +1,14 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.connector.messagescalar.CompletablePromise;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.messagestream.Actor1;
 import org.df4j.core.node.messagestream.PickPoint;
-import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -26,95 +19,44 @@ import java.util.concurrent.TimeoutException;
  *     |<------------------------------------------------------------|                                                             |
  */
 public  class EchoTest {
-    static final int BUF_SIZE = 128;
     static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
-    static final Charset charset = Charset.defaultCharset();
 
-    ConnectionManager connectionManager;
+    static ConnectionManager connectionManager;
 
-    @Before
-    public void init() throws IOException {
-        connectionManager = new ConnectionManager(local9990,2);
-        connectionManager.start();
+    @BeforeClass
+    public static synchronized void init() throws IOException {
+        if (connectionManager==null) {
+            connectionManager = new ConnectionManager(local9990,2);
+            connectionManager.start();
+        }
     }
 
-    @After
-    public void close() {
-        connectionManager.close();
-    }
-    
-    /**
-     * send a message from client to server 
-     */
-    @Test
-    public void smokeIOTest() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        String message="hi there";
-        ClientConnection clientConn = new ClientConnection(local9990);
-        ByteBuffer buf=ByteBuffer.allocate(BUF_SIZE);
-        byte[] src = message.getBytes(charset);
-        buf.put(src);
-        clientConn.writer.input.post(buf);
-        PickPoint<ByteBuffer> collector = new PickPoint<>();
-        clientConn.reader.input.post(buf);
-        clientConn.writer.output.subscribe(collector);
-        ByteBuffer b = collector.poll(1, TimeUnit.SECONDS);
-        Assert.assertEquals(buf, b);
+    @AfterClass
+    public static synchronized void close() {
+        if (connectionManager!=null) {
+            connectionManager.close();
+            connectionManager = null;
+        }
     }
 
     @Test
-    public void ClientTest1() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        Client client = new Client(local9990, 10);
-        client.result.get(5, TimeUnit.SECONDS);
+    public void ClientTest_1() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+        EchoClient client = new EchoClient(local9990, 1);
+        client.start();
+        client.result.get(1, TimeUnit.SECONDS);
     }
 
-
-    static class Client extends Actor1<ByteBuffer> {
-        protected static final Logger LOG = Logger.getLogger(Client.class.getName());
-
-        CompletablePromise<Void> result = new CompletablePromise<>();
-        String message="hi there";
-        ClientConnection clientConn;
-        ByteBuffer buf;
-        int count;
-
-        @Override
-        public void postFailure(Throwable ex) {
-            result.completeExceptionally(ex);
+    @Test
+    public void ClientTest_4x4() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+        ArrayList<EchoClient> clients = new ArrayList<>();
+        for (int k=0; k<4; k++)  {
+            EchoClient client = new EchoClient(local9990, 4);
+            client.start();
+            clients.add(client);
         }
-
-        /**
-         * Starts connection to a server. IO requests can be queued immediately,
-         * but will be executed only after connection completes.
-         *
-         * @param addr
-         * @param i
-         * @throws IOException
-         */
-        public Client(SocketAddress addr, int count) throws IOException, InterruptedException {
-            this.count = count;
-            clientConn = new ClientConnection(addr);
-            clientConn.writer.output.subscribe(this);
-            buf = ByteBuffer.allocate(128);
-            byte[] src = message.getBytes(charset);
-            buf.put(src);
-            clientConn.writer.input.post(buf);
-        }
-
-        @Action
-        public void onBufRead(ByteBuffer b) {
-            String m2 = new String(b.array(), charset);
-            LOG.info("client received message:"+m2);
-            Assert.assertEquals(message, m2);
-            count--;
-            if (count==0) {
-                LOG.info("client finished successfully");
-                result.complete(null);
-                stop();
-                return;
-            }
-            clientConn.writer.input.post(b);
+        for (EchoClient client: clients) {
+            client.result.get(2, TimeUnit.SECONDS);
         }
     }
-
 
 }

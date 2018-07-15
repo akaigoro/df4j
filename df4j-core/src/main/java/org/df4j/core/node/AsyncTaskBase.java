@@ -9,6 +9,7 @@
  */
 package org.df4j.core.node;
 
+import org.df4j.core.util.DirectExecutor;
 import org.df4j.core.util.SameThreadExecutor;
 
 import java.util.ArrayList;
@@ -24,12 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * user-defined asynchronous procedure, and a mechanism to call that procedure
  * using supplied {@link java.util.concurrent.Executor} as soon as all connectors are unblocked.
  *
- * This class contains connectors for following protocols:
- *  - scalar messages
- *  - message stream (without back pressure)
- *  - permit stream
+ * This class contains base classes for locks and connectors
  */
 public abstract class AsyncTaskBase implements Runnable {
+    public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
+    static public final SameThreadExecutor sameThreadExecutor = SameThreadExecutor.sameThreadExecutor;
 
     /**
      * the set of all b/w Pins

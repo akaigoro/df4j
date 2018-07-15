@@ -31,9 +31,8 @@ import java.nio.channels.AsynchronousSocketChannel;
  */
 public class ServerConnection extends AsyncSocketChannel {
 
-    public ServerConnection(ScalarCollector backport) {
-        super(backport);
-        name = "ServerConnection";
+    public ServerConnection(String name, ScalarCollector backport) {
+        super(name, backport);
     }
 
 }

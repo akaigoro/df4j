@@ -28,7 +28,7 @@ public class ConnectionManager extends AsyncTask {
 
     @Action
     protected void act() {
-        ServerConnection conn = new EchoServerConnection(backport);
+        ServerConnection conn = new EchoServer(backport);
         conn.name = "EchoServerConnection"+(serialnum++);
         assc.subscribe(conn);
     }

@@ -66,6 +66,7 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
         }
         this.result = result;
         this.completed = true;
+        notifyAll();
         for (ScalarSubscriber<? super T> subscriber: requests) {
             subscriber.post(result);
         }
@@ -138,7 +139,7 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
     public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         long end = System.currentTimeMillis()+ unit.toMillis(timeout);
         for (;;) {
-            if (result != null) {
+            if (completed) {
                 return result;
             } else if (exception != null) {
                 throwStoredException();
