@@ -3,7 +3,7 @@ package org.df4j.core.node.messagescalar;
 import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.AsyncProc;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
 import org.df4j.core.util.invoker.SupplierInvoker;
@@ -12,23 +12,28 @@ import java.util.function.Supplier;
 
 /**
  * Base class for scalar nodes
+ * Has predefined unbound output connector to keep the result of computation.
+ *
+ * Even if the computation does not produce a resulting value,
+ * that connector is useful to monitor the end of the computation.
+ *
  * @param <R>
  */
-public class AsyncResult<R> extends AsyncTask<R> implements ScalarPublisher<R> {
+public class AsyncFunc<R> extends AsyncProc<R> implements ScalarPublisher<R> {
     /** place for demands */
     protected final CompletablePromise<R> result = new CompletablePromise<>();
 
-    public AsyncResult() {}
+    public AsyncFunc() {}
 
-    public AsyncResult(Invoker<R> invoker) {
+    public AsyncFunc(Invoker<R> invoker) {
         super(invoker);
     }
 
-    public AsyncResult(Supplier<R> proc) {
+    public AsyncFunc(Supplier<R> proc) {
         super(new SupplierInvoker<>(proc));
     }
 
-    public AsyncResult(Runnable proc) {
+    public AsyncFunc(Runnable proc) {
         super(new RunnableInvoker<R>(proc));
     }
 

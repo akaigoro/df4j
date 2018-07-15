@@ -1,25 +1,25 @@
 package org.df4j.core.connector.permitstream;
 
 import org.df4j.core.connector.messagescalar.SimpleSubscription;
-import org.df4j.core.node.AsyncTaskBase;
+import org.df4j.core.node.AsyncTask;
 
 /**
  * Counting semaphore
  * holds token counter without data.
  * counter can be negative.
  */
-public class Semafor extends AsyncTaskBase.Lock implements PermitSubscriber {
-    protected final AsyncTaskBase actor;
+public class Semafor extends AsyncTask.Lock implements PermitSubscriber {
+    protected final AsyncTask actor;
     private long count = 0;
     protected SimpleSubscription subscription;
 
-    public Semafor(AsyncTaskBase actor, int count) {
+    public Semafor(AsyncTask actor, int count) {
         actor.super(count <= 0);
         this.actor = actor;
         this.count = count;
     }
 
-    public Semafor(AsyncTaskBase actor) {
+    public Semafor(AsyncTask actor) {
         this(actor, 0);
     }
 

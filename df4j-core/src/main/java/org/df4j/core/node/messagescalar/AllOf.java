@@ -3,7 +3,7 @@ package org.df4j.core.node.messagescalar;
 import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 
-public class AllOf extends AsyncResult<Object[]> {
+public class AllOf extends AsyncFunc<Object[]> {
     Object[] results;
 
     public AllOf() { }

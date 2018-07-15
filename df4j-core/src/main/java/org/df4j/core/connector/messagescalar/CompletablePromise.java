@@ -212,7 +212,7 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable,
                                                    Executor executor) {
-        AsyncResult asyncTask = new AsyncResult<>(runnable);
+        AsyncFunc asyncTask = new AsyncFunc<>(runnable);
         asyncTask.start(executor);
         return asyncTask.asyncResult();
     }
@@ -548,13 +548,13 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
 
 
     /**
-     * Returns {@code true} if this AsyncResult completed
+     * Returns {@code true} if this AsyncFunc completed
      * exceptionally, in any way. Possible causes include
      * cancellation, explicit invocation of {@code
      * completeExceptionally}, and abrupt termination of a
-     * AsyncResult action.
+     * AsyncFunc action.
      *
-     * @return {@code true} if this AsyncResult completed
+     * @return {@code true} if this AsyncFunc completed
      * exceptionally
      */
     public boolean isCompletedExceptionally() {
@@ -564,7 +564,7 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
 
     /**
      * Returns the estimated number of CompletableFutures whose
-     * completions are awaiting completion of this AsyncResult.
+     * completions are awaiting completion of this AsyncFunc.
      * This method is designed for use in monitoring system state, not
      * for synchronization control.
      *

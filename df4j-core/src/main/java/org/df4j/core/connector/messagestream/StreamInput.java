@@ -1,7 +1,7 @@
 package org.df4j.core.connector.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
-import org.df4j.core.node.AsyncTaskBase;
+import org.df4j.core.node.AsyncTask;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -16,17 +16,17 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
     protected Deque<T> queue;
     protected boolean closeRequested = false;
 
-    public StreamInput(AsyncTaskBase actor) {
+    public StreamInput(AsyncTask actor) {
         super(actor);
         this.queue = new ArrayDeque<>();
     }
 
-    public StreamInput(AsyncTaskBase actor, int capacity) {
+    public StreamInput(AsyncTask actor, int capacity) {
         super(actor);
         this.queue = new ArrayDeque<>(capacity);
     }
 
-    public StreamInput(AsyncTaskBase actor, Deque<T> queue) {
+    public StreamInput(AsyncTask actor, Deque<T> queue) {
         super(actor);
         this.queue = queue;
     }

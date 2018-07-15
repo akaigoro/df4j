@@ -3,7 +3,7 @@ package org.df4j.core.messagescalar;
 import org.df4j.core.connector.messagescalar.*;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.messagescalar.AsyncBiFunction;
-import org.df4j.core.node.messagescalar.AsyncResult;
+import org.df4j.core.node.messagescalar.AsyncFunc;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,7 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class AsyncTaskTest {
+public class AsyncProcTest {
 
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
@@ -28,7 +28,7 @@ public class AsyncTaskTest {
         computeMult(-1.0, -2.0, 2.0);
     }
 
-    public static class Blocker<T,R> extends AsyncResult<R> {
+    public static class Blocker<T,R> extends AsyncFunc<R> {
         ConstInput<T> arg = new ConstInput<>(this);
     }
 
@@ -60,7 +60,7 @@ public class AsyncTaskTest {
     }
 
     /* D = b^2 - 4ac */
-    class Discr extends AsyncResult<Double> {
+    class Discr extends AsyncFunc<Double> {
         ConstInput<Double> pa = new ConstInput<>(this);
         ConstInput<Double> pb = new ConstInput<>(this);
         ConstInput<Double> pc = new ConstInput<>(this);
@@ -96,7 +96,7 @@ public class AsyncTaskTest {
     /**
      * (-b +/- sqrt(D))/2a
      */
-    class RootCalc extends AsyncResult<double[]> {
+    class RootCalc extends AsyncFunc<double[]> {
         ConstInput<Double> pa = new ConstInput<>(this);
         ConstInput<Double> pb = new ConstInput<>(this);
         ConstInput<Double> pd = new ConstInput<>(this);

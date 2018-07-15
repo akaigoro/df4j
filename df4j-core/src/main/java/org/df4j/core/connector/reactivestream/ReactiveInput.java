@@ -1,7 +1,7 @@
 package org.df4j.core.connector.reactivestream;
 
 import org.df4j.core.connector.messagestream.StreamInput;
-import org.df4j.core.node.AsyncTaskBase;
+import org.df4j.core.node.AsyncTask;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -18,13 +18,13 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
     protected int capacity;
     protected ReactiveSubscription subscription;
 
-    public ReactiveInput(AsyncTaskBase actor, int capacity) {
+    public ReactiveInput(AsyncTask actor, int capacity) {
         super(actor);
         this.queue = new ArrayDeque<>(capacity);
         this.capacity = capacity;
     }
 
-    public ReactiveInput(AsyncTaskBase actor) {
+    public ReactiveInput(AsyncTask actor) {
         this(actor, 8);
     }
 

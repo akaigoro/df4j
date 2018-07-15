@@ -1,6 +1,6 @@
 package org.df4j.core.connector.messagescalar;
 
-import org.df4j.core.node.AsyncTaskBase;
+import org.df4j.core.node.AsyncTask;
 
 import java.util.Iterator;
 
@@ -12,10 +12,10 @@ import java.util.Iterator;
  *            type of accepted tokens.
  */
 public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
-    protected AsyncTaskBase actor;
+    protected AsyncTask actor;
     protected boolean pushback = false; // if true, do not consume
 
-    public ScalarInput(AsyncTaskBase actor) {
+    public ScalarInput(AsyncTask actor) {
         super(actor);
         this.actor = actor;
     }

@@ -3,7 +3,7 @@ package org.df4j.nio2.net.echo;
 import org.df4j.core.connector.messagescalar.ScalarCollector;
 import org.df4j.core.connector.permitstream.Semafor;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.AsyncProc;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.ServerConnection;
 
@@ -14,7 +14,7 @@ import java.net.SocketAddress;
  * generates {@link ServerConnection}s and passes them to AsyncServerSocketChannel to initialize
  *
  */
-public class ConnectionManager extends AsyncTask {
+public class ConnectionManager extends AsyncProc {
     private final AsyncServerSocketChannel assc;
     Semafor allowedConnections = new Semafor(this);
     int serialnum=0;

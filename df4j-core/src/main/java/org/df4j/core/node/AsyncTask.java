@@ -1,95 +1,208 @@
+/*
+ * Copyright 2011 by Alexei Kaigorodov
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package org.df4j.core.node;
 
-import org.df4j.core.util.ActionCaller;
-import org.df4j.core.util.invoker.Invoker;
+import org.df4j.core.util.DirectExecutor;
+import org.df4j.core.util.SameThreadExecutor;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * this class contains components, likely useful in each async node:
- *  - control pin
- *  - action caller
+ * AsyncProc is an Asynchronous Procedure Call.
  *
- * @param <R>
+ * It consists of asynchronous connectors, implemented as inner classes,
+ * user-defined asynchronous procedure, and a mechanism to call that procedure
+ * using supplied {@link java.util.concurrent.Executor} as soon as all connectors are unblocked.
+ *
+ * This class contains base classes for locks and connectors
  */
-public class AsyncTask<R> extends AsyncTaskBase {
-
-    protected Invoker<R> actionCaller;
-    protected volatile boolean started = false;
-    protected volatile boolean stopped = false;
+public abstract class AsyncTask implements Runnable {
+    public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
+    static public final SameThreadExecutor sameThreadExecutor = SameThreadExecutor.sameThreadExecutor;
 
     /**
-     * blocked initially, until {@link #start} called.
-     * blocked when this actor goes to executor, to ensure serial execution of the act() method.
+     * the set of all b/w Pins
      */
-    protected ControlLock controlLock = new ControlLock();
+    protected final HashSet<Lock> locks = new HashSet<>();
+    /**
+     * the set of all colored Pins
+     */
+    protected final ArrayList<Connector> connectors = new ArrayList<>();
+    /**
+     * total number of created pins
+     */
+    protected AtomicInteger pinCount = new AtomicInteger();
+    /**
+     * total number of created pins
+     */
+    protected AtomicInteger blockedPinCount = new AtomicInteger();
 
-    public AsyncTask() {
-    }
+    protected Executor executor = ForkJoinPool.commonPool();
 
-    public AsyncTask(Invoker<R> actionCaller) {
-        this.actionCaller = actionCaller;
-    }
-
-    public boolean isStarted() {
-        return started;
-    }
-
-    public synchronized void start() {
-        if (stopped) {
-            return;
+    /**
+     * assigns Executor
+     */
+    public void setExecutor(Executor exec) {
+        if (exec == null) {
+            this.executor = SameThreadExecutor.sameThreadExecutor;
+        } else {
+            this.executor = exec;
         }
-        started = true;
-        controlLock.turnOn();
     }
 
-    public synchronized void start(Executor executor) {
-        setExecutor(executor);
-        start();
+    public Executor getExecutor() {
+        return executor;
     }
 
-    public synchronized void stop() {
-        stopped = true;
-        controlLock.turnOff();
+    /**
+     * invoked when all asyncTask asyncTask are ready,
+     * and method run() is to be invoked.
+     * Safe way is to submit this instance as a Runnable to an Executor.
+     * Fast way is to invoke it directly, but make sure the chain of
+     * direct invocations is short to avoid stack overflow.
+     */
+    protected void fire() {
+        getExecutor().execute(this);
     }
 
-    public synchronized Object[] consumeTokens() {
-        if (!isStarted()) {
-            throw new IllegalStateException("not started");
+    /**
+     * Basic class for all locs and connectors (places for tokens).
+     * Asynchronous version of binary semaphore.
+     * <p>
+     * initially in non-blocked state
+     */
+    private abstract class BaseLock {
+        int pinNumber; // distinct for all other connectors of this node
+        boolean blocked;
+
+        public BaseLock(boolean blocked) {
+            this.pinNumber = pinCount.getAndIncrement();
+            this.blocked = blocked;
+            if (blocked) {
+                blockedPinCount.incrementAndGet();
+            }
+            register();
         }
-        locks.forEach(lock -> lock.purge());
-        Object[] args = new Object[connectors.size()];
-        for (int k=0; k<connectors.size(); k++) {
-            AsyncTaskBase.Connector connector = connectors.get(k);
-            args[k] = connector.next();
-        }
-        return args;
-    }
 
-    protected R runAction() throws Exception {
-        if (actionCaller == null) {
-            try {
-                actionCaller = ActionCaller.findAction(this, connectors.size());
-            } catch (NoSuchMethodException e) {
-                throw new IllegalStateException(e);
+        /**
+         * by default, initially in blocked state
+         */
+        public BaseLock() {
+            this(true);
+        }
+
+        public boolean isBlocked() {
+            return blocked;
+        }
+
+        /**
+         * locks the pin
+         * called when a token is consumed and the pin become empty
+         */
+        public void turnOff() {
+            if (blocked) {
+                return;
+            }
+            blocked = true;
+            blockedPinCount.incrementAndGet();
+        }
+
+        public void turnOn() {
+            if (!blocked) {
+                return;
+            }
+            blocked = false;
+            long res = blockedPinCount.decrementAndGet();
+            if (res == 0) {
+                fire();
             }
         }
-        Object[] args = consumeTokens();
-        R  res = actionCaller.apply(args);
-        return res;
+
+        abstract protected void register();
+
+        abstract protected void unRegister();
     }
 
-    @Override
-    public void run() {
-        try {
-            controlLock.turnOff();
-            runAction();
-        } catch (Throwable e) {
-            stop();
+    public class Lock extends BaseLock {
+
+        public Lock(boolean blocked) {
+            super(blocked);
+        }
+
+        public Lock() {
+            super();
+        }
+
+        @Override
+        protected void register() {
+            locks.add(this);
+        }
+
+        protected void unRegister() {
+            if (blocked) {
+                turnOn();
+            }
+            locks.remove(this);
+        }
+
+        /**
+         * Executed after token processing (method act). Cleans reference to
+         * value, if any. Signals to set state to off if no more tokens are in
+         * the place. Should return quickly, as is called from the actor's
+         * synchronized block.
+         */
+        public void purge() {
         }
     }
 
-    protected class ControlLock extends Lock {
+    /**
+     * Basic class for all connectors (places for tokens).
+     * Asynchronous version of binary semaphore.
+     * <p>
+     * initially in non-blocked state
+     */
+    public abstract class Connector<T> extends BaseLock {
+
+        public Connector(boolean blocked) {
+            super(blocked);
+        }
+
+        public Connector() {
+            super();
+        }
+
+        @Override
+        protected void register() {
+            if (isStarted()) {
+                throw new IllegalStateException("cannot register connector after start");
+            }
+            connectors.add(this);
+        }
+
+        protected void unRegister() {
+            if (isStarted()) {
+                throw new IllegalStateException("cannot unregister connector after start");
+            }
+            if (blocked) {
+                turnOn();
+            }
+            connectors.remove(this);
+        }
+
+        /** removes and return next token */
+        public abstract T next();
     }
 
+    protected abstract boolean isStarted();
 }

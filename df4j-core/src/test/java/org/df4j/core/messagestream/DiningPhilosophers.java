@@ -2,8 +2,8 @@ package org.df4j.core.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
 import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncProc;
 import org.df4j.core.node.AsyncTask;
-import org.df4j.core.node.AsyncTaskBase;
 import org.df4j.core.node.messagestream.Actor;
 import org.df4j.core.node.messagestream.PickPoint;
 import org.junit.Test;
@@ -78,9 +78,9 @@ public class DiningPhilosophers {
     }
 
     /**
-     * while ordinary {@link Actor} is a single {@link AsyncTaskBase}
+     * while ordinary {@link Actor} is a single {@link AsyncTask}
      * which restarts itself,
-     * this class comprises of several {@link AsyncTaskBase}s which activate each other cyclically.
+     * this class comprises of several {@link AsyncTask}s which activate each other cyclically.
      */
     static class Philosopher {
         Random rand=new Random();
@@ -112,8 +112,8 @@ public class DiningPhilosophers {
 
         Hungry hungry = new Hungry();
         Replete replete = new Replete();
-        AsyncTask think = new DelayedAsyncTask(hungry);
-        AsyncTask eat = new DelayedAsyncTask(replete);
+        AsyncProc think = new DelayedAsyncProc(hungry);
+        AsyncProc eat = new DelayedAsyncProc(replete);
 
         public void start() {
             think.start();
@@ -123,10 +123,10 @@ public class DiningPhilosophers {
             System.out.println(indent+s);
         }
 
-        private class DelayedAsyncTask extends AsyncTask<Void> {
-            final AsyncTask next;
+        private class DelayedAsyncProc extends AsyncProc<Void> {
+            final AsyncProc next;
 
-            private DelayedAsyncTask(AsyncTask next) {
+            private DelayedAsyncProc(AsyncProc next) {
                 this.next = next;
             }
 
@@ -141,7 +141,7 @@ public class DiningPhilosophers {
         /**
          * collects forks one by one
          */
-        private class Hungry extends AsyncTask<Void> {
+        private class Hungry extends AsyncProc<Void> {
             ScalarInput<Fork> input = new ScalarInput<>(this);
 
             @Override
@@ -168,7 +168,7 @@ public class DiningPhilosophers {
         /** return forks
          *
          */
-        private class Replete extends AsyncTask<Void> {
+        private class Replete extends AsyncProc<Void> {
 
             @Action
             protected Void act() {

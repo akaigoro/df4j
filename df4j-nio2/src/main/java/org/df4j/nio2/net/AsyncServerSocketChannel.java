@@ -12,11 +12,7 @@ package org.df4j.nio2.net;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 import org.df4j.core.connector.messagestream.StreamInput;
-import org.df4j.core.connector.permitstream.Semafor;
-import org.df4j.core.connector.reactivestream.ReactiveInput;
-import org.df4j.core.connector.reactivestream.ReactiveSubscription;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
@@ -26,13 +22,11 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 /**
  * Accepts incoming connections, pushes them pu subscribers
  *
- * though it extends AsyncTask, it is effectively an Actor1<ScalarSubscriber>
+ * though it extends AsyncProc, it is effectively an Actor1<ScalarSubscriber>
  *     
  *  its sole input is a stream of requests of type ServerConnection
  *  for each ServerConnection, AsyncServerSocketChannel accepts an incoming connection requests
