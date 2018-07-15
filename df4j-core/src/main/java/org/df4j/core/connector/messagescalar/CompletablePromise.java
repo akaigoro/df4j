@@ -297,8 +297,8 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
                                                        Executor executor
     ){
         AsyncBiFunction<? super T, ? super U, V> asyncBiFunc = new AsyncBiFunction<>(fn);
-        this.subscribe(asyncBiFunc.arg1);
-        other.subscribe(asyncBiFunc.arg2);
+        this.subscribe(asyncBiFunc.param1);
+        other.subscribe(asyncBiFunc.param2);
         asyncBiFunc.start(executor);
         CompletablePromise<V> result = asyncBiFunc.asyncResult();
         return result;
@@ -320,8 +320,8 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
             CompletablePromise<? extends U> other,
             BiConsumer<? super T, ? super U> action, Executor executor) {
         AsyncBiFunction<? super T,? super U, Void> asyncBiConsumer = new AsyncBiFunction<>(action);
-        this.subscribe(asyncBiConsumer.arg1);
-        other.subscribe(asyncBiConsumer.arg2);
+        this.subscribe(asyncBiConsumer.param1);
+        other.subscribe(asyncBiConsumer.param2);
         asyncBiConsumer.start(executor);
         return asyncBiConsumer.asyncResult();
     }
@@ -341,8 +341,8 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
                                                          Executor executor) {
         BiConsumer<T, U> fn = (t,u)->action.run();
         AsyncBiFunction<? super T,? super U, Void> asyncBiConsumer = new AsyncBiFunction<>(fn);
-        this.subscribe(asyncBiConsumer.arg1);
-        other.subscribe(asyncBiConsumer.arg2);
+        this.subscribe(asyncBiConsumer.param1);
+        other.subscribe(asyncBiConsumer.param2);
         asyncBiConsumer.start(executor);
         return asyncBiConsumer.asyncResult();
     }

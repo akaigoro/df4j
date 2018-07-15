@@ -16,8 +16,8 @@ public class AsyncProcTest {
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         AsyncBiFunction<Double, Double, Double> mult = new Mult();
-        mult.arg1.post(a);
-        mult.arg2.post(b);
+        mult.param1.post(a);
+        mult.param2.post(b);
         double result = mult.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -40,8 +40,8 @@ public class AsyncProcTest {
             CompletablePromise<Double> sp = new CompletablePromise<>();
             Blocker<Double, Double> blocker = new Blocker<>();
             pa.subscribe(blocker.arg);
-            new CompletedPromise<Double>(1.0).subscribe(arg1);
-            new Mult(pa, pb).subscribe(arg2);
+            new CompletedPromise<Double>(1.0).subscribe(param1);
+            new Mult(pa, pb).subscribe(param2);
         }
     }
 
@@ -159,8 +159,8 @@ public class AsyncProcTest {
 
         protected Plus(ScalarPublisher pa, ScalarPublisher pb) {
             this();
-            pa.subscribe(arg1);
-            pb.subscribe(arg2);
+            pa.subscribe(param1);
+            pb.subscribe(param2);
         }
     }
 
@@ -173,8 +173,8 @@ public class AsyncProcTest {
 
         protected Minus(ScalarPublisher pa, ScalarPublisher pb) {
             this();
-            pa.subscribe(arg1);
-            pb.subscribe(arg2);
+            pa.subscribe(param1);
+            pb.subscribe(param2);
         }
     }
 
@@ -187,8 +187,8 @@ public class AsyncProcTest {
 
         protected Mult(ScalarPublisher pa, ScalarPublisher pb) {
             this();
-            pa.subscribe(arg1);
-            pb.subscribe(arg2);
+            pa.subscribe(param1);
+            pb.subscribe(param2);
         }
     }
 
@@ -201,8 +201,8 @@ public class AsyncProcTest {
 
         protected Div(ScalarPublisher pa, ScalarPublisher pb) {
             this();
-            pa.subscribe(arg1);
-            pb.subscribe(arg2);
+            pa.subscribe(param1);
+            pb.subscribe(param2);
         }
     }
 }

@@ -8,8 +8,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 public class AsyncBiFunction<U, V, R> extends AsyncFunc<R> {
-    public final ConstInput<U> arg1 = new ConstInput<>(this);
-    public final ConstInput<V> arg2 = new ConstInput<>(this);
+    public final ConstInput<U> param1 = new ConstInput<>(this);
+    public final ConstInput<V> param2 = new ConstInput<>(this);
 
     public AsyncBiFunction(BiFunction<? super U, ? super V, ? extends R> fn) {
         super(new BiFunctionInvoker(fn));
