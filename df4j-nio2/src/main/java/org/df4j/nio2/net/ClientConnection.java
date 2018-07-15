@@ -5,7 +5,7 @@ import java.net.SocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-public class ClientConnection extends AsyncSocketChannel
+public class ClientConnection extends ServerConnection
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
     /**

@@ -11,6 +11,8 @@ import java.util.function.Supplier;
 public class AsyncFunction<T, R> extends AsyncResult<R> implements ScalarSubscriber<T> {
     protected final ConstInput<T> argument = new ConstInput<>(this);
 
+    public AsyncFunction() { }
+
     public AsyncFunction(Function<T,R> fn) {
         super(new FunctionInvoker<>(fn));
     }

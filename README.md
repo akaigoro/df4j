@@ -1,45 +1,44 @@
 Simplicity is prerequisite for reliability. - Edsger W. Dijkstra
-
 -------------------------
+
 df4j is an abbreviation of "Data Flow for Java". It is a library to support asynchronous computations. 
 For those interested in history of dataflow programming, I recommend to start with short introductory article
 "Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
 
-The primary goal of this library is to investigate the anatomy of asynchronous programming. The asynchronous programming always attracted
-Java programmers, and the absence of a complete asynchronous support in language and runtime only stimulated programmers to find their own solutions.
-Today some asynchronous libraries for Java are very popular, e.g. rx-java, vert.x, Akka. However, all they imply steep learning curve,
-use different terminology, and hides implementation details under the hood.
-df4j ia an attempt to discover the basic building elements of asynchronous computations, and allow developer to freely combine those elements,
-and add new ones.
+The primary goal of this library is to investigate the anatomy of asynchronous programming.
+The asynchronous programming always attracted Java programmers,
+and the absence of a complete asynchronous support in language and runtime only stimulated programmers to find their own solutions.
+Today some asynchronous libraries for Java are very popular, e.g. rx-java, vert.x, Akka.
+However, all they imply steep learning curve and hides implementation details under the hood.
+df4j ia an attempt to discover the basic building elements of asynchronous computations,
+and allow developer to freely combine those elements, and add new ones.
 
 The main results of this work are listed below. Some of them look evident, but listed for completeness.
 
 1. Parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
 Activities compute tokens (values and signals), connectors pass them between activities.
 2. Activities can be of two kinds: threads and asynchronous procedures.
-3. Connectors can be bound to a specific async node and defer node's execution until feed with a token. 
-Such connectors plays role of parameters for the asynchronous procedure thay are bounded to.
 3. Asynchronous procedure consists of:
-  - asynchronous parameters (bound connectors),
+  - asynchronous parameters (represented as connectors)
   - user-defined synchronous procedure,
   - reference to an Executor, and
-  - an object that glues all that components together.
-  
-Below this object is referenced as a "node of dataflow graph", or just a "node".
-4. Parameters can be used for input and output.
-Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output parameters are necessary. 
-A node can have multiple input and multiple output parameters.
-5. Nodes are connected by their connectors: output connector of one node is connected to input connector of another node.
-It is also possible for single connector to serve both as an output connector for one node and input connector for another node.
-6. Connectors can implement different exchange protocols. Connected connectors must implement the same protocol.
-7. Nodes are submitted for execution when all their input connectors are filled with information (this sentence will be refined later).
+  - an object that glues all that components together. Below this object is referenced as a "node of dataflow graph", or just a "node".
+4. Connector has several important characteristics:
+ -  it can be bound to a node and serve as a mandatory asyncronous parameter.
+ The execution of the node starts exactly after all such parameters are filled with tokens. 
+ This mechanism is the base of asynchronoys computations.
+ - can be used for input or output.
+Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output connectors are necessary. 
+A node can have multiple input and multiple output connectors.
+Nodes are connected by their connectors: output connector of one node is connected to input connector of another node.
+ - Connectors can implement different exchange protocols. Connected connectors must implement the same protocol.
  
 The main result is differentiation between connectors and nodes. 
 This allows to develop connectors independently of nodes and make use of new protocols with already developed node types.
-As a result, this library is very compact. It does not contain "all combinations of all capabilities", but allow developers to freely combine
-existing and newly developed capabilities.
+As a result, this library is very compact. It does not contain "all combinations of all capabilities",
+but allow developers to freely combine existing and newly developed capabilities.
 
-Another interesting result is that notorious reactive streams are just implementation of a specific protocol, and that protocol is no more
+Another interesting result is that the notorious reactive streams are just implementation of a specific protocol, and that protocol is no more
 but a combination of two more simple protocols. 
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
@@ -49,9 +48,11 @@ See examples and test directories for various custom-made dataflow objects and t
 If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
 
-[df4j-core tutorial](/df4j-core/README.md)
+Submodiles:
 
-[df4j-nio2 tutorial](/df4j-nio2/README.md)
+[df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and connectors
+
+[df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
 Version history
 ---------------

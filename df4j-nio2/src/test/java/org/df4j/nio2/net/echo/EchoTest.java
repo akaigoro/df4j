@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * ConnectionSource => AsyncServerSocketChannel -> ServerConnection -|
+ * ConnectionManager => AsyncServerSocketChannel -> ServerConnection -|
  *     ^                                                             v
  *     |<------------------------------------------------------------|                                                             |
  */

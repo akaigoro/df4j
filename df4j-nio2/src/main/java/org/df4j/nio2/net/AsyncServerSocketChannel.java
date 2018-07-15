@@ -17,6 +17,7 @@ import org.df4j.core.connector.reactivestream.ReactiveInput;
 import org.df4j.core.connector.reactivestream.ReactiveSubscription;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncTask;
+import org.df4j.core.node.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -31,12 +32,19 @@ import java.util.Queue;
 /**
  * Accepts incoming connections, pushes them pu subscribers
  *
- * though it extends AsyncTask, it is effectively an Actor
+ * though it extends AsyncTask, it is effectively an Actor1<ScalarSubscriber>
+ *     
+ *  its sole input is a stream of requests of type ServerConnection
+ *  for each ServerConnection, AsyncServerSocketChannel accepts an incoming connection requests
+ *  from a client and passes it to the ServerConnection
+ *
+ *  when there are no ServerConnection on the input, client requests are not accepted.
+ *
  */
 public class AsyncServerSocketChannel
-        extends AsyncTask<AsynchronousSocketChannel>
+        extends Actor1<AsynchronousSocketChannel>
         implements ScalarPublisher<AsynchronousSocketChannel>,
-        CompletionHandler<AsynchronousSocketChannel, AsyncSocketChannel>
+        CompletionHandler<AsynchronousSocketChannel, ServerConnection>
 {
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
 
@@ -44,8 +52,6 @@ public class AsyncServerSocketChannel
     private StreamInput<ScalarSubscriber<? super AsynchronousSocketChannel>> requests = new StreamInput<>(this);
     
     protected volatile AsynchronousServerSocketChannel assc;
-    /** max number of connections in input queue */
-    ReactiveSubscription subscription;
 
     public AsyncServerSocketChannel(SocketAddress addr) throws IOException {
         if (addr == null) {
@@ -56,8 +62,7 @@ public class AsyncServerSocketChannel
         this.start(directExecutor);
         LOG.config("AsyncServerSocketChannel("+addr+") created");
     }
-
-
+    
     @Override
     public <S extends ScalarSubscriber<? super AsynchronousSocketChannel>> S subscribe(S subscriber) {
         requests.post(subscriber);
@@ -81,7 +86,7 @@ public class AsyncServerSocketChannel
     //====================== Dataflow backend
 
     @Action
-    public void accept(AsyncSocketChannel connection) {
+    public void accept(ServerConnection connection) {
         try {
             assc.accept(connection, this);
         } catch (Exception e) {
@@ -92,7 +97,7 @@ public class AsyncServerSocketChannel
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel result, AsyncSocketChannel connection) {
+    public void completed(AsynchronousSocketChannel result, ServerConnection connection) {
         LOG.finest("AsynchronousServerSocketChannel: request accepted");
         connection.post(result);
         this.start(); // allow  next assc.accpt()
@@ -103,7 +108,7 @@ public class AsyncServerSocketChannel
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, AsyncSocketChannel connection) {
+    public void failed(Throwable exc, ServerConnection connection) {
         connection.postFailure(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.

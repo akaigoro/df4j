@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
+/** receives sends and receives limited number of messages
+ *
+ */
 class EchoClient extends Actor1<ByteBuffer> {
     protected static final Logger LOG = Logger.getLogger(EchoClient.class.getName());
 
@@ -24,14 +27,6 @@ class EchoClient extends Actor1<ByteBuffer> {
         result.completeExceptionally(ex);
     }
 
-    /**
-     * Starts connection to a server. IO requests can be queued immediately,
-     * but will be executed only after connection completes.
-     *
-     * @param addr
-     * @param i
-     * @throws IOException
-     */
     public EchoClient(SocketAddress addr, int count) throws IOException, InterruptedException {
         this.count = count;
         clientConn = new ClientConnection("Client", addr);
