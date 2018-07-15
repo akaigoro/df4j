@@ -14,6 +14,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.connector.messagescalar.ScalarCollector;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
+import org.df4j.core.connector.messagescalar.SimpleSubscription;
 import org.df4j.core.connector.messagestream.StreamInput;
 import org.df4j.core.connector.messagestream.StreamOutput;
 import org.df4j.core.node.Action;
@@ -107,6 +108,11 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
 
     public synchronized boolean isClosed() {
         return channel==null;
+    }
+
+    @Override
+    public void onSubscribe(SimpleSubscription simpleSubscription) {
+
     }
 
     //===================== inner classes
