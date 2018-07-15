@@ -155,7 +155,7 @@ In short, actors are repeatable asynchronous procedures.
 After processing first set of arguments, they purge them out of parameters and wait until next set of arguments is ready.
 So the main difference is parameters which can keep a sequence of values. The node classes differ only that after calling the action procedure,
 the method `AsyncTask.start()` is called again. 
-The node class even can be [AsyncProc](src/main/java/org/df4j/core/AsyncProc.java) itself, with method `AsyncProc::start()`
+The node class even can be [AsyncProc](src/main/java/org/df4j/core/node/AsyncProc.java) itself, with method `AsyncProc::start()`
 called by a user-defined method. 
 An interesting case is calling `start()` in an asynchronous callback like in
  [AsyncServerSocketChannel](../df4j-nio2/src/main/java/org/df4j/nio2/net/AsyncServerSocketChannel.java).   
