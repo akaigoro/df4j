@@ -36,9 +36,9 @@ public abstract class AsyncTask implements Runnable {
      */
     protected final HashSet<Lock> locks = new HashSet<>();
     /**
-     * the set of all colored Pins
+     * the set of all colored Pins, to form array of arguments
      */
-    protected final ArrayList<Connector> connectors = new ArrayList<>();
+    protected final ArrayList<AsynctParam> asynctParams = new ArrayList<>();
     /**
      * total number of created pins
      */
@@ -134,6 +134,13 @@ public abstract class AsyncTask implements Runnable {
         abstract protected void unRegister();
     }
 
+
+    /**
+     * Basic class for all permission parameters (places for black/white tokens).
+     * Asynchronous version of binary semaphore.
+     * <p>
+     * initially in non-blocked state
+     */
     public class Lock extends BaseLock {
 
         public Lock(boolean blocked) {
@@ -167,18 +174,17 @@ public abstract class AsyncTask implements Runnable {
     }
 
     /**
-     * Basic class for all connectors (places for tokens).
-     * Asynchronous version of binary semaphore.
+     * Basic class for all valued parameters (places for colored tokens).
      * <p>
-     * initially in non-blocked state
+     * initially in blocked state
      */
-    public abstract class Connector<T> extends BaseLock {
+    public abstract class AsynctParam<T> extends BaseLock {
 
-        public Connector(boolean blocked) {
+        public AsynctParam(boolean blocked) {
             super(blocked);
         }
 
-        public Connector() {
+        public AsynctParam() {
             super();
         }
 
@@ -187,7 +193,7 @@ public abstract class AsyncTask implements Runnable {
             if (isStarted()) {
                 throw new IllegalStateException("cannot register connector after start");
             }
-            connectors.add(this);
+            asynctParams.add(this);
         }
 
         protected void unRegister() {
@@ -197,7 +203,7 @@ public abstract class AsyncTask implements Runnable {
             if (blocked) {
                 turnOn();
             }
-            connectors.remove(this);
+            asynctParams.remove(this);
         }
 
         /** removes and return next token */

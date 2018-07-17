@@ -22,7 +22,7 @@ public class AsyncProc<R> extends AsyncTask {
      * blocked initially, until {@link #start} called.
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
-    protected ControlLock controlLock = new ControlLock();
+    protected Lock controlLock = new Lock();
 
     public AsyncProc() {
     }
@@ -58,10 +58,10 @@ public class AsyncProc<R> extends AsyncTask {
             throw new IllegalStateException("not started");
         }
         locks.forEach(lock -> lock.purge());
-        Object[] args = new Object[connectors.size()];
-        for (int k=0; k<connectors.size(); k++) {
-            AsyncTask.Connector connector = connectors.get(k);
-            args[k] = connector.next();
+        Object[] args = new Object[asynctParams.size()];
+        for (int k = 0; k< asynctParams.size(); k++) {
+            AsynctParam asynctParam = asynctParams.get(k);
+            args[k] = asynctParam.next();
         }
         return args;
     }
@@ -69,7 +69,7 @@ public class AsyncProc<R> extends AsyncTask {
     protected R runAction() throws Exception {
         if (actionCaller == null) {
             try {
-                actionCaller = ActionCaller.findAction(this, connectors.size());
+                actionCaller = ActionCaller.findAction(this, asynctParams.size());
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }
@@ -88,8 +88,4 @@ public class AsyncProc<R> extends AsyncTask {
             stop();
         }
     }
-
-    protected class ControlLock extends Lock {
-    }
-
 }

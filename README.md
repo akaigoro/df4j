@@ -35,7 +35,8 @@ Nodes are connected by their connectors: output connector of one node is connect
  
 The main result is differentiation between connectors and nodes. 
 This allows to develop connectors independently of nodes and make use of new protocols with already developed node types.
-As a result, this library is very compact. It does not contain "all combinations of all capabilities",
+As a result, this library is very compact. 
+It does not contain fluent API and do not tries to implement [all combinations of all capabilities](https://www.google.ru/search?q="all+combinations+of+all+capabilities),
 but allow developers to freely combine existing and newly developed capabilities.
 
 Another interesting result is that the notorious reactive streams are just implementation of a specific protocol, and that protocol is no more

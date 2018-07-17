@@ -105,7 +105,8 @@ We can avoid creating new node classes, if out computation procedures are of sta
         // create nodes and connect them
         AsyncFunction<Integer, Integer> sqX = new AsyncFunction<>(square);
         AsyncFunction<Integer, Integer> sqY = new AsyncFunction<>(square);
-        AsyncBiFunction<Integer, Integer, Integer> sum = new AsyncBiFunction<Integer, Integer, Integer>(plus);
+        AsyncBiFunction<Integer, Integer, Integer> sum =
+                     new AsyncBiFunction<Integer, Integer, Integer>(plus);
         // make 2 connections
         sqX.subscribe(sum.param1);
         sqY.subscribe(sum.param2);
@@ -150,7 +151,7 @@ This is the clear result of using fluent API instead of explicit object construc
 What are Actors compared to Asycnchronous Procedures?
 ----------------------------------------------------
 `Actors` here are both [Hewitt's actors](https://en.wikipedia.org/wiki/Actor_model) (e.g. [Akka](https://akka.io/)) 
-with single predifined input parameter, and dataflow actors whith atbitry number of parameters. 
+with single predifined input parameter, and dataflow actors whith arbitrary number of parameters. 
 In short, actors are repeatable asynchronous procedures. 
 After processing first set of arguments, they purge them out of parameters and wait until next set of arguments is ready.
 So the main difference is parameters which can keep a sequence of values. The node classes differ only that after calling the action procedure,
@@ -160,6 +161,43 @@ called by a user-defined method.
 An interesting case is calling `start()` in an asynchronous callback like in
  [AsyncServerSocketChannel](../df4j-nio2/src/main/java/org/df4j/nio2/net/AsyncServerSocketChannel.java).   
 
-Value-less tokens.
------------------
-See package  [permitstream](src/main/java/org/df4j/core/connector/permitstream). 
+Supported protocols.
+-------------------
+In the above example which compute expression `x^2+x^2` all connectors used the **scalar message** protocol, 
+which consists of 2 steps:
+- connection established: `publisher.subscribe(subscriber); subscriber.onSubscribe(subscription);`
+- a value is passed and the connection is closed: `subscriber.post(value);`.
+
+Connectors for this interface are located in the  package [connector/messagescalar](src/main/java/org/df4j/core/connector/messagescalar). 
+Nodes that support only scalar connectors are located in the  package [node/messagescalar](src/main/java/org/df4j/core/node/messagescalar). 
+The subsequent subscriptions of the same or other subscribers can receive the same or different values. 
+In the above example, all subscribers receive the same value, and this is natural, 
+because the value is the result of concrete calculation. 
+But publishers which provide different values for different connections can easily be implemented. 
+One of such publishers is  [PickPoint](src/main/java/org/df4j/core/node/messagestream/PickPoint.java). 
+It receives stream of messages and delivers each message to single subscriber.
+It is asynchronous analogue of `java.util.concurrent.BlockingQueue`.
+It even implements the `BlockingQueue` interface, and so it can connect both threads and asynchronous procedures in all combinations.
+On the input side it uses **message stream** protocol, which consists of 3 steps:
+
+- connection established: `publisher.subscribe(subscriber); subscriber.onSubscribe(subscription);`
+- arbitrary number of values is passed to the same subscriber: `subscriber.post(value);`.
+- the connection is closed by explicit request from publisher side: `subscriber.complete(value);`,
+ or from the subscriber's side: 'subscription.cancel();'. 
+
+Connectors for this interface are located in the  package [connector/messagestream](src/main/java/org/df4j/core/connector/messagestream). 
+Nodes that support both scalar and stream connectors are located in the 
+package [node/messagestream](src/main/java/org/df4j/core/node/messagestream). 
+
+The protocol **permit stream** is the same as **message stream** protocol,
+ but transmited tokens does not carry any value and are indistinguishable.
+In the synchronous world, the connector for this protocol is `java.util.concurrent.Semaphore`. 
+Its asynchronous counterpart, [Semafor](src/main/java/org/df4j/core/connector/permitstream/Semafor.java),
+is a bound asynchronous connector and, as any other bound connector (parameter),
+prevents the submission the bounded asynchronous procedure to the executor until its internal counter become positive. 
+After the submission to the executor, the counter is automatically decreased by 1.
+
+The last protocol, implemented currently in the **df4j** library is **reactive stream**.
+Basically, its interfaces are roughly equivalent to the interfaces declared in the class `java.util.concurrent.Flow` in Java9.
+What is interesting of this protocol, is that its connectors are implemented as a pair of connectors of lower level protocols:
+ **permit stream** and **message stream**, and **permit stream** connectors are configured to work in opposite direction than **message stream**.
