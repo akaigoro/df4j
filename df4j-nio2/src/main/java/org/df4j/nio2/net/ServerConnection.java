@@ -18,7 +18,7 @@ import org.df4j.core.connector.messagescalar.SimpleSubscription;
 import org.df4j.core.connector.messagestream.StreamInput;
 import org.df4j.core.connector.messagestream.StreamOutput;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncProc;
+import org.df4j.core.node.AsyncProcedure;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -120,7 +120,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
     /**
      * an actor with delayed restart of the action
      */
-    public abstract class BuffProcessor extends AsyncProc
+    public abstract class BuffProcessor extends AsyncProcedure
             implements CompletionHandler<Integer, ByteBuffer>
     {
         protected final Logger LOG = Logger.getLogger(getClass().getName());

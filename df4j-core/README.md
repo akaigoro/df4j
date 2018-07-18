@@ -148,6 +148,11 @@ However, the symmetry beween computation of `x^2` and `x^2` is lost.
 Worst of all, nodes with more than 2 input connectors or with more than 1 output connector cannot be created at all!
 This is the clear result of using fluent API instead of explicit object construction.
 
+The class [_CompletablePromise_](src/main/java/org/df4j/core/connector/messagescalar/CompletablePromise.java) also provides
+fluent API identical to that of _CompletableFuture_, only to demonstrate how a developer can live without it, or create his own.
+Detailed explanation of that fluent API is in document [UnderTheHood](/UnderTheHood.md) (in Russian).
+ 
+
 What are Actors compared to Asycnchronous Procedures?
 ----------------------------------------------------
 `Actors` here are both [Hewitt's actors](https://en.wikipedia.org/wiki/Actor_model) (e.g. [Akka](https://akka.io/)) 

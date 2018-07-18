@@ -212,7 +212,7 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable,
                                                    Executor executor) {
-        AsyncFunc asyncTask = new AsyncFunc<>(runnable);
+        AsyncResult asyncTask = new AsyncResult<>(runnable);
         asyncTask.start(executor);
         return asyncTask.asyncResult();
     }

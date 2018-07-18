@@ -3,7 +3,7 @@ package org.df4j.examples.tutorial.basic;
 import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarInput;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncProc;
+import org.df4j.core.node.AsyncProcedure;
 import org.df4j.core.node.messagescalar.AsyncBiFunction;
 import org.df4j.core.node.messagescalar.AsyncFunction;
 import org.junit.Assert;
@@ -15,7 +15,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class SumSquareTest {
-    public static class Square extends AsyncProc {
+    public static class Square extends AsyncProcedure {
         final CompletablePromise<Integer> result = new CompletablePromise<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
@@ -26,7 +26,7 @@ public class SumSquareTest {
         }
     }
 
-    public static class Sum extends AsyncProc {
+    public static class Sum extends AsyncProcedure {
         final CompletablePromise<Integer> result = new CompletablePromise<>();
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);

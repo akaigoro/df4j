@@ -2,7 +2,7 @@ package org.df4j.core.messagestream;
 
 import org.df4j.core.connector.messagescalar.ScalarInput;
 import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncProc;
+import org.df4j.core.node.AsyncProcedure;
 import org.df4j.core.node.AsyncTask;
 import org.df4j.core.node.messagestream.Actor;
 import org.df4j.core.node.messagestream.PickPoint;
@@ -112,8 +112,8 @@ public class DiningPhilosophers {
 
         Hungry hungry = new Hungry();
         Replete replete = new Replete();
-        AsyncProc think = new DelayedAsyncProc(hungry);
-        AsyncProc eat = new DelayedAsyncProc(replete);
+        AsyncProcedure think = new DelayedAsyncProc(hungry);
+        AsyncProcedure eat = new DelayedAsyncProc(replete);
 
         public void start() {
             think.start();
@@ -123,10 +123,10 @@ public class DiningPhilosophers {
             System.out.println(indent+s);
         }
 
-        private class DelayedAsyncProc extends AsyncProc<Void> {
-            final AsyncProc next;
+        private class DelayedAsyncProc extends AsyncProcedure<Void> {
+            final AsyncProcedure next;
 
-            private DelayedAsyncProc(AsyncProc next) {
+            private DelayedAsyncProc(AsyncProcedure next) {
                 this.next = next;
             }
 
@@ -141,7 +141,7 @@ public class DiningPhilosophers {
         /**
          * collects forks one by one
          */
-        private class Hungry extends AsyncProc<Void> {
+        private class Hungry extends AsyncProcedure<Void> {
             ScalarInput<Fork> input = new ScalarInput<>(this);
 
             @Override
@@ -168,7 +168,7 @@ public class DiningPhilosophers {
         /** return forks
          *
          */
-        private class Replete extends AsyncProc<Void> {
+        private class Replete extends AsyncProcedure<Void> {
 
             @Action
             protected Void act() {
