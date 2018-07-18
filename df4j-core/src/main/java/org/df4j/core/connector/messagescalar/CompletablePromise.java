@@ -182,7 +182,7 @@ public class CompletablePromise<T> implements ScalarSubscriber<T>,
      */
     public static <U> CompletablePromise<U> supplyAsync(Supplier<U> supplier,
                                                        Executor executor) {
-        AsyncFunction<Void, U> asyncSupplier =  new AsyncFunction<>(supplier);
+        AsyncResult<U> asyncSupplier =  new AsyncResult<>(supplier);
         asyncSupplier.start(executor);
         return asyncSupplier.asyncResult();
     }
