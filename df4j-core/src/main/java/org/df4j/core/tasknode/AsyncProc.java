@@ -19,7 +19,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * AsyncProc is an Asynchronous Procedure Call.
+ * AsyncProc is an Asynchronous Procedure.
  *
  * It consists of asynchronous connectors, implemented as inner classes,
  * user-defined asynchronous procedure, and a mechanism to call that procedure
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * This class contains base classes for locks and connectors
  */
-public abstract class AsyncTask implements Runnable {
+public abstract class AsyncProc implements Runnable {
     public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
     static public final SameThreadExecutor sameThreadExecutor = SameThreadExecutor.sameThreadExecutor;
 

@@ -1,7 +1,7 @@
 package org.df4j.core.boundconnector.messagestream;
 
 import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
-import org.df4j.core.tasknode.AsyncTask;
+import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -12,11 +12,11 @@ import java.util.function.Consumer;
  *
  * @param <M>
  */
-public class StreamOutput<M> extends AsyncTask.Lock implements StreamPublisher<M>, StreamCollector<M> {
-    protected AsyncTask actor;
+public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M>, StreamCollector<M> {
+    protected AsyncProc actor;
     protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
 
-    public StreamOutput(AsyncTask actor) {
+    public StreamOutput(AsyncProc actor) {
         actor.super(false);
         this.actor = actor;
     }

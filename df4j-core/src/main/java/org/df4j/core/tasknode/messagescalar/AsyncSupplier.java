@@ -3,7 +3,7 @@ package org.df4j.core.tasknode.messagescalar;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
-import org.df4j.core.tasknode.AsyncProcedure;
+import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
 import org.df4j.core.util.invoker.SupplierInvoker;
@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  *
  * @param <R>
  */
-public class AsyncSupplier<R> extends AsyncProcedure<R> implements ScalarPublisher<R> {
+public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R> {
     /** place for demands */
     protected final CompletablePromise<R> result = new CompletablePromise<>();
 

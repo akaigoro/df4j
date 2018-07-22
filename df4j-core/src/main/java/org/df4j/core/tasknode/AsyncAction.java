@@ -12,7 +12,7 @@ import java.util.concurrent.Executor;
  *
  * @param <R>
  */
-public class AsyncProcedure<R> extends AsyncTask {
+public class AsyncAction<R> extends AsyncProc {
 
     protected Invoker<R> actionCaller;
     protected volatile boolean started = false;
@@ -24,10 +24,10 @@ public class AsyncProcedure<R> extends AsyncTask {
      */
     protected Lock controlLock = new Lock();
 
-    public AsyncProcedure() {
+    public AsyncAction() {
     }
 
-    public AsyncProcedure(Invoker<R> actionCaller) {
+    public AsyncAction(Invoker<R> actionCaller) {
         this.actionCaller = actionCaller;
     }
 
