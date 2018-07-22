@@ -13,12 +13,12 @@ import java.util.function.Consumer;
  * @param <M>
  */
 public class StreamOutput<M> extends AsyncTask.Lock implements StreamPublisher<M>, StreamCollector<M> {
-    protected AsyncTask base;
+    protected AsyncTask actor;
     protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
 
-    public StreamOutput(AsyncTask base) {
-        base.super(false);
-        this.base = base;
+    public StreamOutput(AsyncTask actor) {
+        actor.super(false);
+        this.actor = actor;
     }
 
     @Override

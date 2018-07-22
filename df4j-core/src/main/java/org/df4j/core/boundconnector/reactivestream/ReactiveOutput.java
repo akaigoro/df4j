@@ -17,12 +17,12 @@ import java.util.function.Consumer;
  * @param <M>
  */
 public class ReactiveOutput<M> extends AsyncTask.Lock implements ReactivePublisher<M>, StreamCollector<M> {
-    protected AsyncTask base;
+    protected AsyncTask actor;
     protected Set<SimpleReactiveSubscriptionImpl> subscriptions = new HashSet<>();
 
-    public ReactiveOutput(AsyncTask base) {
-        base.super(false);
-        this.base = base;
+    public ReactiveOutput(AsyncTask actor) {
+        actor.super(false);
+        this.actor = actor;
     }
 
     @Override
@@ -68,7 +68,7 @@ public class ReactiveOutput<M> extends AsyncTask.Lock implements ReactivePublish
         private volatile boolean closed = false;
 
         public SimpleReactiveSubscriptionImpl(ReactiveSubscriber<? super M> subscriber) {
-            super(base);
+            super(ReactiveOutput.this.actor);
             if (subscriber == null) {
                 throw new NullPointerException();
             }

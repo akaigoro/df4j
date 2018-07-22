@@ -6,9 +6,9 @@ import org.df4j.core.util.invoker.Invoker;
 import java.util.concurrent.Executor;
 
 /**
- * this class contains components, likely useful in each async node:
- *  - control pin
- *  - action caller
+ * this class contains components, likely useful in each async task node:
+ *  - control pin -- requires start()
+ *  - action caller -- allows @Action annotation
  *
  * @param <R>
  */

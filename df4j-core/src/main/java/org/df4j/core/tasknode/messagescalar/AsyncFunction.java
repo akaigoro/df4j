@@ -2,11 +2,12 @@ package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ConstInput;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.util.invoker.*;
+import org.df4j.core.util.invoker.ConsumerInvoker;
+import org.df4j.core.util.invoker.FunctionInvoker;
+import org.df4j.core.util.invoker.RunnableInvoker;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubscriber<T> {
     protected final ConstInput<T> argument = new ConstInput<>(this);
@@ -19,10 +20,6 @@ public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubsc
 
     public AsyncFunction(Consumer<? super T> action) {
         super(new ConsumerInvoker<>(action));
-    }
-
-    public AsyncFunction(Supplier<R> supplier) {
-        super(new SupplierInvoker<>(supplier));
     }
 
     public AsyncFunction(Runnable action) {

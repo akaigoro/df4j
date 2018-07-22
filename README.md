@@ -26,7 +26,7 @@ Activities compute tokens (values and signals), connectors pass them between act
 4. Connector has several important characteristics:
  -  it can be bound to a node and serve as a mandatory asyncronous parameter.
  The execution of the node starts exactly after all such parameters are filled with tokens. 
- This mechanism is the base of asynchronoys computations.
+ This mechanism is the actor of asynchronoys computations.
  - can be used for input or output.
 Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output connectors are necessary. 
 A node can have multiple input and multiple output connectors.
