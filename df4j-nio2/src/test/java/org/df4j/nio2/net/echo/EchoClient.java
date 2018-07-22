@@ -1,8 +1,8 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.node.messagescalar.SubscriberPromise;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.messagestream.Actor1;
+import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;
 import org.junit.Assert;

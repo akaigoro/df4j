@@ -1,8 +1,11 @@
 package org.df4j.core.messagescalar;
 
-import org.df4j.core.connector.messagescalar.*;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.messagescalar.*;
+import org.df4j.core.boundconnector.messagescalar.*;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
+import org.df4j.core.simplenode.messagescalar.CompletedResult;
+import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.messagescalar.*;
 import org.junit.Assert;
 import org.junit.Test;
 

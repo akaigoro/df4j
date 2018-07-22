@@ -1,12 +1,12 @@
 package org.df4j.core.permitstream;
 
-import org.df4j.core.connector.messagestream.StreamOutput;
-import org.df4j.core.connector.permitstream.OneShotPermitPublisher;
-import org.df4j.core.connector.permitstream.Semafor;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.messagestream.Actor;
-import org.df4j.core.node.messagestream.Actor1;
-import org.df4j.core.node.messagestream.StreamProcessor;
+import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.boundconnector.permitstream.OneShotPermitPublisher;
+import org.df4j.core.boundconnector.permitstream.Semafor;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.messagestream.Actor;
+import org.df4j.core.tasknode.messagestream.Actor1;
+import org.df4j.core.tasknode.messagestream.StreamProcessor;
 import org.df4j.core.util.SameThreadExecutor;
 import org.junit.Test;
 

@@ -1,7 +1,7 @@
 //package com.vogella.android.rxjava.simple;
 package org.df4j.rxjava2;
 
-import org.df4j.core.node.messagescalar.CompletedResult;
+import org.df4j.core.simplenode.messagescalar.CompletedResult;
 import org.junit.Test;
 
 import io.reactivex.Observable;

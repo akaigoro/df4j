@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.connector.messagescalar.ScalarCollector;
+import org.df4j.core.boundconnector.messagescalar.ScalarCollector;
 import org.df4j.nio2.net.ServerConnection;
 
 public class EchoServer extends ServerConnection {

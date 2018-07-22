@@ -1,6 +1,6 @@
 package org.df4j.reflect;
 
-import org.df4j.core.node.Action;
+import org.df4j.core.tasknode.Action;
 import org.df4j.core.util.ActionCaller;
 import org.df4j.core.util.invoker.FunctionInvoker;
 import org.df4j.core.util.invoker.Invoker;

@@ -1,6 +1,6 @@
 package org.df4j.juc;
 
-import org.df4j.core.node.messagescalar.CompletablePromise;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -15,8 +15,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
-import static org.df4j.core.node.messagescalar.CompletablePromise.supplyAsync;
-import static org.junit.Assert.assertEquals;
+import static org.df4j.core.simplenode.messagescalar.CompletablePromise.supplyAsync;
 import static org.junit.Assert.fail;
 
 /**
@@ -208,19 +207,19 @@ public class CompletablePromiseTest {
         future.applyToEither(future1, v -> result3.complete("Selected: " + v));
         final CompletablePromise<String> result4 = new CompletablePromise<>();
         future1.applyToEither(future, v -> result4.complete("Selected: " + v));
-        assertEquals("Selected: Done2.", result3.get());
-        assertEquals("Selected: Done2.", result4.get());
-        assertEquals("Done2.", selected.get());
+        Assert.assertEquals("Selected: Done2.", result3.get());
+        Assert.assertEquals("Selected: Done2.", result4.get());
+        Assert.assertEquals("Done2.", selected.get());
 
         CompletablePromise<String> map1 = future.thenCombine(future1, (value1, value2) -> value1 + ", " + value2);
         CompletablePromise<String> map2 = future1.thenCombine(future, (value1, value2) -> value1 + ", " + value2);
-        assertEquals("Done., Done2.", map1.get());
-        assertEquals("Done2., Done.", map2.get());
+        Assert.assertEquals("Done., Done2.", map1.get());
+        Assert.assertEquals("Done2., Done.", map2.get());
 
         final CompletablePromise<String> result1 = new CompletablePromise<>();
         future.acceptEither(future3, s -> result1.complete("Selected: " + s));
-        assertEquals("Selected: Done.", result1.get());
-        assertEquals("Failed", result10.get());
+        Assert.assertEquals("Selected: Done.", result1.get());
+        Assert.assertEquals("Failed", result10.get());
 
         try {
             onFailure(future3.acceptEither(future4, e -> {
@@ -257,7 +256,7 @@ public class CompletablePromiseTest {
         } catch (ExecutionException ee) {
         }
 
-        assertEquals("Flatmapped: Constant", future1.thenCompose(v -> future2).thenApply(v -> "Flatmapped: " + v).get());
+        Assert.assertEquals("Flatmapped: Constant", future1.thenCompose(v -> future2).thenApply(v -> "Flatmapped: " + v).get());
 
         CompletablePromise<String> result11 = new CompletablePromise<>();
         try {
@@ -265,16 +264,16 @@ public class CompletablePromiseTest {
                 result11.complete("Failed");
             }).get();
         } catch (ExecutionException ee) {
-            assertEquals("Failed", result11.get());
+            Assert.assertEquals("Failed", result11.get());
         }
 
         CompletablePromise<String> result2 = new CompletablePromise<>();
         onFailure(future3.thenCompose(v -> future1), e -> {
             result2.complete("Flat map failed: " + e);
         });
-        assertEquals("Flat map failed: java.util.concurrent.CompletionException: java.lang.RuntimeException: CompletableFuture4", result2.get());
+        Assert.assertEquals("Flat map failed: java.util.concurrent.CompletionException: java.lang.RuntimeException: CompletableFuture4", result2.get());
 
-        assertEquals("Done.", future.get(1, TimeUnit.DAYS));
+        Assert.assertEquals("Done.", future.get(1, TimeUnit.DAYS));
 
         try {
             future3.get();
@@ -293,31 +292,31 @@ public class CompletablePromiseTest {
         onFailure(future.thenAccept(s -> result5.complete("onSuccess: " + s)),
                 e -> result5.complete("onFailure: " + e))
                 .thenRun(() -> result6.complete("Ensured"));
-        assertEquals("onSuccess: Done.", result5.get());
-        assertEquals("Ensured", result6.get());
+        Assert.assertEquals("onSuccess: Done.", result5.get());
+        Assert.assertEquals("Ensured", result6.get());
 
         CompletablePromise<String> result7 = new CompletablePromise<>();
         CompletablePromise<String> result8 = new CompletablePromise<>();
         ensure(onFailure(future3.thenAccept(s -> result7.complete("onSuccess: " + s)), e -> {
             result7.complete("onFailure: " + e);
         }), () -> result8.complete("Ensured"));
-        assertEquals("onFailure: java.util.concurrent.CompletionException: java.lang.RuntimeException: CompletableFuture4", result7.get());
-        assertEquals("Ensured", result8.get());
+        Assert.assertEquals("onFailure: java.util.concurrent.CompletionException: java.lang.RuntimeException: CompletableFuture4", result7.get());
+        Assert.assertEquals("Ensured", result8.get());
 
-        assertEquals("Was Rescued!", future3.exceptionally(e -> "Rescued!").thenApply(v -> "Was " + v).get());
-        assertEquals("Was Constant", future2.exceptionally(e -> "Rescued!").thenApply(v -> "Was " + v).get());
+        Assert.assertEquals("Was Rescued!", future3.exceptionally(e -> "Rescued!").thenApply(v -> "Was " + v).get());
+        Assert.assertEquals("Was Constant", future2.exceptionally(e -> "Rescued!").thenApply(v -> "Was " + v).get());
 
-        assertEquals(asList("Done.", "Done2.", "Constant"), collect(asList(future, future1, future2)).get());
-        assertEquals(Arrays.<String>asList(), collect(new ArrayList<>()).get());
+        Assert.assertEquals(asList("Done.", "Done2.", "Constant"), collect(asList(future, future1, future2)).get());
+        Assert.assertEquals(Arrays.<String>asList(), collect(new ArrayList<>()).get());
         try {
-            assertEquals(asList("Done.", "Done2.", "Constant"), collect(asList(future, future3, future2)).get());
+            Assert.assertEquals(asList("Done.", "Done2.", "Constant"), collect(asList(future, future3, future2)).get());
             fail("Didn't fail");
         } catch (ExecutionException ee) {
         }
 
         CompletablePromise<String> result9 = new CompletablePromise<>();
         future.thenAccept(v -> result9.complete("onSuccess: " + v));
-        assertEquals("onSuccess: Done.", result9.get());
+        Assert.assertEquals("onSuccess: Done.", result9.get());
     }
 
     private CompletablePromise<List<String>> collect(List<CompletablePromise<String>> completableFutures) {

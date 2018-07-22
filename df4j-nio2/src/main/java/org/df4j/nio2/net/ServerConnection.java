@@ -12,13 +12,13 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.connector.messagescalar.ScalarCollector;
-import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.connector.messagescalar.SimpleSubscription;
-import org.df4j.core.connector.messagestream.StreamInput;
-import org.df4j.core.connector.messagestream.StreamOutput;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncProcedure;
+import org.df4j.core.boundconnector.messagescalar.ScalarCollector;
+import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.boundconnector.messagestream.StreamInput;
+import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.AsyncProcedure;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;

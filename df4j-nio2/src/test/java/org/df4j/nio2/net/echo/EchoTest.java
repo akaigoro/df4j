@@ -1,13 +1,10 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.node.messagestream.PickPoint;
-import org.df4j.nio2.net.ClientConnection;
 import org.junit.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;

@@ -1,11 +1,11 @@
 package org.df4j.core.messagestream;
 
-import org.df4j.core.connector.messagescalar.ScalarInput;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncProcedure;
-import org.df4j.core.node.AsyncTask;
-import org.df4j.core.node.messagestream.Actor;
-import org.df4j.core.node.messagestream.PickPoint;
+import org.df4j.core.boundconnector.messagescalar.ScalarInput;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.AsyncProcedure;
+import org.df4j.core.tasknode.AsyncTask;
+import org.df4j.core.tasknode.messagestream.Actor;
+import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.junit.Test;
 
 import java.util.Random;

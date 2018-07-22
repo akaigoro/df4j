@@ -1,7 +1,7 @@
 package org.df4j.examples.tutorial;
 
-import org.df4j.core.node.Action;
-import org.df4j.core.node.messagestream.Actor1;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.messagestream.Actor1;
 import org.junit.Test;
 
 public class HelloWorld1 {

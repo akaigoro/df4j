@@ -9,11 +9,11 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.connector.messagescalar.ScalarPublisher;
-import org.df4j.core.connector.messagescalar.ScalarSubscriber;
-import org.df4j.core.connector.messagestream.StreamInput;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.messagestream.Actor1;
+import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
+import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.boundconnector.messagestream.StreamInput;
+import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
