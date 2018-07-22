@@ -1,13 +1,12 @@
 //package com.vogella.android.rxjava.simple;
 package org.df4j.rxjava2;
 
-import org.df4j.core.connector.messagescalar.CompletedPromise;
+import org.df4j.core.node.messagescalar.CompletedResult;
 import org.junit.Test;
 
 import io.reactivex.Observable;
 
-import static junit.framework.Assert.assertTrue;
-
+import static org.junit.Assert.assertTrue;
 
 public class RxJavaUnitTest {
     String result="";
@@ -24,7 +23,7 @@ public class RxJavaUnitTest {
     @Test
     public void returnAValueDf(){
         result = "";
-        CompletedPromise<String> observer = new CompletedPromise("Hello"); // provides datea
+        CompletedResult<String> observer = new CompletedResult("Hello"); // provides datea
         observer.subscribe(s -> result=s); // Callable as subscriber
         assertTrue(result.equals("Hello"));
     }

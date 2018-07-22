@@ -1,10 +1,9 @@
 package org.df4j.core.node.messagestream;
 
-import org.df4j.core.connector.messagescalar.CompletablePromise;
+import org.df4j.core.node.messagescalar.SubscriberPromise;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 import org.df4j.core.connector.messagescalar.SimpleSubscription;
-import org.df4j.core.connector.messagestream.StreamCollector;
 import org.df4j.core.connector.messagestream.StreamSubscriber;
 
 import java.util.ArrayDeque;
@@ -12,7 +11,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.*;
-import java.util.function.Function;
 
 /**
  * An asynchronous analogue of BlockingQueue
@@ -126,7 +124,7 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
                 return resources.remove();
             }
         }
-        CompletablePromise<T> future = new CompletablePromise<>();
+        SubscriberPromise<T> future = new SubscriberPromise<>();
         subscribe(future);
         try {
             return future.get();
@@ -142,7 +140,7 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
                 return resources.remove();
             }
         }
-        CompletablePromise<T> future = new CompletablePromise<>();
+        SubscriberPromise<T> future = new SubscriberPromise<>();
         subscribe(future);
         try {
             return future.get(timeout, unit);

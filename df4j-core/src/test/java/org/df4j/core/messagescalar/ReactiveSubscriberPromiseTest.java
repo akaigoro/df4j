@@ -1,6 +1,6 @@
 package org.df4j.core.messagescalar;
 
-import org.df4j.core.connector.messagescalar.SubscriberPromise;
+import org.df4j.core.node.messagescalar.SubscriberPromise;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -19,9 +19,9 @@ public class ReactiveSubscriberPromiseTest {
         sp0.subscribe(sp2);
         double v = 4.0;
         sp0.post(v);
-        double val1 = sp1.asFuture().get(1, TimeUnit.SECONDS).doubleValue();
+        double val1 = sp1.get(1, TimeUnit.SECONDS).doubleValue();
         Assert.assertEquals(v, val1, 0.0001);
-        double val2 = sp2.asFuture().get(1, TimeUnit.SECONDS).doubleValue();
+        double val2 = sp2.get(1, TimeUnit.SECONDS).doubleValue();
         Assert.assertEquals(v, val2, 0.0001);
     }
 }

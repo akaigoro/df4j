@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class AsyncFunction<T, R> extends AsyncResult<R> implements ScalarSubscriber<T> {
+public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubscriber<T> {
     protected final ConstInput<T> argument = new ConstInput<>(this);
 
     public AsyncFunction() { }

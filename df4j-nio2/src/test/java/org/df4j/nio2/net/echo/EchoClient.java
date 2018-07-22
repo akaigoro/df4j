@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.connector.messagescalar.CompletablePromise;
+import org.df4j.core.node.messagescalar.SubscriberPromise;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.messagestream.Actor1;
 import org.df4j.core.util.Logger;
@@ -17,7 +17,7 @@ import java.nio.ByteBuffer;
 class EchoClient extends Actor1<ByteBuffer> {
     protected static final Logger LOG = Logger.getLogger(EchoClient.class.getName());
 
-    CompletablePromise<Void> result = new CompletablePromise<>();
+    SubscriberPromise<Void> result = new SubscriberPromise<>();
     String message="hi there";
     ClientConnection clientConn;
     int count;

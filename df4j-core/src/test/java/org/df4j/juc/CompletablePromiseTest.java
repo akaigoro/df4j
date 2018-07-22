@@ -1,6 +1,6 @@
 package org.df4j.juc;
 
-import org.df4j.core.connector.messagescalar.CompletablePromise;
+import org.df4j.core.node.messagescalar.CompletablePromise;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -11,10 +11,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
-import static org.df4j.core.connector.messagescalar.CompletablePromise.supplyAsync;
+import static org.df4j.core.node.messagescalar.CompletablePromise.supplyAsync;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -45,18 +46,20 @@ public class CompletablePromiseTest {
             throw new CompletionException(t);
         });
 
-        CompletablePromise<Object> future2 = supplyAsync(() -> {
+        CompletablePromise future2 = supplyAsync(() -> {
             throw new RuntimeException();
         });
+        /* FIXME
         future2.exceptionally(t -> {
             t.printStackTrace();
             throw new CompletionException(t);
         });
-
+*/
         CompletablePromise<String> future3 = supplyAsync(() -> "test");
-        future3.thenAccept(t -> {
+        CompletablePromise<Void> voidAsyncResult = future3.thenAccept(t -> {
             throw new RuntimeException();
-        }).exceptionally(t -> {
+        });
+        voidAsyncResult.exceptionally(t -> {
             t.printStackTrace();
             throw new CompletionException(t);
         });
@@ -68,13 +71,14 @@ public class CompletablePromiseTest {
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
         CompletablePromise<String> other = supplyAsync(() -> "Doomed value");
-        CompletablePromise<String> future = supplyAsync(() -> {
-            sleep(1000);
-            return "Doomed value";
-        }).exceptionally(t -> {
+        CompletablePromise<String> asyncResult = new CompletablePromise();
+        CompletablePromise<String> completablePromise = asyncResult.exceptionally(t -> {
             cancelled.set(true);
             return null;
-        }).thenCombine(other, (a, b) -> a + ", " + b).handle((v, t) -> {
+        });
+        BiFunction<String, String, String> biFunction = (a, b) -> a + ", " + b;
+        CompletablePromise<String> promise = completablePromise.thenCombine(other, biFunction);
+        CompletablePromise<String> future = promise.handle((v, t) -> {
             if (t == null) {
                 handleCalledWithValue.set(true);
             }
@@ -104,11 +108,9 @@ public class CompletablePromiseTest {
         AtomicBoolean cancelled = new AtomicBoolean();
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
-        CompletablePromise<String> other = supplyAsync(() -> "Doomed value");
-        CompletablePromise<String> future = supplyAsync(() -> {
-            sleep(1000);
-            return "Doomed value";
-        }).exceptionally(t -> {
+        CompletablePromise<String> other = new CompletablePromise();
+        CompletablePromise<String> asyncResult = new CompletablePromise<>();
+        CompletablePromise<String> future = asyncResult.exceptionally(t -> {
             cancelled.set(true);
             return null;
         }).thenCombine(other, (a, b) -> a + ", " + b).handle((v, t) -> {
@@ -230,18 +232,18 @@ public class CompletablePromiseTest {
         }
 
 //        final CountDownLatch monitor = new CountDownLatch(2);
-//        CompletablePromise<String> onraise = supplyAsync(() -> {
+//        SimpleAsyncResult<String> onraise = supplyAsync(() -> {
 //            try {
 //                monitor.await();
 //            } catch (InterruptedException e) {
 //            }
 //            return "Interrupted";
 //        });
-//        CompletablePromise<String> join = future2.thenCombine(onraise, (a, b) -> null);
+//        SimpleAsyncResult<String> join = future2.thenCombine(onraise, (a, b) -> null);
 //        onraise.onRaise(e -> monitor.countDown());
 //        onraise.onRaise(e -> monitor.countDown());
 
-//        CompletablePromise<String> map = future.map(v -> "Set1: " + v).map(v -> {
+//        SimpleAsyncResult<String> map = future.map(v -> "Set1: " + v).map(v -> {
 //            join.raise(new CancellationException());
 //            return "Set2: " + v;
 //        });

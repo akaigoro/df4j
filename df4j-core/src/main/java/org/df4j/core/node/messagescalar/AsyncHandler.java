@@ -7,7 +7,7 @@ import org.df4j.core.util.Pair;
 
 import java.util.function.*;
 
-public class AsyncHandler<T,R> extends AsyncResult<R> implements ScalarSubscriber<T> {
+public class AsyncHandler<T,R> extends AsyncSupplier<R> implements ScalarSubscriber<T> {
     private final ConstInput<Pair<T, Throwable>> argument = new ConstInput<>(this);
     private final BiFunction<? super T, ? super Throwable, ? extends R> action;
 

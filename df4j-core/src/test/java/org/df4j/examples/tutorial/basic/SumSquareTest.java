@@ -1,6 +1,6 @@
 package org.df4j.examples.tutorial.basic;
 
-import org.df4j.core.connector.messagescalar.CompletablePromise;
+import org.df4j.core.node.messagescalar.SubscriberPromise;
 import org.df4j.core.connector.messagescalar.ScalarInput;
 import org.df4j.core.node.Action;
 import org.df4j.core.node.AsyncProcedure;
@@ -16,7 +16,7 @@ import java.util.function.Function;
 
 public class SumSquareTest {
     public static class Square extends AsyncProcedure {
-        final CompletablePromise<Integer> result = new CompletablePromise<>();
+        final SubscriberPromise<Integer> result = new SubscriberPromise<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
         @Action
@@ -27,7 +27,7 @@ public class SumSquareTest {
     }
 
     public static class Sum extends AsyncProcedure {
-        final CompletablePromise<Integer> result = new CompletablePromise<>();
+        final SubscriberPromise<Integer> result = new SubscriberPromise<>();
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 

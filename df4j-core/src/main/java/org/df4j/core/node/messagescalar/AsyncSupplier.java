@@ -1,6 +1,5 @@
 package org.df4j.core.node.messagescalar;
 
-import org.df4j.core.connector.messagescalar.CompletablePromise;
 import org.df4j.core.connector.messagescalar.ScalarPublisher;
 import org.df4j.core.connector.messagescalar.ScalarSubscriber;
 import org.df4j.core.node.AsyncProcedure;
@@ -19,21 +18,21 @@ import java.util.function.Supplier;
  *
  * @param <R>
  */
-public class AsyncResult<R> extends AsyncProcedure<R> implements ScalarPublisher<R> {
+public class AsyncSupplier<R> extends AsyncProcedure<R> implements ScalarPublisher<R> {
     /** place for demands */
     protected final CompletablePromise<R> result = new CompletablePromise<>();
 
-    public AsyncResult() {}
+    public AsyncSupplier() {}
 
-    public AsyncResult(Invoker<R> invoker) {
+    public AsyncSupplier(Invoker<R> invoker) {
         super(invoker);
     }
 
-    public AsyncResult(Supplier<R> proc) {
+    public AsyncSupplier(Supplier<R> proc) {
         super(new SupplierInvoker<>(proc));
     }
 
-    public AsyncResult(Runnable proc) {
+    public AsyncSupplier(Runnable proc) {
         super(new RunnableInvoker<R>(proc));
     }
 

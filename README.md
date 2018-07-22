@@ -13,7 +13,7 @@ However, all they imply steep learning curve and hides implementation details un
 df4j ia an attempt to discover the basic building elements of asynchronous computations,
 and allow developer to freely combine those elements, and add new ones.
 
-The main results of this work are listed below. Some of them look evident, but listed for completeness.
+The main results of this work are listed beloForkJoinTaskw. Some of them look evident, but listed for completeness.
 
 1. Parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
 Activities compute tokens (values and signals), connectors pass them between activities.
