@@ -1,17 +1,15 @@
 package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.simplenode.messagescalar.CompletablePromise;
+import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
 
 public class AllOf extends AsyncSupplier<Object[]> {
     Object[] results;
 
-    public AllOf() { }
-
-    public AllOf(CompletablePromise<?>... sources) {
+    public AllOf(SubscriberPromise<?>... sources) {
         results = new Object[sources.length];
         for (int k = 0; k<sources.length; k++) {
-            CompletablePromise source = sources[k];
+            SubscriberPromise source = sources[k];
             final Enter arg = new Enter(k);
             source.subscribe(arg);
         }

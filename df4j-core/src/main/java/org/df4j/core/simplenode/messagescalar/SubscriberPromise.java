@@ -2,6 +2,8 @@ package org.df4j.core.simplenode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.tasknode.AsyncProc;
+import org.df4j.core.tasknode.messagescalar.CompletablePromise;
 
 import java.util.concurrent.CancellationException;
 
@@ -16,6 +18,13 @@ public class SubscriberPromise<T>
 {
     protected SimpleSubscription subscription;
     protected boolean cancelled = false;
+
+    public SubscriberPromise(AsyncProc task) {
+        super(task);
+    }
+
+    public SubscriberPromise() {
+    }
 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {

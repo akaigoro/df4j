@@ -58,10 +58,10 @@ public class AsyncAction<R> extends AsyncProc {
             throw new IllegalStateException("not started");
         }
         locks.forEach(lock -> lock.purge());
-        Object[] args = new Object[asynctParams.size()];
-        for (int k = 0; k< asynctParams.size(); k++) {
-            AsynctParam asynctParam = asynctParams.get(k);
-            args[k] = asynctParam.next();
+        Object[] args = new Object[asyncParams.size()];
+        for (int k = 0; k< asyncParams.size(); k++) {
+            AsyncParam asyncParam = asyncParams.get(k);
+            args[k] = asyncParam.next();
         }
         return args;
     }
@@ -69,7 +69,7 @@ public class AsyncAction<R> extends AsyncProc {
     protected R runAction() throws Exception {
         if (actionCaller == null) {
             try {
-                actionCaller = ActionCaller.findAction(this, asynctParams.size());
+                actionCaller = ActionCaller.findAction(this, asyncParams.size());
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }

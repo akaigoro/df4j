@@ -14,8 +14,7 @@ import org.df4j.core.util.SameThreadExecutor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -29,7 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class AsyncProc implements Runnable {
     public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
-    static public final SameThreadExecutor sameThreadExecutor = SameThreadExecutor.sameThreadExecutor;
+    public static final Executor syncExec = SameThreadExecutor.sameThreadExecutor;
+    public static final Executor asyncExec = ForkJoinPool.commonPool();
 
     /**
      * the set of all b/w Pins
@@ -38,7 +38,7 @@ public abstract class AsyncProc implements Runnable {
     /**
      * the set of all colored Pins, to form array of arguments
      */
-    protected final ArrayList<AsynctParam> asynctParams = new ArrayList<>();
+    protected final ArrayList<AsyncParam> asyncParams = new ArrayList<>();
     /**
      * total number of created pins
      */
@@ -178,13 +178,13 @@ public abstract class AsyncProc implements Runnable {
      * <p>
      * initially in blocked state
      */
-    public abstract class AsynctParam<T> extends BaseLock {
+    public abstract class AsyncParam<T> extends BaseLock {
 
-        public AsynctParam(boolean blocked) {
+        public AsyncParam(boolean blocked) {
             super(blocked);
         }
 
-        public AsynctParam() {
+        public AsyncParam() {
             super();
         }
 
@@ -193,7 +193,7 @@ public abstract class AsyncProc implements Runnable {
             if (isStarted()) {
                 throw new IllegalStateException("cannot register connector after start");
             }
-            asynctParams.add(this);
+            asyncParams.add(this);
         }
 
         protected void unRegister() {
@@ -203,7 +203,7 @@ public abstract class AsyncProc implements Runnable {
             if (blocked) {
                 turnOn();
             }
-            asynctParams.remove(this);
+            asyncParams.remove(this);
         }
 
         /** removes and return next token */
@@ -211,4 +211,11 @@ public abstract class AsyncProc implements Runnable {
     }
 
     protected abstract boolean isStarted();
+
+    public class CompletablePromise<R> extends org.df4j.core.tasknode.messagescalar.CompletablePromise<R> {
+        public CompletablePromise() {
+            super(AsyncProc.this);
+        }
+    }
+
 }

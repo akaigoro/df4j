@@ -1,6 +1,6 @@
 package org.df4j.juc;
 
-import org.df4j.core.simplenode.messagescalar.CompletablePromise;
+import org.df4j.core.tasknode.messagescalar.CompletablePromise;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -15,7 +15,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
-import static org.df4j.core.simplenode.messagescalar.CompletablePromise.supplyAsync;
+import static org.df4j.core.tasknode.messagescalar.CompletablePromise.supplyAsync;
 import static org.junit.Assert.fail;
 
 /**
@@ -70,7 +70,7 @@ public class CompletablePromiseTest {
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
         CompletablePromise<String> other = supplyAsync(() -> "Doomed value");
-        CompletablePromise<String> asyncResult = new CompletablePromise();
+        CompletablePromise<String> asyncResult =new CompletablePromise();
         CompletablePromise<String> completablePromise = asyncResult.exceptionally(t -> {
             cancelled.set(true);
             return null;
@@ -107,7 +107,7 @@ public class CompletablePromiseTest {
         AtomicBoolean cancelled = new AtomicBoolean();
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
-        CompletablePromise<String> other = new CompletablePromise();
+        CompletablePromise<String> other =new CompletablePromise();
         CompletablePromise<String> asyncResult = new CompletablePromise<>();
         CompletablePromise<String> future = asyncResult.exceptionally(t -> {
             cancelled.set(true);

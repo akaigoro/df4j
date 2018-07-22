@@ -1,10 +1,12 @@
-package org.df4j.core.simplenode.messagescalar;
+package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.AsyncResult;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.tasknode.messagescalar.*;
-import org.df4j.core.util.SameThreadExecutor;
+import org.df4j.core.simplenode.messagescalar.AnyOf;
+import org.df4j.core.simplenode.messagescalar.CompletedResult;
+import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
+import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -17,14 +19,21 @@ import java.util.function.*;
  * @param <R> type of result
  */
 public class CompletablePromise<R> implements AsyncResult<R> {
-    protected static Executor syncExec = SameThreadExecutor.sameThreadExecutor;
-    protected static Executor asyncExec = ForkJoinPool.commonPool();
 
     /** place for demands */
-    private Queue<ScalarSubscriber<? super R>> requests = new ArrayDeque<>();
+    private Lobby<R> requests = new Lobby<>();
     protected boolean completed = false;
     protected R result = null;
     protected Throwable exception;
+    protected final AsyncProc task;
+
+    public CompletablePromise(AsyncProc task) {
+        this.task = task;
+    }
+
+    public CompletablePromise() {
+        this.task = null;
+    }
 
     @Override
     public synchronized <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
@@ -33,7 +42,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
         } else if (exception != null) {
             subscriber.postFailure(exception);
         } else {
-            requests.add(subscriber);
+            requests.subscribe(subscriber);
         }
         return subscriber;
     }
@@ -45,9 +54,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
         this.result = result;
         this.completed = true;
         notifyAll();
-        for (ScalarSubscriber<? super R> subscriber: requests) {
-            subscriber.post(result);
-        }
+        requests.post(result);
         requests = null;
         return true;
     }
@@ -60,9 +67,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
             return false;
         }
         this.exception = exception;
-        for (ScalarSubscriber<? super R> subscriber: requests) {
-            subscriber.postFailure(exception);
-        }
+        requests.postFailure(exception);
         requests = null;
         return true;
     }
@@ -143,7 +148,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
      * @return the new SimpleAsyncResult
      */
     public static <U> CompletablePromise<U> supplyAsync(Supplier<U> supplier) {
-        return supplyAsync(supplier, asyncExec);
+        return supplyAsync(supplier, AsyncProc.asyncExec);
     }
 
     /**
@@ -174,7 +179,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
      * @return the new SimpleAsyncResult
      */
     public static CompletablePromise<Void> runAsync(Runnable runnable) {
-        return runAsync(runnable, asyncExec);
+        return runAsync(runnable, AsyncProc.asyncExec);
     }
 
     /**
@@ -208,12 +213,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     }
 
     public <U> CompletablePromise<U> thenApply(Function<? super R,? extends U> fn) {
-        return thenApplyAsync(fn, syncExec);
+        return thenApplyAsync(fn, AsyncProc.syncExec);
     }
 
     public <U> CompletablePromise<U> thenApplyAsync(
             Function<? super R,? extends U> fn) {
-        return thenApplyAsync(fn, asyncExec);
+        return thenApplyAsync(fn, AsyncProc.asyncExec);
     }
 
     public <U> CompletablePromise<U> thenApplyAsync(
@@ -225,7 +230,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     }
 
     public CompletablePromise<Void> thenAccept(Consumer<? super R> action) {
-        CompletablePromise<Void> result = new CompletablePromise<>();
+        CompletablePromise<Void> result = new CompletablePromise<>(task);
         ScalarSubscriber<? super R> handler = new ScalarSubscriber<R>(){
 
             @Override
@@ -244,7 +249,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     }
 
     public CompletablePromise<Void> thenAcceptAsync(Consumer<? super R> action) {
-        return thenAcceptAsync(action, asyncExec);
+        return thenAcceptAsync(action, AsyncProc.asyncExec);
     }
 
     public CompletablePromise<Void> thenAcceptAsync(Consumer<? super R> action,
@@ -256,7 +261,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     }
 
     public CompletablePromise<Void> thenRun(Runnable action) {
-        CompletablePromise<Void> result = new CompletablePromise<Void>();
+        CompletablePromise<Void> result = new CompletablePromise<Void>(task);
         ScalarSubscriber<? super R> handler = new ScalarSubscriber<R>(){
 
             @Override
@@ -275,7 +280,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     }
 
     public CompletablePromise<Void> thenRunAsync(Runnable action) {
-        return thenRunAsync(action, asyncExec);
+        return thenRunAsync(action, AsyncProc.asyncExec);
     }
 
     public CompletablePromise<Void> thenRunAsync(Runnable action,
@@ -289,13 +294,13 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     public <U,V> CompletablePromise<V> thenCombine(AsyncResult<? extends U> other,
                                                    BiFunction<? super R,? super U,? extends V> fn
     ) {
-        return thenCombineAsync(other, fn, syncExec);
+        return thenCombineAsync(other, fn, AsyncProc.syncExec);
     }
 
     public <U,V> CompletablePromise<V> thenCombineAsync(AsyncResult<? extends U> other,
                                                         BiFunction<? super R,? super U,? extends V> fn
     ) {
-        return thenCombineAsync(other, fn, asyncExec);
+        return thenCombineAsync(other, fn, AsyncProc.asyncExec);
     }
 
     public <U,V> CompletablePromise<V> thenCombineAsync(AsyncResult<? extends U> other,
@@ -313,13 +318,13 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     public <U> CompletablePromise<Void> thenAcceptBoth(
             AsyncResult<? extends U> other,
             BiConsumer<? super R, ? super U> action) {
-        return thenAcceptBothAsync(other, action, syncExec);
+        return thenAcceptBothAsync(other, action, AsyncProc.syncExec);
     }
 
     public <U> CompletablePromise<Void> thenAcceptBothAsync(
             CompletablePromise<? extends U> other,
             BiConsumer<? super R, ? super U> action) {
-        return thenAcceptBothAsync(other, action, asyncExec);
+        return thenAcceptBothAsync(other, action, AsyncProc.asyncExec);
     }
 
     public <U> CompletablePromise<Void> thenAcceptBothAsync(
@@ -334,12 +339,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     public <U> CompletablePromise<Void> runAfterBoth(AsyncResult<? extends  U> other,
                                                      Runnable action) {
-        return runAfterBothAsync(other, action, syncExec);
+        return runAfterBothAsync(other, action, AsyncProc.syncExec);
     }
 
     public <U> CompletablePromise<Void> runAfterBothAsync(AsyncResult<? extends  U> other,
                                                           Runnable action) {
-        return runAfterBothAsync(other, action, asyncExec);
+        return runAfterBothAsync(other, action, AsyncProc.asyncExec);
     }
 
     public <U> CompletablePromise<Void> runAfterBothAsync(AsyncResult<? extends  U> other,
@@ -356,12 +361,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     public <U> CompletablePromise<U> applyToEither(
             CompletablePromise<? extends R> other, Function<? super R, U> fn
     ) {
-        return applyToEitherAsync(other, fn, syncExec);
+        return applyToEitherAsync(other, fn, AsyncProc.syncExec);
     }
 
     public <U> CompletablePromise<U> applyToEitherAsync(
             AsyncResult<? extends R> other, Function<? super R, U> fn) {
-        return applyToEitherAsync(other, fn, asyncExec);
+        return applyToEitherAsync(other, fn, AsyncProc.asyncExec);
     }
 
     public <U> CompletablePromise<U> applyToEitherAsync(
@@ -378,12 +383,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     public CompletablePromise<Void> acceptEither(
             AsyncResult<? extends R> other, Consumer<? super R> action) {
-        return acceptEitherAsync(other, action, syncExec);
+        return acceptEitherAsync(other, action, AsyncProc.syncExec);
     }
 
     public CompletablePromise<Void> acceptEitherAsync(
             AsyncResult<? extends R> other, Consumer<? super R> action) {
-        return acceptEitherAsync(other, action, asyncExec);
+        return acceptEitherAsync(other, action, AsyncProc.asyncExec);
     }
 
     public CompletablePromise<Void> acceptEitherAsync(
@@ -398,12 +403,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     public CompletablePromise<Void> runAfterEither(AsyncResult<? extends R> other,
                                                    Runnable action) {
-        return runAfterEitherAsync(other, action, syncExec);
+        return runAfterEitherAsync(other, action, AsyncProc.syncExec);
     }
 
     public CompletablePromise<Void> runAfterEitherAsync(AsyncResult<? extends R> other,
                                                         Runnable action) {
-        return runAfterEitherAsync(other, action, asyncExec);
+        return runAfterEitherAsync(other, action, AsyncProc.asyncExec);
     }
 
     public CompletablePromise<Void> runAfterEitherAsync(AsyncResult<? extends R> other,
@@ -418,12 +423,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     public <U> CompletablePromise<U> thenCompose(
             Function<? super R, ? extends AsyncResult<U>> fn) {
-        return thenComposeAsync(fn, syncExec);
+        return thenComposeAsync(fn, AsyncProc.syncExec);
     }
 
     public <U> CompletablePromise<U> thenComposeAsync(
             Function<? super R, ? extends CompletablePromise<U>> fn) {
-        return thenComposeAsync(fn, asyncExec);
+        return thenComposeAsync(fn, AsyncProc.asyncExec);
     }
 
     public <U> CompletablePromise<U> thenComposeAsync(
@@ -435,7 +440,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     public CompletablePromise<R> whenComplete(
             BiConsumer<? super R, ? super Throwable> action
     ) {
-        SubscriberPromise<R> result = new SubscriberPromise<R>() {
+        SubscriberPromise<R> result = new SubscriberPromise<R>(task) {
 
             @Override
             public boolean complete(R message) {
@@ -457,7 +462,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     public CompletablePromise<R> whenCompleteAsync(
             BiConsumer<? super R, ? super Throwable> action) {
-        return whenCompleteAsync(action, asyncExec);
+        return whenCompleteAsync(action, AsyncProc.asyncExec);
     }
 
     public CompletablePromise<R> whenCompleteAsync(
@@ -473,12 +478,12 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     public <U> CompletablePromise<U> handle(
             BiFunction<? super R, Throwable, ? extends U> fn) {
-        return handleAsync(fn, syncExec);
+        return handleAsync(fn, AsyncProc.syncExec);
     }
 
     public <U> CompletablePromise<U> handleAsync(
             BiFunction<? super R, Throwable, ? extends U> fn) {
-        return handleAsync(fn, asyncExec);
+        return handleAsync(fn, AsyncProc.asyncExec);
     }
 
     public <U> CompletablePromise<U> handleAsync(
@@ -570,4 +575,85 @@ public class CompletablePromise<R> implements AsyncResult<R> {
         return either;
     }
 
+    class Lobby<R> {
+        private ScalarSubscriber<? super R> request;
+        private Queue<ScalarSubscriber<? super R>> requests;
+
+        public synchronized  <S extends ScalarSubscriber<? super R>> void subscribe(S subscriber) {
+            if (request == null) {
+                request = subscriber;
+            } else {
+                if (requests == null) {
+                    requests = new ArrayDeque<>();
+                }
+                requests.add(subscriber);
+            }
+        }
+
+        private Executor getExecutor() {
+            if (task != null) {
+                Executor exec = task.getExecutor();
+                if (exec != null) {
+                    return exec;
+                }
+            }
+            return ForkJoinPool.commonPool();
+        }
+
+        void post(R result) {
+            if (request == null) {
+                return;
+            }
+            request.post(result);
+            if (requests == null) {
+                return;
+            }
+            getExecutor().execute(new PostResult<R>(requests, result));
+        }
+
+        void postFailure(Throwable exception) {
+            if (request == null) {
+                return;
+            }
+            request.postFailure(exception);
+            if (requests == null) {
+                return;
+            }
+            getExecutor().execute(new PostFailure(requests, exception));
+        }
+    }
+
+    static class PostResult<R> implements Runnable {
+        private final Queue<ScalarSubscriber<? super R>> requests;
+        private final R result;
+
+        PostResult(Queue<ScalarSubscriber<? super R>> requests, R result) {
+            this.requests = requests;
+            this.result = result;
+        }
+
+        @Override
+        public void run() {
+            for (ScalarSubscriber<? super R> subscriber: requests) {
+                subscriber.post(result);
+            }
+        }
+    }
+
+    static class PostFailure<R> implements Runnable {
+        private final Queue<ScalarSubscriber<? super R>> requests;
+        private final Throwable exception;
+
+        PostFailure(Queue<ScalarSubscriber<? super R>> requests, Throwable exception) {
+            this.requests = requests;
+            this.exception = exception;
+        }
+
+        @Override
+        public void run() {
+            for (ScalarSubscriber<? super R> subscriber: requests) {
+                subscriber.postFailure(exception);
+            }
+        }
+    }
 }

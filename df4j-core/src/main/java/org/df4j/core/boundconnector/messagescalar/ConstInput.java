@@ -9,7 +9,7 @@ import org.df4j.core.tasknode.AsyncProc;
  * @param <T>
  *     type of accepted tokens.
  */
-public class ConstInput<T> extends AsyncProc.AsynctParam<T> implements ScalarSubscriber<T> {
+public class ConstInput<T> extends AsyncProc.AsyncParam<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;
     protected boolean closeRequested = false;
     protected boolean cancelled = false;
@@ -19,8 +19,8 @@ public class ConstInput<T> extends AsyncProc.AsynctParam<T> implements ScalarSub
     protected T value = null;
     protected Throwable exception;
 
-    public ConstInput(AsyncProc actor) {
-        actor.super();
+    public ConstInput(AsyncProc task) {
+        task.super();
     }
 
     @Override

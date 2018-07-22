@@ -2,12 +2,10 @@ package org.df4j.core.simplenode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.AsyncResult;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.tasknode.messagescalar.CompletablePromise;
 
 public class AnyOf<T> extends CompletablePromise<T> {
     Enter subscriber = new Enter();
-
-    public AnyOf() {
-    }
 
     public AnyOf(AsyncResult<? extends T>... sources) {
         for (AsyncResult source: sources) {
