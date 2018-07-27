@@ -1,5 +1,6 @@
 package org.df4j.juc;
 
+import org.df4j.core.boundconnector.messagescalar.AsyncResult;
 import org.df4j.core.tasknode.messagescalar.CompletablePromise;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -15,7 +16,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
-import static org.df4j.core.tasknode.messagescalar.CompletablePromise.supplyAsync;
+import static org.df4j.core.boundconnector.messagescalar.AsyncResult.supplyAsync;
 import static org.junit.Assert.fail;
 
 /**
@@ -45,7 +46,7 @@ public class CompletablePromiseTest {
             throw new CompletionException(t);
         });
 
-        CompletablePromise future2 = supplyAsync(() -> {
+        AsyncResult<Object> future2 = supplyAsync(() -> {
             throw new RuntimeException();
         });
         /* FIXME
@@ -54,8 +55,8 @@ public class CompletablePromiseTest {
             throw new CompletionException(t);
         });
 */
-        CompletablePromise<String> future3 = supplyAsync(() -> "test");
-        CompletablePromise<Void> voidAsyncResult = future3.thenAccept(t -> {
+        AsyncResult<String> future3 = supplyAsync(() -> "test");
+        CompletionStage<Void> voidAsyncResult = future3.thenAccept(t -> {
             throw new RuntimeException();
         });
         voidAsyncResult.exceptionally(t -> {
@@ -69,15 +70,15 @@ public class CompletablePromiseTest {
         AtomicBoolean cancelled = new AtomicBoolean();
         AtomicBoolean handled = new AtomicBoolean();
         AtomicBoolean handleCalledWithValue = new AtomicBoolean();
-        CompletablePromise<String> other = supplyAsync(() -> "Doomed value");
+        AsyncResult<String> other = supplyAsync(() -> "Doomed value");
         CompletablePromise<String> asyncResult =new CompletablePromise();
         CompletablePromise<String> completablePromise = asyncResult.exceptionally(t -> {
             cancelled.set(true);
             return null;
         });
         BiFunction<String, String, String> biFunction = (a, b) -> a + ", " + b;
-        CompletablePromise<String> promise = completablePromise.thenCombine(other, biFunction);
-        CompletablePromise<String> future = promise.handle((v, t) -> {
+        AsyncResult<String> promise = completablePromise.thenCombine(other, biFunction);
+        CompletablePromise<Object> future = promise.handle((v, t) -> {
             if (t == null) {
                 handleCalledWithValue.set(true);
             }

@@ -4,7 +4,7 @@ import org.df4j.core.boundconnector.messagescalar.ScalarInput;
 import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Queue;
 import java.util.Iterator;
 
 /**
@@ -13,7 +13,7 @@ import java.util.Iterator;
  * @param <T>
  */
 public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T>, Iterator<T> {
-    protected Deque<T> queue;
+    protected Queue<T> queue;
     protected boolean closeRequested = false;
 
     public StreamInput(AsyncProc actor) {
@@ -26,7 +26,7 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
         this.queue = new ArrayDeque<>(capacity);
     }
 
-    public StreamInput(AsyncProc actor, Deque<T> queue) {
+    public StreamInput(AsyncProc actor, Queue<T> queue) {
         super(actor);
         this.queue = queue;
     }
@@ -88,7 +88,7 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
             if (this.value == null) {
                 throw new IllegalStateException();
             }
-            queue.addFirst(this.value);
+            queue.add(this.value);
             this.value = value;
         }
     }

@@ -36,8 +36,7 @@ class EchoClient extends Actor1<ByteBuffer> {
         clientConn.writer.input.post(buf);
     }
 
-    @Action
-    public void onBufRead(ByteBuffer b) {
+    public void runAction(ByteBuffer b) {
         String m2 = Utils.fromByteBuf(b);
         LOG.info("client received message:"+m2);
         Assert.assertEquals(message, m2);

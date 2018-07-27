@@ -49,4 +49,13 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
     public boolean isClosed() {
         return mainInput.isClosed();
     }
+
+    @Override
+    protected Void runAction() throws Exception {
+        M arg = mainInput.next();
+        runAction(arg);
+        return null;
+    }
+
+    protected abstract void runAction(M arg) throws Exception;
 }

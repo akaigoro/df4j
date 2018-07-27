@@ -2,6 +2,8 @@ package org.df4j.core.boundconnector.messagescalar;
 
 import org.df4j.core.tasknode.AsyncProc;
 
+import java.util.function.BiConsumer;
+
 /**
  * Token storage with standard Subscriber<T> interface. It has place for only one
  * token, which is never consumed.
@@ -9,7 +11,10 @@ import org.df4j.core.tasknode.AsyncProc;
  * @param <T>
  *     type of accepted tokens.
  */
-public class ConstInput<T> extends AsyncProc.AsyncParam<T> implements ScalarSubscriber<T> {
+public class ConstInput<T> extends AsyncProc.AsyncParam<T>
+        implements ScalarSubscriber<T>,
+        BiConsumer<T, Throwable>  // to connect to a CompletionStage by whenComplete
+{
     protected SimpleSubscription subscription;
     protected boolean closeRequested = false;
     protected boolean cancelled = false;
@@ -77,6 +82,16 @@ public class ConstInput<T> extends AsyncProc.AsyncParam<T> implements ScalarSubs
             throw new IllegalStateException("token set already");
         }
         this.exception = throwable;
+    }
+
+    @Override
+    public void accept(T value, Throwable throwable) {
+        if (throwable != null) {
+            postFailure(throwable);
+        } else {
+            post(value);
+        }
+
     }
 
     public synchronized boolean cancel() {

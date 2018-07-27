@@ -1,7 +1,5 @@
-package org.df4j.core.util;
+package org.df4j.core.util.executor;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.Executor;
 
 public class DirectExecutor implements Executor {

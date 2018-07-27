@@ -1,12 +1,12 @@
-package org.df4j.core.util;
+package org.df4j.core.util.executor;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 
-public class SameThreadExecutor implements Executor {
+public class CurrentThreadExecutor implements Executor {
     static private ThreadLocal<Queue<Runnable>> myThreadLocal = new ThreadLocal<>();
-    static public final SameThreadExecutor sameThreadExecutor = new SameThreadExecutor();
+    static public final CurrentThreadExecutor CURRENT_THREAD_EXECUTOR = new CurrentThreadExecutor();
 
     @Override
     public void execute(Runnable command) {

@@ -12,8 +12,7 @@ public class HelloWorld1 {
     class Collector extends Actor1<String> {
         StringBuilder sb = new StringBuilder();
 
-        @Action
-        protected void act(String message) {
+        protected void runAction(String message) {
             sb.append(message);
             sb.append(" ");
         }

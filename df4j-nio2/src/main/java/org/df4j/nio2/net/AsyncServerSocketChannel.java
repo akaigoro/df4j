@@ -12,7 +12,7 @@ package org.df4j.nio2.net;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
-import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
@@ -26,8 +26,8 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections, pushes them pu subscribers
  *
- * though it extends AsyncProc, it is effectively an Actor1<ScalarSubscriber>
- *     
+ * though it extends AsyncAction, it is effectively an Actor1<ScalarSubscriber>
+ *
  *  its sole input is a stream of requests of type ServerConnection
  *  for each ServerConnection, AsyncServerSocketChannel accepts an incoming connection requests
  *  from a client and passes it to the ServerConnection
@@ -36,15 +36,15 @@ import java.nio.channels.CompletionHandler;
  *
  */
 public class AsyncServerSocketChannel
-        extends Actor1<AsynchronousSocketChannel>
+        extends AsyncAction<Void>
         implements ScalarPublisher<AsynchronousSocketChannel>,
-        CompletionHandler<AsynchronousSocketChannel, ServerConnection>
+        CompletionHandler<AsynchronousSocketChannel, ScalarSubscriber<? super AsynchronousSocketChannel>>
 {
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
 
     /** place for demands */
     private StreamInput<ScalarSubscriber<? super AsynchronousSocketChannel>> requests = new StreamInput<>(this);
-    
+
     protected volatile AsynchronousServerSocketChannel assc;
 
     public AsyncServerSocketChannel(SocketAddress addr) throws IOException {
@@ -79,19 +79,22 @@ public class AsyncServerSocketChannel
 
     //====================== Dataflow backend
 
-    @Action
-    public void accept(ServerConnection connection) {
+    @Override
+    protected Void runAction() throws Exception {
+        ScalarSubscriber<? super AsynchronousSocketChannel> arg = requests.next();
         try {
-            assc.accept(connection, this);
+            assc.accept(arg, this);
         } catch (Exception e) {
             close();
         }
+        // no start() at this point, it will be called later in the handler
+        return null;
     }
 
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel result, ServerConnection connection) {
+    public void completed(AsynchronousSocketChannel result, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
         LOG.finest("AsynchronousServerSocketChannel: request accepted");
         connection.post(result);
         this.start(); // allow  next assc.accpt()
@@ -102,13 +105,14 @@ public class AsyncServerSocketChannel
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, ServerConnection connection) {
+    public void failed(Throwable exc, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
         connection.postFailure(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.
             close();
         } else {
-            this.start(); // TODO should we allow  next assc.accpt() after call to failed()?
+            this.start(); // TODO deside if we should allow next call to assc.accept() after failure?
         }
     }
+
 }

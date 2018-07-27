@@ -83,8 +83,7 @@ public class SwingActorTest extends JFrame {
         /**
          * Processes message asynchronously out of EDT.
          */
-        @Action
-        protected void act(String str) throws Exception {
+        protected void runAction(String str) throws Exception {
             Thread.sleep(2000); // imitate working hard
             try {
                 Number num = Integer.valueOf(str);
@@ -107,8 +106,7 @@ public class SwingActorTest extends JFrame {
      */
     class PrintingActor extends SwingActor1<String> {
 
-        @Action
-        protected void act(String m) throws Exception {
+        protected void runAction(String m) throws Exception {
             jlist.append(m);
             workCount--;
             if (workCount==0) {

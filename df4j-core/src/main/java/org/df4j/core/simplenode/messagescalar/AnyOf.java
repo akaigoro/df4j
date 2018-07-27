@@ -1,35 +1,27 @@
 package org.df4j.core.simplenode.messagescalar;
 
-import org.df4j.core.boundconnector.messagescalar.AsyncResult;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.tasknode.messagescalar.CompletablePromise;
 
-public class AnyOf<T> extends CompletablePromise<T> {
-    Enter subscriber = new Enter();
+import java.util.concurrent.CompletionStage;
+import java.util.function.BiConsumer;
 
-    public AnyOf(AsyncResult<? extends T>... sources) {
-        for (AsyncResult source: sources) {
-            source.subscribe(subscriber);
+public class AnyOf<T> extends CompletablePromise<T> implements BiConsumer<T, Throwable> {
+
+    public AnyOf(CompletionStage<? extends T>... sources) {
+        for (CompletionStage source: sources) {
+            source.whenComplete(this);
         }
     }
 
-    class Enter implements ScalarSubscriber<T> {
-        @Override
-        public void post(T value) {
-            synchronized (AnyOf.this) {
-                if (!isDone()) {
-                    complete(value);
-                }
-            }
+    @Override
+    public synchronized void accept(T value, Throwable ex) {
+        if (!isDone()) {
+            return;
         }
-
-        @Override
-        public void postFailure(Throwable ex) {
-            synchronized (AnyOf.this) {
-                if (!isDone()) {
-                    completeExceptionally(ex);
-                }
-            }
+        if (ex != null) {
+            completeExceptionally(ex);
+        } else {
+            complete(value);
         }
     }
 

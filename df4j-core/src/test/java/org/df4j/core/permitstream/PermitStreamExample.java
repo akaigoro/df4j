@@ -7,7 +7,7 @@ import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.messagestream.Actor;
 import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.tasknode.messagestream.StreamProcessor;
-import org.df4j.core.util.SameThreadExecutor;
+import org.df4j.core.util.executor.CurrentThreadExecutor;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -42,7 +42,7 @@ public class PermitStreamExample {
 
         Source(int count) {
             this.count = count;
-            setExecutor(new SameThreadExecutor());
+            setExecutor(new CurrentThreadExecutor());
         }
 
         @Action
@@ -77,8 +77,7 @@ public class PermitStreamExample {
             start();
         }
 
-        @Action
-        protected void act(Integer message) throws Exception {
+        protected void runAction(Integer message) throws Exception {
             if (message == null) {
                 fin.countDown();
             } else {

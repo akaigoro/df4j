@@ -9,8 +9,8 @@
  */
 package org.df4j.core.tasknode;
 
-import org.df4j.core.util.DirectExecutor;
-import org.df4j.core.util.SameThreadExecutor;
+import org.df4j.core.util.executor.DirectExecutor;
+import org.df4j.core.util.executor.CurrentThreadExecutor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class AsyncProc implements Runnable {
     public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
-    public static final Executor syncExec = SameThreadExecutor.sameThreadExecutor;
+    public static final Executor syncExec = CurrentThreadExecutor.CURRENT_THREAD_EXECUTOR;
     public static final Executor asyncExec = ForkJoinPool.commonPool();
 
     /**
@@ -55,7 +55,7 @@ public abstract class AsyncProc implements Runnable {
      */
     public void setExecutor(Executor exec) {
         if (exec == null) {
-            this.executor = SameThreadExecutor.sameThreadExecutor;
+            this.executor = CurrentThreadExecutor.CURRENT_THREAD_EXECUTOR;
         } else {
             this.executor = exec;
         }
