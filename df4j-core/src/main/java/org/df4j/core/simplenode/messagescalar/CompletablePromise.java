@@ -1,11 +1,10 @@
-package org.df4j.core.tasknode.messagescalar;
+package org.df4j.core.simplenode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.AsyncResult;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.tasknode.AsyncProc;
+import org.df4j.core.tasknode.messagescalar.AsyncFunction;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.*;
 
 /**
@@ -16,8 +15,8 @@ import java.util.concurrent.*;
 public class CompletablePromise<R> implements AsyncResult<R> {
 
     /** place for demands */
-    private Lobby<R> requests = new Lobby<>();
-    protected boolean completed = false;
+    private ScalarSubscriber<? super R> subscriber = null;
+    protected boolean done = false;
     protected R result = null;
     protected Throwable exception;
     protected final AsyncProc asyncProc;
@@ -32,12 +31,20 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     @Override
     public synchronized <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
-        if (completed) {
+        if (done) {
             subscriber.post(result);
         } else if (exception != null) {
             subscriber.postFailure(exception);
+        } else if (this.subscriber == null) {
+            this.subscriber = subscriber;
+        } else if (this.subscriber instanceof Lobby){
+            ((Lobby) this.subscriber).subscribe(subscriber);
         } else {
-            requests.subscribe(subscriber);
+            ScalarSubscriber<? super R> old = this.subscriber;
+            Lobby<R> lobby = new Lobby<R>();
+            lobby.subscribe(old);
+            lobby.subscribe(subscriber);
+            this.subscriber = lobby;
         }
         return subscriber;
     }
@@ -47,10 +54,10 @@ public class CompletablePromise<R> implements AsyncResult<R> {
             return false;
         }
         this.result = result;
-        this.completed = true;
+        this.done = true;
         notifyAll();
-        requests.post(result);
-        requests = null;
+        subscriber.post(result);
+        subscriber = null;
         return true;
     }
 
@@ -62,13 +69,13 @@ public class CompletablePromise<R> implements AsyncResult<R> {
             return false;
         }
         this.exception = exception;
-        requests.postFailure(exception);
-        requests = null;
+        subscriber.postFailure(exception);
+        subscriber = null;
         return true;
     }
 
     /**
-     * wrong API design. Future is not a task.
+     * wrong API design. Generally, Future is not a task and cannot be cancelled.
      * @param mayInterruptIfRunning
      * @return
      */
@@ -79,11 +86,11 @@ public class CompletablePromise<R> implements AsyncResult<R> {
 
     @Override
     public boolean isCancelled() {
-        throw new UnsupportedOperationException();
+        return false;
     }
 
     public boolean isDone() {
-        return completed || (exception != null);
+        return done;
     }
 
     @Override
@@ -113,7 +120,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     public synchronized R get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         long end = System.currentTimeMillis()+ unit.toMillis(timeout);
         for (;;) {
-            if (completed) {
+            if (done) {
                 return result;
             } else if (exception != null) {
                 throwStoredException();
@@ -127,22 +134,13 @@ public class CompletablePromise<R> implements AsyncResult<R> {
         }
     }
 
-    class Lobby<R> {
-        private ScalarSubscriber<? super R> request;
-        private Queue<ScalarSubscriber<? super R>> requests;
+    class Lobby<R> extends AsyncFunction<R,R> {
 
-        public synchronized  <S extends ScalarSubscriber<? super R>> void subscribe(S subscriber) {
-            if (request == null) {
-                request = subscriber;
-            } else {
-                if (requests == null) {
-                    requests = new ArrayDeque<>();
-                }
-                requests.add(subscriber);
-            }
+        public Lobby() {
+            super(r->r);
         }
 
-        private Executor getExecutor() {
+        public Executor getExecutor() {
             if (asyncProc != null) {
                 Executor exec = asyncProc.getExecutor();
                 if (exec != null) {
@@ -150,62 +148,6 @@ public class CompletablePromise<R> implements AsyncResult<R> {
                 }
             }
             return ForkJoinPool.commonPool();
-        }
-
-        void post(R result) {
-            if (request == null) {
-                return;
-            }
-            request.post(result);
-            if (requests == null) {
-                return;
-            }
-            getExecutor().execute(new PostResult<R>(requests, result));
-        }
-
-        void postFailure(Throwable exception) {
-            if (request == null) {
-                return;
-            }
-            request.postFailure(exception);
-            if (requests == null) {
-                return;
-            }
-            getExecutor().execute(new PostFailure(requests, exception));
-        }
-    }
-
-    static class PostResult<R> implements Runnable {
-        private final Queue<ScalarSubscriber<? super R>> requests;
-        private final R result;
-
-        PostResult(Queue<ScalarSubscriber<? super R>> requests, R result) {
-            this.requests = requests;
-            this.result = result;
-        }
-
-        @Override
-        public void run() {
-            for (ScalarSubscriber<? super R> subscriber: requests) {
-                subscriber.post(result);
-            }
-        }
-    }
-
-    static class PostFailure<R> implements Runnable {
-        private final Queue<ScalarSubscriber<? super R>> requests;
-        private final Throwable exception;
-
-        PostFailure(Queue<ScalarSubscriber<? super R>> requests, Throwable exception) {
-            this.requests = requests;
-            this.exception = exception;
-        }
-
-        @Override
-        public void run() {
-            for (ScalarSubscriber<? super R> subscriber: requests) {
-                subscriber.postFailure(exception);
-            }
         }
     }
 }

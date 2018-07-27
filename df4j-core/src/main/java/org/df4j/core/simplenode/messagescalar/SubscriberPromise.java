@@ -3,7 +3,6 @@ package org.df4j.core.simplenode.messagescalar;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
 import org.df4j.core.tasknode.AsyncProc;
-import org.df4j.core.tasknode.messagescalar.CompletablePromise;
 
 import java.util.concurrent.CancellationException;
 
@@ -31,7 +30,7 @@ public class SubscriberPromise<T>
         if (cancelled) {
             throw new IllegalStateException("cancelled already");
         }
-        if (completed) {
+        if (done) {
             throw new IllegalStateException("completed already");
         }
         this.subscription = subscription;

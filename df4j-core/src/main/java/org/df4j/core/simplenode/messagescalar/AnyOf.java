@@ -1,7 +1,5 @@
 package org.df4j.core.simplenode.messagescalar;
 
-import org.df4j.core.tasknode.messagescalar.CompletablePromise;
-
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 

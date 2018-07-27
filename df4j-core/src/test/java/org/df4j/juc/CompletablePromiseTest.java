@@ -1,7 +1,7 @@
 package org.df4j.juc;
 
 import org.df4j.core.boundconnector.messagescalar.AsyncResult;
-import org.df4j.core.tasknode.messagescalar.CompletablePromise;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;

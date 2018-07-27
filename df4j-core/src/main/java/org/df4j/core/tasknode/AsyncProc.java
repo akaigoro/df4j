@@ -212,7 +212,7 @@ public abstract class AsyncProc implements Runnable {
 
     protected abstract boolean isStarted();
 
-    public class CompletablePromise<R> extends org.df4j.core.tasknode.messagescalar.CompletablePromise<R> {
+    public class CompletablePromise<R> extends org.df4j.core.simplenode.messagescalar.CompletablePromise<R> {
         public CompletablePromise() {
             super(AsyncProc.this);
         }
