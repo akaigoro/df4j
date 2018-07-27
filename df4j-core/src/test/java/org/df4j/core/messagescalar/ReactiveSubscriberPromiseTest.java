@@ -18,7 +18,7 @@ public class ReactiveSubscriberPromiseTest {
         sp0.subscribe(sp1);
         sp0.subscribe(sp2);
         double v = 4.0;
-        sp0.post(v);
+        sp0.complete(v);
         double val1 = sp1.get(1, TimeUnit.SECONDS).doubleValue();
         Assert.assertEquals(v, val1, 0.0001);
         double val2 = sp2.get(1, TimeUnit.SECONDS).doubleValue();

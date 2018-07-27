@@ -54,13 +54,14 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
         forEachSubscription((subscription) -> subscription.post(item));
     }
 
-    @Override
-    public void postFailure(Throwable throwable) {
-        forEachSubscription((subscription) -> subscription.postFailure(throwable));
-    }
-
     public synchronized void complete() {
         forEachSubscription(SimpleReactiveSubscriptionImpl::complete);
+    }
+
+    @Override
+    public boolean completeExceptionally(Throwable throwable) {
+        forEachSubscription((subscription) -> subscription.postFailure(throwable));
+        return false;
     }
 
     class SimpleReactiveSubscriptionImpl extends Semafor implements ReactiveSubscription {
@@ -84,9 +85,9 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
 
         public void postFailure(Throwable throwable) {
             if (isCompleted()) {
-                throw new IllegalStateException("postFailure to completed connector");
+                throw new IllegalStateException("completeExceptionally to completed connector");
             }
-            subscriber.postFailure(throwable);
+            subscriber.completeExceptionally(throwable);
             cancel();
         }
 

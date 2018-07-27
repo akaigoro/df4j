@@ -65,7 +65,7 @@ public class ConstInput<T> extends AsyncProc.AsyncParam<T>
     }
 
     @Override
-    public void post(T message) {
+    public boolean complete(T message) {
         if (message == null) {
             throw new IllegalArgumentException();
         }
@@ -74,22 +74,24 @@ public class ConstInput<T> extends AsyncProc.AsyncParam<T>
         }
         value = message;
         turnOn();
+        return true;
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
+    public boolean completeExceptionally(Throwable throwable) {
         if (isDone()) {
             throw new IllegalStateException("token set already");
         }
         this.exception = throwable;
+        return true;
     }
 
     @Override
     public void accept(T value, Throwable throwable) {
         if (throwable != null) {
-            postFailure(throwable);
+            completeExceptionally(throwable);
         } else {
-            post(value);
+            complete(value);
         }
 
     }

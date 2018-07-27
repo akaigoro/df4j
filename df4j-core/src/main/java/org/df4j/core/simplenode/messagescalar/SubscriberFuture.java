@@ -18,15 +18,17 @@ public class SubscriberFuture<T> implements ScalarSubscriber<T>, Future<T> {
     protected boolean cancelled = false;
 
     @Override
-    public synchronized void post(T item) {
+    public synchronized boolean complete(T item) {
         this.result = item;
         notifyAll();
+        return false;
     }
 
     @Override
-    public synchronized void postFailure(Throwable throwable) {
+    public synchronized boolean completeExceptionally(Throwable throwable) {
         this.ex = throwable;
         notifyAll();
+        return false;
     }
 
     @Override

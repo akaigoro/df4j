@@ -118,15 +118,16 @@ public abstract class AsyncProc implements Runnable {
             blockedPinCount.incrementAndGet();
         }
 
-        public void turnOn() {
+        public boolean turnOn() {
             if (!blocked) {
-                return;
+                return false;
             }
             blocked = false;
             long res = blockedPinCount.decrementAndGet();
             if (res == 0) {
                 fire();
             }
+            return true;
         }
 
         abstract protected void register();

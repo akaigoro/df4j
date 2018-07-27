@@ -13,7 +13,7 @@ public class AnyOf<T> extends CompletablePromise<T> implements BiConsumer<T, Thr
 
     @Override
     public synchronized void accept(T value, Throwable ex) {
-        if (!isDone()) {
+        if (isDone()) {
             return;
         }
         if (ex != null) {

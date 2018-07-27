@@ -24,7 +24,7 @@ public class RxJavaUnitTest {
     public void returnAValueDf(){
         result = "";
         CompletedResult<String> observer = new CompletedResult("Hello"); // provides datea
-        observer.subscribe(s -> result=s); // Callable as subscriber
+        observer.subscribe(s -> {result=s; return false;}); // Callable as subscriber
         assertTrue(result.equals("Hello"));
     }
 }

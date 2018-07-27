@@ -54,8 +54,9 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
+    public boolean completeExceptionally(Throwable throwable) {
         forEachSubscription((subscription) -> subscription.postFailure(throwable));
+        return false;
     }
 
     @Override
@@ -76,7 +77,7 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
         }
 
         public void postFailure(Throwable throwable) {
-            subscriber.postFailure(throwable);
+            subscriber.completeExceptionally(throwable);
             cancel();
         }
 

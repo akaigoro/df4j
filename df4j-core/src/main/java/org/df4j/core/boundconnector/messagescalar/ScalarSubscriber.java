@@ -14,7 +14,7 @@ package org.df4j.core.boundconnector.messagescalar;
  * scalar inlet for messages
  * @param <M> the type of the message
  */
-public interface ScalarSubscriber<M>  extends ScalarCollector<M> {
+public interface ScalarSubscriber<M> extends ScalarCollector<M> {
 
     default void onSubscribe(SimpleSubscription subscription){}
 

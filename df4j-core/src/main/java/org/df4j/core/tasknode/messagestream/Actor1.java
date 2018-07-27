@@ -29,12 +29,12 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
 
     @Override
     public void post(M m) {
-        mainInput.post(m);
+        mainInput.complete(m);
     }
 
     @Override
-    public void postFailure(Throwable ex) {
-        mainInput.postFailure(ex);
+    public boolean completeExceptionally(Throwable ex) {
+        return mainInput.completeExceptionally(ex);
     }
 
     /**

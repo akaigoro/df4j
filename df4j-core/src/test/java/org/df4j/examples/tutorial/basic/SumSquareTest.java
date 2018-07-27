@@ -52,8 +52,8 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // provide input information:
-        sqX.param.post(3);
-        sqY.param.post(4);
+        sqX.param.complete(3);
+        sqY.param.complete(4);
         // get the result
         int res = sum.result.get();
         Assert.assertEquals(25, res);
@@ -75,8 +75,8 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // provide input information:
-        sqX.post(3);
-        sqY.post(4);
+        sqX.complete(3);
+        sqY.complete(4);
         // get the result
         int res = sum.asyncResult().get();
         Assert.assertEquals(25, res);

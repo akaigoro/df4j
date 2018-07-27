@@ -22,13 +22,13 @@ public interface ScalarCollector<M> {
      * @param message
      * @return true if this message caused this ScalarSubscriber instance to asyncTask to a completed state, else false
      */
-    void post(M message);
+    boolean complete(M message);
 
 	/**
      * If this ScalarSubscriber was not already completed, sets it completed state.
      * @param ex
      * @return true if this exception caused this ScalarSubscriber instance to asyncTask to a completed state, else false
      */
-	default void postFailure(Throwable ex) {}
+	default boolean completeExceptionally(Throwable ex) {return false;}
 
 }

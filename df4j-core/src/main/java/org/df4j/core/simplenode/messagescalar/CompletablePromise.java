@@ -1,10 +1,14 @@
 package org.df4j.core.simplenode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.AsyncResult;
+import org.df4j.core.boundconnector.messagescalar.ConstInput;
+import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.tasknode.AsyncProc;
 import org.df4j.core.tasknode.messagescalar.AsyncFunction;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.*;
 
 /**
@@ -32,9 +36,9 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     @Override
     public synchronized <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
         if (done) {
-            subscriber.post(result);
+            subscriber.complete(result);
         } else if (exception != null) {
-            subscriber.postFailure(exception);
+            subscriber.completeExceptionally(exception);
         } else if (this.subscriber == null) {
             this.subscriber = subscriber;
         } else if (this.subscriber instanceof Lobby){
@@ -56,8 +60,10 @@ public class CompletablePromise<R> implements AsyncResult<R> {
         this.result = result;
         this.done = true;
         notifyAll();
-        subscriber.post(result);
-        subscriber = null;
+        if (subscriber != null) {
+            subscriber.complete(result);
+            subscriber = null;
+        }
         return true;
     }
 
@@ -69,7 +75,7 @@ public class CompletablePromise<R> implements AsyncResult<R> {
             return false;
         }
         this.exception = exception;
-        subscriber.postFailure(exception);
+        subscriber.completeExceptionally(exception);
         subscriber = null;
         return true;
     }
@@ -134,11 +140,9 @@ public class CompletablePromise<R> implements AsyncResult<R> {
         }
     }
 
-    class Lobby<R> extends AsyncFunction<R,R> {
-
-        public Lobby() {
-            super(r->r);
-        }
+    final class Lobby<R> extends AsyncProc implements ScalarPublisher<R>, ScalarSubscriber<R> {
+        private Queue<ScalarSubscriber<? super R>> requests = new ArrayDeque<>();
+        private ConstInput<R> input = new ConstInput<>(this);
 
         public Executor getExecutor() {
             if (asyncProc != null) {
@@ -148,6 +152,30 @@ public class CompletablePromise<R> implements AsyncResult<R> {
                 }
             }
             return ForkJoinPool.commonPool();
+        }
+
+        @Override
+        protected boolean isStarted() {
+            return false;
+        }
+
+        @Override
+        public <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
+            requests.add(subscriber);
+            return subscriber;
+        }
+
+        @Override
+        public void run() {
+            R value = input.getValue();
+            for (ScalarSubscriber<? super R> request: requests) {
+                request.complete(value);
+            }
+        }
+
+        @Override
+        public boolean complete(R message) {
+            return input.complete(message);
         }
     }
 }

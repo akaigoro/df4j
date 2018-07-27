@@ -55,16 +55,6 @@ public class SubscriberPromise<T>
         return cancelled;
     }
 
-    @Override
-    public void post(T message) {
-        complete(message);
-    }
-
-    @Override
-    public void postFailure(Throwable ex) {
-        completeExceptionally(ex);
-    }
-
     /**
      * Forcibly sets or resets the value subsequently returned by
      * method {@link #get()} and related methods, whether or not

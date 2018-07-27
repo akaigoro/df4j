@@ -46,7 +46,7 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
         if (queue.size() >= capacity) {
             throw new IllegalStateException("no space for next token");
         }
-        super.post(token);
+        super.complete(token);
     }
 
     @Override

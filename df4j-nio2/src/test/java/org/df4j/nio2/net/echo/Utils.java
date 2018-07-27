@@ -20,7 +20,7 @@ public class Utils {
     public static void injectBuffers(int count, int bufLen, ServerConnection.Reader reader) {
         for (int k=0; k<count; k++) {
             ByteBuffer buf=ByteBuffer.allocate(bufLen);
-            reader.input.post(buf);
+            reader.input.complete(buf);
         }
     }
 

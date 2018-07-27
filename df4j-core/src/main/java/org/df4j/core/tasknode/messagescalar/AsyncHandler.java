@@ -16,13 +16,13 @@ public class AsyncHandler<T,R> extends AsyncSupplier<R> implements ScalarSubscri
     }
 
     @Override
-    public void post(T message) {
-        argument.post(new Pair(message, null));
+    public boolean complete(T message) {
+        return  argument.complete(new Pair(message, null));
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
-        argument.post(new Pair(null, throwable));
+    public boolean completeExceptionally(Throwable throwable) {
+        return argument.complete(new Pair(null, throwable));
     }
 
     @Action

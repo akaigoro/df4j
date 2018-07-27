@@ -16,6 +16,7 @@ import org.junit.Test;
 
 import java.io.PrintStream;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -52,10 +53,16 @@ public class ReactiveStreamExample {
 
     @Test
     public void testSameTime() throws InterruptedException {
+        testSourceToSink(2, 2);
+
+
         testSourceToSink(0, 0);
         testSourceToSink(0, 1);
         testSourceToSink(1, 0);
         testSourceToSink(1, 1);
+        testSourceToSink(1, 2);
+        testSourceToSink(2, 1);
+        testSourceToSink(2, 2);
         testSourceToSink(5, 5);
     }
 
@@ -76,6 +83,11 @@ public class ReactiveStreamExample {
         public Source(int totalNumber, CountDownLatch fin) {
             this.val = totalNumber;
             this.fin = fin;
+        }
+
+        @Override
+        public Executor getExecutor() {
+            return directExecutor;
         }
 
         @Override
@@ -123,6 +135,11 @@ public class ReactiveStreamExample {
         }
 
         @Override
+        public Executor getExecutor() {
+            return directExecutor;
+        }
+
+        @Override
         public void onSubscribe(ReactiveSubscription subscription) {
             subscriber.onSubscribe(subscription);
         }
@@ -133,13 +150,13 @@ public class ReactiveStreamExample {
         }
 
         @Override
-        public void postFailure(Throwable ex) {
-            subscriber.postFailure(ex);
+        public void complete() {
+            subscriber.complete();
         }
 
         @Override
-        public void complete() {
-            subscriber.complete();
+        public boolean completeExceptionally(Throwable ex) {
+            return subscriber.completeExceptionally(ex);
         }
 
         @Action

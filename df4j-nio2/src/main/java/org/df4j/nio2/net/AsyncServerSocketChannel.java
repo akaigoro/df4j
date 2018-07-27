@@ -13,7 +13,6 @@ import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.tasknode.AsyncAction;
-import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -59,7 +58,7 @@ public class AsyncServerSocketChannel
     
     @Override
     public <S extends ScalarSubscriber<? super AsynchronousSocketChannel>> S subscribe(S subscriber) {
-        requests.post(subscriber);
+        requests.complete(subscriber);
         return subscriber;
     }
 
@@ -96,7 +95,7 @@ public class AsyncServerSocketChannel
     @Override
     public void completed(AsynchronousSocketChannel result, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
         LOG.finest("AsynchronousServerSocketChannel: request accepted");
-        connection.post(result);
+        connection.complete(result);
         this.start(); // allow  next assc.accpt()
     }
 
@@ -106,7 +105,7 @@ public class AsyncServerSocketChannel
      */
     @Override
     public void failed(Throwable exc, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
-        connection.postFailure(exc);
+        connection.completeExceptionally(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.
             close();

@@ -46,7 +46,7 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
 	    if (requests.isEmpty()) {
 	        resources.add(token);
         } else {
-	        requests.poll().post(token);
+	        requests.poll().complete(token);
         }
 	}
 
@@ -58,7 +58,7 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
         completed = true;
         resources = null;
         for (ScalarSubscriber<? super T> subscriber: requests) {
-            subscriber.postFailure(new StreamCompletedException());
+            subscriber.completeExceptionally(new StreamCompletedException());
         }
         requests = null;
 	}
@@ -71,7 +71,7 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
 		if (resources.isEmpty()) {
 			requests.add(subscriber);
 		} else {
-			subscriber.post(resources.poll());
+			subscriber.complete(resources.poll());
 		}
         return subscriber;
 	}

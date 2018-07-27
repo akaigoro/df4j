@@ -74,15 +74,17 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
 
-    public void post(AsynchronousSocketChannel channel) {
+    public boolean complete(AsynchronousSocketChannel channel) {
         LOG.info("conn "+name+": init()");
         this.channel=channel;
         reader.start();
         writer.start();
+        return true;
     }
 
-    public void postFailure(Throwable ex) {
-        LOG.info("conn "+name+": postFailure()");
+    public boolean completeExceptionally(Throwable ex) {
+        LOG.info("conn "+name+": completeExceptionally()");
+        return false;
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -102,7 +104,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
             }
     	}
     	if (backPort != null) {
-            backPort.post(this);
+            backPort.complete(this);
         }
     }
 
@@ -140,7 +142,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         protected void start_IO (ByteBuffer buffer) {
             if (input.isClosed()) {
                 output.close();
-                output.postFailure(new AsynchronousCloseException());
+                output.completeExceptionally(new AsynchronousCloseException());
                 LOG.finest("conn "+ name+": input.isClosed()");
                 return;
             }
@@ -170,7 +172,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
                 close();
             } else {
                 this.start(); // let subsequent requests fail
-                output.postFailure(exc);
+                output.completeExceptionally(exc);
             }
         }
 

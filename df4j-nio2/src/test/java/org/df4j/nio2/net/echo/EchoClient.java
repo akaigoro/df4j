@@ -1,7 +1,6 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
-import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;
@@ -23,8 +22,8 @@ class EchoClient extends Actor1<ByteBuffer> {
     int count;
 
     @Override
-    public void postFailure(Throwable ex) {
-        result.completeExceptionally(ex);
+    public boolean completeExceptionally(Throwable ex) {
+        return result.completeExceptionally(ex);
     }
 
     public EchoClient(SocketAddress addr, int count) throws IOException, InterruptedException {
@@ -33,7 +32,7 @@ class EchoClient extends Actor1<ByteBuffer> {
         clientConn.writer.output.subscribe(this);
         String message = this.message;
         ByteBuffer buf = Utils.toByteBuf(message);
-        clientConn.writer.input.post(buf);
+        clientConn.writer.input.complete(buf);
     }
 
     public void runAction(ByteBuffer b) {
@@ -48,7 +47,7 @@ class EchoClient extends Actor1<ByteBuffer> {
             stop();
             return;
         }
-        clientConn.writer.input.post(b);
+        clientConn.writer.input.complete(b);
     }
 
 }

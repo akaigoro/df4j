@@ -66,11 +66,6 @@ public class DiningPhilosophers {
         }
 
         @Override
-        public void postFailure(Throwable t) {
-            super.postFailure(t);
-        }
-
-        @Override
         public void post(Fork resource) {
             System.out.println(label+": put "+resource.toString());
             super.post(resource);

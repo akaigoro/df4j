@@ -21,6 +21,7 @@ public class ConnectionManager extends AsyncAction {
 
     ScalarCollector<ServerConnection> backport = (asyncSocketChannel) -> {
         allowedConnections.release();
+        return false;
     };
 
     public ConnectionManager(SocketAddress addr, int connCount) throws IOException {

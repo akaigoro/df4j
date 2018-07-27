@@ -27,12 +27,12 @@ public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubsc
     }
 
     @Override
-    public void post(T message) {
-        argument.post(message);
+    public boolean complete(T message) {
+        return argument.complete(message);
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
-        argument.postFailure(throwable);
+    public boolean completeExceptionally(Throwable throwable) {
+        return argument.completeExceptionally(throwable);
     }
 }

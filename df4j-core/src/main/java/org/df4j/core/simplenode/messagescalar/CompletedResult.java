@@ -28,9 +28,9 @@ public class CompletedResult<M> implements AsyncResult<M> {
 	@Override
 	public <S extends ScalarSubscriber<? super M>> S subscribe(S subscriber) {
 	    if (exception == null) {
-            subscriber.post(value);
+            subscriber.complete(value);
         } else {
-	        subscriber.postFailure(exception);
+	        subscriber.completeExceptionally(exception);
         }
 		return subscriber;
 	}

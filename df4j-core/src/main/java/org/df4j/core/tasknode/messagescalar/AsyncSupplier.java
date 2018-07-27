@@ -46,11 +46,11 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
         return subscriber;
     }
 
-    protected boolean complete(R res) {
+    protected boolean completeResult(R res) {
         return result.complete(res);
     }
 
-    protected boolean completeExceptionally(Throwable ex) {
+    protected boolean completeResultExceptionally(Throwable ex) {
         return result.completeExceptionally(ex);
     }
 

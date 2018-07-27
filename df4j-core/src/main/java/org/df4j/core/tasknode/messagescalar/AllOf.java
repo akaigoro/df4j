@@ -17,7 +17,7 @@ public class AllOf extends AsyncSupplier<Object[]> {
 
     @Override
     protected void fire() {
-        complete(results);
+        completeResult(results);
     }
 
     class Enter extends Lock implements ScalarSubscriber<Object> {
@@ -28,18 +28,19 @@ public class AllOf extends AsyncSupplier<Object[]> {
         }
 
         @Override
-        public void post(Object value) {
+        public boolean complete(Object value) {
             results[num] = value;
-            super.turnOn();
+            return super.turnOn();
         }
 
         @Override
-        public void postFailure(Throwable ex) {
+        public boolean completeExceptionally(Throwable ex) {
             synchronized (AllOf.this) {
                 if (!result.isDone()) {
-                    AllOf.this.completeExceptionally(ex);
+                    AllOf.this.completeResultExceptionally(ex);
                 }
             }
+            return true;
         }
     }
 
