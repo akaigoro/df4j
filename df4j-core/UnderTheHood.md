@@ -170,7 +170,7 @@ Returns a new CompletionStage with the same result or exception as this stage,
 Но исполнятся эта цепочка будет строго последовательно, без всякого параллелизма. 
 
 A как же изобразить более сложную диаграмму вычислений, содержащую параллельные ветви? 
-Для этого служит метод `thenCombine(Async)`. 
+Для этого служит метод `thenCombineAsync`. 
 Если в предыдущем примере мы запускали асинхронную процедуру с одним аргументом, то в этом - с двумя.
 При этом вычисление обоих аргументов может происходить параллельно.
 ```java
@@ -182,8 +182,7 @@ Returns a new CompletionStage that, when this and the other given stage complete
 is executed using the supplied executor, with the two results as arguments to the supplied function. 
 ```
 Здесь все как в предыдущем примере с `thenApplyAsync`, но параметр-функция уже от двух аргуметов,
-и добавлен параметр `CompletionStage<? extends U> other`,
-являющийся асинхронным поставщиком второго аргумента.
+и добавлен параметр `CompletionStage<? extends U> other`, являющийся асинхронным поставщиком второго аргумента.
 Как же нам обеспечить обработку второго аргумента? 
 Ну во первых, вместо одной переменной `T arg` описать две: `T arg1;  U arg2;`,
 a вместо одного метода public `void accept(T argument, Throwable throwable)` описать два - `accept1` и `accept2`,
@@ -193,10 +192,7 @@ a вместо одного метода public `void accept(T argument, Throwab
 ```java
         this.whenComplete(task);
 ```
-По видимому, нам придется заключить код для приема аргумента в отдельный класс, и создать для каждого параметра свой экземпляр
-этого класса. Придется, да, но пока что можно общйтись без этого.
 К счастью, объект функционального интерфейса может быть изображен ссылкой на метод, без заключения его в отдельный класс:
-
 ```java
         this.whenComplete(task::accept1);
         other.whenComplete(task::accept2);
