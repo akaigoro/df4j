@@ -1,4 +1,4 @@
-package org.df4j.reflect;
+package org.df4j.core.reflect;
 
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.util.ActionCaller;

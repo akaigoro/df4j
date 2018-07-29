@@ -1,4 +1,4 @@
-package org.df4j.core.messagescalar;
+package org.df4j.core.reactivestream;
 
 import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
 import org.junit.Assert;

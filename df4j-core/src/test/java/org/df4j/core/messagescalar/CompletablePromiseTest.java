@@ -1,4 +1,4 @@
-package org.df4j.juc;
+package org.df4j.core.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.AsyncResult;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;

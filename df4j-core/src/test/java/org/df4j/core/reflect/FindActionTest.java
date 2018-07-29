@@ -1,4 +1,4 @@
-package org.df4j.reflect;
+package org.df4j.core.reflect;
 
 import org.junit.Test;
 
@@ -11,6 +11,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public class FindActionTest {
+
 interface I3 {
     double m3(String s, int n, float f);
 }

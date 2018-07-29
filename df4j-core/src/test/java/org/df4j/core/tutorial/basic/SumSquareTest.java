@@ -1,4 +1,4 @@
-package org.df4j.examples.tutorial.basic;
+package org.df4j.core.tutorial.basic;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarInput;
 import org.df4j.core.simplenode.messagescalar.SubscriberPromise;

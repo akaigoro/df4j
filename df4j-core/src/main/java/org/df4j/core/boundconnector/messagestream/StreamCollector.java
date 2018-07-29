@@ -15,6 +15,4 @@ public interface StreamCollector<T> extends ScalarCollector<T> {
         complete();
         return false;
     }
-
-    default boolean completeExceptionally(Throwable ex) {return false;}
 }

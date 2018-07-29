@@ -12,7 +12,7 @@ import java.util.function.BiConsumer;
  *     type of accepted tokens.
  */
 public class ConstInput<T> extends AsyncProc.AsyncParam<T>
-        implements ScalarSubscriber<T>,
+        implements ScalarSubscriber<T>,  // to connect to a ScalarPublisher
         BiConsumer<T, Throwable>  // to connect to a CompletionStage by whenComplete
 {
     protected SimpleSubscription subscription;

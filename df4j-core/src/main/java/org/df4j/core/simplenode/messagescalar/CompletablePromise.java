@@ -5,7 +5,6 @@ import org.df4j.core.boundconnector.messagescalar.ConstInput;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.tasknode.AsyncProc;
-import org.df4j.core.tasknode.messagescalar.AsyncFunction;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
