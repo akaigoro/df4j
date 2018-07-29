@@ -1,4 +1,4 @@
-package org.df4j.core.tutorial.completablefuture_model;
+package org.df4j.core.completablefuture_model;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
