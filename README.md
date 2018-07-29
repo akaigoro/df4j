@@ -2,8 +2,8 @@ Simplicity is prerequisite for reliability. - Edsger W. Dijkstra
 -------------------------
 
 df4j is an abbreviation of "Data Flow for Java". It is a library to support asynchronous computations. 
-For those interested in history of dataflow programming, I recommend to start with short introductory article
-"Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
+For those interested in history of dataflow programming, I recommend to start with the [definition in Wikipedia](https://en.wikipedia.org/w/index.php?title=Dataflow_programming)
+and then short introductory article "Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
 
 The primary goal of this library is to investigate the anatomy of asynchronous programming.
 The asynchronous programming always attracted Java programmers,
@@ -12,8 +12,9 @@ Today some asynchronous libraries for Java are very popular, e.g. rx-java, vert.
 However, all they imply steep learning curve and hides implementation details under the hood.
 df4j ia an attempt to discover the basic building elements of asynchronous computations,
 and allow developer to freely combine those elements, and add new ones.
+It resembles children's building kit: a set of small parts which can be connected together and be assembled in arbitrary complex constructs.
 
-The main results of this work are listed beloForkJoinTaskw. Some of them look evident, but listed for completeness.
+The main results of this work are listed below. Some of them look evident, but listed for completeness.
 
 1. Parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
 Activities compute tokens (values and signals), connectors pass them between activities.
