@@ -2,7 +2,6 @@ package org.df4j.core.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.*;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
-import org.df4j.core.simplenode.messagescalar.CompletedResult;
 import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.messagescalar.*;
@@ -12,6 +11,8 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.df4j.core.simplenode.messagescalar.CompletablePromise.completedPromise;
 
 public class AsyncProcTest {
 
@@ -42,7 +43,7 @@ public class AsyncProcTest {
             SubscriberPromise<Double> sp = new SubscriberPromise<>();
             Blocker<Double, Double> blocker = new Blocker<>();
             pa.subscribe(blocker.arg);
-            new CompletedResult<Double>(1.0).subscribe(param1);
+            completedPromise(1.0).subscribe(param1);
             new Mult(pa, pb).subscribe(param2);
         }
     }
@@ -126,7 +127,7 @@ public class AsyncProcTest {
     }
 
     public void calcRootsAndCheck(double a, double b, double d, double... expected) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletablePromise<double[]> rc = calcRoots(a, b, new CompletedResult(d));
+        CompletablePromise<double[]> rc = calcRoots(a, b, completedPromise(d));
         double[] result = rc.get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }

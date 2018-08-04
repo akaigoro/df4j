@@ -1,27 +1,22 @@
 package org.df4j.core.simplenode.messagescalar;
 
-import org.df4j.core.boundconnector.messagescalar.AsyncResult;
-import org.df4j.core.boundconnector.messagescalar.ConstInput;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
 import org.df4j.core.tasknode.AsyncProc;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 /**
  *
  * @param <R> type of input parameter
  * @param <R> type of result
  */
-public class CompletablePromise<R> implements AsyncResult<R> {
+public class CompletablePromise<R> extends CompletableFuture<R> implements ScalarPublisher<R> {
 
     /** place for demands */
     private ScalarSubscriber<? super R> subscriber = null;
-    protected boolean done = false;
-    protected R result = null;
-    protected Throwable exception;
     protected final AsyncProc asyncProc;
 
     public CompletablePromise(AsyncProc asyncProc) {
@@ -33,148 +28,52 @@ public class CompletablePromise<R> implements AsyncResult<R> {
     }
 
     @Override
+    public CompletablePromise<R> asFuture() {
+        return this;
+    }
+
+    @Override
     public synchronized <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
-        if (done) {
-            subscriber.complete(result);
-        } else if (exception != null) {
-            subscriber.completeExceptionally(exception);
-        } else if (this.subscriber == null) {
-            this.subscriber = subscriber;
-        } else if (this.subscriber instanceof Lobby){
-            ((Lobby) this.subscriber).subscribe(subscriber);
-        } else {
-            ScalarSubscriber<? super R> old = this.subscriber;
-            Lobby<R> lobby = new Lobby<R>();
-            lobby.subscribe(old);
-            lobby.subscribe(subscriber);
-            this.subscriber = lobby;
-        }
+        ScalarSubscription<R> subscription = new ScalarSubscription<>(subscriber);
+        subscriber.onSubscribe(subscription);
+        super.whenComplete(subscription);
         return subscriber;
     }
 
-    public synchronized boolean complete(R result) {
-        if (isDone()) {
-            return false;
-        }
-        this.result = result;
-        this.done = true;
-        notifyAll();
-        if (subscriber != null) {
-            subscriber.complete(result);
-            subscriber = null;
-        }
-        return true;
-    }
-
-    public synchronized boolean completeExceptionally(Throwable exception) {
-        if (exception == null) {
-            throw new IllegalArgumentException("AsyncResult::completeExceptionally(): argument may not be null");
-        }
-        if (isDone()) {
-            return false;
-        }
-        this.exception = exception;
-        subscriber.completeExceptionally(exception);
-        subscriber = null;
-        return true;
-    }
-
     /**
-     * wrong API design. Generally, Future is not a task and cannot be cancelled.
-     * @param mayInterruptIfRunning
-     * @return
+     * Returns a new CompletableFuture that is already completed with
+     * the given value.
+     *
+     * @param value the value
+     * @param <U> the type of the value
+     * @return the completed CompletableFuture
      */
-    @Override
-    public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        throw new UnsupportedOperationException();
+    public static <U> CompletablePromise<U> completedPromise(U value) {
+        CompletablePromise<U> result = new CompletablePromise<>();
+        result.complete(value);
+        return result;
     }
 
-    @Override
-    public boolean isCancelled() {
-        return false;
-    }
+    static class ScalarSubscription<R> implements SimpleSubscription, BiConsumer<R, Throwable> {
 
-    public boolean isDone() {
-        return done;
-    }
+        private final ScalarSubscriber<? super R> subscriber;
 
-    @Override
-    public synchronized R get() throws InterruptedException, ExecutionException {
-        for (;;) {
-            if (result != null) {
-                return result;
-            } else if (exception != null) {
-                return throwStoredException();
-            } else {
-                wait();
-            }
-        }
-    }
-
-    private R throwStoredException() throws ExecutionException {
-        Throwable x=exception, cause;
-        if (x instanceof CancellationException)
-            throw (CancellationException)x;
-        if ((x instanceof CompletionException) &&
-                (cause = x.getCause()) != null)
-            x = cause;
-        throw new ExecutionException(x);
-    }
-
-    @Override
-    public synchronized R get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        long end = System.currentTimeMillis()+ unit.toMillis(timeout);
-        for (;;) {
-            if (done) {
-                return result;
-            } else if (exception != null) {
-                throwStoredException();
-            } else {
-                long timeout1 = end - System.currentTimeMillis();
-                if (timeout1 <= 0) {
-                    throw new TimeoutException();
-                }
-                wait(timeout1);
-            }
-        }
-    }
-
-    final class Lobby<R> extends AsyncProc implements ScalarPublisher<R>, ScalarSubscriber<R> {
-        private Queue<ScalarSubscriber<? super R>> requests = new ArrayDeque<>();
-        private ConstInput<R> input = new ConstInput<>(this);
-
-        public Executor getExecutor() {
-            if (asyncProc != null) {
-                Executor exec = asyncProc.getExecutor();
-                if (exec != null) {
-                    return exec;
-                }
-            }
-            return ForkJoinPool.commonPool();
+        public <S extends ScalarSubscriber<? super R>> ScalarSubscription(S subscriber) {
+            this.subscriber = subscriber;
         }
 
         @Override
-        protected boolean isStarted() {
+        public boolean cancel() {
             return false;
         }
 
         @Override
-        public <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
-            requests.add(subscriber);
-            return subscriber;
-        }
-
-        @Override
-        public void run() {
-            R value = input.getValue();
-            for (ScalarSubscriber<? super R> request: requests) {
-                request.complete(value);
+        public void accept(R r, Throwable throwable) {
+            if (throwable != null) {
+                subscriber.completeExceptionally(throwable);
+            } else {
+                subscriber.complete(r);
             }
-        }
-
-        @Override
-        public boolean complete(R message) {
-            return input.complete(message);
         }
     }
 }

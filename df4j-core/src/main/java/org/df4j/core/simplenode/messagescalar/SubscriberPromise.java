@@ -11,12 +11,8 @@ import java.util.concurrent.CancellationException;
  *
  * @param <T>
  */
-public class SubscriberPromise<T>
-        extends CompletablePromise<T>
-        implements ScalarSubscriber<T>
-{
+public class SubscriberPromise<T> extends CompletablePromise<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;
-    protected boolean cancelled = false;
 
     public SubscriberPromise(AsyncProc task) {
         super(task);
@@ -27,10 +23,10 @@ public class SubscriberPromise<T>
 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
-        if (cancelled) {
+        if (isCancelled()) {
             throw new IllegalStateException("cancelled already");
         }
-        if (done) {
+        if (isDone()) {
             throw new IllegalStateException("completed already");
         }
         this.subscription = subscription;
@@ -43,45 +39,9 @@ public class SubscriberPromise<T>
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        cancelled = true;
         if (subscription != null) {
             subscription.cancel();
         }
-        return completeExceptionally(new CancellationException());
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancelled;
-    }
-
-    /**
-     * Forcibly sets or resets the value subsequently returned by
-     * method {@link #get()} and related methods, whether or not
-     * already completed. This method is designed for use only in
-     * error recovery actions, and even in such situations may result
-     * in ongoing dependent completions using established versus
-     * overwritten outcomes.
-     *
-     * @param value the completion value
-     */
-    public void obtrudeValue(T value) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Forcibly causes subsequent invocations of method {@link #get()}
-     * and related methods to throw the given exception, whether or
-     * not already completed. This method is designed for use only in
-     * error recovery actions, and even in such situations may result
-     * in ongoing dependent completions using established versus
-     * overwritten outcomes.
-     *
-     * @param ex the exception
-     * @throws NullPointerException if the exception is null
-     */
-    public void obtrudeException(Throwable ex) {
-        throw new UnsupportedOperationException();
-    }
-
+        return super.cancel(mayInterruptIfRunning);
+   }
 }

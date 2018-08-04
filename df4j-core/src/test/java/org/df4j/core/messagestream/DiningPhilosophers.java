@@ -1,14 +1,14 @@
 package org.df4j.core.messagestream;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarInput;
-import org.df4j.core.tasknode.Action;
+import org.df4j.core.boundconnector.messagescalar.*;
 import org.df4j.core.tasknode.AsyncAction;
-import org.df4j.core.tasknode.AsyncProc;
-import org.df4j.core.tasknode.messagestream.Actor;
 import org.df4j.core.simplenode.messagestream.PickPoint;
+import org.df4j.core.tasknode.messagestream.Actor;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -18,14 +18,19 @@ import static org.junit.Assert.assertTrue;
  * Demonstrates usage of class {@link PickPoint} to model common places for tokens.
  */
 public class DiningPhilosophers {
-    private static final int num = 5;
+    static final int num = 5; // number of phylosofers
+    static int N = 1; // nuber of rounds
 
-//    @Ignore
+    enum State{Thinking, Hungry, Hungry1, Eating, Repleted, Died}
+
+    ForkPlace[] forkPlaces = new ForkPlace[num];
+    CountDownLatch counter = new CountDownLatch(num);
+    Philosopher[] philosophers = new Philosopher[num];
+    Timer timer = new Timer();
+
+    //    @Ignore
     @Test
     public void test() throws InterruptedException {
-        ForkPlace[] forkPlaces = new ForkPlace[num];
-        CountDownLatch counter = new CountDownLatch(num);
-        Philosopher[] philosophers = new Philosopher[num];
     	// create places for forks with 1 fork in each
         for (int k=0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
@@ -34,13 +39,13 @@ public class DiningPhilosophers {
         }
         // create philosophers
         for (int k=0; k<num; k++) {
-            philosophers[k] = new Philosopher(k, forkPlaces, counter);
+            philosophers[k] = new Philosopher(k);
         }
         // animate all philosophers
         for (int k=0; k<num; k++) {
             philosophers[k].start();
         }
-        assertTrue(counter.await(2000, TimeUnit.MILLISECONDS));
+        assertTrue(counter.await(2, TimeUnit.SECONDS));
     }
 
     static class Fork  {
@@ -67,32 +72,26 @@ public class DiningPhilosophers {
 
         @Override
         public void post(Fork resource) {
-            System.out.println(label+": put "+resource.toString());
+ //           System.out.println(label+": put "+resource.toString());
             super.post(resource);
         }
     }
 
-    /**
-     * while ordinary {@link Actor} is a single {@link AsyncProc}
-     * which restarts itself,
-     * this class comprises of several {@link AsyncProc}s which activate each other cyclically.
-     */
-    static class Philosopher {
+   class Philosopher extends AsyncAction<Void> {
+        State state = State.Thinking;
         Random rand=new Random();
         int id;
-        CountDownLatch counter;
-		ForkPlace firstPlace, secondPlace;
+        ForkPlace firstPlace, secondPlace;
         Fork first, second;
         String indent;
         int rounds = 0;
 
-        public Philosopher(int id, ForkPlace[] forkPlaces, CountDownLatch counter) {
+        public Philosopher(int id) {
             this.id = id;
-            this.counter = counter;
             // to avoid deadlocks, allocate resource with lower number first
             if (id == num-1) {
                 firstPlace = forkPlaces[0];
-                secondPlace= forkPlaces[id];
+                secondPlace = forkPlaces[id];
             } else {
                 firstPlace = forkPlaces[id];
                 secondPlace = forkPlaces[id+1];
@@ -102,83 +101,124 @@ public class DiningPhilosophers {
             sb.append(id).append(":");
             for (int k = 0; k<=id; k++) sb.append("  ");
             indent = sb.toString();
-            println("first place ("+firstPlace.id+") second place ("+secondPlace.id+")");
+            println("Ph no. "+id+": first place ("+firstPlace.id+") second place ("+secondPlace.id+")");
         }
 
-        Hungry hungry = new Hungry();
-        Replete replete = new Replete();
-        AsyncAction think = new DelayedAsyncProc(hungry);
-        AsyncAction eat = new DelayedAsyncProc(replete);
+        DelayedSignal signal = new DelayedSignal();
+        SingleInput<Fork> input = new SingleInput<Fork>();
 
-        public void start() {
-            think.start();
+        @Override
+        public Void runAction() {
+            loop:
+            for (;;) {
+                switch(state) {
+                    case Thinking:
+                        state = State.Hungry;
+                        signal.delay(rand.nextLong() % 11 + 11);
+                        break loop;
+                    case Hungry:
+                        /**
+                         * collects forks one by one
+                         */
+                        println("Request first (" + firstPlace.id + ")");
+                        input.subscribeTo(firstPlace);
+                        state = State.Hungry1;
+                    case Hungry1:
+                        if (!input.isDone()) {
+                            break loop;
+                        }
+                        first = input.get();
+                        println("Request second (" + secondPlace.id + ")");
+                        input.subscribeTo(secondPlace);
+                        state = State.Eating;
+                    case Eating:
+                        if (!input.isDone()) {
+                            break loop;
+                        }
+                        second = input.get();
+                        state = State.Repleted;
+                        signal.delay(rand.nextLong() % 11 + 11);
+                        break loop;
+                    case Repleted:
+                        println("Release first (" + firstPlace.id + ")");
+                        firstPlace.post(first);
+                        println("Release second (" + secondPlace.id + ")");
+                        secondPlace.post(second);
+                        rounds++;
+                        if (rounds < N) {
+                            println("Ph no. "+id+": continue round "+rounds);
+                            state = State.Thinking;
+                            break;
+                        } else {
+                            println("Ph no. "+id+": dye at round "+rounds);
+                            state = State.Died;
+                            counter.countDown();
+                            stop();
+                            return null;
+                        }
+                }
+            }
+            start();
+            return null;
         }
 
         private void println(String s) {
             System.out.println(indent+s);
         }
 
-        private class DelayedAsyncProc extends AsyncAction<Void> {
-            final AsyncAction next;
+       protected class DelayedSignal extends Lock {
+           boolean done;
 
-            private DelayedAsyncProc(AsyncAction next) {
-                this.next = next;
-            }
+           public DelayedSignal() {
+               super(false);
+           }
 
-            @Action
-            protected Void act() throws InterruptedException {
-                Thread.sleep(rand.nextLong()%11+11);
-                next.start();
-                return null;
-            }
-        }
+           public boolean isDone() {
+               return done;
+           }
 
-        /**
-         * collects forks one by one
-         */
-        private class Hungry extends AsyncAction<Void> {
-            ScalarInput<Fork> input = new ScalarInput<>(this);
+           public void delay(long delay) {
+               super.turnOff();
+               done = false;
+               timer.schedule(new TimerTask() {
+                   @Override
+                   public void run() {
+                       done = true;
+                       turnOn();
+                   }
+               }, delay);
+           }
+       }
 
-            @Override
-            public void start() {
-                println("Request first (" + firstPlace.id + ")");
-                firstPlace.subscribe(this.input);
-                super.start();
-            }
+       protected class SingleInput<T> extends Lock implements ScalarSubscriber<T> {
+           boolean done;
+           T value;
 
-            @Action
-            protected void act(Fork fork) {
-                if (first == null) {
-                    first = fork;
-                    println("Request second (" + secondPlace.id + ")");
-                    secondPlace.subscribe(this.input);
-                    super.start();
-                } else  {
-                    second = fork;
-                    eat.start();
-                }
-            }
-        }
+           public SingleInput() {
+               super(false);
+           }
 
-        /** return forks
-         *
-         */
-        private class Replete extends AsyncAction<Void> {
+           public boolean isDone() {
+               return done;
+           }
 
-            @Action
-            protected Void act() {
-                println("Release first (" + firstPlace.id + ")");
-                firstPlace.post(first);
-                println("Release second (" + secondPlace.id + ")");
-                secondPlace.post(second);
-                rounds++;
-                if (rounds < 10) {
-                    think.start();
-                } else {
-                    counter.countDown();
-                }
-                return null;
-            }
-        }
+           public void subscribeTo(ScalarPublisher publisher) {
+               super.turnOff();
+               done = false;
+               publisher.subscribe(this);
+           }
+
+           @Override
+           public boolean complete(T message) {
+               value = message;
+               done = true;
+               turnOn();
+               return true;
+           }
+
+           public T get() {
+               return value;
+           }
+       }
     }
 }

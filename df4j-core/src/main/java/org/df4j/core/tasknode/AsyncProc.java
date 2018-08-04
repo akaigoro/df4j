@@ -48,7 +48,7 @@ public abstract class AsyncProc implements Runnable {
      */
     protected AtomicInteger blockedPinCount = new AtomicInteger();
 
-    protected Executor executor = ForkJoinPool.commonPool();
+    protected Executor executor = asyncExec;
 
     /**
      * assigns Executor
