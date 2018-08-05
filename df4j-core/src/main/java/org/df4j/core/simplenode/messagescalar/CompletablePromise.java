@@ -15,8 +15,6 @@ import java.util.function.BiConsumer;
  */
 public class CompletablePromise<R> extends CompletableFuture<R> implements ScalarPublisher<R> {
 
-    /** place for demands */
-    private ScalarSubscriber<? super R> subscriber = null;
     protected final AsyncProc asyncProc;
 
     public CompletablePromise(AsyncProc asyncProc) {

@@ -39,9 +39,11 @@ public class SubscriberPromise<T> extends CompletablePromise<T> implements Scala
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
+        boolean result = super.cancel(mayInterruptIfRunning);
         if (subscription != null) {
-            subscription.cancel();
+            result = subscription.cancel();
+            this.subscription = null;
         }
-        return super.cancel(mayInterruptIfRunning);
+        return result;
    }
 }

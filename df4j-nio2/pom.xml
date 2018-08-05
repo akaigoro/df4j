@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.df4j</groupId>
 		<artifactId>df4j</artifactId>
-		<version>${project.version}</version>
+		<version>6.1</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
 	<groupId>org.df4j</groupId>
 	<artifactId>df4j-nio2</artifactId>
-	<version>${project.version}</version>
+	<version>${parent.version}</version>
 	<packaging>jar</packaging>
 
 	<properties>
@@ -22,7 +22,7 @@
 		<dependency>
 			<groupId>org.df4j</groupId>
 			<artifactId>df4j-core</artifactId>
-			<version>5.1.</version>
+			<version>${project.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

@@ -21,12 +21,10 @@ import java.util.concurrent.TimeoutException;
  *  (only on output end, while from the input side it does not block)
  * @param <T>
  */
-public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, BlockingQueue<T> {
+public class PickPoint<T> extends ArrayDeque<T> implements StreamSubscriber<T>, ScalarPublisher<T>, BlockingQueue<T> {
     private boolean completed = false;
 	/** place for demands */
 	private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
-	/** place for resources */
-	private Queue<T> resources = new ArrayDeque<>();
 
 	private SimpleSubscription subscription;
 
@@ -44,7 +42,7 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
             throw new IllegalStateException();
         }
 	    if (requests.isEmpty()) {
-	        resources.add(token);
+	        super.add(token);
         } else {
 	        requests.poll().complete(token);
         }
@@ -56,7 +54,6 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
             return;
         }
         completed = true;
-        resources = null;
         for (ScalarSubscriber<? super T> subscriber: requests) {
             subscriber.completeExceptionally(new StreamCompletedException());
         }
@@ -68,10 +65,10 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
         if (completed) {
             throw new IllegalStateException();
         }
-		if (resources.isEmpty()) {
+		if (super.isEmpty()) {
 			requests.add(subscriber);
 		} else {
-			subscriber.complete(resources.poll());
+			subscriber.complete(super.poll());
 		}
         return subscriber;
 	}
@@ -91,26 +88,6 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
     }
 
     @Override
-    public synchronized T remove() {
-        return resources.remove();
-    }
-
-    @Override
-    public synchronized T poll() {
-        return resources.poll();
-    }
-
-    @Override
-    public synchronized T element() {
-        return resources.element();
-    }
-
-    @Override
-    public synchronized T peek() {
-        return resources.peek();
-    }
-
-    @Override
     public void put(T t) throws InterruptedException {
         post(t);
     }
@@ -124,8 +101,8 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
     @Override
     public T take() throws InterruptedException {
         synchronized(this) {
-            if (!resources.isEmpty() && requests.isEmpty()) {
-                return resources.remove();
+            if (!super.isEmpty() && requests.isEmpty()) {
+                return super.remove();
             }
         }
         SubscriberPromise<T> future = new SubscriberPromise<>();
@@ -140,8 +117,8 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
     @Override
     public T poll(long timeout, TimeUnit unit) throws InterruptedException {
         synchronized(this) {
-            if (!resources.isEmpty() && requests.isEmpty()) {
-                return resources.remove();
+            if (!super.isEmpty() && requests.isEmpty()) {
+                return super.remove();
             }
         }
         SubscriberPromise<T> future = new SubscriberPromise<>();
@@ -156,66 +133,6 @@ public class PickPoint<T> implements StreamSubscriber<T>, ScalarPublisher<T>, Bl
     @Override
     public synchronized int remainingCapacity() {
         return 1;
-    }
-
-    @Override
-    public synchronized boolean remove(Object o) {
-        return resources.remove(o);
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        return resources.containsAll(c);
-    }
-
-    @Override
-    public synchronized boolean addAll(Collection<? extends T> c) {
-        return resources.addAll(c);
-    }
-
-    @Override
-    public synchronized boolean removeAll(Collection<?> c) {
-        return resources.removeAll(c);
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        return resources.retainAll(c);
-    }
-
-    @Override
-    public synchronized void clear() {
-        resources.clear();
-    }
-
-    @Override
-    public synchronized int size() {
-        return resources.size();
-    }
-
-    @Override
-    public synchronized boolean isEmpty() {
-        return resources.isEmpty();
-    }
-
-    @Override
-    public synchronized boolean contains(Object o) {
-        return resources.contains(o);
-    }
-
-    @Override
-    public synchronized Iterator<T> iterator() {
-        return resources.iterator();
-    }
-
-    @Override
-    public synchronized Object[] toArray() {
-        return resources.toArray();
-    }
-
-    @Override
-    public synchronized <T1> T1[] toArray(T1[] a) {
-        return resources.toArray(a);
     }
 
     @Override

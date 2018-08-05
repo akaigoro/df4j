@@ -3,89 +3,33 @@ package org.df4j.core.simplenode.messagescalar;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 /**
  * @param <T>
  */
-public class SubscriberFuture<T> implements ScalarSubscriber<T>, Future<T> {
+public class SubscriberFuture<T> extends CompletableFuture<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;
-    protected T result = null;
-    protected Throwable ex = null;
-    protected boolean cancelled = false;
-
-    @Override
-    public synchronized boolean complete(T item) {
-        this.result = item;
-        notifyAll();
-        return false;
-    }
-
-    @Override
-    public synchronized boolean completeExceptionally(Throwable throwable) {
-        this.ex = throwable;
-        notifyAll();
-        return false;
-    }
 
     @Override
     public synchronized void onSubscribe(SimpleSubscription subscription) {
+        if (isCancelled()) {
+            throw new IllegalStateException("cancelled already");
+        }
+        if (isDone()) {
+            throw new IllegalStateException("completed already");
+        }
         this.subscription = subscription;
     }
 
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        if (subscription == null) {
-            return cancelled;
+        boolean result = super.cancel(mayInterruptIfRunning);
+        if (subscription != null) {
+            result = subscription.cancel();
+            this.subscription = null;
         }
-        SimpleSubscription subscription = this.subscription;
-        this.subscription = null;
-        cancelled = true;
-        boolean result = subscription.cancel();
         return result;
     }
 
-    @Override
-    public synchronized boolean isCancelled() {
-        return cancelled;
-    }
-
-    @Override
-    public synchronized boolean isDone() {
-        return result != null || ex != null;
-    }
-
-    @Override
-    public synchronized T get() throws InterruptedException, ExecutionException {
-        for (;;) {
-            if (result != null) {
-                return result;
-            } else if (ex != null) {
-                throw new ExecutionException(ex);
-            } else {
-                wait();
-            }
-        }
-    }
-
-    @Override
-    public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        long end = System.currentTimeMillis()+ unit.toMillis(timeout);
-        for (;;) {
-            if (result != null) {
-                return result;
-            } else if (ex != null) {
-                throw new ExecutionException(ex);
-            } else {
-                long timeout1 = end - System.currentTimeMillis();
-                if (timeout1 <= 0) {
-                    throw new TimeoutException();
-                }
-                wait(timeout1);
-            }
-        }
-    }
 }
