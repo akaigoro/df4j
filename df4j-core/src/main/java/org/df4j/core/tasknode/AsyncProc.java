@@ -30,6 +30,7 @@ public abstract class AsyncProc implements Runnable {
     public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
     public static final Executor syncExec = CurrentThreadExecutor.CURRENT_THREAD_EXECUTOR;
     public static final Executor asyncExec = ForkJoinPool.commonPool();
+    public static final Executor newThreadExec = (Runnable r)->new Thread(r).start();
 
     /**
      * the set of all b/w Pins

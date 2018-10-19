@@ -2,25 +2,45 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <properties>
-        <project.version>6.1</project.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-
     <groupId>org.df4j</groupId>
     <artifactId>df4j</artifactId>
-    <version>${project.version}</version>
+    <version>6.1</version>
     <packaging>pom</packaging>
-
     <name>df4j</name>
-    <url>http://maven.apache.org</url>
+    <url>https://github.com/akaigoro/df4j</url>
+    <description>Lightweight dataflow Java library. Includes various asynchronous constructs, including actors and asynchronous I/O requests</description>
+    <developers>
+        <developer>
+            <name>Alexei Kaigorodov</name>
+            <email>alexei.kaigorodov@gmail.com</email>
+            <url>https://ru.linkedin.com/in/alexei-kaigorodov-2637812</url>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:git://github.com/akaigoro/df4j.git</connection>
+        <developerConnection>scm:git:ssh://github.com:akaigoro/df4j.git</developerConnection>
+        <url>https://github.com/akaigoro/df4j/tree/API-6</url>
+    </scm>
+
+    <properties>
+        <project.version>6.1</project.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
 
     <modules>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
     </modules>
+
     <build>
         <plugins>
             <plugin>
@@ -30,6 +50,7 @@
             </plugin>
         </plugins>
     </build>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
