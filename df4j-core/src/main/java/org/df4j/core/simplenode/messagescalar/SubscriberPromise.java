@@ -9,7 +9,7 @@ import java.util.concurrent.CancellationException;
 /**
  * an unblocking single-shot output connector
  *
- * @param <T>
+ * @param <T> type of future value
  */
 public class SubscriberPromise<T> extends CompletablePromise<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;
@@ -32,11 +32,6 @@ public class SubscriberPromise<T> extends CompletablePromise<T> implements Scala
         this.subscription = subscription;
     }
 
-    /**
-     * wrong API design. Future is not a task.
-     * @param mayInterruptIfRunning
-     * @return
-     */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
         boolean result = super.cancel(mayInterruptIfRunning);

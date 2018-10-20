@@ -8,9 +8,9 @@ import java.util.Deque;
 import java.util.Iterator;
 
 /**
- * A Queue of tokens of type <T>
+ * A Queue of tokens
  *
- * @param <T>
+ * @param <T> the type of tokens
  */
 public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscriber<T>, Iterator<T> {
     protected Deque<T> queue;

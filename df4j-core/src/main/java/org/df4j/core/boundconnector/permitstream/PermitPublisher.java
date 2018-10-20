@@ -13,7 +13,6 @@ package org.df4j.core.boundconnector.permitstream;
 
 /**
  * A {@link PermitPublisher} is a provider of a potentially unbounded number of permits
- * <p>
  */
 public interface PermitPublisher {
 

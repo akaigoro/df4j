@@ -25,7 +25,7 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections, pushes them pu subscribers
  *
- * though it extends AsyncAction, it is effectively an Actor1<ScalarSubscriber>
+ * though it extends AsyncAction, it is effectively an Actor1&lt;ScalarSubscriber&gt;
  *
  *  its sole input is a stream of requests of type ServerConnection
  *  for each ServerConnection, AsyncServerSocketChannel accepts an incoming connection requests

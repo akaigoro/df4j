@@ -5,11 +5,10 @@ import org.df4j.core.tasknode.AsyncProc;
 import java.util.Iterator;
 
 /**
- * Token storage with standard Subscriber<T> interface.
+ * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.
  *
- * @param <T>
- *            type of accepted tokens.
+ * @param <T> type of accepted tokens.
  */
 public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
     protected AsyncProc task;

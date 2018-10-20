@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  * Even if the computation does not produce a resulting value,
  * that connector is useful to monitor the end of the computation.
  *
- * @param <R>
+ * @param <R> type of the result
  */
 public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R> {
     /** place for demands */

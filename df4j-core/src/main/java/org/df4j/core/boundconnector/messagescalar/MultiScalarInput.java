@@ -16,6 +16,8 @@ public class MultiScalarInput<T> extends AsyncProc.Lock implements ScalarSubscri
 
     /**
      * not blocked by default
+     *
+     * @param task parent async procedure
      */
     public MultiScalarInput(AsyncProc task) {
         task.super(false);

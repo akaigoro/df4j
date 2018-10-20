@@ -15,11 +15,9 @@
  * Executor can be set directly as a constructor argument, or taken implicitly 
  * from thread context.  
  * <p>
- * - nodes are subclasses of abstract class {@link org.df4j.core.Actor}.
- *  User have to override  method to handle tokens
- *  {@link org.df4j.core.Actor#act()}
+ * - nodes are subclasses of abstract class {@link org.df4j.core.tasknode.AsyncProc}.
  * <p>
  * - pins may be of several predefined types, and user can create specific pin types
- * by subclassing class {@link org.df4j.core.Pin}
+ * by subclassing class {@link org.df4j.core.tasknode.AsyncProc.AsyncParam}
  */
 package org.df4j.core;

@@ -8,9 +8,9 @@ import java.util.Queue;
 import java.util.Iterator;
 
 /**
- * A Queue of tokens of type <T>
+ * A Queue of tokens
  *
- * @param <T>
+ * @param <T> type of tokens
  */
 public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T>, Iterator<T> {
     protected Queue<T> queue;

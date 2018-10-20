@@ -51,9 +51,6 @@ public abstract class AsyncProc implements Runnable {
 
     protected Executor executor = asyncExec;
 
-    /**
-     * assigns Executor
-     */
     public void setExecutor(Executor exec) {
         if (exec == null) {
             this.executor = CurrentThreadExecutor.CURRENT_THREAD_EXECUTOR;
@@ -76,6 +73,8 @@ public abstract class AsyncProc implements Runnable {
     protected void fire() {
         getExecutor().execute(this);
     }
+
+    protected abstract boolean isStarted();
 
     /**
      * Basic class for all locs and connectors (places for tokens).
@@ -208,11 +207,12 @@ public abstract class AsyncProc implements Runnable {
             asyncParams.remove(this);
         }
 
-        /** removes and return next token */
+        /** removes and return next token
+         *
+         * @return the next token
+         */
         public abstract T next();
     }
-
-    protected abstract boolean isStarted();
 
     public class CompletablePromise<R> extends org.df4j.core.simplenode.messagescalar.CompletablePromise<R> {
         public CompletablePromise() {

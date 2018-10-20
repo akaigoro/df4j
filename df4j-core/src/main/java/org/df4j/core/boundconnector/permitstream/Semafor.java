@@ -45,7 +45,10 @@ public class Semafor extends AsyncProc.Lock implements PermitSubscriber {
         this.subscription = subscription;
     }
 
-    /** decrements resource counter by delta */
+    /** decrements resource counter by delta
+     *
+     * @param delta number of permissions to aquire
+     */
     protected synchronized void acquire(long delta) {
         if (delta <= 0) {
             throw  new IllegalArgumentException("resource counter delta must be > 0");

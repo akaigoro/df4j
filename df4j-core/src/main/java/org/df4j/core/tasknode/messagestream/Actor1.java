@@ -39,7 +39,6 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
 
     /**
      * processes closing signal
-     * @throws Exception
      */
     @Override
     public void complete() {

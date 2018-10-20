@@ -1,4 +1,3 @@
-//package com.vogella.android.rxjava.simple;
 package org.df4j.core.rxjava2;
 
 import org.junit.Test;
@@ -11,7 +10,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class RxJavaUnitTest {
 

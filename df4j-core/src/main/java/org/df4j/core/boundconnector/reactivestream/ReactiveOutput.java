@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  *
  * An equivalent to java.util.concurrent.SubmissionPublisher
  *
- * @param <M>
+ * @param <M> the type of broadcasted values
  */
 public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublisher<M>, StreamCollector<M> {
     protected AsyncProc actor;

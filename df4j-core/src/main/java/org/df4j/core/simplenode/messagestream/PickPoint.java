@@ -17,9 +17,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * An asynchronous analogue of BlockingQueue
+ *  An asynchronous analogue of BlockingQueue
  *  (only on output end, while from the input side it does not block)
- * @param <T>
+ *
+ * @param <T> the type of the values passed through this token container
  */
 public class PickPoint<T> extends ArrayDeque<T> implements StreamSubscriber<T>, ScalarPublisher<T>, BlockingQueue<T> {
     private boolean completed = false;

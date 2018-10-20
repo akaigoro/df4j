@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 /**
  * serves multiple subscribers
  *
- * @param <M>
+ * @param <M> type of tokens
  */
 public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M>, StreamCollector<M> {
     protected AsyncProc actor;

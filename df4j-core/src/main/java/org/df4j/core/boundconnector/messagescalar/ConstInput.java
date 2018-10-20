@@ -5,7 +5,7 @@ import org.df4j.core.tasknode.AsyncProc;
 import java.util.function.BiConsumer;
 
 /**
- * Token storage with standard Subscriber<T> interface. It has place for only one
+ * Token storage with standard Subscriber&lt;T&gt; interface. It has place for only one
  * token, which is never consumed.
  *
  * @param <T>

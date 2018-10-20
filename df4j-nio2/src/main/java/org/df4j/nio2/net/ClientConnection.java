@@ -12,9 +12,11 @@ public class ClientConnection extends ServerConnection
      * Starts connection to a server. IO requests can be queued immediately,
      * but will be executed only after connection completes.
      *
-     * @throws IOException
+     * @param name name of the connection
+     * @param addr address of the server to connect
+     * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
-    public ClientConnection(String name, SocketAddress addr) throws IOException, InterruptedException {
+    public ClientConnection(String name, SocketAddress addr) throws IOException {
         super(name);
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open();
         channel.connect(addr, channel, this);

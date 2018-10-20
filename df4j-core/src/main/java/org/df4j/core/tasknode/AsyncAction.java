@@ -10,7 +10,7 @@ import java.util.concurrent.Executor;
  *  - control pin -- requires start()
  *  - action caller -- allows @Action annotation
  *
- * @param <R>
+ * @param <R> type of result
  */
 public class AsyncAction<R> extends AsyncProc {
 

@@ -6,7 +6,7 @@ import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
 import java.util.concurrent.*;
 
 /**
- * @param <T>
+ * @param <T> the type of future value
  */
 public class SubscriberFuture<T> extends CompletableFuture<T> implements ScalarSubscriber<T> {
     protected SimpleSubscription subscription;

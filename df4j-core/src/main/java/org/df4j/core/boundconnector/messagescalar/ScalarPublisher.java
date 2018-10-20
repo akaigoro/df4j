@@ -17,10 +17,15 @@ public interface ScalarPublisher<T> {
      * method is invoked with an {@link IllegalStateException}.
      *
      * @param subscriber the subscriber
-     * @throws NullPointerException if subscriber is null
+     * @param <S> the type of the subscriber
+     * @return the subscriber argument
      */
     <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber);
 
+    /**
+     *
+     * @return Future subscribed to this publisher
+     */
     default Future<T> asFuture() {
         return subscribe(new SubscriberFuture<T>());
     }

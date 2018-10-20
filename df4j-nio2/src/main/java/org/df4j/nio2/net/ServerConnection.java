@@ -89,7 +89,6 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
 
     /** disallows subsequent posts of requests; already posted requests
      * would be processed.
-     * @throws IOException 
      */
     public synchronized void close() {
         AsynchronousSocketChannel locchannel;
