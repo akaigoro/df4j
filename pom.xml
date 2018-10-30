@@ -34,6 +34,8 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <msp.version>3.0.1</msp.version>
+        <mjdp.version>3.0.1</mjdp.version>
     </properties>
 
     <modules>
