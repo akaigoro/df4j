@@ -12,8 +12,6 @@ import java.util.concurrent.Executor;
  *  - action caller -- allows @Action annotation
  *  - scalar result. Even if this action will produce a stream of results or no result at all,
  *  it can be used as a channel for unexpected errors.
- *
- * @param <R> type of result
  */
 public class AsyncAction extends AsyncProc {
 
