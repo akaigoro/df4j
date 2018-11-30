@@ -2,7 +2,7 @@ package org.df4j.core.util.invoker;
 
 import java.util.function.Supplier;
 
-public class SupplierInvoker<R> extends AbstractInvoker<Supplier<R>, R> {
+public class SupplierInvoker<R> extends AbstractInvoker<Supplier<R>> {
 
 
     public SupplierInvoker(Supplier<R> supplier) {

@@ -1,9 +1,9 @@
 package org.df4j.core.util.invoker;
 
-public interface Invoker<R> {
+public interface Invoker {
     boolean isEmpty();
 
-    R apply(Object... args) throws Exception;
+    Object apply(Object... args) throws Exception;
 
     default boolean returnsValue() {
         return false;

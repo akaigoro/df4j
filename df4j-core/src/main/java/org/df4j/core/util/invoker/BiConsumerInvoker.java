@@ -2,7 +2,7 @@ package org.df4j.core.util.invoker;
 
 import java.util.function.BiConsumer;
 
-public class BiConsumerInvoker<U,V> extends AbstractInvoker<BiConsumer<U,V>, Void> {
+public class BiConsumerInvoker<U,V> extends AbstractInvoker<BiConsumer<U,V>> {
 
     public BiConsumerInvoker(BiConsumer<U, V> consumer) {
         super(consumer);

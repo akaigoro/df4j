@@ -2,11 +2,16 @@ package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
 import org.df4j.core.util.invoker.SupplierInvoker;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 /**
@@ -18,13 +23,11 @@ import java.util.function.Supplier;
  *
  * @param <R> type of the result
  */
-public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R> {
-    /** place for demands */
-    protected final CompletablePromise<R> result = new CompletablePromise<>();
+public class AsyncSupplier<R> extends AsyncAction implements ScalarPublisher<R>, Future<R> {
 
     public AsyncSupplier() {}
 
-    public AsyncSupplier(Invoker<R> invoker) {
+    public AsyncSupplier(Invoker invoker) {
         super(invoker);
     }
 
@@ -36,18 +39,19 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
         super(new RunnableInvoker<R>(proc));
     }
 
+    @Override
     public CompletablePromise<R> asyncResult() {
-        return result;
+        return (CompletablePromise<R>) super.asyncResult();
     }
 
     @Override
     public <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
-        result.subscribe(subscriber);
+        asyncResult().subscribe(subscriber);
         return subscriber;
     }
 
     protected boolean completeResult(R res) {
-        return result.complete(res);
+        return asyncResult().complete(res);
     }
 
     protected boolean completeResultExceptionally(Throwable ex) {
@@ -55,14 +59,39 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     }
 
     @Override
-    protected R runAction() throws Exception {
-        R value = super.runAction();
-        result.complete(value);
-        return value;
+    public boolean cancel(boolean b) {
+        return result.cancel(b);
     }
 
-    public String toString() {
-        return super.toString() + result.toString();
+    @Override
+    public boolean isCancelled() {
+        return result.isCancelled();
     }
 
+    @Override
+    public boolean isDone() {
+        return result.isDone();
+    }
+
+    @Override
+    public R get() throws InterruptedException, ExecutionException {
+        return asyncResult().get();
+    }
+
+    @Override
+    public R get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+        return asyncResult().get(l, timeUnit);
+    }
+
+    @Override
+    public void run() {
+        try {
+            blockStarted();
+            R res = (R) runAction();
+            asyncResult().complete(res);
+        } catch (Throwable e) {
+            result.completeExceptionally(e);
+        }
+        stop();
+    }
 }

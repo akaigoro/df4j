@@ -1,6 +1,6 @@
 package org.df4j.core.util.invoker;
 
-public class RunnableInvoker<R> extends AbstractInvoker<Runnable, R> {
+public class RunnableInvoker<R> extends AbstractInvoker<Runnable> {
 
     public RunnableInvoker(Runnable runnable) {
         super(runnable);

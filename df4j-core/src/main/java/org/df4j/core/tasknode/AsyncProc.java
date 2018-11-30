@@ -214,10 +214,4 @@ public abstract class AsyncProc implements Runnable {
         public abstract T next();
     }
 
-    public class CompletablePromise<R> extends org.df4j.core.simplenode.messagescalar.CompletablePromise<R> {
-        public CompletablePromise() {
-            super(AsyncProc.this);
-        }
-    }
-
 }

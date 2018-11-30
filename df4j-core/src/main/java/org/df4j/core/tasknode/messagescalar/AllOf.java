@@ -1,35 +1,32 @@
 package org.df4j.core.tasknode.messagescalar;
 
+import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
 
-public class AllOf extends AsyncSupplier<Object[]> {
-    Object[] results;
+public class AllOf extends AsyncSupplier<Void> {
 
-    public AllOf(SubscriberPromise<?>... sources) {
-        results = new Object[sources.length];
-        for (int k = 0; k<sources.length; k++) {
-            SubscriberPromise source = sources[k];
-            final Enter arg = new Enter(k);
-            source.subscribe(arg);
+    public AllOf() {
+    }
+
+    public AllOf(ScalarPublisher<?>... sources) {
+        for (ScalarPublisher source: sources) {
+            add(source);
         }
+    }
+
+    public synchronized void add(ScalarPublisher source) {
+        source.subscribe(new Enter());
     }
 
     @Override
     protected void fire() {
-        completeResult(results);
+        completeResult(null);
     }
 
     class Enter extends Lock implements ScalarSubscriber<Object> {
-        private final int num;
-
-        public Enter(int num) {
-            this.num = num;
-        }
 
         @Override
         public boolean complete(Object value) {
-            results[num] = value;
             return super.turnOn();
         }
 

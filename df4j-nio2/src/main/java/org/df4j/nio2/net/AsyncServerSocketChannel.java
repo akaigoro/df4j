@@ -35,7 +35,7 @@ import java.nio.channels.CompletionHandler;
  *
  */
 public class AsyncServerSocketChannel
-        extends AsyncAction<Void>
+        extends AsyncAction
         implements ScalarPublisher<AsynchronousSocketChannel>,
         CompletionHandler<AsynchronousSocketChannel, ScalarSubscriber<? super AsynchronousSocketChannel>>
 {

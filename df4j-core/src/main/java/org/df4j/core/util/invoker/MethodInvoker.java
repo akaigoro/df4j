@@ -2,7 +2,7 @@ package org.df4j.core.util.invoker;
 
 import java.lang.reflect.Method;
 
-public class MethodInvoker<R> implements Invoker<R> {
+public class MethodInvoker<R> implements Invoker {
     private final Object actionObject;
     private final Method actionMethod;
     private final boolean returnsValue;

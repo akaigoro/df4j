@@ -10,12 +10,15 @@
 
 package org.df4j.core.boundconnector.messagescalar;
 
+import java.util.function.BiConsumer;
+
 /**
  * scalar inlet for messages
  * @param <M> the type of the message
  */
-@FunctionalInterface
-public interface ScalarCollector<M> {
+public interface ScalarCollector<M>
+        extends BiConsumer<M, Throwable> // to connect to a CompletionStage by whenComplete
+{
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
@@ -30,5 +33,14 @@ public interface ScalarCollector<M> {
      * @return true if this exception caused this ScalarSubscriber instance to asyncTask to a completed state, else false
      */
 	default boolean completeExceptionally(Throwable ex) {return false;}
+
+    @Override
+    default void accept(M r, Throwable throwable) {
+        if (throwable != null) {
+            completeExceptionally(throwable);
+        } else {
+            complete(r);
+        }
+    }
 
 }

@@ -95,7 +95,7 @@ public class ActionCallerTest {
         Assert.assertFalse(p.returnsValue());
         Object res = p.apply();
         Assert.assertNull(res);
-        Invoker<Integer> f = ActionCaller.findAction(new WithFunc(), 0);
+        Invoker f = ActionCaller.findAction(new WithFunc(), 0);
         Assert.assertTrue(f.returnsValue());
         Object res2 = f.apply();
         Assert.assertEquals(137, res2);

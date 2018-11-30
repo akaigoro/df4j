@@ -21,7 +21,7 @@ public class DiningPhilosophers {
     static final int num = 5; // number of phylosofers
     static int N = 4; // number of rounds
 
-    enum State{Thinking, Hungry1, Hungry2, Eating, Repleted, Died}
+    enum State{Thinking, Hungry1, Hungry2, Eating, Replete, Died}
 
     ForkPlace[] forkPlaces = new ForkPlace[num];
     CountDownLatch counter = new CountDownLatch(num);
@@ -139,9 +139,9 @@ public class DiningPhilosophers {
                             return null;
                         }
                         second = input.get();
-                        state = State.Repleted;
+                        state = State.Replete;
                         signal.delay(timer,rand.nextLong() % 11 + 13);
-                    case Repleted:
+                    case Replete:
                         if (!signal.isDone()) {
                             return null;
                         }

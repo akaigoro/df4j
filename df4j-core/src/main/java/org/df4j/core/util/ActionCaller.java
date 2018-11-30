@@ -48,8 +48,11 @@ public class ActionCaller<R> {
                 }
             }
             if (resultMethod != null) {
-                if (resultMethod.getParameterTypes().length != argCount) {
-                    throw new NoSuchMethodException("class "+startClass.getName()+" has a method annotated with @Action but with wrong numbers of parameters");
+                int paramCount = resultMethod.getParameterTypes().length;
+                if (paramCount != argCount) {
+                    throw new NoSuchMethodException("class "+startClass.getName()
+                            +" has a method annotated with @Action but with wrong numbers of parameters ("
+                            +paramCount+" instead of "+argCount);
                 }
                 resultMethod.setAccessible(true);
                 actionInvoker = new MethodInvoker(objectWithAction, resultMethod);

@@ -2,7 +2,7 @@ package org.df4j.core.util.invoker;
 
 import java.util.function.Function;
 
-public class FunctionInvoker<U,R> extends AbstractInvoker<Function<U,R>, R> {
+public class FunctionInvoker<U,R> extends AbstractInvoker<Function<U,R>> {
 
     public FunctionInvoker(Function<U, R> function) {
         super(function);

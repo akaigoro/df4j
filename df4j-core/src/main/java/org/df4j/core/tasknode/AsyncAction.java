@@ -1,5 +1,6 @@
 package org.df4j.core.tasknode;
 
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.util.ActionCaller;
 import org.df4j.core.util.invoker.Invoker;
 
@@ -9,37 +10,44 @@ import java.util.concurrent.Executor;
  * this class contains components, likely useful in each async task node:
  *  - control pin -- requires start()
  *  - action caller -- allows @Action annotation
+ *  - scalar result. Even if this action will produce a stream of results or no result at all,
+ *  it can be used as a channel for unexpected errors.
  *
  * @param <R> type of result
  */
-public class AsyncAction<R> extends AsyncProc {
+public class AsyncAction extends AsyncProc {
 
-    protected Invoker<R> actionCaller;
-    protected volatile boolean started = false;
-    protected volatile boolean stopped = false;
-
+    protected Invoker actionCaller;
+    protected final CompletablePromise<?> result = new CompletablePromise<>(this);
     /**
      * blocked initially, until {@link #start} called.
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
-    protected Lock controlLock = new Lock();
+    private Lock controlLock = new Lock();
+    /**
+     * cannot be restarted
+     */
+    protected volatile boolean stopped = false;
 
     public AsyncAction() {
     }
 
-    public AsyncAction(Invoker<R> actionCaller) {
+    public AsyncAction(Invoker actionCaller) {
         this.actionCaller = actionCaller;
     }
 
     public boolean isStarted() {
-        return started;
+        return !controlLock.isBlocked();
+    }
+
+    public CompletablePromise<?> asyncResult() {
+        return result;
     }
 
     public synchronized void start() {
         if (stopped) {
-            return;
+            throw new IllegalStateException();
         }
-        started = true;
         controlLock.turnOn();
     }
 
@@ -48,15 +56,16 @@ public class AsyncAction<R> extends AsyncProc {
         start();
     }
 
-    public synchronized void stop() {
-        stopped = true;
+    protected void blockStarted() {
         controlLock.turnOff();
     }
 
-    public synchronized Object[] consumeTokens() {
-        if (!isStarted()) {
-            throw new IllegalStateException("not started");
-        }
+    public synchronized void stop() {
+        stopped = true;
+        blockStarted();
+    }
+
+    private synchronized Object[] consumeTokens() {
         locks.forEach(lock -> lock.purge());
         Object[] args = new Object[asyncParams.size()];
         for (int k = 0; k< asyncParams.size(); k++) {
@@ -66,25 +75,26 @@ public class AsyncAction<R> extends AsyncProc {
         return args;
     }
 
-    protected R runAction() throws Exception {
+    public String toString() {
+        return super.toString() + result.toString();
+    }
+
+    protected Object runAction() throws Throwable {
         if (actionCaller == null) {
-            try {
-                actionCaller = ActionCaller.findAction(this, asyncParams.size());
-            } catch (NoSuchMethodException e) {
-                throw new IllegalStateException(e);
-            }
+            actionCaller = ActionCaller.findAction(this, asyncParams.size());
         }
         Object[] args = consumeTokens();
-        R  res = actionCaller.apply(args);
+        Object  res = actionCaller.apply(args);
         return res;
     }
 
     @Override
     public void run() {
         try {
-            controlLock.turnOff();
+            blockStarted();
             runAction();
         } catch (Throwable e) {
+            result.completeExceptionally(e);
             stop();
         }
     }
