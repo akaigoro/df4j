@@ -26,12 +26,12 @@ public class ClientConnection extends ServerConnection
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        super.complete(channel);
+        super.post(channel);
     }
 
     @Override
     public void failed(Throwable exc, AsynchronousSocketChannel channel) {
-        super.completeExceptionally(exc);
+        super.postFailure(exc);
     }
 
 }

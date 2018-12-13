@@ -11,28 +11,33 @@ package org.df4j.core.reactivestream;
 
 import org.df4j.core.boundconnector.reactivestream.*;
 import org.df4j.core.tasknode.Action;
+import org.df4j.core.tasknode.AsyncProc;
+import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.df4j.core.tasknode.messagestream.Actor;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.PrintStream;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class ReactiveStreamExample {
+public class ReactiveStreamExample extends AllOf {
+    @Before
+    public void init() {
+        AsyncProc.setThreadLocalExecutor(AsyncProc.currentThreadExec);
+    }
 
-    public void testSourceToSink(int sourceNumber, int sinkNumber) throws InterruptedException {
-        CountDownLatch fin = new CountDownLatch(3);
-        Source from = new Source(sourceNumber, fin);
-        Sink to1 = new Sink(sinkNumber, fin);
+    public void testSourceToSink(int sourceNumber, int sinkNumber) throws Exception {
+        Source from = new Source(sourceNumber);
+        Sink to1 = new Sink(sinkNumber);
         from.subscribe(to1);
-        Sink to2 = new Sink(sinkNumber, fin);
+        Sink to2 = new Sink(sinkNumber);
         from.subscribe(to2);
+        super.start(); // after all components created
         from.start();
-        assertTrue(fin.await(1, TimeUnit.SECONDS));
+        asyncResult().get(1, TimeUnit.SECONDS);
         // publisher always sends all tokens, even if all subscribers unsubscribed.
         sinkNumber = Math.min(sourceNumber, sinkNumber);
         assertEquals(sinkNumber, to1.received);
@@ -40,19 +45,19 @@ public class ReactiveStreamExample {
     }
 
     @Test
-    public void testSourceFirst() throws InterruptedException {
+    public void testSourceFirst() throws Exception {
         testSourceToSink(0, 1);
         testSourceToSink(2, 1);
     }
 
     @Test
-    public void testSinkFirst() throws InterruptedException {
+    public void testSinkFirst() throws Exception {
         testSourceToSink(1, 0);
         testSourceToSink(10, 11);
     }
 
     @Test
-    public void testSameTime() throws InterruptedException {
+    public void testSameTime() throws Exception {
         testSourceToSink(2, 2);
 
 
@@ -75,19 +80,13 @@ public class ReactiveStreamExample {
     /**
      * emits totalNumber of Integers and closes the stream
      */
-    static class Source extends Actor implements ReactivePublisher<Integer> {
+    class Source extends Actor implements ReactivePublisher<Integer> {
         ReactiveOutput<Integer> pub = new ReactiveOutput<>(this);
         int val = 0;
-        CountDownLatch fin;
 
-        public Source(int totalNumber, CountDownLatch fin) {
+        public Source(int totalNumber) {
             this.val = totalNumber;
-            this.fin = fin;
-        }
-
-        @Override
-        public Executor getExecutor() {
-            return directExecutor;
+            registerAsyncResult(asyncResult());
         }
 
         @Override
@@ -100,8 +99,7 @@ public class ReactiveStreamExample {
         public void act() {
             if (val == 0) {
                 pub.complete();
-                println("Source.pub.complete()");
-                fin.countDown();
+                println("Source.pub.post()");
                 stop();
             } else {
                 //          ReactorTest.println("pub.post("+val+")");
@@ -114,29 +112,23 @@ public class ReactiveStreamExample {
     /**
      * receives totalNumber of Integers and cancels the subscription
      */
-    static class Sink extends Actor implements ReactiveSubscriber<Integer> {
+    class Sink extends Actor implements ReactiveSubscriber<Integer> {
         int totalNumber;
         ReactiveInput<Integer> subscriber;
-        final CountDownLatch fin;
         int received = 0;
 
-        public Sink(int totalNumber, CountDownLatch fin) {
-            this.fin = fin;
+        public Sink(int totalNumber) {
+            registerAsyncResult(asyncResult());
             if (totalNumber==0) {
                 subscriber = new ReactiveInput<Integer>(this);
                 subscriber.cancel();
                 println("  sink: countDown");
-                fin.countDown();
+                asyncResult().complete();
             } else {
                 subscriber = new ReactiveInput<Integer>(this);
                 this.totalNumber = totalNumber;
                 start();
             }
-        }
-
-        @Override
-        public Executor getExecutor() {
-            return directExecutor;
         }
 
         @Override
@@ -155,8 +147,8 @@ public class ReactiveStreamExample {
         }
 
         @Override
-        public boolean completeExceptionally(Throwable ex) {
-            return subscriber.completeExceptionally(ex);
+        public void postFailure(Throwable ex) {
+            subscriber.postFailure(ex);
         }
 
         @Action
@@ -171,7 +163,6 @@ public class ReactiveStreamExample {
                 subscriber.cancel();
             }
             println("  sink: countDown");
-            fin.countDown();
             stop();
         }
     }

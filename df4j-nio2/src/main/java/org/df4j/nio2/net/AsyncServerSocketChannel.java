@@ -11,6 +11,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.Logger;
@@ -52,14 +53,14 @@ public class AsyncServerSocketChannel
         }
         assc = AsynchronousServerSocketChannel.open();
         assc.bind(addr);
-        this.start(directExecutor);
+        this.start(directExec);
         LOG.config("AsyncServerSocketChannel("+addr+") created");
     }
     
     @Override
-    public <S extends ScalarSubscriber<? super AsynchronousSocketChannel>> S subscribe(S subscriber) {
-        requests.complete(subscriber);
-        return subscriber;
+    public SimpleSubscription subscribe(ScalarSubscriber<AsynchronousSocketChannel> subscriber) {
+        requests.post(subscriber);
+        return null;
     }
 
     public synchronized void close() {
@@ -95,7 +96,7 @@ public class AsyncServerSocketChannel
     @Override
     public void completed(AsynchronousSocketChannel result, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
         LOG.finest("AsynchronousServerSocketChannel: request accepted");
-        connection.complete(result);
+        connection.post(result);
         this.start(); // allow  next assc.accpt()
     }
 
@@ -105,7 +106,7 @@ public class AsyncServerSocketChannel
      */
     @Override
     public void failed(Throwable exc, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
-        connection.completeExceptionally(exc);
+        connection.postFailure(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.
             close();

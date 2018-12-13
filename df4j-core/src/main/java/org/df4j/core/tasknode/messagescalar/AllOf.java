@@ -10,12 +10,27 @@ public class AllOf extends AsyncSupplier<Void> {
 
     public AllOf(ScalarPublisher<?>... sources) {
         for (ScalarPublisher source: sources) {
-            add(source);
+            registerAsyncResult(source);
         }
     }
 
-    public synchronized void add(ScalarPublisher source) {
+    /**
+     * blocks this instance from completion until the source is completed.
+     *
+     * @param source source of completion. successfull or unseccessfull
+     */
+    public synchronized void registerAsyncResult(ScalarPublisher source) {
         source.subscribe(new Enter());
+    }
+
+    /**
+     * does not blocks this instance from completion.
+     * Used to collect possible exceptions only
+     *
+     * @param source source of errors
+     */
+    public synchronized void registerAsyncDaemon(ScalarPublisher source) {
+        source.subscribe(new DaemonEnter());
     }
 
     @Override
@@ -23,22 +38,31 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResult(null);
     }
 
+    protected synchronized void postGlobalFailure(Throwable ex) {
+        completeResultExceptionally(ex);
+    }
+
     class Enter extends Lock implements ScalarSubscriber<Object> {
 
         @Override
-        public boolean complete(Object value) {
-            return super.turnOn();
+        public void post(Object value) {
+            super.turnOn();
         }
 
         @Override
-        public boolean completeExceptionally(Throwable ex) {
-            synchronized (AllOf.this) {
-                if (!result.isDone()) {
-                    AllOf.this.completeResultExceptionally(ex);
-                }
-            }
-            return true;
+        public void postFailure(Throwable ex) {
+            postGlobalFailure(ex);
         }
     }
 
+    class DaemonEnter implements ScalarSubscriber<Object> {
+
+        @Override
+        public void post(Object value) { }
+
+        @Override
+        public void postFailure(Throwable ex) {
+            postGlobalFailure(ex);
+        }
+    }
 }

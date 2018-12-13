@@ -12,7 +12,7 @@ import java.util.Iterator;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T>, Iterator<T> {
+public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, StreamSubscriber<T> {
     protected Queue<T> queue;
     protected boolean closeRequested = false;
 

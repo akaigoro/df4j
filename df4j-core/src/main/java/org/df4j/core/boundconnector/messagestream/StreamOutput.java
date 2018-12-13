@@ -1,6 +1,6 @@
 package org.df4j.core.boundconnector.messagestream;
 
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.HashSet;
@@ -12,7 +12,7 @@ import java.util.function.Consumer;
  *
  * @param <M> type of tokens
  */
-public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M>, StreamCollector<M> {
+public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M>, StreamSubscriber<M> {
     protected AsyncProc actor;
     protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
 
@@ -22,11 +22,10 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
     }
 
     @Override
-    public <S extends StreamSubscriber<? super M>> S subscribe(S subscriber) {
+    public SimpleSubscriptionImpl subscribe(StreamSubscriber<M> subscriber) {
         SimpleSubscriptionImpl newSubscription = new SimpleSubscriptionImpl(subscriber);
         subscriptions.add(newSubscription);
-        subscriber.onSubscribe(newSubscription);
-        return subscriber;
+        return newSubscription;
     }
 
     public synchronized void close() {
@@ -54,9 +53,8 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
     }
 
     @Override
-    public boolean completeExceptionally(Throwable throwable) {
+    public void postFailure(Throwable throwable) {
         forEachSubscription((subscription) -> subscription.postFailure(throwable));
-        return false;
     }
 
     @Override
@@ -77,7 +75,7 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
         }
 
         public void postFailure(Throwable throwable) {
-            subscriber.completeExceptionally(throwable);
+            subscriber.postFailure(throwable);
             cancel();
         }
 

@@ -1,16 +1,16 @@
 package org.df4j.core.messagestream;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarInput;
-import org.df4j.core.boundconnector.permitscalar.BinarySemafor;
+import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.df4j.core.tasknode.messagestream.Actor;
+import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
 import java.util.Random;
-import java.util.Timer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -28,11 +28,12 @@ public class DiningPhilosophersMultistate {
     ForkPlace[] forkPlaces = new ForkPlace[num];
     Philosopher[] philosophers = new Philosopher[num];
     AllOf listener = new AllOf();
-    Timer timer = new Timer();
+    TimeSignalPublisher timer = new TimeSignalPublisher();
 
     @Test
     public void test() throws InterruptedException, ExecutionException, TimeoutException {
-    	// create places for forks with 1 fork in each
+  //      AsyncProc.setThreadLocalExecutor(AsyncProc.currentThreadExec);
+        // create places for forks with 1 fork in each
         for (int k=0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
             forkPlace.post(new Fork(k));
@@ -42,7 +43,7 @@ public class DiningPhilosophersMultistate {
         for (int k=0; k<num; k++) {
             Philosopher philosopher = new Philosopher(k);
             philosophers[k] = philosopher;
-            listener.add(philosopher);
+            listener.registerAsyncResult(philosopher);
         }
         // animate all philosophers
         for (int k=0; k<num; k++) {
@@ -131,7 +132,7 @@ public class DiningPhilosophersMultistate {
          */
         class State extends AsyncAction {
             {
-                Philosopher.this.add(asyncResult());
+                Philosopher.this.registerAsyncResult(asyncResult());
             }
         }
 
@@ -140,7 +141,7 @@ public class DiningPhilosophersMultistate {
          */
         class TimeConsuming extends State {
             final State nextState;
-            BinarySemafor signal = new BinarySemafor(this);
+            Semafor signal = new Semafor(this);
 
             TimeConsuming(State nextState) {
                 this.nextState = nextState;
@@ -148,7 +149,7 @@ public class DiningPhilosophersMultistate {
 
             @Override
             public synchronized void start() {
-                signal.delay(timer, rand.nextLong() % 17 + 23);
+                timer.subscribe(signal, rand.nextLong() % 17 + 23);
                 super.start();
             }
 

@@ -9,9 +9,8 @@
  */
 package org.df4j.core.tasknode.messagestream;
 
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
-import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
+import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 
 /**
  * A dataflow Actor with one predefined input stream port.
@@ -23,18 +22,13 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
     protected final StreamInput<M> mainInput = new StreamInput<M>(this);
 
     @Override
-    public synchronized void onSubscribe(SimpleSubscription subscription) {
-        mainInput.onSubscribe(subscription);
-    }
-
-    @Override
     public void post(M m) {
-        mainInput.complete(m);
+        mainInput.post(m);
     }
 
     @Override
-    public boolean completeExceptionally(Throwable ex) {
-        return mainInput.completeExceptionally(ex);
+    public void postFailure(Throwable ex) {
+        mainInput.postFailure(ex);
     }
 
     /**
@@ -51,10 +45,18 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
 
     @Override
     protected Void runAction() throws Exception {
-        M arg = mainInput.next();
-        runAction(arg);
+        M message = mainInput.next();
+        if (message != null) {
+            runAction(message);
+        } else {
+            completion();
+        }
         return null;
     }
 
     protected abstract void runAction(M arg) throws Exception;
+
+    protected void completion() throws Exception {
+        stop();
+    }
 }

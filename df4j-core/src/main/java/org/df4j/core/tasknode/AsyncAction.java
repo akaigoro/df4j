@@ -13,15 +13,15 @@ import java.util.concurrent.Executor;
  *  - scalar result. Even if this action will produce a stream of results or no result at all,
  *  it can be used as a channel for unexpected errors.
  */
-public class AsyncAction extends AsyncProc {
+public class AsyncAction<R> extends AsyncProc {
 
     protected Invoker actionCaller;
-    protected final CompletablePromise<?> result = new CompletablePromise<>(this);
+    protected final CompletablePromise<R> result = new CompletablePromise<>();
     /**
      * blocked initially, until {@link #start} called.
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
-    private Lock controlLock = new Lock();
+    protected Lock controlLock = new Lock();
     /**
      * cannot be restarted
      */
@@ -38,7 +38,11 @@ public class AsyncAction extends AsyncProc {
         return !controlLock.isBlocked();
     }
 
-    public CompletablePromise<?> asyncResult() {
+    public boolean isStopped() {
+        return stopped;
+    }
+
+    public CompletablePromise<R> asyncResult() {
         return result;
     }
 
@@ -60,6 +64,9 @@ public class AsyncAction extends AsyncProc {
 
     public synchronized void stop() {
         stopped = true;
+        if (!result.isDone()) {
+            result.complete();
+        }
         blockStarted();
     }
 
@@ -67,7 +74,7 @@ public class AsyncAction extends AsyncProc {
         locks.forEach(lock -> lock.purge());
         Object[] args = new Object[asyncParams.size()];
         for (int k = 0; k< asyncParams.size(); k++) {
-            AsyncParam asyncParam = asyncParams.get(k);
+            ConstInput<?> asyncParam = asyncParams.get(k);
             args[k] = asyncParam.next();
         }
         return args;

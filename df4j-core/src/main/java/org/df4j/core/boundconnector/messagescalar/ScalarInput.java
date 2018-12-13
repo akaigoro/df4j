@@ -10,12 +10,12 @@ import java.util.Iterator;
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends ConstInput<T> implements Iterator<T> {
+public class ScalarInput<T> extends AsyncProc.ConstInput<T> implements Iterator<T> {
     protected AsyncProc task;
     protected boolean pushback = false; // if true, do not consume
 
     public ScalarInput(AsyncProc task) {
-        super(task);
+        task.super();
         this.task = task;
     }
 

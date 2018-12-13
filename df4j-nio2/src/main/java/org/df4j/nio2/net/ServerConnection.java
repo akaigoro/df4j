@@ -12,9 +12,7 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarCollector;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.boundconnector.messagestream.StreamOutput;
 import org.df4j.core.tasknode.Action;
@@ -47,7 +45,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
 {
     protected static final Logger LOG = Logger.getLogger(ServerConnection.class.getName());
 
-    private final ScalarCollector<ServerConnection> backPort;
+    private final ScalarSubscriber<ServerConnection> backPort;
 
 	/** read requests queue */
 	public final Reader reader;
@@ -58,7 +56,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
 
     public String name;
 
-    public ServerConnection(String name, ScalarCollector<ServerConnection> backPort) {
+    public ServerConnection(String name, ScalarSubscriber<ServerConnection> backPort) {
         this.name = name;
         this.backPort = backPort;
         reader = new Reader();
@@ -74,17 +72,15 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
 
-    public boolean complete(AsynchronousSocketChannel channel) {
+    public void post(AsynchronousSocketChannel channel) {
         LOG.info("conn "+name+": init()");
         this.channel=channel;
         reader.start();
         writer.start();
-        return true;
     }
 
-    public boolean completeExceptionally(Throwable ex) {
-        LOG.info("conn "+name+": completeExceptionally()");
-        return false;
+    public void postFailure(Throwable ex) {
+        LOG.info("conn "+name+": postFailure()");
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -103,17 +99,12 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
             }
     	}
     	if (backPort != null) {
-            backPort.complete(this);
+            backPort.post(this);
         }
     }
 
     public synchronized boolean isClosed() {
         return channel==null;
-    }
-
-    @Override
-    public void onSubscribe(SimpleSubscription simpleSubscription) {
-
     }
 
     //===================== inner classes
@@ -141,7 +132,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         protected void start_IO (ByteBuffer buffer) {
             if (input.isClosed()) {
                 output.close();
-                output.completeExceptionally(new AsynchronousCloseException());
+                output.postFailure(new AsynchronousCloseException());
                 LOG.finest("conn "+ name+": input.isClosed()");
                 return;
             }
@@ -171,7 +162,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
                 close();
             } else {
                 this.start(); // let subsequent requests fail
-                output.completeExceptionally(exc);
+                output.postFailure(exc);
             }
         }
 

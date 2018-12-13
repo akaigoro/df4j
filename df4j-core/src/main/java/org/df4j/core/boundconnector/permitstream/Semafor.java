@@ -1,6 +1,6 @@
 package org.df4j.core.boundconnector.permitstream;
 
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.tasknode.AsyncProc;
 
 /**
@@ -38,11 +38,6 @@ public class Semafor extends AsyncProc.Lock implements PermitSubscriber {
         if (prev <= 0 && count > 0 ) {
             turnOn();
         }
-    }
-
-    @Override
-    public void onSubscribe(SimpleSubscription subscription) {
-        this.subscription = subscription;
     }
 
     /** decrements resource counter by delta

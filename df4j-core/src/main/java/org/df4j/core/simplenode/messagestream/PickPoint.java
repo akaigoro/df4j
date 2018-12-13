@@ -2,14 +2,13 @@ package org.df4j.core.simplenode.messagestream;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
-import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.messagestream.StreamCompletedException;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -22,19 +21,14 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> extends ArrayDeque<T> implements StreamSubscriber<T>, ScalarPublisher<T>, BlockingQueue<T> {
-    private boolean completed = false;
+public class PickPoint<T> implements ScalarPublisher<T>, StreamSubscriber<T> {
+    protected ArrayDeque<T> resources = new ArrayDeque<>();
+    protected boolean completed = false;
 	/** place for demands */
 	private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
 
-	private SimpleSubscription subscription;
-
     public synchronized boolean isCompleted() {
         return completed;
-    }
-
-    public void onSubscribe(SimpleSubscription subscription){
-        this.subscription = subscription;
     }
 
     @Override
@@ -43,9 +37,9 @@ public class PickPoint<T> extends ArrayDeque<T> implements StreamSubscriber<T>, 
             throw new IllegalStateException();
         }
 	    if (requests.isEmpty()) {
-	        super.add(token);
+            resources.add(token);
         } else {
-	        requests.poll().complete(token);
+	        requests.poll().post(token);
         }
 	}
 
@@ -56,57 +50,31 @@ public class PickPoint<T> extends ArrayDeque<T> implements StreamSubscriber<T>, 
         }
         completed = true;
         for (ScalarSubscriber<? super T> subscriber: requests) {
-            subscriber.completeExceptionally(new StreamCompletedException());
+            subscriber.postFailure(new StreamCompletedException());
         }
         requests = null;
 	}
 
 	@Override
-	public <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber) {
+    public SimpleSubscription subscribe(ScalarSubscriber<T> subscriber) {
         if (completed) {
             throw new IllegalStateException();
         }
-		if (super.isEmpty()) {
+		if (resources.isEmpty()) {
 			requests.add(subscriber);
 		} else {
-			subscriber.complete(super.poll());
+			subscriber.post(resources.poll());
 		}
-        return subscriber;
+		return null;
 	}
 
-    /**====================== implementation of synchronous BlockingQueu interface  ====================*/
-
-    @Override
-    public boolean add(T t) {
-        post(t);
-        return true;
-    }
-
-    @Override
-    public boolean offer(T t) {
-        post(t);
-        return true;
-    }
-
-    @Override
-    public void put(T t) throws InterruptedException {
-        post(t);
-    }
-
-    @Override
-    public synchronized boolean offer(T t, long timeout, TimeUnit unit) throws InterruptedException {
-        post(t);
-        return true;
-    }
-
-    @Override
     public T take() throws InterruptedException {
         synchronized(this) {
-            if (!super.isEmpty() && requests.isEmpty()) {
-                return super.remove();
+            if (!resources.isEmpty() && requests.isEmpty()) {
+                return resources.remove();
             }
         }
-        SubscriberPromise<T> future = new SubscriberPromise<>();
+        CompletablePromise<T> future = new CompletablePromise<>();
         subscribe(future);
         try {
             return future.get();
@@ -115,38 +83,18 @@ public class PickPoint<T> extends ArrayDeque<T> implements StreamSubscriber<T>, 
         }
     }
 
-    @Override
     public T poll(long timeout, TimeUnit unit) throws InterruptedException {
         synchronized(this) {
-            if (!super.isEmpty() && requests.isEmpty()) {
-                return super.remove();
+            if (!resources.isEmpty() && requests.isEmpty()) {
+                return resources.remove();
             }
         }
-        SubscriberPromise<T> future = new SubscriberPromise<>();
+        CompletablePromise<T> future = new CompletablePromise<>();
         subscribe(future);
         try {
             return future.get(timeout, unit);
         } catch (ExecutionException | TimeoutException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public synchronized int remainingCapacity() {
-        return 1;
-    }
-
-    @Override
-    public synchronized int drainTo(Collection<? super T> c) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public synchronized int drainTo(Collection<? super T> c, int maxElements) {
-        throw new UnsupportedOperationException();
-    }
-
-    static class ThreadSupscriber {
-
     }
 }

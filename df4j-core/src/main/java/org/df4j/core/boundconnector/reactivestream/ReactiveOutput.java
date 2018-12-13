@@ -1,6 +1,6 @@
 package org.df4j.core.boundconnector.reactivestream;
 
-import org.df4j.core.boundconnector.messagestream.StreamCollector;
+import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.AsyncProc;
 
@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  *
  * @param <M> the type of broadcasted values
  */
-public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublisher<M>, StreamCollector<M> {
+public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublisher<M>, StreamSubscriber<M> {
     protected AsyncProc actor;
     protected Set<SimpleReactiveSubscriptionImpl> subscriptions = new HashSet<>();
 
@@ -59,9 +59,8 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
     }
 
     @Override
-    public boolean completeExceptionally(Throwable throwable) {
+    public void postFailure(Throwable throwable) {
         forEachSubscription((subscription) -> subscription.postFailure(throwable));
-        return false;
     }
 
     class SimpleReactiveSubscriptionImpl extends Semafor implements ReactiveSubscription {
@@ -85,9 +84,9 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
 
         public void postFailure(Throwable throwable) {
             if (isCompleted()) {
-                throw new IllegalStateException("completeExceptionally to completed connector");
+                throw new IllegalStateException("postFailure to completed connector");
             }
-            subscriber.completeExceptionally(throwable);
+            subscriber.postFailure(throwable);
             cancel();
         }
 
@@ -118,9 +117,10 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
          * subscription closed by request of subscriber
          */
         public synchronized boolean cancel() {
-            if (closed) {
+            if (isCompleted()) {
                 return false;
             }
+            subscriber = null;
             closed = true;
             subscriptions.remove(this);
             super.unRegister(); // and cannot be turned on

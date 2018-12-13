@@ -2,7 +2,6 @@ package org.df4j.core.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.*;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
-import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.messagescalar.*;
 import org.junit.Assert;
@@ -19,8 +18,8 @@ public class AsyncProcTest {
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         AsyncBiFunction<Double, Double, Double> mult = new Mult();
-        mult.param1.complete(a);
-        mult.param2.complete(b);
+        mult.param1.post(a);
+        mult.param2.post(b);
         double result = mult.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -32,15 +31,15 @@ public class AsyncProcTest {
     }
 
     public static class Blocker<T,R> extends AsyncSupplier<R> {
-        ConstInput<T> arg = new ConstInput<>(this);
+        ConstInput<T> arg = new ConstInput<>();
     }
 
     class Mult2 extends Mult {
-        SubscriberPromise<Double> pa = new SubscriberPromise<>();
-        SubscriberPromise<Double> pb = new SubscriberPromise<>();
+        CompletablePromise<Double> pa = new CompletablePromise<>();
+        CompletablePromise<Double> pb = new CompletablePromise<>();
 
         protected Mult2() {
-            SubscriberPromise<Double> sp = new SubscriberPromise<>();
+            CompletablePromise<Double> sp = new CompletablePromise<>();
             Blocker<Double, Double> blocker = new Blocker<>();
             pa.subscribe(blocker.arg);
             completedPromise(1.0).subscribe(param1);
@@ -64,9 +63,9 @@ public class AsyncProcTest {
 
     /* D = b^2 - 4ac */
     class Discr extends AsyncSupplier<Double> {
-        ConstInput<Double> pa = new ConstInput<>(this);
-        ConstInput<Double> pb = new ConstInput<>(this);
-        ConstInput<Double> pc = new ConstInput<>(this);
+        ConstInput<Double> pa = new ConstInput<>();
+        ConstInput<Double> pb = new ConstInput<>();
+        ConstInput<Double> pc = new ConstInput<>();
 
         @Action
         public double act(Double a, Double b, Double c) {
@@ -76,9 +75,9 @@ public class AsyncProcTest {
 
     private CompletablePromise<Double> computeDiscr(double a, double b, double c) {
         Discr d = new Discr();
-        d.pa.complete(a);
-        d.pb.complete(b);
-        d.pc.complete(c);
+        d.pa.post(a);
+        d.pb.post(b);
+        d.pc.post(c);
         d.start();
         return d.asyncResult();
     }
@@ -100,9 +99,9 @@ public class AsyncProcTest {
      * (-b +/- sqrt(D))/2a
      */
     class RootCalc extends AsyncSupplier<double[]> {
-        ConstInput<Double> pa = new ConstInput<>(this);
-        ConstInput<Double> pb = new ConstInput<>(this);
-        ConstInput<Double> pd = new ConstInput<>(this);
+        ConstInput<Double> pa = new ConstInput<>();
+        ConstInput<Double> pb = new ConstInput<>();
+        ConstInput<Double> pd = new ConstInput<>();
 
         @Action
         public double[] act(Double a, Double b, Double d) {
@@ -119,8 +118,8 @@ public class AsyncProcTest {
 
     private CompletablePromise<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
         RootCalc rc = new RootCalc();
-        rc.pa.complete(a);
-        rc.pb.complete(b);
+        rc.pa.post(a);
+        rc.pb.post(b);
         d.subscribe(rc.pd);
         rc.start();
         return rc.asyncResult();

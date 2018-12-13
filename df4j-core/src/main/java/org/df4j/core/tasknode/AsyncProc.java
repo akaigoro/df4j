@@ -9,12 +9,15 @@
  */
 package org.df4j.core.tasknode;
 
-import org.df4j.core.util.executor.DirectExecutor;
+import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.util.executor.CurrentThreadExecutor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -27,10 +30,29 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This class contains base classes for locks and connectors
  */
 public abstract class AsyncProc implements Runnable {
-    public static final DirectExecutor directExecutor = DirectExecutor.directExecutor;
-    public static final Executor syncExec = CurrentThreadExecutor.CURRENT_THREAD_EXECUTOR;
+    public static final Executor directExec = (Runnable r)->r.run();
+    public static final CurrentThreadExecutor currentThreadExec = new CurrentThreadExecutor();
     public static final Executor asyncExec = ForkJoinPool.commonPool();
     public static final Executor newThreadExec = (Runnable r)->new Thread(r).start();
+    private static InheritableThreadLocal<Executor> threadLocalExecutor = new InheritableThreadLocal<Executor>(){
+        @Override
+        protected Executor initialValue() {
+            return asyncExec;
+        }
+    };
+
+    /**
+     * for debug purposes, call
+     * <pre>
+     *    setThreadLocalExecutor(AsyncProc.currentThreadExec);
+     * </pre>
+     * before creating {@link AsyncProc} instances.
+     *
+     * @param exec default executor
+     */
+    public static void setThreadLocalExecutor(Executor exec) {
+        threadLocalExecutor.set(exec);
+    }
 
     /**
      * the set of all b/w Pins
@@ -39,7 +61,7 @@ public abstract class AsyncProc implements Runnable {
     /**
      * the set of all colored Pins, to form array of arguments
      */
-    protected final ArrayList<AsyncParam> asyncParams = new ArrayList<>();
+    protected final ArrayList<ConstInput<?>> asyncParams = new ArrayList<>();
     /**
      * total number of created pins
      */
@@ -49,17 +71,21 @@ public abstract class AsyncProc implements Runnable {
      */
     protected AtomicInteger blockedPinCount = new AtomicInteger();
 
-    protected Executor executor = asyncExec;
+    protected Executor executor;
 
     public void setExecutor(Executor exec) {
-        if (exec == null) {
-            this.executor = CurrentThreadExecutor.CURRENT_THREAD_EXECUTOR;
-        } else {
-            this.executor = exec;
-        }
+        this.executor = exec;
     }
 
-    public Executor getExecutor() {
+    public synchronized Executor getExecutor() {
+        if (executor == null) {
+            Thread currentThread = Thread.currentThread();
+            if (currentThread instanceof ForkJoinWorkerThread) {
+                executor = ((ForkJoinWorkerThread)currentThread).getPool();
+            } else {
+                executor = threadLocalExecutor.get();
+            }
+        }
         return executor;
     }
 
@@ -71,7 +97,8 @@ public abstract class AsyncProc implements Runnable {
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
-        getExecutor().execute(this);
+        Executor executor = getExecutor();
+        executor.execute(this);
     }
 
     protected abstract boolean isStarted();
@@ -175,18 +202,80 @@ public abstract class AsyncProc implements Runnable {
     }
 
     /**
-     * Basic class for all valued parameters (places for colored tokens).
-     * <p>
-     * initially in blocked state
+     * Token storage with standard Subscriber&lt;T&gt; interface. It has place for only one
+     * token, which is never consumed.
+     *
+     * @param <T>
+     *     type of accepted tokens.
      */
-    public abstract class AsyncParam<T> extends BaseLock {
+    public class ConstInput<T> extends BaseLock
+            implements ScalarSubscriber<T>  // to connect to a ScalarPublisher
+    {
+        protected SimpleSubscription subscription;
+        protected boolean closeRequested = false;
+        protected boolean cancelled = false;
 
-        public AsyncParam(boolean blocked) {
-            super(blocked);
+        /** extracted token */
+        protected boolean completed = false;
+        protected T value = null;
+        protected Throwable exception;
+
+        public ConstInput() {
+            super();
         }
 
-        public AsyncParam() {
-            super();
+        public synchronized T current() {
+            if (exception != null) {
+                throw new IllegalStateException(exception);
+            }
+            return value;
+        }
+
+        public T getValue() {
+            return value;
+        }
+
+        public Throwable getException() {
+            return exception;
+        }
+
+        public boolean isDone() {
+            return completed || exception != null;
+        }
+
+        public T next() {
+            return current();
+        }
+
+        @Override
+        public void post(T message) {
+            if (message == null) {
+                throw new IllegalArgumentException();
+            }
+            if (isDone()) {
+                throw new IllegalStateException("token set already");
+            }
+            value = message;
+            turnOn();
+        }
+
+        @Override
+        public void postFailure(Throwable throwable) {
+            if (isDone()) {
+                throw new IllegalStateException("token set already");
+            }
+            this.exception = throwable;
+        }
+
+        public synchronized boolean cancel() {
+            if (subscription == null) {
+                return cancelled;
+            }
+            SimpleSubscription subscription = this.subscription;
+            this.subscription = null;
+            cancelled = true;
+            boolean result = subscription.cancel();
+            return result;
         }
 
         @Override
@@ -206,12 +295,5 @@ public abstract class AsyncProc implements Runnable {
             }
             asyncParams.remove(this);
         }
-
-        /** removes and return next token
-         *
-         * @return the next token
-         */
-        public abstract T next();
     }
-
 }

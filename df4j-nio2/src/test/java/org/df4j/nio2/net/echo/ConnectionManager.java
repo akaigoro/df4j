@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarCollector;
+import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
@@ -19,9 +19,8 @@ public class ConnectionManager extends AsyncAction {
     Semafor allowedConnections = new Semafor(this);
     int serialnum=0;
 
-    ScalarCollector<ServerConnection> backport = (asyncSocketChannel) -> {
+    ScalarSubscriber<ServerConnection> backport = (asyncSocketChannel) -> {
         allowedConnections.release();
-        return false;
     };
 
     public ConnectionManager(SocketAddress addr, int connCount) throws IOException {

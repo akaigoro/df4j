@@ -1,4 +1,4 @@
-package org.df4j.core.boundconnector.messagescalar;
+package org.df4j.core.boundconnector;
 
 public interface SimpleSubscription {
 

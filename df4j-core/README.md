@@ -1,7 +1,8 @@
-Everything should be made as simple as possible, but not simpler. - Albert Einstein
-------------------- 
+# Data Flow For Java Essentials
 
-How to implement an asynchronous procedure.
+ Everything should be made as simple as possible, but not simpler. - Albert Einstein
+
+### How to implement an asynchronous procedure.
 ------------------------------------------
 An asynchronous procedure differs from a thread that while waiting for input information to be delivered, 
 it does not use procedure stack and so does not wastes core memory. 
@@ -153,7 +154,7 @@ fluent API identical to that of _CompletableFuture_, only to demonstrate how a d
 Detailed explanation of that fluent API is in document [UnderTheHood](/UnderTheHood.md) (in Russian).
  
 
-What are Actors compared to Asycnchronous Procedures?
+### What are Actors compared to Asycnchronous Procedures?
 ----------------------------------------------------
 `Actors` here are both [Hewitt's actors](https://en.wikipedia.org/wiki/Actor_model) (e.g. [Akka](https://akka.io/)) 
 with single predifined input parameter, and dataflow actors whith arbitrary number of parameters. 
@@ -166,7 +167,7 @@ called by a user-defined method.
 An interesting case is calling `start()` in an asynchronous callback like in
  [AsyncServerSocketChannel](../df4j-nio2/src/main/java/org/df4j/nio2/net/AsyncServerSocketChannel.java).   
 
-Supported protocols.
+### Supported protocols.
 -------------------
 In the above example which compute expression `x^2+x^2` all connectors used the **scalar message** protocol, 
 which consists of 2 steps:

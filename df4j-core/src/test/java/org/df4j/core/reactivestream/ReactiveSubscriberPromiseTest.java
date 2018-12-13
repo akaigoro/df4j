@@ -1,6 +1,6 @@
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -12,9 +12,9 @@ public class ReactiveSubscriberPromiseTest {
 
     @Test
     public void singleSubscriberTest() throws InterruptedException, ExecutionException, TimeoutException {
-        SubscriberPromise<Double> sp0 = new SubscriberPromise<>();
-        SubscriberPromise<Double> sp1 = new SubscriberPromise<>();
-        SubscriberPromise<Double> sp2 = new SubscriberPromise<>();
+        CompletablePromise<Double> sp0 = new CompletablePromise<>();
+        CompletablePromise<Double> sp1 = new CompletablePromise<>();
+        CompletablePromise<Double> sp2 = new CompletablePromise<>();
         sp0.subscribe(sp1);
         sp0.subscribe(sp2);
         double v = 4.0;

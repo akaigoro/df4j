@@ -10,12 +10,59 @@
 
 package org.df4j.core.boundconnector.messagescalar;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+
 /**
  * scalar inlet for messages
+ *
+ * it could be named "Port" also
+ *
  * @param <M> the type of the message
  */
-public interface ScalarSubscriber<M> extends ScalarCollector<M> {
+public interface ScalarSubscriber<M> extends BiConsumer<M, Throwable> {
+    /**
+     * If this ScalarSubscriber was not already completed, sets it completed state.
+     *
+     * @param message the completion value
+     */
+    void post(M message);
 
-    default void onSubscribe(SimpleSubscription subscription){}
+    /**
+     * If this ScalarSubscriber was not already completed, sets it completed state.
+     *
+     * @param ex the completion exception
+     */
+    default void postFailure(Throwable ex) {}
 
+    static <T> ScalarSubscriber<T> toSubscriber(CompletableFuture<T> completable) {
+        return new ScalarSubscriber<T>() {
+            @Override
+            public void post(T message) {
+                completable.complete(message);
+            }
+
+            @Override
+            public void postFailure(Throwable ex) {
+                completable.completeExceptionally(ex);
+            }
+        };
+    }
+
+    /**
+     * to pass data from  {@link CompletableFuture} to ScalarSubscriber using     *
+     * <pre>
+     *     completableFuture.whenComplete(scalarSubscriber)
+     * </pre>
+     * @param r
+     * @param throwable
+     */
+    @Override
+    default void accept(M r, Throwable throwable) {
+        if (throwable != null) {
+            postFailure(throwable);
+        } else {
+            post(r);
+        }
+    }
 }

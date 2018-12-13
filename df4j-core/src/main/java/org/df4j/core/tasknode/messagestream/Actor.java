@@ -12,7 +12,9 @@ public class Actor extends AsyncAction {
         try {
             blockStarted();
             runAction();
-            start(); // restart execution
+            if (!isStopped()) {
+                start(); // restart execution
+            }
         } catch (Throwable e) {
             result.completeExceptionally(e);
             stop();

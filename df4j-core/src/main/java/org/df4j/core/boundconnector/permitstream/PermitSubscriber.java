@@ -1,6 +1,6 @@
 package org.df4j.core.boundconnector.permitstream;
 
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.boundconnector.reactivestream.ReactiveSubscription;
 
 /**
@@ -8,7 +8,7 @@ import org.df4j.core.boundconnector.reactivestream.ReactiveSubscription;
  *
  *  method descriptions are taken from description of class {@link ReactiveSubscription}.
  */
-public interface PermitSubscriber {
+public interface PermitSubscriber extends ScalarPermitSubscriber {
     /**
      * Adds the given number {@code n} of items to the current
      * unfulfilled demand for this subscription.  If {@code n} is
@@ -26,7 +26,5 @@ public interface PermitSubscriber {
     default void release() {
         release(1);
     }
-
-    void onSubscribe(SimpleSubscription subscription);
 
 }

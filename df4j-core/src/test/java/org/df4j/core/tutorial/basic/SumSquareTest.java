@@ -1,7 +1,7 @@
 package org.df4j.core.tutorial.basic;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarInput;
-import org.df4j.core.simplenode.messagescalar.SubscriberPromise;
+import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.tasknode.messagescalar.AsyncBiFunction;
@@ -16,7 +16,7 @@ import java.util.function.Function;
 
 public class SumSquareTest {
     public static class Square extends AsyncAction {
-        final SubscriberPromise<Integer> result = new SubscriberPromise<>();
+        final CompletablePromise<Integer> result = new CompletablePromise<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
         @Action
@@ -27,7 +27,7 @@ public class SumSquareTest {
     }
 
     public static class Sum extends AsyncAction {
-        final SubscriberPromise<Integer> result = new SubscriberPromise<>();
+        final CompletablePromise<Integer> result = new CompletablePromise<>();
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 
@@ -52,8 +52,8 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // provide input information:
-        sqX.param.complete(3);
-        sqY.param.complete(4);
+        sqX.param.post(3);
+        sqY.param.post(4);
         // get the result
         int res = sum.result.get();
         Assert.assertEquals(25, res);
@@ -75,8 +75,8 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // provide input information:
-        sqX.complete(3);
-        sqY.complete(4);
+        sqX.post(3);
+        sqY.post(4);
         // get the result
         int res = sum.asyncResult().get();
         Assert.assertEquals(25, res);

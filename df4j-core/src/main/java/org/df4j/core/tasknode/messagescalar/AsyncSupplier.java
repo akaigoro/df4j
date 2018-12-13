@@ -2,6 +2,7 @@ package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.invoker.Invoker;
@@ -23,7 +24,7 @@ import java.util.function.Supplier;
  *
  * @param <R> type of the result
  */
-public class AsyncSupplier<R> extends AsyncAction implements ScalarPublisher<R>, Future<R> {
+public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R>, Future<R> {
 
     public AsyncSupplier() {}
 
@@ -41,13 +42,12 @@ public class AsyncSupplier<R> extends AsyncAction implements ScalarPublisher<R>,
 
     @Override
     public CompletablePromise<R> asyncResult() {
-        return (CompletablePromise<R>) super.asyncResult();
+        return super.asyncResult();
     }
 
     @Override
-    public <S extends ScalarSubscriber<? super R>> S subscribe(S subscriber) {
-        asyncResult().subscribe(subscriber);
-        return subscriber;
+    public SimpleSubscription subscribe(ScalarSubscriber<R> subscriber) {
+        return asyncResult().subscribe(subscriber);
     }
 
     protected boolean completeResult(R res) {

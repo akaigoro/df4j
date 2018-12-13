@@ -1,9 +1,9 @@
 package org.df4j.core.boundconnector.messagestream;
 
-import org.df4j.core.boundconnector.messagescalar.SimpleSubscription;
+import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 
-public interface StreamSubscriber<T> extends StreamCollector<T> {
+public interface StreamSubscriber<T> extends ScalarSubscriber<T> {
 
-    void onSubscribe(SimpleSubscription subscription);
-
+    /** closes the message stream */
+    void complete();
 }

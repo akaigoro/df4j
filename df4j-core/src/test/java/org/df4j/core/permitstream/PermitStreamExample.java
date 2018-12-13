@@ -1,13 +1,11 @@
 package org.df4j.core.permitstream;
 
 import org.df4j.core.boundconnector.messagestream.StreamOutput;
-import org.df4j.core.boundconnector.permitstream.OneShotPermitPublisher;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.messagestream.Actor;
 import org.df4j.core.tasknode.messagestream.Actor1;
 import org.df4j.core.tasknode.messagestream.StreamProcessor;
-import org.df4j.core.util.executor.CurrentThreadExecutor;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -16,20 +14,23 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 
 /**
- *  This is a demonstration how backpressure can be implemented using {@link Semafor}
+ *  This is a demonstration how backpressure can be implemented using plain {@link Semafor}
  */
 public class PermitStreamExample {
 
+    /** making a feedback loop: permits flow from {@link Sink} to {@link Source#backPressureActuator}.
+     */
     @Test
     public void piplineTest() throws InterruptedException {
         int totalCount = 10;
         Source first = new Source(totalCount);
-        Sink last = new Sink();
-        first.pub
-                .subscribe(new TestProcessor())
-                .subscribe(new TestProcessor())
-                .subscribe(last).backPressureCommander
-                .subscribe(first.backPressureActuator);
+        TestProcessor testProcessor = new TestProcessor();
+        TestProcessor testProcessor1 = new TestProcessor();
+        Sink last = new Sink(first.backPressureActuator);
+
+        first.pub.subscribe(testProcessor);
+        testProcessor.subscribe(testProcessor1);
+        testProcessor1.subscribe(last);
         first.start();
         last.fin.await(2, TimeUnit.SECONDS);
         assertEquals(totalCount, last.totalCount);
@@ -42,7 +43,6 @@ public class PermitStreamExample {
 
         Source(int count) {
             this.count = count;
-            setExecutor(new CurrentThreadExecutor());
         }
 
         @Action
@@ -68,22 +68,24 @@ public class PermitStreamExample {
     }
 
     static class Sink extends Actor1<Integer> {
-        OneShotPermitPublisher backPressureCommander = new OneShotPermitPublisher();
+        final Semafor backPressureActuator;
         int totalCount = 0;
         CountDownLatch fin = new CountDownLatch(1);
 
-        {
-            backPressureCommander.release(1);
+        Sink(Semafor backPressureActuator) {
+            this.backPressureActuator = backPressureActuator;
+            backPressureActuator.release();
             start();
         }
 
         protected void runAction(Integer message) throws Exception {
-            if (message == null) {
-                fin.countDown();
-            } else {
-                totalCount++;
-                backPressureCommander.release(1);
-            }
+            totalCount++;
+            backPressureActuator.release();
+        }
+
+        @Override
+        protected void completion() throws Exception {
+            fin.countDown();
         }
     }
 }
