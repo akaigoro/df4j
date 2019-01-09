@@ -80,7 +80,7 @@ public class AsyncServerSocketChannel
     //====================== Dataflow backend
 
     @Override
-    protected Void runAction() throws Exception {
+    protected void runAction() throws Exception {
         ScalarSubscriber<? super AsynchronousSocketChannel> arg = requests.next();
         try {
             assc.accept(arg, this);
@@ -88,7 +88,6 @@ public class AsyncServerSocketChannel
             close();
         }
         // no start() at this point, it will be called later in the handler
-        return null;
     }
 
     //====================== CompletionHandler's backend

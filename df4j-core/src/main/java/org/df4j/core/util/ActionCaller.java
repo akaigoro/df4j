@@ -31,7 +31,6 @@ public class ActionCaller<R> {
                     continue;
                 }
                 if (invoker == null) continue;
-                if (invoker.isEmpty()) continue;
                 if (actionInvoker != null) {
                     throw new NoSuchMethodException("class "+startClass.getName()+" has more than one non-null field annotated with @Action");
                 }

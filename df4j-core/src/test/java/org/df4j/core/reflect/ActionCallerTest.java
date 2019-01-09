@@ -32,7 +32,7 @@ public class ActionCallerTest {
 
     @Test(expected = NoSuchMethodException.class)
     public void nullField() throws NoSuchMethodException {
-        ActionCaller.findAction(new WithField_1(null), 1);
+        ActionCaller.findAction(new WithField_1(), 1);
     }
 
     @Test
@@ -48,7 +48,7 @@ public class ActionCallerTest {
 
     @Test
     public void fieldWithAlienMethod() throws Exception {
-        WithFieldAndMethod wfm = new WithFieldAndMethod(null);
+        WithFieldAndMethod wfm = new WithFieldAndMethod();
         Function<Integer, Integer> f = wfm::dec;
         Invoker ac = ActionCaller.findAction(new WithField_1(f), 1);
         Assert.assertTrue(ac.returnsValue());
@@ -71,7 +71,7 @@ public class ActionCallerTest {
 
     @Test
     public void nullFieldAndMethod() throws Exception {
-        Invoker ac = ActionCaller.findAction(new WithFieldAndMethod(null), 1);
+        Invoker ac = ActionCaller.findAction(new WithFieldAndMethod(), 1);
         Assert.assertTrue(ac.returnsValue());
         Integer res1 = (Integer) ac.apply(TWO);
         Assert.assertEquals(ONE, res1);
@@ -108,6 +108,10 @@ public class ActionCallerTest {
         @Action
         final FunctionInvoker invoker;
 
+        WithField_1() {
+            this.invoker = null;
+        }
+
         WithField_1(Function function) {
             this.invoker = new FunctionInvoker(function);
         }
@@ -126,6 +130,10 @@ public class ActionCallerTest {
 
         WithFieldAndMethod(Function function) {
             this.invoker = new FunctionInvoker(function);
+        }
+
+        WithFieldAndMethod() {
+            this.invoker = null;
         }
 
         @Action

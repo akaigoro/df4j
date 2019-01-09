@@ -16,6 +16,7 @@ import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
  * A dataflow Actor with one predefined input stream port.
  * It mimics the Actors described by Carl Hewitt.
  * This class, however, still can have other (named) ports.
+ *
  * @param <M> the type of messages, accepted via predefined port.
  */
 public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
@@ -44,14 +45,13 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
     }
 
     @Override
-    protected Void runAction() throws Exception {
+    protected void runAction() throws Exception {
         M message = mainInput.next();
         if (message != null) {
             runAction(message);
         } else {
             completion();
         }
-        return null;
     }
 
     protected abstract void runAction(M arg) throws Exception;

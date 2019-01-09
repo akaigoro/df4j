@@ -3,7 +3,6 @@ package org.df4j.core.util.asyncmon;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
-import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.tasknode.AsyncProc;
 import org.df4j.core.tasknode.messagescalar.AllOf;
@@ -74,15 +73,14 @@ public class ProducerConsumerAsync extends AllOf {
             registerAsyncResult(asyncResult());
         }
 
-        @Action
-        public Void runAction() {
+        @Override
+        public void runAction() {
             if (k < 10) {
                 blockingQ.put(k, super::start);
                 k++;
             } else {
                 stop();
             }
-            return null;
         }
     }
 

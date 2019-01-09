@@ -32,6 +32,7 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
     public SimpleSubscription subscribe(ScalarSubscriber<R> subscriber) {
         ScalarSubscription<R> subscription = new ScalarSubscription<>(subscriber);
         super.whenComplete(subscription);
+        subscriber.onSubscribe(subscription);
         return subscription;
     }
 

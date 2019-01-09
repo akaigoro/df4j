@@ -154,9 +154,8 @@ public class DiningPhilosophersMultistate {
             }
 
             @Override
-            public Void runAction() {
+            public void runAction() {
                 nextState.start();
-                return null;
             }
         }
 
@@ -192,7 +191,7 @@ public class DiningPhilosophersMultistate {
         class Replete extends State {
 
             @Override
-            public Void runAction() {
+            public void runAction() {
                 println("Release first (" + firstPlace.id + ")");
                 firstPlace.post(first);
                 println("Release second (" + secondPlace.id + ")");
@@ -206,7 +205,6 @@ public class DiningPhilosophersMultistate {
                     println("Ph no. " + id + ": died at round " + rounds);
                     Philosopher.this.completeResult(null);
                 }
-                return null;
             }
 
         }

@@ -34,7 +34,7 @@ public interface ScalarPublisher<T> {
      * @return subscription
      */
     default SimpleSubscription thenComplete(CompletableFuture<T> completable) {
-        return subscribe(ScalarSubscriber.toSubscriber(completable));
+        return subscribe(ScalarSubscriber.fromCompletable(completable));
     }
 
     /**

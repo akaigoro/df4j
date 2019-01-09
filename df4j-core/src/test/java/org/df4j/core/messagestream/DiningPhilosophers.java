@@ -1,21 +1,18 @@
 package org.df4j.core.messagestream;
 
-import org.df4j.core.boundconnector.messagescalar.MultiScalarInput;
 import org.df4j.core.simplenode.messagestream.PickPoint;
-import org.df4j.core.tasknode.messagestream.Actor;
+import org.df4j.core.tasknode.AsyncAction;
+import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
 
 /**
- * Demonstrates usage of class {@link PickPoint} to model common places for tokens,
- * and actors as handmade coroutines.
+ * Demonstrates how coroutines can be emulated.
  */
 public class DiningPhilosophers {
     static final int num = 5; // number of phylosofers
@@ -23,9 +20,8 @@ public class DiningPhilosophers {
     ForkPlace[] forkPlaces = new ForkPlace[num];
     CountDownLatch counter = new CountDownLatch(num);
     Philosopher[] philosophers = new Philosopher[num];
-    Timer timer = new Timer();
+    TimeSignalPublisher timer = new TimeSignalPublisher();
 
-    //    @Ignore
     @Test
     public void test() throws InterruptedException {
         // create places for forks with 1 fork in each
@@ -68,15 +64,9 @@ public class DiningPhilosophers {
             id = k;
             label = "Forkplace_" + id;
         }
-
-        @Override
-        public void post(Fork resource) {
-            //           System.out.println(label+": put "+resource.toString());
-            super.post(resource);
-        }
     }
 
-    class Philosopher extends Actor {
+    class Philosopher extends AsyncAction {
         State state = State.Thinking;
         Random rand = new Random();
         int id;
@@ -84,8 +74,6 @@ public class DiningPhilosophers {
         Fork first, second;
         String indent;
         int rounds = 0;
-        BinarySemafor signal = new BinarySemafor();
-        MultiScalarInput<Fork> input = new MultiScalarInput<Fork>(this);
 
         public Philosopher(int id) {
             this.id = id;
@@ -105,86 +93,66 @@ public class DiningPhilosophers {
             System.out.println("Ph no. " + id + ": first place = " + firstPlace.id + "; second place = " + secondPlace.id + ".");
         }
 
+        public void post1(Fork fork) {
+            first = fork;
+            start();
+        }
+
+        public void post2(Fork fork) {
+            second = fork;
+            start();
+        }
+
         @Override
-        public Void runAction() {
-            loop:
-            for (; ; ) {
-                switch (state) {
-                    case Thinking:
-                        state = State.Hungry1;
-                        signal.delay(rand.nextLong() % 17 + 23);
-                    case Hungry1:
-                        if (!signal.isDone()) {
-                            return null;
-                        }
-                        /**
-                         * collects forks one by one
-                         */
-                        println("Request first (" + firstPlace.id + ")");
-                        state = State.Hungry2;
-                        input.subscribeTo(firstPlace);
-                    case Hungry2:
-                        if (!input.isDone()) {
-                            return null;
-                        }
-                        first = input.get();
-                        println("Request second (" + secondPlace.id + ")");
-                        state = State.Eating;
-                        input.subscribeTo(secondPlace);
-                    case Eating:
-                        if (!input.isDone()) {
-                            return null;
-                        }
-                        second = input.get();
-                        state = State.Replete;
-                        signal.delay(rand.nextLong() % 11 + 13);
-                    case Replete:
-                        if (!signal.isDone()) {
-                            return null;
-                        }
-                        println("Release first (" + firstPlace.id + ")");
-                        firstPlace.post(first);
-                        println("Release second (" + secondPlace.id + ")");
-                        secondPlace.post(second);
-                        rounds++;
-                        if (rounds < N) {
-                            println("Ph no. " + id + ": continue round " + rounds);
-                            state = State.Thinking;
-                            break;
-                        } else {
-                            println("Ph no. " + id + ": died at round " + rounds);
-                            state = State.Died;
-                            counter.countDown();
-                            stop();
-                            return null;
-                        }
-                }
+        public void runAction() {
+            switch (state) {
+                case Thinking:
+                    state = State.Hungry1;
+                    timer.subscribe(this::start, rand.nextLong() % 17 + 23);
+                    return;
+                case Hungry1:
+                    /**
+                     * collect forks one by one
+                     */
+                    println("Request first (" + firstPlace.id + ")");
+                    state = State.Hungry2;
+                    firstPlace.subscribe(this::post1);
+                    return;
+                case Hungry2:
+                    println("Request second (" + secondPlace.id + ")");
+                    state = State.Eating;
+                    secondPlace.subscribe(this::post2);
+                    return;
+                case Eating:
+                    state = State.Replete;
+                    timer.subscribe(this::start, rand.nextLong() % 11 + 13);
+                    return;
+                case Replete:
+                    println("Release first (" + firstPlace.id + ")");
+                    firstPlace.post(first);
+                    first = null;
+                    println("Release second (" + secondPlace.id + ")");
+                    secondPlace.post(second);
+                    second = null;
+                    rounds++;
+                    if (rounds < N) {
+                        println("Ph no. " + id + ": continue round " + rounds);
+                        state = State.Thinking;
+                        start();
+                    } else {
+                        println("Ph no. " + id + ": died at round " + rounds);
+                        state = State.Died;
+                        counter.countDown();
+                        stop();
+                    }
+                    return;
+                default:
+                    throw new IllegalStateException();
             }
         }
 
         private void println(String s) {
             System.out.println(indent + s);
-        }
-
-        class BinarySemafor extends Lock {
-
-            public BinarySemafor() {
-                super(false);
-            }
-
-            public boolean isDone() {
-                return !isBlocked();
-            }
-
-            public void delay(long delay) {
-                super.turnOff();
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        BinarySemafor.this.turnOn();
-                    }
-                }, delay);
-            }
         }
     }
 }

@@ -40,6 +40,7 @@ public abstract class AsyncProc implements Runnable {
             return asyncExec;
         }
     };
+    private static final Object[] emptyArgs = new Object[0];
 
     /**
      * for debug purposes, call
@@ -57,21 +58,21 @@ public abstract class AsyncProc implements Runnable {
     /**
      * the set of all b/w Pins
      */
-    protected final HashSet<Lock> locks = new HashSet<>();
+    private HashSet<Lock> locks;
     /**
      * the set of all colored Pins, to form array of arguments
      */
-    protected final ArrayList<ConstInput<?>> asyncParams = new ArrayList<>();
+    private ArrayList<ConstInput<?>> asyncParams;
     /**
      * total number of created pins
      */
-    protected AtomicInteger pinCount = new AtomicInteger();
+    private AtomicInteger pinCount = new AtomicInteger();
     /**
      * total number of created pins
      */
-    protected AtomicInteger blockedPinCount = new AtomicInteger();
+    private AtomicInteger blockedPinCount = new AtomicInteger();
 
-    protected Executor executor;
+    private Executor executor;
 
     public void setExecutor(Executor exec) {
         this.executor = exec;
@@ -102,6 +103,27 @@ public abstract class AsyncProc implements Runnable {
     }
 
     protected abstract boolean isStarted();
+
+    protected int getParamCount() {
+        if (asyncParams == null) {
+            return 0;
+        }
+        return asyncParams.size();
+    }
+
+    protected synchronized Object[] consumeTokens() {
+        locks.forEach(Lock::purge);
+        if (asyncParams == null) {
+            return emptyArgs;
+        }
+        int paramCount = asyncParams.size();
+        Object[] args = new Object[paramCount];
+        for (int k = 0; k< paramCount; k++) {
+            ConstInput<?> asyncParam = asyncParams.get(k);
+            args[k] = asyncParam.next();
+        }
+        return args;
+    }
 
     /**
      * Basic class for all locs and connectors (places for tokens).
@@ -181,6 +203,9 @@ public abstract class AsyncProc implements Runnable {
 
         @Override
         protected void register() {
+            if (locks == null) {
+                locks = new HashSet<>();
+            }
             locks.add(this);
         }
 
@@ -282,6 +307,9 @@ public abstract class AsyncProc implements Runnable {
         protected void register() {
             if (isStarted()) {
                 throw new IllegalStateException("cannot register connector after start");
+            }
+            if (asyncParams==null) {
+                asyncParams = new ArrayList<>();
             }
             asyncParams.add(this);
         }

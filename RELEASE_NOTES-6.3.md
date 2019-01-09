@@ -6,6 +6,8 @@ StreamPublisher.subscribe and ScalarPublisher.subscribe return subscription.
 
 2, ScalarSubscriber.complete renamed to ScalarSubscriber.post and returns void. Similary, ScalarSubscriber.completeExceptionally renamed to postFailure.
 
+3. AsyncAction#runAction returns void. If a non-void result requires, use new method AsyncAction#callAction.
+
 ### ADDITIONS
 
 1. package org.df4j.core.util.asyncmon, with support to convert synchronous multithreading program to asynchronous.

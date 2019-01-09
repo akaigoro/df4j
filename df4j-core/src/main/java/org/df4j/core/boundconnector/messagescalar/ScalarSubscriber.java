@@ -10,6 +10,8 @@
 
 package org.df4j.core.boundconnector.messagescalar;
 
+import org.df4j.core.boundconnector.SimpleSubscription;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -21,6 +23,9 @@ import java.util.function.BiConsumer;
  * @param <M> the type of the message
  */
 public interface ScalarSubscriber<M> extends BiConsumer<M, Throwable> {
+
+    default void onSubscribe(SimpleSubscription subscription){}
+
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
      *
@@ -35,7 +40,7 @@ public interface ScalarSubscriber<M> extends BiConsumer<M, Throwable> {
      */
     default void postFailure(Throwable ex) {}
 
-    static <T> ScalarSubscriber<T> toSubscriber(CompletableFuture<T> completable) {
+    static <T> ScalarSubscriber<T> fromCompletable(CompletableFuture<T> completable) {
         return new ScalarSubscriber<T>() {
             @Override
             public void post(T message) {

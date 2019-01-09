@@ -87,7 +87,7 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     public void run() {
         try {
             blockStarted();
-            R res = (R) runAction();
+            R res = callAction();
             asyncResult().complete(res);
         } catch (Throwable e) {
             result.completeExceptionally(e);

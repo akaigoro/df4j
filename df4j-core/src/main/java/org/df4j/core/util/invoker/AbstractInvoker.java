@@ -4,12 +4,10 @@ public abstract class AbstractInvoker<FT> implements Invoker {
     protected final FT function;
 
     protected AbstractInvoker(FT function) {
+        if (function == null) {
+            throw new IllegalArgumentException();
+        }
         this.function = function;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return function == null;
     }
 
     public abstract Object apply(Object... args) throws Exception;

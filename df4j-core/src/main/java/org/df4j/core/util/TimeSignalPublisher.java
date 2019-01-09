@@ -1,6 +1,6 @@
 package org.df4j.core.util;
 
-import org.df4j.core.boundconnector.permitstream.PermitSubscriber;
+import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -16,15 +16,15 @@ public class TimeSignalPublisher {
         this(new Timer());
     }
 
-    public void subscribe(PermitSubscriber sema, long delay) {
+    public void subscribe(ScalarPermitSubscriber sema, long delay) {
         Event task = new Event(sema);
         timer.schedule(task, delay);
     }
 
     private static class Event extends TimerTask {
-        private final PermitSubscriber sema;
+        private final ScalarPermitSubscriber sema;
 
-        public Event(PermitSubscriber sema) {
+        public Event(ScalarPermitSubscriber sema) {
             this.sema = sema;
         }
 
