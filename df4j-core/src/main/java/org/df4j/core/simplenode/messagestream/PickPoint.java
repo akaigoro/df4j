@@ -1,9 +1,8 @@
 package org.df4j.core.simplenode.messagestream;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.messagestream.StreamCompletedException;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -19,11 +18,11 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> implements ScalarPublisher<T>, Subscriber<T> {
+public class PickPoint<T> implements Publisher<T>, Subscriber<T> {
     protected ArrayDeque<T> resources = new ArrayDeque<>();
     protected boolean completed = false;
 	/** place for demands */
-	private Queue<ScalarSubscriber<? super T>> requests = new ArrayDeque<>();
+	private Queue<Subscriber<? super T>> requests = new ArrayDeque<>();
 
     public synchronized boolean isCompleted() {
         return completed;
@@ -57,14 +56,14 @@ public class PickPoint<T> implements ScalarPublisher<T>, Subscriber<T> {
             return;
         }
         completed = true;
-        for (ScalarSubscriber<? super T> subscriber: requests) {
+        for (Subscriber<? super T> subscriber: requests) {
             subscriber.onError(new StreamCompletedException());
         }
         requests = null;
 	}
 
 	@Override
-    public Subscription subscribe(ScalarSubscriber<T> subscriber) {
+    public void subscribe(Subscriber<? super T> subscriber) {
         if (completed) {
             throw new IllegalStateException();
         }
@@ -73,7 +72,6 @@ public class PickPoint<T> implements ScalarPublisher<T>, Subscriber<T> {
 		} else {
 			subscriber.onNext(resources.poll());
 		}
-		return null;
 	}
 
     public T take() throws InterruptedException {

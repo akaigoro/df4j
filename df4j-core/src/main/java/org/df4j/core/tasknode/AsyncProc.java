@@ -9,8 +9,8 @@
  */
 package org.df4j.core.tasknode;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.util.executor.CurrentThreadExecutor;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.ArrayList;
@@ -233,8 +233,7 @@ public abstract class AsyncProc implements Runnable {
      * @param <T>
      *     type of accepted tokens.
      */
-    public class ConstInput<T> extends BaseLock
-            implements ScalarSubscriber<T>  // to connect to a ScalarPublisher
+    public class ConstInput<T> extends BaseLock implements Subscriber<T>  // to connect to a Publisher
     {
         protected Subscription subscription;
         protected boolean closeRequested = false;
@@ -273,6 +272,11 @@ public abstract class AsyncProc implements Runnable {
         }
 
         @Override
+        public void onSubscribe(Subscription s) {
+
+        }
+
+        @Override
         public void onNext(T message) {
             if (message == null) {
                 throw new IllegalArgumentException();
@@ -290,6 +294,11 @@ public abstract class AsyncProc implements Runnable {
                 throw new IllegalStateException("token set already");
             }
             this.exception = throwable;
+        }
+
+        @Override
+        public void onComplete() {
+
         }
 
         public synchronized void cancel() {

@@ -4,6 +4,8 @@ import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -66,7 +68,7 @@ public class DiningPhilosophers {
         }
     }
 
-    class Philosopher extends AsyncAction {
+    class Philosopher extends AsyncAction implements Subscriber<Fork> {
         State state = State.Thinking;
         Random rand = new Random();
         int id;
@@ -93,11 +95,6 @@ public class DiningPhilosophers {
             System.out.println("Ph no. " + id + ": first place = " + firstPlace.id + "; second place = " + secondPlace.id + ".");
         }
 
-        public void post1(Fork fork) {
-            first = fork;
-            start();
-        }
-
         public void post2(Fork fork) {
             second = fork;
             start();
@@ -116,12 +113,12 @@ public class DiningPhilosophers {
                      */
                     println("Request first (" + firstPlace.id + ")");
                     state = State.Hungry2;
-                    firstPlace.subscribe(this::post1);
+                    firstPlace.subscribe(this);
                     return;
                 case Hungry2:
                     println("Request second (" + secondPlace.id + ")");
                     state = State.Eating;
-                    secondPlace.subscribe(this::post2);
+                    secondPlace.subscribe(this);
                     return;
                 case Eating:
                     state = State.Replete;
@@ -153,6 +150,30 @@ public class DiningPhilosophers {
 
         private void println(String s) {
             System.out.println(indent + s);
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+        }
+
+        @Override
+        public void onNext(Fork fork) {
+            if (first == null) {
+                first = fork;
+            } else {
+                second = fork;
+            }
+            start();
+        }
+
+        @Override
+        public void onError(Throwable t) {
+
+        }
+
+        @Override
+        public void onComplete() {
+
         }
     }
 }

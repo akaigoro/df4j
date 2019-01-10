@@ -125,7 +125,7 @@ public class ReactiveStreamExample extends AllOf {
                 subscriber = new ReactiveInput<Integer>(this);
                 subscriber.cancel();
                 println("  sink: countDown");
-                asyncResult().complete();
+                asyncResult().onComplete();
             } else {
                 subscriber = new ReactiveInput<Integer>(this);
                 this.totalNumber = totalNumber;

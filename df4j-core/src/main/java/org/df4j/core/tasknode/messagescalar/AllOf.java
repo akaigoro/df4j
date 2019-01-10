@@ -1,15 +1,16 @@
 package org.df4j.core.tasknode.messagescalar;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 public class AllOf extends AsyncSupplier<Void> {
 
     public AllOf() {
     }
 
-    public AllOf(ScalarPublisher<?>... sources) {
-        for (ScalarPublisher source: sources) {
+    public AllOf(Publisher<?>... sources) {
+        for (Publisher source: sources) {
             registerAsyncResult(source);
         }
     }
@@ -19,7 +20,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of completion. successfull or unseccessfull
      */
-    public synchronized void registerAsyncResult(ScalarPublisher source) {
+    public synchronized void registerAsyncResult(Publisher source) {
         source.subscribe(new Enter());
     }
 
@@ -29,7 +30,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of errors
      */
-    public synchronized void registerAsyncDaemon(ScalarPublisher source) {
+    public synchronized void registerAsyncDaemon(Publisher source) {
         source.subscribe(new DaemonEnter());
     }
 
@@ -42,7 +43,12 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResultExceptionally(ex);
     }
 
-    class Enter extends Lock implements ScalarSubscriber<Object> {
+    class Enter extends Lock implements Subscriber<Object> {
+
+        @Override
+        public void onSubscribe(Subscription s) {
+
+        }
 
         @Override
         public void onNext(Object value) {
@@ -53,9 +59,19 @@ public class AllOf extends AsyncSupplier<Void> {
         public void onError(Throwable ex) {
             postGlobalFailure(ex);
         }
+
+        @Override
+        public void onComplete() {
+
+        }
     }
 
-    class DaemonEnter implements ScalarSubscriber<Object> {
+    class DaemonEnter implements Subscriber<Object> {
+
+        @Override
+        public void onSubscribe(Subscription s) {
+
+        }
 
         @Override
         public void onNext(Object value) { }
@@ -63,6 +79,11 @@ public class AllOf extends AsyncSupplier<Void> {
         @Override
         public void onError(Throwable ex) {
             postGlobalFailure(ex);
+        }
+
+        @Override
+        public void onComplete() {
+
         }
     }
 }

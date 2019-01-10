@@ -1,7 +1,7 @@
 package org.df4j.core.simplenode.messagescalar;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
@@ -12,7 +12,12 @@ import java.util.function.BiConsumer;
  * @param <R> type of input parameter
  * @param <R> type of result
  */
-public class CompletablePromise<R> extends CompletableFuture<R> implements ScalarSubscriber<R>, ScalarPublisher<R> {
+public class CompletablePromise<R> extends CompletableFuture<R> implements Subscriber<R>, Publisher<R> {
+
+    @Override
+    public void onSubscribe(Subscription s) {
+
+    }
 
     @Override
     public void onNext(R message) {
@@ -23,17 +28,16 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
     public void onError(Throwable ex) {
         super.completeExceptionally(ex);
     }
-    @Override
+
     public CompletablePromise<R> asFuture() {
         return this;
     }
 
     @Override
-    public Subscription subscribe(ScalarSubscriber<R> subscriber) {
+    public void subscribe(Subscriber<? super R> subscriber) {
         ScalarSubscription<R> subscription = new ScalarSubscription<>(subscriber);
         super.whenComplete(subscription);
         subscriber.onSubscribe(subscription);
-        return subscription;
     }
 
     /**
@@ -50,15 +54,16 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
         return result;
     }
 
-    public void complete() {
+    @Override
+    public void onComplete() {
         super.complete(null);
     }
 
     static class ScalarSubscription<R> implements Subscription, BiConsumer<R, Throwable> {
 
-        private final ScalarSubscriber<? super R> subscriber;
+        private final Subscriber<? super R> subscriber;
 
-        public <S extends ScalarSubscriber<? super R>> ScalarSubscription(S subscriber) {
+        public <S extends Subscriber<? super R>> ScalarSubscription(S subscriber) {
             this.subscriber = subscriber;
         }
 

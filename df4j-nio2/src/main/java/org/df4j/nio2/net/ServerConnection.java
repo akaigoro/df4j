@@ -12,7 +12,6 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.boundconnector.messagestream.StreamOutput;
 import org.df4j.core.tasknode.Action;
@@ -41,11 +40,11 @@ import java.util.concurrent.TimeUnit;
  * IO requests can be posted immediately, but will be executed
  * only after connection completes.
  */
-public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChannel>
+public class ServerConnection implements Subscriber<AsynchronousSocketChannel>
 {
     protected static final Logger LOG = Logger.getLogger(ServerConnection.class.getName());
 
-    private final ScalarSubscriber<ServerConnection> backPort;
+    private final Subscriber<ServerConnection> backPort;
 
 	/** read requests queue */
 	public final Reader reader;
@@ -56,7 +55,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
 
     public String name;
 
-    public ServerConnection(String name, ScalarSubscriber<ServerConnection> backPort) {
+    public ServerConnection(String name, Subscriber<ServerConnection> backPort) {
         this.name = name;
         this.backPort = backPort;
         reader = new Reader();

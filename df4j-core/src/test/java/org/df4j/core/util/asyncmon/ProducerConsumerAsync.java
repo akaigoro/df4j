@@ -1,6 +1,5 @@
 package org.df4j.core.util.asyncmon;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.AsyncAction;
