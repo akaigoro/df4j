@@ -1,4 +1,9 @@
-#
+#version 7.0
+
+org.reactivestreams.* interfaces used for connectors of all protocols
+
+#version 6.3
+
 ### CHANGES
 
 1. ScalarCollector renamed to ScalarSubscriber and StreamCollector renamed to StreamSubscriber. Thus, old ScalarSubscriber and StreamSubscriber effectively removed.

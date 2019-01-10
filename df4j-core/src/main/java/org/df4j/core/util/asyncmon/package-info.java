@@ -25,7 +25,7 @@
  *          public T get(same arguments, {@link org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber}&lt;T&gt; connector) {
  *             super.exec(({@link org.df4j.core.util.asyncmon.AsyncMonitor} monitor) -&gt; {
  *                 body
- *                 connector.post(value);
+ *                 connector.onNext(value);
  *             );
  *         }
  *

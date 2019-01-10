@@ -2,7 +2,7 @@ package org.df4j.core.simplenode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -15,12 +15,12 @@ import java.util.function.BiConsumer;
 public class CompletablePromise<R> extends CompletableFuture<R> implements ScalarSubscriber<R>, ScalarPublisher<R> {
 
     @Override
-    public void post(R message) {
+    public void onNext(R message) {
         super.complete(message);
     }
 
     @Override
-    public void postFailure(Throwable ex) {
+    public void onError(Throwable ex) {
         super.completeExceptionally(ex);
     }
     @Override
@@ -29,7 +29,7 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
     }
 
     @Override
-    public SimpleSubscription subscribe(ScalarSubscriber<R> subscriber) {
+    public Subscription subscribe(ScalarSubscriber<R> subscriber) {
         ScalarSubscription<R> subscription = new ScalarSubscription<>(subscriber);
         super.whenComplete(subscription);
         subscriber.onSubscribe(subscription);
@@ -54,7 +54,7 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
         super.complete(null);
     }
 
-    static class ScalarSubscription<R> implements SimpleSubscription, BiConsumer<R, Throwable> {
+    static class ScalarSubscription<R> implements Subscription, BiConsumer<R, Throwable> {
 
         private final ScalarSubscriber<? super R> subscriber;
 
@@ -63,16 +63,19 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
         }
 
         @Override
-        public boolean cancel() {
-            return false;
+        public void request(long n) {
+        }
+
+        @Override
+        public void cancel() {
         }
 
         @Override
         public void accept(R r, Throwable throwable) {
             if (throwable != null) {
-                subscriber.postFailure(throwable);
+                subscriber.onError(throwable);
             } else {
-                subscriber.post(r);
+                subscriber.onNext(r);
             }
         }
     }

@@ -2,15 +2,13 @@ package org.df4j.core.simplenode.messagestream;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
-import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.messagestream.StreamCompletedException;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
-import java.util.Collection;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -21,7 +19,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> implements ScalarPublisher<T>, StreamSubscriber<T> {
+public class PickPoint<T> implements ScalarPublisher<T>, Subscriber<T> {
     protected ArrayDeque<T> resources = new ArrayDeque<>();
     protected boolean completed = false;
 	/** place for demands */
@@ -32,38 +30,48 @@ public class PickPoint<T> implements ScalarPublisher<T>, StreamSubscriber<T> {
     }
 
     @Override
-	public synchronized void post(T token) {
+    public void onSubscribe(Subscription s) {
+
+    }
+
+    @Override
+	public synchronized void onNext(T token) {
         if (completed) {
             throw new IllegalStateException();
         }
 	    if (requests.isEmpty()) {
             resources.add(token);
         } else {
-	        requests.poll().post(token);
+	        requests.poll().onNext(token);
         }
 	}
 
-	@Override
-	public synchronized void complete() {
+    @Override
+    public void onError(Throwable t) {
+
+    }
+
+    @Override
+	public synchronized void onComplete() {
         if (completed) {
             return;
         }
         completed = true;
         for (ScalarSubscriber<? super T> subscriber: requests) {
-            subscriber.postFailure(new StreamCompletedException());
+            subscriber.onError(new StreamCompletedException());
         }
         requests = null;
 	}
 
 	@Override
-    public SimpleSubscription subscribe(ScalarSubscriber<T> subscriber) {
+    public Subscription subscribe(ScalarSubscriber<T> subscriber) {
         if (completed) {
             throw new IllegalStateException();
         }
 		if (resources.isEmpty()) {
 			requests.add(subscriber);
 		} else {
-			subscriber.post(resources.poll());
+			subscriber.onNext(resources.poll());
 		}
 		return null;
 	}

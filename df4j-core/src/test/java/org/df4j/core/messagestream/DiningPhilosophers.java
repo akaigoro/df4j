@@ -27,7 +27,7 @@ public class DiningPhilosophers {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.post(new Fork(k));
+            forkPlace.onNext(new Fork(k));
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -129,10 +129,10 @@ public class DiningPhilosophers {
                     return;
                 case Replete:
                     println("Release first (" + firstPlace.id + ")");
-                    firstPlace.post(first);
+                    firstPlace.onNext(first);
                     first = null;
                     println("Release second (" + secondPlace.id + ")");
-                    secondPlace.post(second);
+                    secondPlace.onNext(second);
                     second = null;
                     rounds++;
                     if (rounds < N) {

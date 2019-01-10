@@ -2,6 +2,8 @@ package org.df4j.core.boundconnector.reactivestream;
 
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -12,11 +14,11 @@ import java.util.Iterator;
  *
  * @param <T> the type of tokens
  */
-public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscriber<T>, Iterator<T> {
+public class ReactiveInput<T> extends StreamInput<T> implements Iterator<T>, Subscriber<T> {
     protected Deque<T> queue;
     protected boolean closeRequested = false;
     protected int capacity;
-    protected ReactiveSubscription subscription;
+    protected Subscription subscription;
 
     public ReactiveInput(AsyncProc actor, int capacity) {
         super(actor);
@@ -33,20 +35,20 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
     }
 
     @Override
-    public void onSubscribe(ReactiveSubscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
         subscription.request(capacity);
     }
 
     @Override
-    public synchronized void post(T token) {
+    public synchronized void onNext(T token) {
         if (subscription == null) {
             throw new IllegalStateException("not yet subscribed");
         }
         if (queue.size() >= capacity) {
             throw new IllegalStateException("no space for next token");
         }
-        super.post(token);
+        super.onNext(token);
     }
 
     @Override

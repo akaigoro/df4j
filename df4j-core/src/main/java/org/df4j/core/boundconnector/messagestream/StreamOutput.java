@@ -1,7 +1,9 @@
 package org.df4j.core.boundconnector.messagestream;
 
-import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -12,8 +14,9 @@ import java.util.function.Consumer;
  *
  * @param <M> type of tokens
  */
-public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M>, StreamSubscriber<M> {
+public class StreamOutput<M> extends AsyncProc.Lock implements Publisher<M>, Subscriber<M> {
     protected AsyncProc actor;
+    protected Subscription subscription;
     protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
 
     public StreamOutput(AsyncProc actor) {
@@ -22,13 +25,18 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
     }
 
     @Override
-    public SimpleSubscriptionImpl subscribe(StreamSubscriber<M> subscriber) {
+    public void subscribe(Subscriber<? super M> subscriber) {
         SimpleSubscriptionImpl newSubscription = new SimpleSubscriptionImpl(subscriber);
         subscriptions.add(newSubscription);
-        return newSubscription;
+        subscriber.onSubscribe(newSubscription);
     }
 
     public synchronized void close() {
+        if (subscription != null) {
+            subscription.cancel();
+            subscription = null;
+        }
+        onComplete();
         subscriptions = null;
         super.turnOff();
     }
@@ -45,7 +53,12 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
     }
 
     @Override
-    public void post(M item) {
+    public void onSubscribe(Subscription subscription) {
+        this.subscription = subscription;
+    }
+
+    @Override
+    public void onNext(M item) {
         if (item == null) {
             throw new NullPointerException();
         }
@@ -53,29 +66,29 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
+    public void onError(Throwable throwable) {
         forEachSubscription((subscription) -> subscription.postFailure(throwable));
     }
 
     @Override
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         forEachSubscription(SimpleSubscriptionImpl::complete);
     }
 
-    class SimpleSubscriptionImpl implements SimpleSubscription {
-        protected StreamSubscriber<? super M> subscriber;
+    class SimpleSubscriptionImpl implements Subscription {
+        protected Subscriber<? super M> subscriber;
         private volatile boolean closed = false;
 
-        public SimpleSubscriptionImpl(StreamSubscriber<? super M> subscriber) {
+        public SimpleSubscriptionImpl(Subscriber<? super M> subscriber) {
             this.subscriber = subscriber;
         }
 
         public void post(M message) {
-            subscriber.post(message);
+            subscriber.onNext(message);
         }
 
         public void postFailure(Throwable throwable) {
-            subscriber.postFailure(throwable);
+            subscriber.onError(throwable);
             cancel();
         }
 
@@ -87,21 +100,24 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
             if (subscriber == null) {
                 return;
             }
-            subscriber.complete();
+            subscriber.onComplete();
             subscriber = null;
+        }
+
+        @Override
+        public void request(long n) {
         }
 
         /**
          * subscription closed by request of subscriber
          */
-        public boolean cancel() {
+        public void cancel() {
             synchronized(StreamOutput.this) {
                 if (closed) {
-                    return false;
+                    return;
                 }
                 closed = true;
                 subscriptions.remove(this);
-                return false;
             }
         }
     }

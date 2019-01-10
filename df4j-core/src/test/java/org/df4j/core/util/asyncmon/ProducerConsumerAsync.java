@@ -9,6 +9,7 @@ import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.df4j.core.tasknode.messagestream.Actor1;
 import org.junit.Assert;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.ExecutionException;
@@ -43,7 +44,7 @@ public class ProducerConsumerAsync extends AllOf {
             );
         }
 
-        public CriticalSection take(ScalarSubscriber<T> connector) {
+        public CriticalSection take(Subscriber<T> connector) {
             CriticalSection criticalSection = (AsyncMonitor monitor) -> {
                 if (count == 0) {
                     monitor.doWait();
@@ -52,7 +53,7 @@ public class ProducerConsumerAsync extends AllOf {
                 T item = buf.poll();
                 count--;
                 monitor.doNotifyAll();
-                connector.post(item);
+                connector.onNext(item);
             };
             super.exec(criticalSection);
             return criticalSection;

@@ -18,8 +18,8 @@ public class AsyncProcTest {
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         AsyncBiFunction<Double, Double, Double> mult = new Mult();
-        mult.param1.post(a);
-        mult.param2.post(b);
+        mult.param1.onNext(a);
+        mult.param2.onNext(b);
         double result = mult.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -75,9 +75,9 @@ public class AsyncProcTest {
 
     private CompletablePromise<Double> computeDiscr(double a, double b, double c) {
         Discr d = new Discr();
-        d.pa.post(a);
-        d.pb.post(b);
-        d.pc.post(c);
+        d.pa.onNext(a);
+        d.pb.onNext(b);
+        d.pc.onNext(c);
         d.start();
         return d.asyncResult();
     }
@@ -118,8 +118,8 @@ public class AsyncProcTest {
 
     private CompletablePromise<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
         RootCalc rc = new RootCalc();
-        rc.pa.post(a);
-        rc.pb.post(b);
+        rc.pa.onNext(a);
+        rc.pb.onNext(b);
         d.subscribe(rc.pd);
         rc.start();
         return rc.asyncResult();

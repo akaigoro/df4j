@@ -45,12 +45,12 @@ public class AllOf extends AsyncSupplier<Void> {
     class Enter extends Lock implements ScalarSubscriber<Object> {
 
         @Override
-        public void post(Object value) {
+        public void onNext(Object value) {
             super.turnOn();
         }
 
         @Override
-        public void postFailure(Throwable ex) {
+        public void onError(Throwable ex) {
             postGlobalFailure(ex);
         }
     }
@@ -58,10 +58,10 @@ public class AllOf extends AsyncSupplier<Void> {
     class DaemonEnter implements ScalarSubscriber<Object> {
 
         @Override
-        public void post(Object value) { }
+        public void onNext(Object value) { }
 
         @Override
-        public void postFailure(Throwable ex) {
+        public void onError(Throwable ex) {
             postGlobalFailure(ex);
         }
     }

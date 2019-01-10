@@ -36,7 +36,7 @@ public class DiningPhilosophersMultistate {
         // create places for forks with 1 fork in each
         for (int k=0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.post(new Fork(k));
+            forkPlace.onNext(new Fork(k));
             forkPlaces[k]=forkPlace;
         }
         // create philosophers
@@ -76,9 +76,9 @@ public class DiningPhilosophersMultistate {
         }
 
         @Override
-        public void post(Fork resource) {
+        public void onNext(Fork resource) {
  //           System.out.println(label+": put "+resource.toString());
-            super.post(resource);
+            super.onNext(resource);
         }
     }
 
@@ -193,9 +193,9 @@ public class DiningPhilosophersMultistate {
             @Override
             public void runAction() {
                 println("Release first (" + firstPlace.id + ")");
-                firstPlace.post(first);
+                firstPlace.onNext(first);
                 println("Release second (" + secondPlace.id + ")");
-                secondPlace.post(second);
+                secondPlace.onNext(second);
                 first = second = null;
                 rounds++;
                 if (rounds < N) {

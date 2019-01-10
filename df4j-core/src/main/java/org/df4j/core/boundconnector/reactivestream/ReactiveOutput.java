@@ -1,8 +1,10 @@
 package org.df4j.core.boundconnector.reactivestream;
 
-import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -14,9 +16,9 @@ import java.util.function.Consumer;
  *
  * An equivalent to java.util.concurrent.SubmissionPublisher
  *
- * @param <M> the type of broadcasted values
+ * @param <T> the type of broadcasted values
  */
-public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublisher<M>, StreamSubscriber<M> {
+public class ReactiveOutput<T> extends AsyncProc.Lock implements Publisher<T>, Subscriber<T> {
     protected AsyncProc actor;
     protected Set<SimpleReactiveSubscriptionImpl> subscriptions = new HashSet<>();
 
@@ -26,11 +28,10 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
     }
 
     @Override
-    public <S extends ReactiveSubscriber<? super M>> S subscribe(S subscriber) {
+    public void subscribe(Subscriber<? super T> subscriber) {
         SimpleReactiveSubscriptionImpl newSubscription = new SimpleReactiveSubscriptionImpl(subscriber);
         subscriptions.add(newSubscription);
         subscriber.onSubscribe(newSubscription);
-        return subscriber;
     }
 
     public synchronized void close() {
@@ -50,24 +51,29 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
     }
 
     @Override
-    public void post(M item) {
+    public void onSubscribe(Subscription s) {
+
+    }
+
+    @Override
+    public void onNext(T item) {
         forEachSubscription((subscription) -> subscription.post(item));
     }
 
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         forEachSubscription(SimpleReactiveSubscriptionImpl::complete);
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
+    public void onError(Throwable throwable) {
         forEachSubscription((subscription) -> subscription.postFailure(throwable));
     }
 
-    class SimpleReactiveSubscriptionImpl extends Semafor implements ReactiveSubscription {
-        protected ReactiveSubscriber<? super M> subscriber;
+    class SimpleReactiveSubscriptionImpl extends Semafor implements Subscription {
+        protected Subscriber<? super T> subscriber;
         private volatile boolean closed = false;
 
-        public SimpleReactiveSubscriptionImpl(ReactiveSubscriber<? super M> subscriber) {
+        public SimpleReactiveSubscriptionImpl(Subscriber<? super T> subscriber) {
             super(ReactiveOutput.this.actor);
             if (subscriber == null) {
                 throw new NullPointerException();
@@ -75,18 +81,18 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
             this.subscriber = subscriber;
         }
 
-        public void post(M message) {
+        public void post(T message) {
             if (isCompleted()) {
-                throw new IllegalStateException("post to completed connector");
+                throw new IllegalStateException("onNext to completed connector");
             }
-            subscriber.post(message);
+            subscriber.onNext(message);
         }
 
         public void postFailure(Throwable throwable) {
             if (isCompleted()) {
-                throw new IllegalStateException("postFailure to completed connector");
+                throw new IllegalStateException("onError to completed connector");
             }
-            subscriber.postFailure(throwable);
+            subscriber.onError(throwable);
             cancel();
         }
 
@@ -105,7 +111,7 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
             if (isCompleted()) {
                 return;
             }
-            subscriber.complete();
+            subscriber.onComplete();
             subscriber = null;
         }
 
@@ -116,15 +122,14 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
         /**
          * subscription closed by request of subscriber
          */
-        public synchronized boolean cancel() {
+        public synchronized void cancel() {
             if (isCompleted()) {
-                return false;
+                return;
             }
             subscriber = null;
             closed = true;
             subscriptions.remove(this);
             super.unRegister(); // and cannot be turned on
-            return false;
         }
 
         @Override

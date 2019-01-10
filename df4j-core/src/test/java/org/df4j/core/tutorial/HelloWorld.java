@@ -33,9 +33,9 @@ public class HelloWorld {
     public void test() {
         Collector coll = new Collector();
         coll.start();
-        coll.input.post("Hello");
-        coll.input.post("World");
-        coll.input.complete();
+        coll.input.onNext("Hello");
+        coll.input.onNext("World");
+        coll.input.onComplete();
     }
 
 }

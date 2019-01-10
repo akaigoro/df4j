@@ -10,7 +10,8 @@
 
 package org.df4j.core.boundconnector.messagescalar;
 
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -20,35 +21,42 @@ import java.util.function.BiConsumer;
  *
  * it could be named "Port" also
  *
- * @param <M> the type of the message
+ * @param <T> the type of the message
  */
-public interface ScalarSubscriber<M> extends BiConsumer<M, Throwable> {
+public interface ScalarSubscriber<T> extends BiConsumer<T, Throwable>, Subscriber<T> {
 
-    default void onSubscribe(SimpleSubscription subscription){}
+    default void onSubscribe(Subscription subscription){}
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
      *
      * @param message the completion value
      */
-    void post(M message);
+    void onNext(T message);
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
      *
      * @param ex the completion exception
      */
-    default void postFailure(Throwable ex) {}
+    default void onError(Throwable ex) {}
+
+
+    @Override
+    default void onComplete() {
+        throw new UnsupportedOperationException();
+    }
+
 
     static <T> ScalarSubscriber<T> fromCompletable(CompletableFuture<T> completable) {
         return new ScalarSubscriber<T>() {
             @Override
-            public void post(T message) {
+            public void onNext(T message) {
                 completable.complete(message);
             }
 
             @Override
-            public void postFailure(Throwable ex) {
+            public void onError(Throwable ex) {
                 completable.completeExceptionally(ex);
             }
         };
@@ -63,11 +71,11 @@ public interface ScalarSubscriber<M> extends BiConsumer<M, Throwable> {
      * @param throwable
      */
     @Override
-    default void accept(M r, Throwable throwable) {
+    default void accept(T r, Throwable throwable) {
         if (throwable != null) {
-            postFailure(throwable);
+            onError(throwable);
         } else {
-            post(r);
+            onNext(r);
         }
     }
 }

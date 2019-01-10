@@ -10,7 +10,8 @@
 package org.df4j.core.tasknode.messagestream;
 
 import org.df4j.core.boundconnector.messagestream.StreamInput;
-import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 /**
  * A dataflow Actor with one predefined input stream port.
@@ -19,25 +20,30 @@ import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
  *
  * @param <M> the type of messages, accepted via predefined port.
  */
-public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
+public abstract class Actor1<M> extends Actor implements Subscriber<M> {
     protected final StreamInput<M> mainInput = new StreamInput<M>(this);
 
     @Override
-    public void post(M m) {
-        mainInput.post(m);
+    public void onSubscribe(Subscription s) {
+        mainInput.onSubscribe(s);
     }
 
     @Override
-    public void postFailure(Throwable ex) {
-        mainInput.postFailure(ex);
+    public void onNext(M m) {
+        mainInput.onNext(m);
+    }
+
+    @Override
+    public void onError(Throwable ex) {
+        mainInput.onError(ex);
     }
 
     /**
      * processes closing signal
      */
     @Override
-    public void complete() {
-        mainInput.complete();
+    public void onComplete() {
+        mainInput.onComplete();
     }
 
     public boolean isClosed() {

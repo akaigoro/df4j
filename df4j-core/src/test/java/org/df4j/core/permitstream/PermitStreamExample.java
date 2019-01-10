@@ -48,9 +48,9 @@ public class PermitStreamExample {
         @Action
         public void act() {
             if (count == 0) {
-                pub.complete();
+                pub.onComplete();
             } else {
-                pub.post(count);
+                pub.onNext(count);
                 count--;
             }
         }

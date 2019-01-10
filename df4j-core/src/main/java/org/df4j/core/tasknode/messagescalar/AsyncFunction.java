@@ -26,12 +26,12 @@ public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubsc
     }
 
     @Override
-    public void post(T message) {
-        argument.post(message);
+    public void onNext(T message) {
+        argument.onNext(message);
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
-        argument.postFailure(throwable);
+    public void onError(Throwable throwable) {
+        argument.onError(throwable);
     }
 }

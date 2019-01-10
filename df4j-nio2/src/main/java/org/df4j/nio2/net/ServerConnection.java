@@ -72,15 +72,15 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
     }
 
-    public void post(AsynchronousSocketChannel channel) {
+    public void onNext(AsynchronousSocketChannel channel) {
         LOG.info("conn "+name+": init()");
         this.channel=channel;
         reader.start();
         writer.start();
     }
 
-    public void postFailure(Throwable ex) {
-        LOG.info("conn "+name+": postFailure()");
+    public void onError(Throwable ex) {
+        LOG.info("conn "+name+": onError()");
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -99,7 +99,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
             }
     	}
     	if (backPort != null) {
-            backPort.post(this);
+            backPort.onNext(this);
         }
     }
 
@@ -132,7 +132,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         protected void start_IO (ByteBuffer buffer) {
             if (input.isClosed()) {
                 output.close();
-                output.postFailure(new AsynchronousCloseException());
+                output.onError(new AsynchronousCloseException());
                 LOG.finest("conn "+ name+": input.isClosed()");
                 return;
             }
@@ -145,11 +145,11 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         public void completed(Integer result, ByteBuffer buffer) {
             LOG.finest("conn "+ name+": read() completed "+result);
             if (result==-1) {
-                output.complete();
+                output.onComplete();
                 close();
             } else {
                 buffer.flip();
-                output.post(buffer);
+                output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
                 this.start();
@@ -162,7 +162,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
                 close();
             } else {
                 this.start(); // let subsequent requests fail
-                output.postFailure(exc);
+                output.onError(exc);
             }
         }
 

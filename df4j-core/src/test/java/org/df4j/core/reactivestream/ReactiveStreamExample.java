@@ -16,6 +16,9 @@ import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.df4j.core.tasknode.messagestream.Actor;
 import org.junit.Before;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.io.PrintStream;
 import java.util.concurrent.*;
@@ -80,7 +83,7 @@ public class ReactiveStreamExample extends AllOf {
     /**
      * emits totalNumber of Integers and closes the stream
      */
-    class Source extends Actor implements ReactivePublisher<Integer> {
+    class Source extends Actor implements Publisher<Integer> {
         ReactiveOutput<Integer> pub = new ReactiveOutput<>(this);
         int val = 0;
 
@@ -90,20 +93,19 @@ public class ReactiveStreamExample extends AllOf {
         }
 
         @Override
-        public <S extends ReactiveSubscriber<? super Integer>> S subscribe(S subscriber) {
+        public void subscribe(Subscriber<? super Integer> subscriber) {
             pub.subscribe(subscriber);
-            return subscriber;
         }
 
         @Action
         public void act() {
             if (val == 0) {
-                pub.complete();
-                println("Source.pub.post()");
+                pub.onComplete();
+                println("Source.pub.onNext()");
                 stop();
             } else {
-                //          ReactorTest.println("pub.post("+val+")");
-                pub.post(val);
+                //          ReactorTest.println("pub.onNext("+val+")");
+                pub.onNext(val);
                 val--;
             }
         }
@@ -112,7 +114,7 @@ public class ReactiveStreamExample extends AllOf {
     /**
      * receives totalNumber of Integers and cancels the subscription
      */
-    class Sink extends Actor implements ReactiveSubscriber<Integer> {
+    class Sink extends Actor implements Subscriber<Integer> {
         int totalNumber;
         ReactiveInput<Integer> subscriber;
         int received = 0;
@@ -132,23 +134,23 @@ public class ReactiveStreamExample extends AllOf {
         }
 
         @Override
-        public void onSubscribe(ReactiveSubscription subscription) {
+        public void onSubscribe(Subscription subscription) {
             subscriber.onSubscribe(subscription);
         }
 
         @Override
-        public void post(Integer message) {
-            subscriber.post(message);
+        public void onNext(Integer message) {
+            subscriber.onNext(message);
         }
 
         @Override
-        public void complete() {
-            subscriber.complete();
+        public void onComplete() {
+            subscriber.onComplete();
         }
 
         @Override
-        public void postFailure(Throwable ex) {
-            subscriber.postFailure(ex);
+        public void onError(Throwable ex) {
+            subscriber.onError(ex);
         }
 
         @Action

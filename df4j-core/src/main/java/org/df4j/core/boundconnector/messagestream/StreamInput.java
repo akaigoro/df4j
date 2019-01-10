@@ -2,6 +2,7 @@ package org.df4j.core.boundconnector.messagestream;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarInput;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Subscriber;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -12,7 +13,7 @@ import java.util.Iterator;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, StreamSubscriber<T> {
+public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Subscriber<T> {
     protected Queue<T> queue;
     protected boolean closeRequested = false;
 
@@ -36,7 +37,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Strea
     }
 
     @Override
-    public synchronized void post(T token) {
+    public synchronized void onNext(T token) {
         if (token == null) {
             throw new NullPointerException();
         }
@@ -59,7 +60,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Strea
      * null (null cannot be send with Subscriber.add(message)).
      */
     @Override
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         if (closeRequested) {
             return;
         }
