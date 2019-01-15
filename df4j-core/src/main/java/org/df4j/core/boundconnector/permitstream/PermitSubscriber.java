@@ -1,12 +1,11 @@
 package org.df4j.core.boundconnector.permitstream;
 
 import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
-import org.df4j.core.boundconnector.reactivestream.ReactiveSubscription;
 
 /**
  *  inlet for permits.
  *
- *  method descriptions are taken from description of class {@link ReactiveSubscription}.
+ *  method descriptions are taken from description of class {@link Subscription}.
  */
 public interface PermitSubscriber extends ScalarPermitSubscriber {
     /**

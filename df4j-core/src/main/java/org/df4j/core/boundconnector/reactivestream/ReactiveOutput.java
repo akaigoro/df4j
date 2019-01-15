@@ -3,6 +3,7 @@ package org.df4j.core.boundconnector.reactivestream;
 import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Subscription;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -63,7 +64,7 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
         forEachSubscription((subscription) -> subscription.postFailure(throwable));
     }
 
-    class SimpleReactiveSubscriptionImpl extends Semafor implements ReactiveSubscription {
+    class SimpleReactiveSubscriptionImpl extends Semafor implements Subscription {
         protected ReactiveSubscriber<? super M> subscriber;
         private volatile boolean closed = false;
 
@@ -116,15 +117,14 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
         /**
          * subscription closed by request of subscriber
          */
-        public synchronized boolean cancel() {
+        public synchronized void cancel() {
             if (isCompleted()) {
-                return false;
+                return;
             }
             subscriber = null;
             closed = true;
             subscriptions.remove(this);
             super.unRegister(); // and cannot be turned on
-            return false;
         }
 
         @Override

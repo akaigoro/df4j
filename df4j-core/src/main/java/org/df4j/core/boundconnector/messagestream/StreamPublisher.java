@@ -1,8 +1,8 @@
 package org.df4j.core.boundconnector.messagestream;
 
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 public interface StreamPublisher<M> {
 
-    SimpleSubscription subscribe(StreamSubscriber<M> subscriber);
+    Subscription subscribe(StreamSubscriber<M> subscriber);
 }

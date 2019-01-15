@@ -1,6 +1,6 @@
 package org.df4j.core.boundconnector.messagescalar;
 
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 
 import java.util.concurrent.CompletableFuture;
@@ -25,7 +25,7 @@ public interface ScalarPublisher<T> {
      * @return the subscriber argument
      */
 //    <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber);
-    SimpleSubscription subscribe(ScalarSubscriber<T> subscriber);
+    Subscription subscribe(ScalarSubscriber<T> subscriber);
 
     /**
      * to pass data from ScalarPublisher to {@link CompletableFuture}
@@ -33,7 +33,7 @@ public interface ScalarPublisher<T> {
      * @param completable CompletableFuture to complete
      * @return subscription
      */
-    default SimpleSubscription thenComplete(CompletableFuture<T> completable) {
+    default Subscription thenComplete(CompletableFuture<T> completable) {
         return subscribe(ScalarSubscriber.fromCompletable(completable));
     }
 

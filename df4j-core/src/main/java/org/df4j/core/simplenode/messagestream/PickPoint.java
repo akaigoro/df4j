@@ -2,15 +2,13 @@ package org.df4j.core.simplenode.messagestream;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.messagestream.StreamCompletedException;
 
 import java.util.ArrayDeque;
-import java.util.Collection;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -56,7 +54,7 @@ public class PickPoint<T> implements ScalarPublisher<T>, StreamSubscriber<T> {
 	}
 
 	@Override
-    public SimpleSubscription subscribe(ScalarSubscriber<T> subscriber) {
+    public Subscription subscribe(ScalarSubscriber<T> subscriber) {
         if (completed) {
             throw new IllegalStateException();
         }

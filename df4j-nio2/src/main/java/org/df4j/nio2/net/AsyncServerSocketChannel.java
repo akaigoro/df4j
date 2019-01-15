@@ -11,7 +11,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.Logger;
@@ -58,7 +58,7 @@ public class AsyncServerSocketChannel
     }
     
     @Override
-    public SimpleSubscription subscribe(ScalarSubscriber<AsynchronousSocketChannel> subscriber) {
+    public Subscription subscribe(ScalarSubscriber<AsynchronousSocketChannel> subscriber) {
         requests.post(subscriber);
         return null;
     }

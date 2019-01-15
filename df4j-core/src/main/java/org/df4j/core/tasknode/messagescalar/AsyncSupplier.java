@@ -1,8 +1,8 @@
 package org.df4j.core.tasknode.messagescalar;
 
+import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.invoker.Invoker;
@@ -46,7 +46,7 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     }
 
     @Override
-    public SimpleSubscription subscribe(ScalarSubscriber<R> subscriber) {
+    public Subscription subscribe(ScalarSubscriber<R> subscriber) {
         return asyncResult().subscribe(subscriber);
     }
 

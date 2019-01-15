@@ -1,8 +1,8 @@
 package org.df4j.core.simplenode.messagescalar;
 
+import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -29,10 +29,8 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
     }
 
     @Override
-    public SimpleSubscription subscribe(ScalarSubscriber<R> subscriber) {
-        ScalarSubscription<R> subscription = new ScalarSubscription<>(subscriber);
-        super.whenComplete(subscription);
-        subscriber.onSubscribe(subscription);
+    public Subscription subscribe(ScalarSubscriber<R> subscriber) {
+        ScalarSubscription subscription = new ScalarSubscription(subscriber);
         return subscription;
     }
 
@@ -54,17 +52,15 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
         super.complete(null);
     }
 
-    static class ScalarSubscription<R> implements SimpleSubscription, BiConsumer<R, Throwable> {
+    class ScalarSubscription implements Subscription, BiConsumer<R, Throwable> {
 
         private final ScalarSubscriber<? super R> subscriber;
+        private final CompletableFuture<R> cp;
 
         public <S extends ScalarSubscriber<? super R>> ScalarSubscription(S subscriber) {
             this.subscriber = subscriber;
-        }
-
-        @Override
-        public boolean cancel() {
-            return false;
+            cp = CompletablePromise.this.whenComplete(this);
+            subscriber.onSubscribe(this);
         }
 
         @Override
@@ -74,6 +70,14 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
             } else {
                 subscriber.post(r);
             }
+        }
+
+        @Override
+        public void request(long n) {}
+
+        @Override
+        public void cancel() {
+            cp.cancel(true);
         }
     }
 }

@@ -2,6 +2,7 @@ package org.df4j.core.boundconnector.reactivestream;
 
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -16,7 +17,7 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
     protected Deque<T> queue;
     protected boolean closeRequested = false;
     protected int capacity;
-    protected ReactiveSubscription subscription;
+    protected Subscription subscription;
 
     public ReactiveInput(AsyncProc actor, int capacity) {
         super(actor);
@@ -33,7 +34,7 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
     }
 
     @Override
-    public void onSubscribe(ReactiveSubscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
         subscription.request(capacity);
     }

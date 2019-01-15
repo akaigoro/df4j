@@ -11,7 +11,7 @@
 
 package org.df4j.core.boundconnector.permitstream;
 
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 /**
  * A {@link PermitPublisher} is a provider of a potentially unbounded number of permits
@@ -24,7 +24,7 @@ public interface PermitPublisher {
      *
      * @param subscriber
      *      the {@link PermitSubscriber} that will consume signals from this {@link PermitPublisher}
-     * @return SimpleSubscription which can be cancelled, or null if subscribtion object is not created
+     * @return Subscription which can be cancelled, or null if subscribtion object is not created
      */
-    SimpleSubscription subscribe(PermitSubscriber subscriber);
+    Subscription subscribe(PermitSubscriber subscriber);
 }

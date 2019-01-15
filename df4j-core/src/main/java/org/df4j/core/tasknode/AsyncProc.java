@@ -9,8 +9,8 @@
  */
 package org.df4j.core.tasknode;
 
+import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.df4j.core.boundconnector.SimpleSubscription;
 import org.df4j.core.util.executor.CurrentThreadExecutor;
 
 import java.util.ArrayList;
@@ -236,7 +236,7 @@ public abstract class AsyncProc implements Runnable {
     public class ConstInput<T> extends BaseLock
             implements ScalarSubscriber<T>  // to connect to a ScalarPublisher
     {
-        protected SimpleSubscription subscription;
+        protected Subscription subscription;
         protected boolean closeRequested = false;
         protected boolean cancelled = false;
 
@@ -292,15 +292,14 @@ public abstract class AsyncProc implements Runnable {
             this.exception = throwable;
         }
 
-        public synchronized boolean cancel() {
+        public synchronized void cancel() {
             if (subscription == null) {
-                return cancelled;
+                return;
             }
-            SimpleSubscription subscription = this.subscription;
+            Subscription subscription = this.subscription;
             this.subscription = null;
             cancelled = true;
-            boolean result = subscription.cancel();
-            return result;
+            subscription.cancel();
         }
 
         @Override

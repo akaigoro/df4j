@@ -1,6 +1,6 @@
 package org.df4j.core.boundconnector.messagestream;
 
-import org.df4j.core.boundconnector.SimpleSubscription;
+import org.reactivestreams.Subscription;
 import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.HashSet;
@@ -62,7 +62,7 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
         forEachSubscription(SimpleSubscriptionImpl::complete);
     }
 
-    class SimpleSubscriptionImpl implements SimpleSubscription {
+    class SimpleSubscriptionImpl implements Subscription {
         protected StreamSubscriber<? super M> subscriber;
         private volatile boolean closed = false;
 
@@ -91,17 +91,19 @@ public class StreamOutput<M> extends AsyncProc.Lock implements StreamPublisher<M
             subscriber = null;
         }
 
+        @Override
+        public void request(long n) {}
+
         /**
          * subscription closed by request of subscriber
          */
-        public boolean cancel() {
+        public void cancel() {
             synchronized(StreamOutput.this) {
                 if (closed) {
-                    return false;
+                    return;
                 }
                 closed = true;
                 subscriptions.remove(this);
-                return false;
             }
         }
     }

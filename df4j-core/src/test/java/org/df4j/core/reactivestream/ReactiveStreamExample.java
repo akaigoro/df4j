@@ -16,6 +16,7 @@ import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.df4j.core.tasknode.messagestream.Actor;
 import org.junit.Before;
 import org.junit.Test;
+import org.reactivestreams.Subscription;
 
 import java.io.PrintStream;
 import java.util.concurrent.*;
@@ -132,7 +133,7 @@ public class ReactiveStreamExample extends AllOf {
         }
 
         @Override
-        public void onSubscribe(ReactiveSubscription subscription) {
+        public void onSubscribe(Subscription subscription) {
             subscriber.onSubscribe(subscription);
         }
 
