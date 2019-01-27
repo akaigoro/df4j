@@ -12,12 +12,13 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.boundconnector.messagestream.StreamOutput;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.Logger;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;
@@ -26,6 +27,7 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -37,15 +39,14 @@ import java.util.concurrent.TimeUnit;
  * Internally, manages 2 input queues: one for reading requests and one for writing requests.
  * After request is served, it is sent to the port denoted by <code>replyTo</code>
  * property in the request.
- * 
+ *
  * IO requests can be posted immediately, but will be executed
  * only after connection completes.
  */
-public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChannel>
-{
+public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
     protected static final Logger LOG = Logger.getLogger(ServerConnection.class.getName());
 
-    private final ScalarSubscriber<ServerConnection> backPort;
+    private final Consumer<ServerConnection> backPort;
 
 	/** read requests queue */
 	public final Reader reader;
@@ -56,7 +57,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
 
     public String name;
 
-    public ServerConnection(String name, ScalarSubscriber<ServerConnection> backPort) {
+    public ServerConnection(String name, Consumer<ServerConnection> backPort) {
         this.name = name;
         this.backPort = backPort;
         reader = new Reader();
@@ -68,19 +69,25 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         this(name, null);
     }
 
-    public void setTcpNoDelay(boolean on) throws IOException {
-        channel.setOption(StandardSocketOptions.TCP_NODELAY, on);
+    @Override
+    public void onSubscribe(Subscription s) {
+
     }
 
-    public void post(AsynchronousSocketChannel channel) {
+    public void onNext(AsynchronousSocketChannel channel) {
         LOG.info("conn "+name+": init()");
         this.channel=channel;
         reader.start();
         writer.start();
     }
 
-    public void postFailure(Throwable ex) {
+    public void onError(Throwable ex) {
         LOG.info("conn "+name+": postFailure()");
+    }
+
+    @Override
+    public void onComplete() {
+
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -99,7 +106,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
             }
     	}
     	if (backPort != null) {
-            backPort.post(this);
+            backPort.accept(this);
         }
     }
 

@@ -9,12 +9,12 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
-import org.reactivestreams.Subscription;
-import org.df4j.core.boundconnector.messagestream.StreamInput;
+import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.Logger;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -26,7 +26,7 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections, pushes them pu subscribers
  *
- * though it extends AsyncAction, it is effectively an Actor1&lt;ScalarSubscriber&gt;
+ * though it extends AsyncAction, it is effectively an Actor1&lt;Subscriber&gt;
  *
  *  its sole input is a stream of requests of type ServerConnection
  *  for each ServerConnection, AsyncServerSocketChannel accepts an incoming connection requests
@@ -37,13 +37,13 @@ import java.nio.channels.CompletionHandler;
  */
 public class AsyncServerSocketChannel
         extends AsyncAction
-        implements ScalarPublisher<AsynchronousSocketChannel>,
-        CompletionHandler<AsynchronousSocketChannel, ScalarSubscriber<? super AsynchronousSocketChannel>>
+        implements Publisher<AsynchronousSocketChannel>,
+        CompletionHandler<AsynchronousSocketChannel, Subscriber<? super AsynchronousSocketChannel>>
 {
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
 
     /** place for demands */
-    private StreamInput<ScalarSubscriber<? super AsynchronousSocketChannel>> requests = new StreamInput<>(this);
+    private StreamOutput<AsynchronousSocketChannel> requests = new StreamOutput<>(this);
 
     protected volatile AsynchronousServerSocketChannel assc;
 
@@ -56,11 +56,11 @@ public class AsyncServerSocketChannel
         this.start(directExec);
         LOG.config("AsyncServerSocketChannel("+addr+") created");
     }
-    
+
+
     @Override
-    public Subscription subscribe(ScalarSubscriber<AsynchronousSocketChannel> subscriber) {
-        requests.post(subscriber);
-        return null;
+    public void subscribe(Subscriber<? super AsynchronousSocketChannel> subscriber) {
+        requests.subscribe(subscriber);
     }
 
     public synchronized void close() {
@@ -79,9 +79,8 @@ public class AsyncServerSocketChannel
 
     //====================== Dataflow backend
 
-    @Override
-    protected void runAction() throws Exception {
-        ScalarSubscriber<? super AsynchronousSocketChannel> arg = requests.next();
+    @Action
+    protected void act(Subscriber<? super AsynchronousSocketChannel> arg) throws Exception {
         try {
             assc.accept(arg, this);
         } catch (Exception e) {
@@ -93,9 +92,9 @@ public class AsyncServerSocketChannel
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel result, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
+    public void completed(AsynchronousSocketChannel result, Subscriber<? super AsynchronousSocketChannel> connection) {
         LOG.finest("AsynchronousServerSocketChannel: request accepted");
-        connection.post(result);
+        connection.onNext(result);
         this.start(); // allow  next assc.accpt()
     }
 
@@ -104,8 +103,8 @@ public class AsyncServerSocketChannel
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, ScalarSubscriber<? super AsynchronousSocketChannel> connection) {
-        connection.postFailure(exc);
+    public void failed(Throwable exc, Subscriber<? super AsynchronousSocketChannel> connection) {
+        connection.onError(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.
             close();
@@ -113,5 +112,4 @@ public class AsyncServerSocketChannel
             this.start(); // TODO deside if we should allow next call to assc.accept() after failure?
         }
     }
-
 }

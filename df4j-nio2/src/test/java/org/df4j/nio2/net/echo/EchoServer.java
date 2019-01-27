@@ -1,12 +1,13 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.nio2.net.ServerConnection;
+
+import java.util.function.Consumer;
 
 public class EchoServer extends ServerConnection {
 
-    public EchoServer(ScalarSubscriber<ServerConnection> backport) {
-        super("EchoServerConnection",backport);
+    public EchoServer(Consumer<ServerConnection> backport) {
+        super("EchoServerConnection", backport);
         // returns each received ByteBuffer to the client
         reader.output.subscribe(writer.input);
         // directs all used buffers after writing to the reader
