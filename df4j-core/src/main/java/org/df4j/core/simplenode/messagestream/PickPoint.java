@@ -42,7 +42,7 @@ public class PickPoint<T> implements ScalarPublisher<T>, StreamSubscriber<T> {
 	}
 
 	@Override
-	public synchronized void complete() {
+	public synchronized void onComplete() {
         if (completed) {
             return;
         }

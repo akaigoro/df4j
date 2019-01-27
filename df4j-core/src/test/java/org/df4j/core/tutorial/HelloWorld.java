@@ -35,7 +35,7 @@ public class HelloWorld {
         coll.start();
         coll.input.post("Hello");
         coll.input.post("World");
-        coll.input.complete();
+        coll.input.onComplete();
     }
 
 }

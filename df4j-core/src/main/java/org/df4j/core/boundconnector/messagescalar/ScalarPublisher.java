@@ -28,16 +28,6 @@ public interface ScalarPublisher<T> {
     Subscription subscribe(ScalarSubscriber<T> subscriber);
 
     /**
-     * to pass data from ScalarPublisher to {@link CompletableFuture}
-     *
-     * @param completable CompletableFuture to complete
-     * @return subscription
-     */
-    default Subscription thenComplete(CompletableFuture<T> completable) {
-        return subscribe(ScalarSubscriber.fromCompletable(completable));
-    }
-
-    /**
      * to access the published result in synchronous way
      *
      * @return Future subscribed to this publisher

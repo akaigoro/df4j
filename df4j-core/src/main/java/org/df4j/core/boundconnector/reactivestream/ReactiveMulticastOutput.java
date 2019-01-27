@@ -3,6 +3,8 @@ package org.df4j.core.boundconnector.reactivestream;
 import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.HashSet;
@@ -17,21 +19,20 @@ import java.util.function.Consumer;
  *
  * @param <M> the type of broadcasted values
  */
-public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublisher<M>, StreamSubscriber<M> {
+public class ReactiveMulticastOutput<M> extends AsyncProc.Lock implements Publisher<M>, StreamSubscriber<M> {
     protected AsyncProc actor;
     protected Set<SimpleReactiveSubscriptionImpl> subscriptions = new HashSet<>();
 
-    public ReactiveOutput(AsyncProc actor) {
+    public ReactiveMulticastOutput(AsyncProc actor) {
         actor.super(false);
         this.actor = actor;
     }
 
     @Override
-    public <S extends ReactiveSubscriber<? super M>> S subscribe(S subscriber) {
+    public void subscribe(Subscriber<? super M> subscriber) {
         SimpleReactiveSubscriptionImpl newSubscription = new SimpleReactiveSubscriptionImpl(subscriber);
         subscriptions.add(newSubscription);
         subscriber.onSubscribe(newSubscription);
-        return subscriber;
     }
 
     public synchronized void close() {
@@ -55,7 +56,7 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
         forEachSubscription((subscription) -> subscription.post(item));
     }
 
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         forEachSubscription(SimpleReactiveSubscriptionImpl::complete);
     }
 
@@ -65,11 +66,11 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
     }
 
     class SimpleReactiveSubscriptionImpl extends Semafor implements Subscription {
-        protected ReactiveSubscriber<? super M> subscriber;
+        protected Subscriber<? super M> subscriber;
         private volatile boolean closed = false;
 
-        public SimpleReactiveSubscriptionImpl(ReactiveSubscriber<? super M> subscriber) {
-            super(ReactiveOutput.this.actor);
+        public SimpleReactiveSubscriptionImpl(Subscriber<? super M> subscriber) {
+            super(ReactiveMulticastOutput.this.actor);
             if (subscriber == null) {
                 throw new NullPointerException();
             }
@@ -80,14 +81,14 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
             if (isCompleted()) {
                 throw new IllegalStateException("post to completed connector");
             }
-            subscriber.post(message);
+            subscriber.onNext(message);
         }
 
         public void postFailure(Throwable throwable) {
             if (isCompleted()) {
                 throw new IllegalStateException("postFailure to completed connector");
             }
-            subscriber.postFailure(throwable);
+            subscriber.onError(throwable);
             cancel();
         }
 
@@ -106,7 +107,7 @@ public class ReactiveOutput<M> extends AsyncProc.Lock implements ReactivePublish
             if (isCompleted()) {
                 return;
             }
-            subscriber.complete();
+            subscriber.onComplete();
             subscriber = null;
         }
 

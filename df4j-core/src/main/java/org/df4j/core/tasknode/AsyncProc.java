@@ -14,7 +14,6 @@ import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 import org.df4j.core.util.executor.CurrentThreadExecutor;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
@@ -32,12 +31,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class AsyncProc implements Runnable {
     public static final Executor directExec = (Runnable r)->r.run();
     public static final CurrentThreadExecutor currentThreadExec = new CurrentThreadExecutor();
-    public static final Executor asyncExec = ForkJoinPool.commonPool();
     public static final Executor newThreadExec = (Runnable r)->new Thread(r).start();
     private static InheritableThreadLocal<Executor> threadLocalExecutor = new InheritableThreadLocal<Executor>(){
         @Override
         protected Executor initialValue() {
-            return asyncExec;
+            Thread currentThread = Thread.currentThread();
+            if (currentThread instanceof ForkJoinWorkerThread) {
+                return ((ForkJoinWorkerThread) currentThread).getPool();
+            } else {
+                return ForkJoinPool.commonPool();
+            }
         }
     };
     private static final Object[] emptyArgs = new Object[0];
@@ -58,7 +61,7 @@ public abstract class AsyncProc implements Runnable {
     /**
      * the set of all b/w Pins
      */
-    private HashSet<Lock> locks;
+    private ArrayList<Lock> locks;
     /**
      * the set of all colored Pins, to form array of arguments
      */
@@ -78,18 +81,6 @@ public abstract class AsyncProc implements Runnable {
         this.executor = exec;
     }
 
-    public synchronized Executor getExecutor() {
-        if (executor == null) {
-            Thread currentThread = Thread.currentThread();
-            if (currentThread instanceof ForkJoinWorkerThread) {
-                executor = ((ForkJoinWorkerThread)currentThread).getPool();
-            } else {
-                executor = threadLocalExecutor.get();
-            }
-        }
-        return executor;
-    }
-
     /**
      * invoked when all asyncTask asyncTask are ready,
      * and method run() is to be invoked.
@@ -98,7 +89,11 @@ public abstract class AsyncProc implements Runnable {
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
-        Executor executor = getExecutor();
+        synchronized (this) {
+            if (executor == null) {
+                executor = threadLocalExecutor.get();
+            }
+        }
         executor.execute(this);
     }
 
@@ -111,18 +106,30 @@ public abstract class AsyncProc implements Runnable {
         return asyncParams.size();
     }
 
-    protected synchronized Object[] consumeTokens() {
-        locks.forEach(Lock::purge);
+    protected synchronized Object[] collectTokens() {
         if (asyncParams == null) {
             return emptyArgs;
+        } else {
+            int paramCount = asyncParams.size();
+            Object[] args = new Object[paramCount];
+            for (int k = 0; k < paramCount; k++) {
+                args[k] = asyncParams.get(k).current();
+            }
+            return args;
         }
-        int paramCount = asyncParams.size();
-        Object[] args = new Object[paramCount];
-        for (int k = 0; k< paramCount; k++) {
-            ConstInput<?> asyncParam = asyncParams.get(k);
-            args[k] = asyncParam.next();
+    }
+
+    protected void purgeAll() {
+        if (locks != null) {
+            for (int k = 0; k < locks.size(); k++) {
+                locks.get(k).purge();
+            }
         }
-        return args;
+        if (asyncParams != null) {
+            for (int k = 0; k < asyncParams.size(); k++) {
+                asyncParams.get(k).purge();
+            }
+        }
     }
 
     /**
@@ -159,7 +166,7 @@ public abstract class AsyncProc implements Runnable {
          * locks the pin
          * called when a token is consumed and the pin become empty
          */
-        public void turnOff() {
+        protected void turnOff() {
             if (blocked) {
                 return;
             }
@@ -167,7 +174,7 @@ public abstract class AsyncProc implements Runnable {
             blockedPinCount.incrementAndGet();
         }
 
-        public boolean turnOn() {
+        protected boolean turnOn() {
             if (!blocked) {
                 return false;
             }
@@ -182,6 +189,20 @@ public abstract class AsyncProc implements Runnable {
         abstract protected void register();
 
         abstract protected void unRegister();
+
+        /**
+         * Must be executed  before restart of the parent async action.
+         * Cleans reference to value, if any.
+         * Signals to set state to off if no more tokens are in the place.
+         * Should return quickly, as is called from the actor's
+         * synchronized block.
+         */
+        public void purge() {
+            if (this==null) {
+                throw new IllegalStateException();
+            }
+        }
+
     }
 
 
@@ -204,7 +225,7 @@ public abstract class AsyncProc implements Runnable {
         @Override
         protected void register() {
             if (locks == null) {
-                locks = new HashSet<>();
+                locks = new ArrayList<>();
             }
             locks.add(this);
         }
@@ -214,15 +235,6 @@ public abstract class AsyncProc implements Runnable {
                 turnOn();
             }
             locks.remove(this);
-        }
-
-        /**
-         * Executed after token processing (method act). Cleans reference to
-         * value, if any. Signals to set state to off if no more tokens are in
-         * the place. Should return quickly, as is called from the actor's
-         * synchronized block.
-         */
-        public void purge() {
         }
     }
 
@@ -237,12 +249,11 @@ public abstract class AsyncProc implements Runnable {
             implements ScalarSubscriber<T>  // to connect to a ScalarPublisher
     {
         protected Subscription subscription;
-        protected boolean closeRequested = false;
         protected boolean cancelled = false;
 
         /** extracted token */
         protected boolean completed = false;
-        protected T value = null;
+        protected T current = null;
         protected Throwable exception;
 
         public ConstInput() {
@@ -253,11 +264,11 @@ public abstract class AsyncProc implements Runnable {
             if (exception != null) {
                 throw new IllegalStateException(exception);
             }
-            return value;
+            return current;
         }
 
-        public T getValue() {
-            return value;
+        public T getCurrent() {
+            return current;
         }
 
         public Throwable getException() {
@@ -268,10 +279,6 @@ public abstract class AsyncProc implements Runnable {
             return completed || exception != null;
         }
 
-        public T next() {
-            return current();
-        }
-
         @Override
         public void post(T message) {
             if (message == null) {
@@ -280,7 +287,7 @@ public abstract class AsyncProc implements Runnable {
             if (isDone()) {
                 throw new IllegalStateException("token set already");
             }
-            value = message;
+            current = message;
             turnOn();
         }
 
@@ -322,5 +329,6 @@ public abstract class AsyncProc implements Runnable {
             }
             asyncParams.remove(this);
         }
+
     }
 }

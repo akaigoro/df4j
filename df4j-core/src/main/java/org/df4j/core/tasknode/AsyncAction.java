@@ -79,7 +79,7 @@ public class AsyncAction<R> extends AsyncProc {
         if (actionCaller == null) {
             actionCaller = ActionCaller.findAction(this, getParamCount());
         }
-        Object[] args = consumeTokens();
+        Object[] args = collectTokens();
         R  res = (R) actionCaller.apply(args);
         return res;
     }

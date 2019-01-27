@@ -36,8 +36,8 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
      * processes closing signal
      */
     @Override
-    public void complete() {
-        mainInput.complete();
+    public void onComplete() {
+        mainInput.onComplete();
     }
 
     public boolean isClosed() {
@@ -46,7 +46,7 @@ public abstract class Actor1<M> extends Actor implements StreamSubscriber<M> {
 
     @Override
     protected void runAction() throws Exception {
-        M message = mainInput.next();
+        M message = mainInput.current();
         if (message != null) {
             runAction(message);
         } else {

@@ -41,11 +41,6 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     }
 
     @Override
-    public CompletablePromise<R> asyncResult() {
-        return super.asyncResult();
-    }
-
-    @Override
     public Subscription subscribe(ScalarSubscriber<R> subscriber) {
         return asyncResult().subscribe(subscriber);
     }

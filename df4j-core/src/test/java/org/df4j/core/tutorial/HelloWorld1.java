@@ -29,7 +29,7 @@ public class HelloWorld1 {
         coll.start();
         coll.post("Hello");
         coll.post("World");
-        coll.complete();
+        coll.onComplete();
     }
 
 }

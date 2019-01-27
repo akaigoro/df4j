@@ -1,16 +1,15 @@
 package org.df4j.core.tasknode.messagestream;
 
-import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagestream.StreamOutput;
-import org.df4j.core.boundconnector.messagestream.StreamPublisher;
-import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
-public abstract class StreamProcessor<M, R> extends Actor1<M> implements StreamPublisher<R> {
+public abstract class StreamProcessor<M, R> extends Actor1<M> implements Publisher<R> {
 	protected final StreamOutput<R> output = new StreamOutput<>(this);
 
-    public Subscription subscribe(StreamSubscriber<R> subscriber) {
-        Subscription subscription = output.subscribe(subscriber);
-        return subscription;
+    @Override
+    public void subscribe(Subscriber<? super R> subscriber) {
+        output.subscribe(subscriber);
     }
 
     @Override

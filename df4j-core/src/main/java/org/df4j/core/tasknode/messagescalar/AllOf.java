@@ -2,6 +2,8 @@ package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.df4j.core.tasknode.AsyncAction;
+import org.df4j.core.tasknode.AsyncProc;
 
 public class AllOf extends AsyncSupplier<Void> {
 
@@ -21,6 +23,12 @@ public class AllOf extends AsyncSupplier<Void> {
      */
     public synchronized void registerAsyncResult(ScalarPublisher source) {
         source.subscribe(new Enter());
+    }
+
+    public synchronized void registerAsyncResult(AsyncAction... sources) {
+        for (AsyncAction source: sources) {
+            registerAsyncResult(source.asyncResult());
+        }
     }
 
     /**

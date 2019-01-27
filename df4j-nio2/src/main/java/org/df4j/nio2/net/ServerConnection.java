@@ -131,7 +131,7 @@ public class ServerConnection implements ScalarSubscriber<AsynchronousSocketChan
         @Action
         protected void start_IO (ByteBuffer buffer) {
             if (input.isClosed()) {
-                output.close();
+                output.complete();
                 output.postFailure(new AsynchronousCloseException());
                 LOG.finest("conn "+ name+": input.isClosed()");
                 return;

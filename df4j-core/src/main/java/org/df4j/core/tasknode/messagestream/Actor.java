@@ -13,6 +13,7 @@ public class Actor extends AsyncAction {
             blockStarted();
             runAction();
             if (!isStopped()) {
+                purgeAll();
                 start(); // restart execution
             }
         } catch (Throwable e) {

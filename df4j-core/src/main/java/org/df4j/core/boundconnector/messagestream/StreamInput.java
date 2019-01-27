@@ -5,14 +5,13 @@ import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.Iterator;
 
 /**
  * A Queue of tokens
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, StreamSubscriber<T> {
+public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T> {
     protected Queue<T> queue;
     protected boolean closeRequested = false;
 
@@ -46,8 +45,8 @@ public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Strea
         if (exception != null) {
             throw new IllegalStateException("token set already");
         }
-        if (value == null) {
-            value = token;
+        if (current == null) {
+            current = token;
             turnOn();
         } else {
             queue.add(token);
@@ -59,17 +58,19 @@ public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Strea
      * null (null cannot be send with Subscriber.add(message)).
      */
     @Override
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         if (closeRequested) {
             return;
         }
         closeRequested = true;
-        if (value == null) {
+        if (current == null) {
             turnOn();
         }
     }
 
-    @Override
+    /**
+     * in order to reuse same token in subsequent async call
+     */
     protected void pushback() {
         if (pushback) {
             throw new IllegalStateException();
@@ -77,7 +78,9 @@ public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Strea
         pushback = true;
     }
 
-    @Override
+    /**
+     * in order to reuse another token in subsequent async call
+     */
     protected synchronized void pushback(T value) {
         if (value == null) {
             throw new IllegalArgumentException();
@@ -85,38 +88,51 @@ public class StreamInput<T> extends ScalarInput<T> implements Iterator<T>, Strea
         if (!pushback) {
             pushback = true;
         } else {
-            if (this.value == null) {
+            if (this.current == null) {
                 throw new IllegalStateException();
             }
-            queue.add(this.value);
-            this.value = value;
+            queue.add(this.current);
+            this.current = value;
+        }
+    }
+
+    /**
+     * in order to use next token in the same async call
+     *
+     * @return
+     */
+    public boolean moveNext() {
+        boolean wasNotNull = (current != null);
+        current = queue.poll();
+        return current != null || (closeRequested && wasNotNull);
+    }
+
+    @Override
+    public synchronized void purge() {
+        if (pushback) {
+            pushback = false;
+        } else if (!moveNext()) {
+            turnOff();
         }
     }
 
     @Override
     public synchronized T next() {
-        if (pushback) {
-            pushback = false;
-            return value; // value remains the same, the pin remains turned on
-        }
-        T res = value;
-        boolean wasNull = (value == null);
-        value = queue.poll();
-        if (value == null) {
-            // no more tokens; check closing
-            if (wasNull || !closeRequested) {
-                turnOff();
-            }
-        }
-        return res;
+        purge();
+        return current();
     }
 
     @Override
     public boolean hasNext() {
-        return value != null;
+        return current != null;
     }
 
     public synchronized boolean  isClosed() {
-        return closeRequested && (value == null);
+        return closeRequested && (current == null);
     }
+
+    public synchronized void remove(T item) {
+        queue.remove(item);
+    }
+
 }

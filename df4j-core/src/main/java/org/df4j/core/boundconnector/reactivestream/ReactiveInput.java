@@ -2,22 +2,21 @@ package org.df4j.core.boundconnector.reactivestream;
 
 import org.df4j.core.boundconnector.messagestream.StreamInput;
 import org.df4j.core.tasknode.AsyncProc;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Iterator;
 
 /**
  * A Queue of tokens
  *
  * @param <T> the type of tokens
  */
-public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscriber<T>, Iterator<T> {
+public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
     protected Deque<T> queue;
     protected boolean closeRequested = false;
     protected int capacity;
-    protected Subscription subscription;
 
     public ReactiveInput(AsyncProc actor, int capacity) {
         super(actor);
@@ -40,6 +39,16 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
     }
 
     @Override
+    public void onNext(T item) {
+        post(item);
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        postFailure(t);
+    }
+
+    @Override
     public synchronized void post(T token) {
         if (subscription == null) {
             throw new IllegalStateException("not yet subscribed");
@@ -57,6 +66,6 @@ public class ReactiveInput<T> extends StreamInput<T> implements ReactiveSubscrib
     }
 
     public synchronized boolean  isClosed() {
-        return closeRequested && (value == null);
+        return closeRequested && (current == null);
     }
 }
