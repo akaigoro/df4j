@@ -17,9 +17,9 @@ public class ReactiveStreamMulticastTest extends ReactiveStreamExampleBase {
 
     public void testSourceToSink(int sourceNumber, int sinkNumber) throws Exception {
         Source<Long> from = new MulticastSource(this, sourceNumber);
-        Sink to1 = new Sink(this, sinkNumber);
+        Sink to1 = new Sink(this, sinkNumber, "sink1");
         from.subscribe(to1);
-        Sink to2 = new Sink(this, sinkNumber);
+        Sink to2 = new Sink(this, sinkNumber, "sink2");
         from.subscribe(to2);
         super.start(); // after all components created
         from.start();

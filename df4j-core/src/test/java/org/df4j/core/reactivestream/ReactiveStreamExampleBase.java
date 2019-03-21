@@ -12,6 +12,7 @@ package org.df4j.core.reactivestream;
 import org.df4j.core.tasknode.AsyncProc;
 import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.PrintStream;
@@ -20,12 +21,13 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 
 public abstract class ReactiveStreamExampleBase extends AllOf {
-    @Before
-    public void init() {
+    @BeforeClass
+    public static void init() {
         AsyncProc.setThreadLocalExecutor(AsyncProc.currentThreadExec);
+        printOn();
     }
 
-    protected abstract void testSourceToSink(int sourceNumber, int sinkNumber) throws Exception;
+    public abstract void testSourceToSink(int sourceNumber, int sinkNumber) throws Exception;
 
     @Test
     public void testSourceLess() throws Exception {
@@ -40,13 +42,12 @@ public abstract class ReactiveStreamExampleBase extends AllOf {
         testSourceToSink(1, 0);
         testSourceToSink(2, 1);
         testSourceToSink(5, 4);
+        testSourceToSink(8, 7);
         testSourceToSink(10, 9);
     }
 
     @Test
     public void testSame() throws Exception {
-        testSourceToSink(1, 1);
-
         testSourceToSink(0, 0);
         testSourceToSink(0, 1);
         testSourceToSink(1, 0);
@@ -58,7 +59,16 @@ public abstract class ReactiveStreamExampleBase extends AllOf {
     }
 
     static PrintStream out = System.out;
+    static boolean printOn = false;
+
+    static void printOn() {
+        printOn = true;
+    }
+
     static void println(String s) {
+        if (!printOn) {
+            return;
+        }
         out.println(s);
         out.flush();
     }

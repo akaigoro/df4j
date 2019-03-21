@@ -1,136 +1,196 @@
 package org.df4j.core.boundconnector.reactivestream;
 
-import org.df4j.core.boundconnector.messagestream.StreamSubscriber;
-import org.df4j.core.boundconnector.permitstream.Semafor;
+import org.df4j.core.boundconnector.Port;
 import org.df4j.core.tasknode.AsyncProc;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
-import java.util.function.Consumer;
 
 /**
  * serves multiple subscribers
- * demonstrates usage of class AsyncProc.Semafor for handling back pressure
  *
- * An equivalent to java.util.concurrent.SubmissionPublisher
- *
- * @param <M> the type of broadcasted values
+ * @param <T> the type of broadcasted values
  */
-public class ReactiveMulticastOutput<M> extends AsyncProc.Lock implements Publisher<M>, StreamSubscriber<M> {
-    protected AsyncProc actor;
-    protected Set<SimpleReactiveSubscriptionImpl> subscriptions = new HashSet<>();
+public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T>, Publisher<T> {
+    protected ValuePublisher currentValuePublisher = new ValuePublisher();
 
     public ReactiveMulticastOutput(AsyncProc actor) {
-        actor.super(false);
-        this.actor = actor;
+        actor.super(true);
     }
 
     @Override
-    public void subscribe(Subscriber<? super M> subscriber) {
-        SimpleReactiveSubscriptionImpl newSubscription = new SimpleReactiveSubscriptionImpl(subscriber);
-        subscriptions.add(newSubscription);
-        subscriber.onSubscribe(newSubscription);
+    public synchronized void subscribe(Subscriber<? super T> subscriber) {
+        currentValuePublisher.subscribe(subscriber);
+        turnOn();
     }
 
-    public synchronized void close() {
-        subscriptions = null;
+    protected synchronized boolean isCompleted() {
+        return currentValuePublisher.state == ValueState.STREAM_COMPLETED
+                || currentValuePublisher.state == ValueState.STREAM_FAILED;
+    }
+
+    @Override
+    public synchronized void post(T value) {
+        if (isCompleted()) {
+            throw new IllegalStateException("completed already");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException();
+        }
+        currentValuePublisher.post(value);
+    }
+
+    @Override
+    public synchronized void postFailure(Throwable throwable) {
+        if (isCompleted()) {
+            throw new IllegalStateException("completed already");
+        }
         super.turnOff();
+        ValuePublisher currentSubscriptionsLoc = currentValuePublisher;
+        currentSubscriptionsLoc.postFailure(throwable);
     }
 
-    public synchronized boolean closed() {
-        return super.isBlocked();
-    }
-
-    public void forEachSubscription(Consumer<? super SimpleReactiveSubscriptionImpl> operator) {
-        if (closed()) {
-            return; // completed already
+    public synchronized void complete() {
+        if (isCompleted()) {
+            throw new IllegalStateException("completed already");
         }
-        subscriptions.forEach(operator);
+        super.turnOff();
+        ValuePublisher currentSubscriptionsLoc = currentValuePublisher;
+        currentSubscriptionsLoc.complete();
     }
 
-    @Override
-    public void post(M item) {
-        forEachSubscription((subscription) -> subscription.post(item));
+    enum ValueState {
+        VALUE_NOT_READY,
+        VALUE_READY,
+        STREAM_COMPLETED,
+        STREAM_FAILED
     }
 
-    public synchronized void onComplete() {
-        forEachSubscription(SimpleReactiveSubscriptionImpl::complete);
-    }
+    class ValuePublisher implements Port<T>, Publisher<T> {
+        volatile ValueState state = ValueState.VALUE_NOT_READY;
+        volatile T value = null;
+        volatile Throwable throwable = null;
+        ValuePublisher next = null;
+        Set<MulticastReactiveSubscription> subscriptions = new HashSet<>();
 
-    @Override
-    public void postFailure(Throwable throwable) {
-        forEachSubscription((subscription) -> subscription.postFailure(throwable));
-    }
-
-    class SimpleReactiveSubscriptionImpl extends Semafor implements Subscription {
-        protected Subscriber<? super M> subscriber;
-        private volatile boolean closed = false;
-
-        public SimpleReactiveSubscriptionImpl(Subscriber<? super M> subscriber) {
-            super(ReactiveMulticastOutput.this.actor);
-            if (subscriber == null) {
-                throw new NullPointerException();
-            }
-            this.subscriber = subscriber;
+        public void subscribe(Subscriber<? super T> subscriber) {
+            MulticastReactiveSubscription newSubscription = new MulticastReactiveSubscription(this, subscriber);
+            subscriber.onSubscribe(newSubscription);
         }
 
-        public void post(M message) {
-            if (isCompleted()) {
-                throw new IllegalStateException("post to completed connector");
+        public void post(T value) {
+            this.value = value;
+            this.state = ValueState.VALUE_READY;
+            ReactiveMulticastOutput.this.currentValuePublisher = this.next = new ValuePublisher();
+            Iterator<MulticastReactiveSubscription> it = subscriptions.iterator();
+            while (it.hasNext()) {
+                MulticastReactiveSubscription subscription = it.next();
+                if (subscription.requested > 0) {
+                    subscription.requested--;
+                    subscription.parent = next;
+                    next.subscriptions.add(subscription);
+                    it.remove();
+                    subscription.subscriber.onNext(value);
+                }
             }
-            subscriber.onNext(message);
         }
 
         public void postFailure(Throwable throwable) {
-            if (isCompleted()) {
-                throw new IllegalStateException("postFailure to completed connector");
+            if (throwable == null) {
+                throw new IllegalArgumentException();
             }
-            subscriber.onError(throwable);
-            cancel();
+            this.throwable = throwable;
+            this.state = ValueState.STREAM_FAILED;
+            Iterator<MulticastReactiveSubscription> it = subscriptions.iterator();
+            while (it.hasNext()) {
+                MulticastReactiveSubscription subscription = it.next();
+                subscription.parent = null;
+                subscription.subscriber.onError(throwable);
+            }
+            subscriptions = null;
         }
 
-        /**
-         * does nothing: counter decreases when a message is posted
-         */
-        @Override
-        public void purge() {
-        }
-
-        /**
-         * subscription closed by request of publisher
-         * unregistering not needed
-         */
         public void complete() {
-            if (isCompleted()) {
-                return;
+            this.state = ValueState.STREAM_COMPLETED;
+            Iterator<MulticastReactiveSubscription> it = subscriptions.iterator();
+            while (it.hasNext()) {
+                MulticastReactiveSubscription subscription = it.next();
+                subscription.parent = null;
+                subscription.subscriber.onComplete();
             }
-            subscriber.onComplete();
-            subscriber = null;
+            subscriptions = null;
+        }
+    }
+
+    class MulticastReactiveSubscription implements Subscription {
+        protected ValuePublisher parent;
+        protected Subscriber<? super T> subscriber;
+        private long requested = 0;
+
+        public MulticastReactiveSubscription(ValuePublisher parent, Subscriber<? super T> subscriber) {
+            this.parent = parent;
+            this.subscriber = subscriber;
+            parent.subscriptions.add(this);
         }
 
-        private boolean isCompleted() {
-            return subscriber == null;
+        @Override
+        public void request(long n) {
+            synchronized(ReactiveMulticastOutput.this) {
+                if (n <= 0){
+                    subscriber.onError(new IllegalArgumentException());
+                    return;
+                }
+                requested += n;
+                ValuePublisher currentParent = parent;
+                loop:
+                while (requested > 0) {
+                    if (currentParent == null) {
+                        break;
+                    }
+                    switch (currentParent.state) {
+                        case VALUE_NOT_READY:
+                            break loop;
+                        case VALUE_READY:
+                            subscriber.onNext(currentParent.value);
+                            requested--;
+                            currentParent = parent.next;
+                            break;
+                        case STREAM_COMPLETED:
+                            subscriber.onComplete();
+                            break loop;
+                        case STREAM_FAILED:
+                            subscriber.onError(currentParent.throwable);
+                            break loop;
+                    }
+                }
+                if (currentParent != parent) {
+                    parent.subscriptions.remove(this);
+                    parent = currentParent;
+                    if (parent != null && parent.subscriptions != null) {
+                        parent.subscriptions.add(this);
+                    }
+                }
+            }
         }
 
         /**
          * subscription closed by request of subscriber
          */
-        public synchronized void cancel() {
-            if (isCompleted()) {
-                return;
+        public void cancel() {
+            synchronized(ReactiveMulticastOutput.this) {
+                if (subscriber == null) {
+                    return;
+                }
+                if (parent != null && parent.subscriptions != null) {
+                    parent.subscriptions.remove(this);
+                }
+                subscriber = null;
+                parent = null;
             }
-            subscriber = null;
-            closed = true;
-            subscriptions.remove(this);
-            super.unRegister(); // and cannot be turned on
-        }
-
-        @Override
-        public void request(long n) {
-            super.release(n);
         }
     }
 

@@ -130,9 +130,4 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
     public synchronized boolean  isClosed() {
         return closeRequested && (current == null);
     }
-
-    public synchronized void remove(T item) {
-        queue.remove(item);
-    }
-
 }

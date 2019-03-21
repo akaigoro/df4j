@@ -23,6 +23,7 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
     public void postFailure(Throwable ex) {
         super.completeExceptionally(ex);
     }
+    
     @Override
     public CompletablePromise<R> asFuture() {
         return this;

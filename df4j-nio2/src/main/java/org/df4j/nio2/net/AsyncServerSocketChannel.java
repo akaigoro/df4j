@@ -9,7 +9,7 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.boundconnector.messagestream.MulticastStreamOutput;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.Logger;
@@ -43,7 +43,7 @@ public class AsyncServerSocketChannel
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
 
     /** place for demands */
-    private StreamOutput<AsynchronousSocketChannel> requests = new StreamOutput<>(this);
+    private MulticastStreamOutput<AsynchronousSocketChannel> requests = new MulticastStreamOutput<>(this);
 
     protected volatile AsynchronousServerSocketChannel assc;
 

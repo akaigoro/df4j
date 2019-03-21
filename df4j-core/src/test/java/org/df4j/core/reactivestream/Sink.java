@@ -14,16 +14,21 @@ class Sink extends Actor implements Subscriber<Long> {
     int maxNumber;
     ReactiveInput<Long> subscriber;
     int received = 0;
+    String name = "sink";
+
+    public Sink(AllOf reactiveStreamExample, int maxNumber, String name) {
+        this(reactiveStreamExample, maxNumber);
+        this.name = name;
+    }
 
     public Sink(AllOf reactiveStreamExample, int maxNumber) {
         reactiveStreamExample.registerAsyncResult(asyncResult());
+        subscriber = new ReactiveInput<Long>(this);
         if (maxNumber==0) {
-            subscriber = new ReactiveInput<Long>(this);
             subscriber.cancel();
-            ReactiveStreamMulticastTest.println("  sink: countDown");
+            ReactiveStreamMulticastTest.println("  "+ name +": completed 0");
             asyncResult().complete();
         } else {
-            subscriber = new ReactiveInput<Long>(this);
             this.maxNumber = maxNumber;
             start();
         }
@@ -53,14 +58,16 @@ class Sink extends Actor implements Subscriber<Long> {
     public void act(Long val) {
         //     ReactorTest.println("  Sink.current()="+val);
         if (val != null) {
-            ReactiveStreamMulticastTest.println("  sink: received "+val);
+            ReactiveStreamMulticastTest.println("  "+ name +": received "+val);
             received++;
             if (received < maxNumber) {
                 return;
             }
             subscriber.cancel();
+            ReactiveStreamMulticastTest.println("  "+ name +": maxNumber");
+        } else {
+            ReactiveStreamMulticastTest.println("  " + name + ": completed");
         }
-        ReactiveStreamMulticastTest.println("  sink: countDown");
         stop();
     }
 }

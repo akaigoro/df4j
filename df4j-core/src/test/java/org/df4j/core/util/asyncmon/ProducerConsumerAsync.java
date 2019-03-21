@@ -17,12 +17,12 @@ import java.util.concurrent.TimeoutException;
 
 public class ProducerConsumerAsync extends AllOf {
 
-    class BlockingQ<T> extends AsyncObject {
+    class NonBlockingQ<T> extends AsyncObject {
         private final int maxItems;
         private final ArrayDeque<T> buf;
         private int count = 0;
 
-        public BlockingQ(int maxItems) {
+        public NonBlockingQ(int maxItems) {
             this.maxItems = maxItems;
             buf = new ArrayDeque(maxItems);
             CompletablePromise<?> scalarPublisher = super.asyncResult();
@@ -65,18 +65,18 @@ public class ProducerConsumerAsync extends AllOf {
      */
     class IntProducer extends AsyncAction {
 
-        final BlockingQ<Integer> blockingQ;
+        final NonBlockingQ<Integer> nonBlockingQ;
         int k = 0;
 
-        IntProducer(BlockingQ<Integer> blockingQ) {
-            this.blockingQ = blockingQ;
+        IntProducer(NonBlockingQ<Integer> nonBlockingQ) {
+            this.nonBlockingQ = nonBlockingQ;
             registerAsyncResult(asyncResult());
         }
 
         @Override
         public void runAction() {
             if (k < 10) {
-                blockingQ.put(k, super::start);
+                nonBlockingQ.put(k, super::start);
                 k++;
             } else {
                 stop();
@@ -85,10 +85,10 @@ public class ProducerConsumerAsync extends AllOf {
     }
 
     class IntConsumer extends Actor1<Integer> {
-        final BlockingQ<Integer> blockingQ;
+        final NonBlockingQ<Integer> blockingQ;
         int k = 0;
 
-        IntConsumer(BlockingQ<Integer> blockingQ) {
+        IntConsumer(NonBlockingQ<Integer> blockingQ) {
             this.blockingQ = blockingQ;
             registerAsyncResult(asyncResult());
         }
@@ -112,7 +112,7 @@ public class ProducerConsumerAsync extends AllOf {
     @Test
     public void test() throws InterruptedException, ExecutionException, TimeoutException {
         AsyncProc.setThreadLocalExecutor(AsyncProc.currentThreadExec);
-        BlockingQ blockingQ = new BlockingQ(5);
+        NonBlockingQ blockingQ = new NonBlockingQ(5);
         IntProducer producer = new IntProducer(blockingQ);
         IntConsumer consumer = new IntConsumer(blockingQ);
         super.start(); // only after all components created

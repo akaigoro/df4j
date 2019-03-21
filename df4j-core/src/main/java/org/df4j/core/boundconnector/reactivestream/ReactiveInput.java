@@ -16,7 +16,8 @@ import java.util.Deque;
 public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
     protected Deque<T> queue;
     protected boolean closeRequested = false;
-    protected int capacity;
+    protected final int capacity;
+    protected int requested = 0;
 
     public ReactiveInput(AsyncProc actor, int capacity) {
         super(actor);
@@ -25,17 +26,22 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
     }
 
     public ReactiveInput(AsyncProc actor) {
-        this(actor, 8);
+        this(actor, 4);
     }
 
     protected int size() {
         return queue.size();
     }
 
+    protected void makeRequest(int delta) {
+        requested += delta;
+        this.subscription.request(delta);
+    }
+
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
-        subscription.request(capacity);
+        makeRequest(capacity);
     }
 
     @Override
@@ -56,7 +62,19 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
         if (queue.size() >= capacity) {
             throw new IllegalStateException("no space for next token");
         }
+        requested--;
         super.post(token);
+    }
+
+    @Override
+    public boolean moveNext() {
+        boolean res = super.moveNext();
+        int freeSpace=capacity - super.size();
+        int delta = freeSpace - requested;
+        if (delta > 0) {
+            subscription.request(delta);
+        }
+        return res;
     }
 
     @Override

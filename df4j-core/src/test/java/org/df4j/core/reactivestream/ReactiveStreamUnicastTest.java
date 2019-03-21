@@ -17,16 +17,16 @@ public class ReactiveStreamUnicastTest extends ReactiveStreamExampleBase {
 
     public void testSourceToSink(int sourceNumber, int sinkNumber) throws Exception {
         Source<Long> from = new UnicastSource(this, sourceNumber);
-        Sink to1 = new Sink(this, sinkNumber);
+        Sink to1 = new Sink(this, sinkNumber, "sink1");
         from.subscribe(to1);
-        Sink to2 = new Sink(this, sinkNumber);
+        Sink to2 = new Sink(this, sinkNumber, "sink2");
         from.subscribe(to2);
         super.start(); // after all components created
         from.start();
         asyncResult().get(1, TimeUnit.SECONDS);
         // publisher always sends all tokens, even if all subscribers unsubscribed.
-        int expectedNumber = Math.min(sourceNumber, 2*sinkNumber);
-        assertEquals(expectedNumber, to1.received + to2.received);
+        int expected = Math.min(sourceNumber, 2*sinkNumber);
+        int actual = to1.received + to2.received;
+        assertEquals(expected, actual);
     }
-
 }

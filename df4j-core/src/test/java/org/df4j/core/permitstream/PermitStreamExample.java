@@ -1,6 +1,6 @@
 package org.df4j.core.permitstream;
 
-import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.boundconnector.messagestream.MulticastStreamOutput;
 import org.df4j.core.boundconnector.permitstream.Semafor;
 import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.df4j.core.tasknode.messagestream.Actor;
@@ -43,7 +43,7 @@ public class PermitStreamExample {
 
     public static class Source extends Actor {
         Semafor backPressureActuator = new Semafor(this);
-        StreamOutput<Integer> pub = new StreamOutput<>(this);
+        MulticastStreamOutput<Integer> pub = new MulticastStreamOutput<>(this);
         int count;
 
         Source(int count) {

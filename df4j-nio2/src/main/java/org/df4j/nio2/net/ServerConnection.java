@@ -13,7 +13,7 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.boundconnector.messagestream.StreamInput;
-import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.boundconnector.messagestream.MulticastStreamOutput;
 import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.Logger;
@@ -21,7 +21,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.io.IOException;
-import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -125,7 +124,7 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
         protected final Logger LOG = Logger.getLogger(getClass().getName());
 
         public final StreamInput<ByteBuffer> input = new StreamInput<ByteBuffer>(this);
-        public final StreamOutput<ByteBuffer> output = new StreamOutput<>(this);
+        public final MulticastStreamOutput<ByteBuffer> output = new MulticastStreamOutput<>(this);
 
         {
             LOG.info(getClass().getName()+" "+name+" created");

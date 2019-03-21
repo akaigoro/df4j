@@ -26,7 +26,7 @@ public class ProducerConsumerSync {
             notifyAll();
         }
 
-        public T take() throws InterruptedException {
+        public synchronized T take() throws InterruptedException {
             while (count == 0) {
                 wait();
             }
@@ -83,6 +83,8 @@ public class ProducerConsumerSync {
         Consumer consumer = new Consumer(blockingQ);
         Thread pt = new Thread(producer);
         Thread ct = new Thread(consumer);
+        pt.start();
+        ct.start();
         pt.join();
         ct.join();
     }

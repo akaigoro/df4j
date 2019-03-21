@@ -1,5 +1,6 @@
 package org.df4j.core.messagestream;
 
+import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
@@ -14,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Demonstrates how coroutines can be emulated.
  */
-public class DiningPhilosophers {
+public class DiningPhilosophersCallbacks {
     static final int num = 5; // number of phylosofers
     static int N = 4; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];
@@ -27,7 +28,7 @@ public class DiningPhilosophers {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.post(new Fork(k));
+            forkPlace.post("Fork_" + k);
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -41,22 +42,7 @@ public class DiningPhilosophers {
         assertTrue(counter.await(2, TimeUnit.SECONDS));
     }
 
-    enum State {Thinking, Hungry1, Hungry2, Eating, Replete, Died}
-
-    static class Fork {
-        public final String id;
-
-        Fork(int id) {
-            this.id = "Fork_" + id;
-        }
-
-        @Override
-        public String toString() {
-            return id;
-        }
-    }
-
-    static class ForkPlace extends PickPoint<Fork> {
+    static class ForkPlace extends PickPoint<String> {
         int id;
         String label;
 
@@ -67,11 +53,11 @@ public class DiningPhilosophers {
     }
 
     class Philosopher extends AsyncAction {
-        State state;
+        Runnable nextAction;
         Random rand = new Random();
         int id;
         ForkPlace firstPlace, secondPlace;
-        Fork first, second;
+        String firstFork, secondFork;
         String indent;
         int rounds = 0;
 
@@ -93,74 +79,68 @@ public class DiningPhilosophers {
             System.out.println("Ph no. " + id + ": first place = " + firstPlace.id + "; second place = " + secondPlace.id + ".");
         }
 
+        protected long randDelay() {
+            return rand.nextLong() % 15 + 17;
+        }
+
+        public void setNextTimedAction(long delay, ScalarPermitSubscriber action) {
+            nextAction = () -> timer.subscribe(action, delay);
+            start();
+        }
+
+        public void setNextAction(Runnable action) {
+            nextAction = action;
+            start();
+        }
+
         public void startThinking() {
-            state = State.Thinking;
+            nextAction =  () -> timer.subscribe(this::endThinking, randDelay());
             start();
         }
 
         public void endThinking() {
-            state = State.Hungry1;
-            start();
-        }
-
-        public void post1(Fork fork) {
             println("Request first (" + firstPlace.id + ")");
-            first = fork;
-            state = State.Hungry2;
+            nextAction = () -> firstPlace.subscribe(this::getFork1);
             start();
         }
 
-        public void post2(Fork fork) {
+        public void getFork1(String fork) {
+            firstFork = fork;
             println("Request second (" + secondPlace.id + ")");
-            second = fork;
-            state = State.Eating;
-            start();
+            setNextAction(() -> secondPlace.subscribe(this::startEating));
+        }
+
+        public void startEating(String fork) {
+            secondFork = fork;
+            setNextTimedAction(randDelay(), this::endEating);
+        }
+
+        public void eating() {
+            println("Release first (" + firstPlace.id + ")");
+            firstPlace.post(firstFork);
+            firstFork = null;
+            println("Release second (" + secondPlace.id + ")");
+            secondPlace.post(secondFork);
+            secondFork = null;
+            rounds++;
+            if (rounds < N) {
+                println("Ph no. " + id + ": continue round " + rounds);
+                startThinking();
+            } else {
+                println("Ph no. " + id + ": died at round " + rounds);
+                counter.countDown();
+                nextAction = null;
+                stop();
+            }
         }
 
         public void endEating() {
-            state = State.Replete;
-            start();
+            setNextAction(this::eating);
         }
 
         @Override
         public void runAction() {
-            switch (state) {
-                case Thinking:
-                    timer.subscribe(this::endThinking, rand.nextLong() % 17 + 23);
-                    return;
-                case Hungry1:
-                    /**
-                     * collect forks one by one
-                     */
-                    firstPlace.subscribe(this::post1);
-                    return;
-                case Hungry2:
-                    secondPlace.subscribe(this::post2);
-                    return;
-                case Eating:
-                    timer.subscribe(this::endEating, rand.nextLong() % 11 + 13);
-                    return;
-                case Replete:
-                    println("Release first (" + firstPlace.id + ")");
-                    firstPlace.post(first);
-                    first = null;
-                    println("Release second (" + secondPlace.id + ")");
-                    secondPlace.post(second);
-                    second = null;
-                    rounds++;
-                    if (rounds < N) {
-                        println("Ph no. " + id + ": continue round " + rounds);
-                        startThinking();
-                    } else {
-                        println("Ph no. " + id + ": died at round " + rounds);
-                        state = State.Died;
-                        counter.countDown();
-                        stop();
-                    }
-                    return;
-                default:
-                    throw new IllegalStateException();
-            }
+            nextAction.run();
         }
 
         private void println(String s) {

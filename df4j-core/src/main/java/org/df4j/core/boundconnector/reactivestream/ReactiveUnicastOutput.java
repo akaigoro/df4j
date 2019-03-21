@@ -1,7 +1,7 @@
 package org.df4j.core.boundconnector.reactivestream;
 
 import org.df4j.core.boundconnector.Port;
-import org.df4j.core.boundconnector.messagestream.StreamOutput;
+import org.df4j.core.boundconnector.messagestream.UnicastStreamOutput;
 import org.df4j.core.tasknode.AsyncProc;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -17,8 +17,8 @@ import java.util.Queue;
  *
  * @param <T> the type of broadcasted values
  */
-public class ReactiveUnicastOutput<T> extends StreamOutput<T> implements Publisher<T> {
-    protected Queue<ReactiveSubscription> activeSubscriptions = new ArrayDeque<>();
+public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements Publisher<T> {
+    protected Queue<UnicastReactiveSubscription> activeSubscriptions = new ArrayDeque<>();
     boolean completed = false;
 
     public ReactiveUnicastOutput(AsyncProc actor) {
@@ -31,7 +31,7 @@ public class ReactiveUnicastOutput<T> extends StreamOutput<T> implements Publish
 
     @Override
     public synchronized void subscribe(Subscriber<? super T> subscriber) {
-        ReactiveSubscription newSubscription = new ReactiveSubscription(subscriber);
+        UnicastReactiveSubscription newSubscription = new UnicastReactiveSubscription(subscriber);
         subscriptions.add(newSubscription);
         super.subscribe(newSubscription);
     }
@@ -50,13 +50,14 @@ public class ReactiveUnicastOutput<T> extends StreamOutput<T> implements Publish
         }
         subscriptions.forEach((sub)->sub.complete());
         completed = true;
+        super.turnOff();
     }
 
     public void postFailure(Throwable throwable) {
         currentSubscription().postFailure(throwable);
     }
 
-    protected synchronized void activeSubscriptionsAdd(ReactiveSubscription subscription) {
+    protected synchronized void activeSubscriptionsAdd(UnicastReactiveSubscription subscription) {
         boolean wasEmpty = activeSubscriptions.isEmpty();
         activeSubscriptions.add(subscription);
         if (wasEmpty) {
@@ -71,7 +72,7 @@ public class ReactiveUnicastOutput<T> extends StreamOutput<T> implements Publish
         }
     }
 
-    public synchronized void cancel(SimpleSubscriptionImpl subscription) {
+    public synchronized void cancel(SimpleSubscription subscription) {
         super.cancel(subscription);
         activeSubscriptions.remove(subscription);
         if (activeSubscriptions.isEmpty()) {
@@ -79,11 +80,11 @@ public class ReactiveUnicastOutput<T> extends StreamOutput<T> implements Publish
         }
     }
 
-    class ReactiveSubscription extends SimpleSubscriptionImpl {
+    class UnicastReactiveSubscription extends SimpleSubscription {
         private volatile boolean completed = false;
         private long requested = 0;
 
-        public ReactiveSubscription(Subscriber<? super T> subscriber) {
+        public UnicastReactiveSubscription(Subscriber<? super T> subscriber) {
             super(subscriber);
         }
 

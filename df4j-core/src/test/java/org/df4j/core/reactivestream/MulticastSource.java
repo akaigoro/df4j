@@ -8,8 +8,8 @@ import org.reactivestreams.Subscriber;
 /**
  * emits totalNumber of Integers and closes the stream
  */
-class MulticastSource extends Source<Long> {
-    ReactiveMulticastOutput<Long> pub = new ReactiveMulticastOutput<>(this);
+public class MulticastSource extends Source<Long> {
+    protected ReactiveMulticastOutput<Long> pub = new ReactiveMulticastOutput<>(this);
     long val = 0;
 
     public MulticastSource() {
@@ -32,11 +32,11 @@ class MulticastSource extends Source<Long> {
     @Action
     public void act() {
         if (val == 0) {
-            pub.onComplete();
-            ReactiveStreamMulticastTest.println("MulticastSource.pub.post()");
+            ReactiveStreamMulticastTest.println("MulticastSource.pub.complete()");
+            pub.complete();
             stop();
         } else {
-            //          ReactorTest.println("pub.post("+val+")");
+            ReactiveStreamMulticastTest.println("MulticastSource.pub.post "+ val);
             pub.post(val);
             val--;
         }

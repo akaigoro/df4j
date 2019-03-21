@@ -6,11 +6,13 @@ import org.reactivestreams.Subscriber;
 
 import java.io.PrintStream;
 
+import static org.df4j.core.reactivestream.ReactiveStreamExampleBase.println;
+
 /**
  * emits totalNumber of Longs and closes the stream
  */
 public class UnicastSource extends Source<Long> {
-    ReactiveUnicastOutput<Long> pub = new ReactiveUnicastOutput<>(this);
+    public ReactiveUnicastOutput<Long> pub = new ReactiveUnicastOutput<>(this);
     long val = 0;
 
     public UnicastSource(AllOf parent, int totalNumber) {
@@ -41,11 +43,5 @@ public class UnicastSource extends Source<Long> {
             println("Source.pub.complete()");
             stop();
         }
-    }
-
-    static PrintStream out = System.out;
-    static void println(String s) {
-        out.println(s);
-        out.flush();
     }
 }

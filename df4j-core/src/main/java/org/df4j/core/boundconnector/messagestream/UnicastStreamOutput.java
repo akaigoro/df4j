@@ -1,45 +1,45 @@
 package org.df4j.core.boundconnector.messagestream;
 
 import org.df4j.core.boundconnector.Port;
+import org.df4j.core.tasknode.AsyncProc;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.df4j.core.tasknode.AsyncProc;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * serves multiple subscribers
+ * each input token it transferred to a single subscriber
  *
  * @param <T> type of tokens
  */
-public class StreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publisher<T> {
+public class UnicastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publisher<T> {
     protected AsyncProc actor;
-    protected Set<SimpleSubscriptionImpl> subscriptions = new HashSet<>();
+    protected Set<SimpleSubscription> subscriptions = new HashSet<>();
 
-    public StreamOutput(AsyncProc actor, boolean blocked) {
+    public UnicastStreamOutput(AsyncProc actor, boolean blocked) {
         actor.super(blocked);
         this.actor = actor;
     }
 
-    public StreamOutput(AsyncProc actor) {
+    public UnicastStreamOutput(AsyncProc actor) {
         this(actor, false);
     }
 
-    protected void subscribe(SimpleSubscriptionImpl newSubscription) {
+    protected void subscribe(SimpleSubscription newSubscription) {
         subscriptions.add(newSubscription);
         newSubscription.subscriber.onSubscribe(newSubscription);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
-        SimpleSubscriptionImpl newSubscription = new SimpleSubscriptionImpl(subscriber);
+        SimpleSubscription newSubscription = new SimpleSubscription(subscriber);
         subscribe(newSubscription);
     }
 
-    private void forEachSubscription(Consumer<? super SimpleSubscriptionImpl> operator) {
+    private void forEachSubscription(Consumer<? super SimpleSubscription> operator) {
         synchronized (this) {
             if (subscriptions == null) {
                 return; // completed already
@@ -61,18 +61,22 @@ public class StreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publishe
     }
 
     public synchronized void complete() {
-        forEachSubscription(SimpleSubscriptionImpl::complete);
+        forEachSubscription(SimpleSubscription::complete);
         subscriptions = null;
         super.turnOff();
     }
 
-    public synchronized void cancel(SimpleSubscriptionImpl subscription) {
+    public synchronized void cancel(SimpleSubscription subscription) {
         subscriptions.remove(subscription);
     }
 
-    protected class SimpleSubscriptionImpl implements Subscription, Port<T> {
+    protected class SimpleSubscription implements Subscription, Port<T> {
         protected Subscriber<? super T> subscriber;
-        public SimpleSubscriptionImpl(Subscriber<? super T> subscriber) {
+
+        public SimpleSubscription() {
+        }
+
+        public SimpleSubscription(Subscriber<? super T> subscriber) {
             this.subscriber = subscriber;
         }
 
@@ -107,7 +111,7 @@ public class StreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publishe
             if (subscriber == null) {
                 return;
             }
-            StreamOutput.this.cancel(this);
+            UnicastStreamOutput.this.cancel(this);
             subscriber = null;
         }
     }
