@@ -246,7 +246,7 @@ public abstract class AsyncProc implements Runnable {
      *     type of accepted tokens.
      */
     public class ConstInput<T> extends BaseLock
-            implements Subscriber<T>  // to connect to a ScalarPublisher
+            implements Subscriber<T>  // to connect to a Publisher
     {
         protected Subscription subscription;
         protected boolean cancelled = false;

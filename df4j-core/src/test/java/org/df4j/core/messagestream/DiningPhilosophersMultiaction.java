@@ -53,8 +53,8 @@ public class DiningPhilosophersMultiaction {
             label = "Forkplace_" + id;
         }
 
-        public Subscription subscribe(Port<String> subscriber) {
-            return super.subscribe(subscriber);
+        public void subscribe(Port<String> subscriber) {
+            super.subscribe(subscriber);
         }
     }
 

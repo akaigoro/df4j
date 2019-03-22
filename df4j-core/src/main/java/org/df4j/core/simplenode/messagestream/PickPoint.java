@@ -1,7 +1,7 @@
 package org.df4j.core.simplenode.messagestream;
 
 import org.df4j.core.boundconnector.Port;
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.Subscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
@@ -19,7 +19,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> implements ScalarPublisher<T>, Port<T> {
+public class PickPoint<T> implements Publisher<T>, Port<T> {
     protected ArrayDeque<T> resources = new ArrayDeque<>();
     protected boolean completed = false;
 	/** place for demands */
@@ -53,7 +53,8 @@ public class PickPoint<T> implements ScalarPublisher<T>, Port<T> {
         requests = null;
 	}
 
-    public Subscription subscribe(Subscriber subscriber) {
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber) {
         if (completed) {
             throw new IllegalStateException();
         }
@@ -62,7 +63,6 @@ public class PickPoint<T> implements ScalarPublisher<T>, Port<T> {
 		} else {
 			subscriber.onNext(resources.poll());
 		}
-		return null;
 	}
 
     public T take() throws InterruptedException {

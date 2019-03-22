@@ -1,8 +1,7 @@
 package org.df4j.core.tasknode.messagescalar;
 
 import org.df4j.core.boundconnector.Port;
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.reactivestreams.Subscriber;
+import org.reactivestreams.Publisher;
 import org.df4j.core.tasknode.AsyncAction;
 
 public class AllOf extends AsyncSupplier<Void> {
@@ -10,8 +9,8 @@ public class AllOf extends AsyncSupplier<Void> {
     public AllOf() {
     }
 
-    public AllOf(ScalarPublisher<?>... sources) {
-        for (ScalarPublisher source: sources) {
+    public AllOf(Publisher<?>... sources) {
+        for (Publisher source: sources) {
             registerAsyncResult(source);
         }
     }
@@ -21,7 +20,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of completion. successfull or unseccessfull
      */
-    public synchronized void registerAsyncResult(ScalarPublisher source) {
+    public synchronized void registerAsyncResult(Publisher source) {
         source.subscribe(new Enter());
     }
 
@@ -37,7 +36,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of errors
      */
-    public synchronized void registerAsyncDaemon(ScalarPublisher source) {
+    public synchronized void registerAsyncDaemon(Publisher source) {
         source.subscribe(new DaemonEnter());
     }
 

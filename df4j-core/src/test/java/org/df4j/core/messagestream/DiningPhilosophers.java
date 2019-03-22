@@ -67,8 +67,8 @@ public class DiningPhilosophers {
             label = "Forkplace_" + id;
         }
 
-        public Subscription subscribe(Port<Fork> subscriber) {
-            return super.subscribe(subscriber);
+        public void subscribe(Port<Fork> subscriber) {
+            super.subscribe(subscriber);
         }
     }
 

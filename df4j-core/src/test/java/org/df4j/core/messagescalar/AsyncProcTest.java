@@ -6,6 +6,7 @@ import org.df4j.core.tasknode.Action;
 import org.df4j.core.tasknode.messagescalar.*;
 import org.junit.Assert;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -116,7 +117,7 @@ public class AsyncProcTest {
         }
     }
 
-    private CompletablePromise<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
+    private CompletablePromise<double[]> calcRoots(double a, double b, Publisher<Double> d) {
         RootCalc rc = new RootCalc();
         rc.pa.onNext(a);
         rc.pb.onNext(b);
@@ -159,7 +160,7 @@ public class AsyncProcTest {
             start();
         }
 
-        protected Plus(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Plus(Publisher pa, Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -173,7 +174,7 @@ public class AsyncProcTest {
             start();
         }
 
-        protected Minus(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Minus(Publisher pa, Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -187,7 +188,7 @@ public class AsyncProcTest {
             start();
         }
 
-        protected Mult(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Mult(Publisher pa, Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -201,7 +202,7 @@ public class AsyncProcTest {
             start();
         }
 
-        protected Div(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Div(Publisher pa, Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);

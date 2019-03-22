@@ -1,8 +1,8 @@
 package org.df4j.core.tasknode.messagescalar;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
@@ -23,7 +23,7 @@ import java.util.function.Supplier;
  *
  * @param <R> type of the result
  */
-public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R>, Future<R> {
+public class AsyncSupplier<R> extends AsyncAction<R> implements Publisher<R>, Future<R> {
 
     public AsyncSupplier() {}
 
@@ -40,8 +40,8 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     }
 
     @Override
-    public Subscription subscribe(Subscriber<R> subscriber) {
-        return asyncResult().subscribe(subscriber);
+    public void subscribe(Subscriber<? super R> subscriber) {
+        asyncResult().subscribe(subscriber);
     }
 
     protected boolean completeResult(R res) {
