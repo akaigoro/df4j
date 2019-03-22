@@ -45,17 +45,12 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
     }
 
     @Override
-    public void onNext(T item) {
-        post(item);
-    }
-
-    @Override
     public void onError(Throwable t) {
-        postFailure(t);
+        this.onError(t);
     }
 
     @Override
-    public synchronized void post(T token) {
+    public synchronized void onNext(T token) {
         if (subscription == null) {
             throw new IllegalStateException("not yet subscribed");
         }
@@ -63,7 +58,7 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
             throw new IllegalStateException("no space for next token");
         }
         requested--;
-        super.post(token);
+        super.onNext(token);
     }
 
     @Override

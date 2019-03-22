@@ -137,8 +137,8 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
         @Action
         protected void start_IO (ByteBuffer buffer) {
             if (input.isClosed()) {
-                output.complete();
-                output.postFailure(new AsynchronousCloseException());
+                output.onComplete();
+                output.onError(new AsynchronousCloseException());
                 LOG.finest("conn "+ name+": input.isClosed()");
                 return;
             }
@@ -151,11 +151,11 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
         public void completed(Integer result, ByteBuffer buffer) {
             LOG.finest("conn "+ name+": read() completed "+result);
             if (result==-1) {
-                output.complete();
+                output.onComplete();
                 close();
             } else {
                 buffer.flip();
-                output.post(buffer);
+                output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
                 this.start();
@@ -168,7 +168,7 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
                 close();
             } else {
                 this.start(); // let subsequent requests fail
-                output.postFailure(exc);
+                output.onError(exc);
             }
         }
 

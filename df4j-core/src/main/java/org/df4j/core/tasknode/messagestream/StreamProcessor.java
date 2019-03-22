@@ -15,12 +15,12 @@ public abstract class StreamProcessor<M, R> extends Actor1<M> implements Publish
     @Override
     protected void runAction(M message) {
         R res = process(message);
-        output.post(res);
+        output.onNext(res);
     }
 
     @Override
     protected void completion() throws Exception {
-        output.complete();
+        output.onComplete();
     }
 
     protected abstract R process(M message);

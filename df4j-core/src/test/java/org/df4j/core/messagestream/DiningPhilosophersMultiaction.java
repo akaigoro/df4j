@@ -1,9 +1,12 @@
 package org.df4j.core.messagestream;
 
+import org.df4j.core.boundconnector.Port;
 import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -27,7 +30,7 @@ public class DiningPhilosophersMultiaction {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.post("Fork_" + k);
+            forkPlace.onNext("Fork_" + k);
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -48,6 +51,10 @@ public class DiningPhilosophersMultiaction {
         public ForkPlace(int k) {
             id = k;
             label = "Forkplace_" + id;
+        }
+
+        public Subscription subscribe(Port<String> subscriber) {
+            return super.subscribe(subscriber);
         }
     }
 
@@ -109,10 +116,10 @@ public class DiningPhilosophersMultiaction {
         public void endEating() {
             nextAction = () -> {
                 println("Release first (" + firstPlace.id + ")");
-                firstPlace.post(firstFork);
+                firstPlace.onNext(firstFork);
                 firstFork = null;
                 println("Release second (" + secondPlace.id + ")");
-                secondPlace.post(secondFork);
+                secondPlace.onNext(secondFork);
                 secondFork = null;
                 rounds++;
                 if (rounds < N) {

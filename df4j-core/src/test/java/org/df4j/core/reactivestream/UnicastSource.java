@@ -4,8 +4,6 @@ import org.df4j.core.boundconnector.reactivestream.ReactiveUnicastOutput;
 import org.df4j.core.tasknode.messagescalar.AllOf;
 import org.reactivestreams.Subscriber;
 
-import java.io.PrintStream;
-
 import static org.df4j.core.reactivestream.ReactiveStreamExampleBase.println;
 
 /**
@@ -36,10 +34,10 @@ public class UnicastSource extends Source<Long> {
     protected void runAction() {
         if (val > 0) {
             println("Source.pub.post("+val+")");
-            pub.post(val);
+            pub.onNext(val);
             val--;
         } else {
-            pub.complete();
+            pub.onComplete();
             println("Source.pub.complete()");
             stop();
         }

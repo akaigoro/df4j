@@ -33,11 +33,11 @@ public class MulticastSource extends Source<Long> {
     public void act() {
         if (val == 0) {
             ReactiveStreamMulticastTest.println("MulticastSource.pub.complete()");
-            pub.complete();
+            pub.onComplete();
             stop();
         } else {
             ReactiveStreamMulticastTest.println("MulticastSource.pub.post "+ val);
-            pub.post(val);
+            pub.onNext(val);
             val--;
         }
     }

@@ -1,9 +1,9 @@
 package org.df4j.core.tasknode.messagescalar;
 
+import org.df4j.core.boundconnector.Port;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.reactivestreams.Subscriber;
 import org.df4j.core.tasknode.AsyncAction;
-import org.df4j.core.tasknode.AsyncProc;
 
 public class AllOf extends AsyncSupplier<Void> {
 
@@ -50,26 +50,26 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResultExceptionally(ex);
     }
 
-    class Enter extends Lock implements ScalarSubscriber<Object> {
+    class Enter extends Lock implements Port<Object> {
 
         @Override
-        public void post(Object value) {
+        public void onNext(Object value) {
             super.turnOn();
         }
 
         @Override
-        public void postFailure(Throwable ex) {
+        public void onError(Throwable ex) {
             postGlobalFailure(ex);
         }
     }
 
-    class DaemonEnter implements ScalarSubscriber<Object> {
+    class DaemonEnter implements Port<Object> {
 
         @Override
-        public void post(Object value) { }
+        public void onNext(Object value) { }
 
         @Override
-        public void postFailure(Throwable ex) {
+        public void onError(Throwable ex) {
             postGlobalFailure(ex);
         }
     }

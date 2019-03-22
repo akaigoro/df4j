@@ -67,7 +67,7 @@ public class AsyncAction<R> extends AsyncProc {
     public synchronized void stop() {
         stopped = true;
         if (!result.isDone()) {
-            result.complete();
+            result.onComplete();
         }
     }
 

@@ -66,7 +66,7 @@ static class FailedUnicastSource extends UnicastSource {
 
     @Override
     protected void runAction() {
-        pub.postFailure(new RuntimeException());
+        pub.onError(new RuntimeException());
     }
     }
 }

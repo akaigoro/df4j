@@ -22,7 +22,7 @@ class EchoClient extends Actor1<ByteBuffer> {
     int count;
 
     @Override
-    public void postFailure(Throwable ex) {
+    public void onError(Throwable ex) {
         result.completeExceptionally(ex);
     }
 
@@ -32,7 +32,7 @@ class EchoClient extends Actor1<ByteBuffer> {
         clientConn.writer.output.subscribe(this);
         String message = this.message;
         ByteBuffer buf = Utils.toByteBuf(message);
-        this.post(buf);
+        this.onNext(buf);
     }
 
     public void runAction(ByteBuffer b) {
@@ -47,7 +47,7 @@ class EchoClient extends Actor1<ByteBuffer> {
             stop();
             return;
         }
-        this.post(b);
+        this.onNext(b);
     }
 
 }

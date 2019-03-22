@@ -1,10 +1,12 @@
 package org.df4j.core.messagestream;
 
+import org.df4j.core.boundconnector.Port;
 import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -28,7 +30,7 @@ public class DiningPhilosophersCallbacks {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.post("Fork_" + k);
+            forkPlace.onNext("Fork_" + k);
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -100,14 +102,19 @@ public class DiningPhilosophersCallbacks {
 
         public void endThinking() {
             println("Request first (" + firstPlace.id + ")");
-            nextAction = () -> firstPlace.subscribe(this::getFork1);
+            nextAction = () -> {
+                Port<String> getFork1 = this::getFork1;
+                firstPlace.subscribe(getFork1);
+            };
             start();
         }
 
         public void getFork1(String fork) {
             firstFork = fork;
             println("Request second (" + secondPlace.id + ")");
-            setNextAction(() -> secondPlace.subscribe(this::startEating));
+            setNextAction(() -> {
+                secondPlace.subscribe((Port<String>) this::startEating);
+            });
         }
 
         public void startEating(String fork) {
@@ -117,10 +124,10 @@ public class DiningPhilosophersCallbacks {
 
         public void eating() {
             println("Release first (" + firstPlace.id + ")");
-            firstPlace.post(firstFork);
+            firstPlace.onNext(firstFork);
             firstFork = null;
             println("Release second (" + secondPlace.id + ")");
-            secondPlace.post(secondFork);
+            secondPlace.onNext(secondFork);
             secondFork = null;
             rounds++;
             if (rounds < N) {

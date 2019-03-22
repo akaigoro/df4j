@@ -48,20 +48,20 @@ public class UnicastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, P
         subscriptions.forEach(operator);
     }
 
-    public void post(T item) {
+    public void onNext(T item) {
         if (item == null) {
             throw new NullPointerException();
         }
-        forEachSubscription((subscription) -> subscription.post(item));
+        forEachSubscription((subscription) -> subscription.onNext(item));
     }
 
     @Override
-    public void postFailure(Throwable throwable) {
-        forEachSubscription((subscription) -> subscription.postFailure(throwable));
+    public void onError(Throwable throwable) {
+        forEachSubscription((subscription) -> subscription.onError(throwable));
     }
 
-    public synchronized void complete() {
-        forEachSubscription(SimpleSubscription::complete);
+    public synchronized void onComplete() {
+        forEachSubscription(SimpleSubscription::onComplete);
         subscriptions = null;
         super.turnOff();
     }
@@ -80,11 +80,11 @@ public class UnicastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, P
             this.subscriber = subscriber;
         }
 
-        public synchronized void post(T message) {
+        public synchronized void onNext(T message) {
             subscriber.onNext(message);
         }
 
-        public synchronized void postFailure(Throwable throwable) {
+        public synchronized void onError(Throwable throwable) {
             subscriber.onError(throwable);
             cancel();
         }
@@ -93,7 +93,7 @@ public class UnicastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, P
          * subscription closed by request of publisher
          * unregistering not needed
          */
-        public synchronized void complete() {
+        public synchronized void onComplete() {
             if (subscriber == null) {
                 return;
             }

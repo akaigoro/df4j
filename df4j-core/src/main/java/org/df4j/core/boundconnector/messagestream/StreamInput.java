@@ -1,5 +1,6 @@
 package org.df4j.core.boundconnector.messagestream;
 
+import org.df4j.core.boundconnector.Port;
 import org.df4j.core.boundconnector.messagescalar.ScalarInput;
 import org.df4j.core.tasknode.AsyncProc;
 
@@ -11,7 +12,7 @@ import java.util.Queue;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T> {
+public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
     protected Queue<T> queue;
     protected boolean closeRequested = false;
 
@@ -35,7 +36,7 @@ public class StreamInput<T> extends ScalarInput<T> implements StreamSubscriber<T
     }
 
     @Override
-    public synchronized void post(T token) {
+    public synchronized void onNext(T token) {
         if (token == null) {
             throw new NullPointerException();
         }

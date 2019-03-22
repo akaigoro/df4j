@@ -43,7 +43,7 @@ public class ReactiveStreamMulticastPublisherTest extends PublisherVerification<
 
         @Override
         protected void runAction() {
-            pub.postFailure(new RuntimeException());
+            pub.onError(new RuntimeException());
         }
     }
 

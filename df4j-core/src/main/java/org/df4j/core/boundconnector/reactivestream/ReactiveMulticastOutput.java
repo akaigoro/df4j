@@ -34,33 +34,33 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
     }
 
     @Override
-    public synchronized void post(T value) {
+    public synchronized void onNext(T value) {
         if (isCompleted()) {
             throw new IllegalStateException("completed already");
         }
         if (value == null) {
             throw new IllegalArgumentException();
         }
-        currentValuePublisher.post(value);
+        currentValuePublisher.onNext(value);
     }
 
     @Override
-    public synchronized void postFailure(Throwable throwable) {
+    public synchronized void onError(Throwable throwable) {
         if (isCompleted()) {
             throw new IllegalStateException("completed already");
         }
         super.turnOff();
         ValuePublisher currentSubscriptionsLoc = currentValuePublisher;
-        currentSubscriptionsLoc.postFailure(throwable);
+        currentSubscriptionsLoc.onError(throwable);
     }
 
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         if (isCompleted()) {
             throw new IllegalStateException("completed already");
         }
         super.turnOff();
         ValuePublisher currentSubscriptionsLoc = currentValuePublisher;
-        currentSubscriptionsLoc.complete();
+        currentSubscriptionsLoc.onComplete();
     }
 
     enum ValueState {
@@ -82,7 +82,7 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
             subscriber.onSubscribe(newSubscription);
         }
 
-        public void post(T value) {
+        public void onNext(T value) {
             this.value = value;
             this.state = ValueState.VALUE_READY;
             ReactiveMulticastOutput.this.currentValuePublisher = this.next = new ValuePublisher();
@@ -99,7 +99,7 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
             }
         }
 
-        public void postFailure(Throwable throwable) {
+        public void onError(Throwable throwable) {
             if (throwable == null) {
                 throw new IllegalArgumentException();
             }
@@ -114,7 +114,7 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
             subscriptions = null;
         }
 
-        public void complete() {
+        public void onComplete() {
             this.state = ValueState.STREAM_COMPLETED;
             Iterator<MulticastReactiveSubscription> it = subscriptions.iterator();
             while (it.hasNext()) {

@@ -27,7 +27,7 @@ class Sink extends Actor implements Subscriber<Long> {
         if (maxNumber==0) {
             subscriber.cancel();
             ReactiveStreamMulticastTest.println("  "+ name +": completed 0");
-            asyncResult().complete();
+            asyncResult().onComplete();
         } else {
             this.maxNumber = maxNumber;
             start();
@@ -41,12 +41,12 @@ class Sink extends Actor implements Subscriber<Long> {
 
     @Override
     public void onNext(Long message) {
-        subscriber.post(message);
+        subscriber.onNext(message);
     }
 
     @Override
     public void onError(Throwable t) {
-        subscriber.postFailure(t);
+        subscriber.onError(t);
     }
 
     @Override

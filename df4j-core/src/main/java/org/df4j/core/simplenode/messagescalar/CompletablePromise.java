@@ -1,8 +1,9 @@
 package org.df4j.core.simplenode.messagescalar;
 
+import org.df4j.core.boundconnector.Port;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.df4j.core.boundconnector.messagescalar.ScalarPublisher;
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -12,15 +13,15 @@ import java.util.function.BiConsumer;
  * @param <R> type of input parameter
  * @param <R> type of result
  */
-public class CompletablePromise<R> extends CompletableFuture<R> implements ScalarSubscriber<R>, ScalarPublisher<R> {
+public class CompletablePromise<R> extends CompletableFuture<R> implements Port<R>, ScalarPublisher<R> {
 
     @Override
-    public void post(R message) {
+    public void onNext(R message) {
         super.complete(message);
     }
 
     @Override
-    public void postFailure(Throwable ex) {
+    public void onError(Throwable ex) {
         super.completeExceptionally(ex);
     }
     
@@ -30,7 +31,7 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
     }
 
     @Override
-    public Subscription subscribe(ScalarSubscriber<R> subscriber) {
+    public Subscription subscribe(Subscriber<R> subscriber) {
         ScalarSubscription subscription = new ScalarSubscription(subscriber);
         return subscription;
     }
@@ -49,16 +50,16 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
         return result;
     }
 
-    public void complete() {
+    public void onComplete() {
         super.complete(null);
     }
 
     class ScalarSubscription implements Subscription, BiConsumer<R, Throwable> {
 
-        private final ScalarSubscriber<? super R> subscriber;
+        private final Subscriber<? super R> subscriber;
         private final CompletableFuture<R> cp;
 
-        public <S extends ScalarSubscriber<? super R>> ScalarSubscription(S subscriber) {
+        public <S extends Subscriber<? super R>> ScalarSubscription(S subscriber) {
             this.subscriber = subscriber;
             cp = CompletablePromise.this.whenComplete(this);
             subscriber.onSubscribe(this);
@@ -67,9 +68,9 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Scala
         @Override
         public void accept(R r, Throwable throwable) {
             if (throwable != null) {
-                subscriber.postFailure(throwable);
+                subscriber.onError(throwable);
             } else {
-                subscriber.post(r);
+                subscriber.onNext(r);
             }
         }
 

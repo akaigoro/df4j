@@ -52,10 +52,10 @@ public class PermitStreamExample {
 
         protected void runAction() {
             if (count > 0) {
-                pub.post(count);
+                pub.onNext(count);
                 count--;
             } else {
-                pub.complete();
+                pub.onComplete();
             }
         }
     }
@@ -88,7 +88,7 @@ public class PermitStreamExample {
 
         @Override
         protected void completion() throws Exception {
-            asyncResult().complete();
+            asyncResult().onComplete();
         }
     }
 }

@@ -10,7 +10,7 @@ public class AsyncObject {
     private MonitorImpl monitor = new MonitorImpl();
 
     public void exec(CriticalSection task) {
-        monitor.post(task);
+        monitor.onNext(task);
     }
 
     protected CompletablePromise<?> asyncResult() {
@@ -32,7 +32,7 @@ public class AsyncObject {
         public void doNotify() {
             CriticalSection task = waiting.poll();
             if (task != null) {
-                super.post(task);
+                super.onNext(task);
             }
         }
 
@@ -42,7 +42,7 @@ public class AsyncObject {
                 if (task == null) {
                     return;
                 }
-                super.post(task);
+                super.onNext(task);
             }
         }
 

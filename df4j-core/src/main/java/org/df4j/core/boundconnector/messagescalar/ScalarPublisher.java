@@ -1,9 +1,9 @@
 package org.df4j.core.boundconnector.messagescalar;
 
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -25,7 +25,7 @@ public interface ScalarPublisher<T> {
      * @return the subscriber argument
      */
 //    <S extends ScalarSubscriber<? super T>> S subscribe(S subscriber);
-    Subscription subscribe(ScalarSubscriber<T> subscriber);
+    Subscription subscribe(Subscriber<T> subscriber);
 
     /**
      * to access the published result in synchronous way

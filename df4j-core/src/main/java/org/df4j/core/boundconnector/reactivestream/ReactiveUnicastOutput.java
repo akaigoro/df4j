@@ -40,21 +40,21 @@ public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements 
         return completed;
     }
 
-    public synchronized void post(T item) {
-        currentSubscription().post(item);
+    public synchronized void onNext(T item) {
+        currentSubscription().onNext(item);
     }
 
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         if (completed) {
             return; // completed already
         }
-        subscriptions.forEach((sub)->sub.complete());
+        subscriptions.forEach((sub)->sub.onComplete());
         completed = true;
         super.turnOff();
     }
 
-    public void postFailure(Throwable throwable) {
-        currentSubscription().postFailure(throwable);
+    public void onError(Throwable throwable) {
+        currentSubscription().onError(throwable);
     }
 
     protected synchronized void activeSubscriptionsAdd(UnicastReactiveSubscription subscription) {
@@ -88,7 +88,7 @@ public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements 
             super(subscriber);
         }
 
-        public synchronized void post(T message) {
+        public synchronized void onNext(T message) {
             if (completed) {
                 throw new IllegalStateException("post to completed connector");
             }
@@ -99,14 +99,14 @@ public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements 
             if (requested == 0) {
                 activeSubscriptionsRemove();
             }
-            super.post(message);
+            super.onNext(message);
         }
 
-        public synchronized void postFailure(Throwable throwable) {
+        public synchronized void onError(Throwable throwable) {
             if (subscriber == null) {
                 throw new IllegalStateException("onError to completed connector");
             }
-            super.postFailure(throwable);
+            super.onError(throwable);
         }
 
         @Override

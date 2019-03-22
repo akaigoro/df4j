@@ -1,6 +1,6 @@
 package org.df4j.core.util.asyncmon;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarSubscriber;
+import org.reactivestreams.Subscriber;
 import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.AsyncAction;
@@ -43,7 +43,7 @@ public class ProducerConsumerAsync extends AllOf {
             );
         }
 
-        public CriticalSection take(ScalarSubscriber<T> connector) {
+        public CriticalSection take(Subscriber<T> connector) {
             CriticalSection criticalSection = (AsyncMonitor monitor) -> {
                 if (count == 0) {
                     monitor.doWait();
@@ -52,7 +52,7 @@ public class ProducerConsumerAsync extends AllOf {
                 T item = buf.poll();
                 count--;
                 monitor.doNotifyAll();
-                connector.post(item);
+                connector.onNext(item);
             };
             super.exec(criticalSection);
             return criticalSection;

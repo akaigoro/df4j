@@ -27,8 +27,8 @@ public class HelloWorld1 {
     public void test() {
         Collector coll = new Collector();
         coll.start();
-        coll.post("Hello");
-        coll.post("World");
+        coll.onNext("Hello");
+        coll.onNext("World");
         coll.onComplete();
     }
 

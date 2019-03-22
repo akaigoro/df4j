@@ -1,9 +1,11 @@
 package org.df4j.core.messagestream;
 
+import org.df4j.core.boundconnector.Port;
 import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
+import org.reactivestreams.Subscription;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -27,7 +29,7 @@ public class DiningPhilosophers {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.post(new Fork(k));
+            forkPlace.onNext(new Fork(k));
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -63,6 +65,10 @@ public class DiningPhilosophers {
         public ForkPlace(int k) {
             id = k;
             label = "Forkplace_" + id;
+        }
+
+        public Subscription subscribe(Port<Fork> subscriber) {
+            return super.subscribe(subscriber);
         }
     }
 
@@ -142,10 +148,10 @@ public class DiningPhilosophers {
                     return;
                 case Replete:
                     println("Release first (" + firstPlace.id + ")");
-                    firstPlace.post(first);
+                    firstPlace.onNext(first);
                     first = null;
                     println("Release second (" + secondPlace.id + ")");
-                    secondPlace.post(second);
+                    secondPlace.onNext(second);
                     second = null;
                     rounds++;
                     if (rounds < N) {

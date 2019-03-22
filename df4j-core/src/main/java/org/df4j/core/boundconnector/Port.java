@@ -10,6 +10,9 @@
 
 package org.df4j.core.boundconnector;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -18,41 +21,28 @@ import java.util.function.BiConsumer;
  *
  * @param <T> the type of the message
  */
-public interface Port<T> extends BiConsumer<T, Throwable> {
+public interface Port<T> extends Subscriber<T>, BiConsumer<T, Throwable> {
+
+    default void onSubscribe(Subscription s) {}
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
      *
      * @param message the completion value
      */
-    void post(T message);
-
-    /**
-     * successful end of stream
-     */
-    default void complete() {}
+    void onNext(T message);
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
      *
      * @param ex the completion exception
      */
-    default void postFailure(Throwable ex) {}
+    default void onError(Throwable ex) {}
 
-    static <T> Port<T> fromCompletable(CompletableFuture<T> completable) {
-        return new Port<T>() {
-
-            @Override
-            public void post(T message) {
-                completable.complete(message);
-            }
-
-            @Override
-            public void postFailure(Throwable ex) {
-                completable.completeExceptionally(ex);
-            }
-        };
-    }
+    /**
+     * successful end of stream
+     */
+    default void onComplete() {}
 
     /**
      * to pass data from  {@link CompletableFuture} to ScalarSubscriber using     *
@@ -65,9 +55,24 @@ public interface Port<T> extends BiConsumer<T, Throwable> {
     @Override
     default void accept(T r, Throwable throwable) {
         if (throwable != null) {
-            postFailure(throwable);
+            onError(throwable);
         } else {
-            post(r);
+            onNext(r);
         }
+    }
+
+    static <T> Port<T> fromCompletable(CompletableFuture<T> completable) {
+        return new Port<T>() {
+
+            @Override
+            public void onNext(T message) {
+                completable.complete(message);
+            }
+
+            @Override
+            public void onError(Throwable ex) {
+                completable.completeExceptionally(ex);
+            }
+        };
     }
 }
