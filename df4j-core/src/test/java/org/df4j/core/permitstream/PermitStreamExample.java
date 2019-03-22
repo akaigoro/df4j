@@ -1,11 +1,11 @@
 package org.df4j.core.permitstream;
 
-import org.df4j.core.boundconnector.messagestream.MulticastStreamOutput;
-import org.df4j.core.boundconnector.permitstream.Semafor;
-import org.df4j.core.tasknode.messagescalar.AllOf;
-import org.df4j.core.tasknode.messagestream.Actor;
-import org.df4j.core.tasknode.messagestream.Actor1;
-import org.df4j.core.tasknode.messagestream.StreamProcessor;
+import org.df4j.core.connector.MulticastStreamOutput;
+import org.df4j.core.connector.Semafor;
+import org.df4j.core.node.ext.AllOf;
+import org.df4j.core.node.Actor;
+import org.df4j.core.node.ext.Actor1;
+import org.df4j.core.node.ext.StreamProcessor;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;

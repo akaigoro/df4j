@@ -1,9 +1,8 @@
 package org.df4j.core.messagestream;
 
-import org.df4j.core.boundconnector.Port;
-import org.df4j.core.boundconnector.permitstream.PermitSubscriber;
-import org.df4j.core.simplenode.messagestream.PickPoint;
-import org.df4j.core.tasknode.AsyncAction;
+import org.df4j.core.Port;
+import org.df4j.core.connectornode.PickPoint;
+import org.df4j.core.node.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 

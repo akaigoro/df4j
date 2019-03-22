@@ -10,7 +10,7 @@
  *              body
  *          }
  *    to
- *          public void put(same arguments, {@link org.df4j.core.boundconnector.permitstream.PermitSubscriber} connector) {
+ *          public void put(same arguments, {@link org.df4j.core.PermitSubscriber} connector) {
  *             super.exec(({@link org.df4j.core.util.asyncmon.AsyncMonitor} monitor) -&gt; {
  *                 body
  *             );
@@ -22,7 +22,7 @@
  *              return value
  *          }
  *    to
- *          public T get(same arguments, {@link org.df4j.core.boundconnector.permitstream.PermitSubscriber}&lt;T&gt; connector) {
+ *          public T get(same arguments, {@link org.df4j.core.PermitSubscriber}&lt;T&gt; connector) {
  *             super.exec(({@link org.df4j.core.util.asyncmon.AsyncMonitor} monitor) -&gt; {
  *                 body
  *                 connector.post(value);

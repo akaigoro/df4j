@@ -9,14 +9,12 @@
  */
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.tasknode.AsyncProc;
-import org.df4j.core.tasknode.messagescalar.AllOf;
-import org.junit.Before;
+import org.df4j.core.node.AsyncProc;
+import org.df4j.core.node.ext.AllOf;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.PrintStream;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 

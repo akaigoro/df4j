@@ -1,11 +1,11 @@
 package org.df4j.core.tutorial.basic;
 
-import org.df4j.core.boundconnector.messagescalar.ScalarInput;
-import org.df4j.core.simplenode.messagescalar.CompletablePromise;
-import org.df4j.core.tasknode.Action;
-import org.df4j.core.tasknode.AsyncAction;
-import org.df4j.core.tasknode.messagescalar.AsyncBiFunction;
-import org.df4j.core.tasknode.messagescalar.AsyncFunction;
+import org.df4j.core.connector.ScalarInput;
+import org.df4j.core.connectornode.CompletablePromise;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncAction;
+import org.df4j.core.node.ext.AsyncBiFunction;
+import org.df4j.core.node.ext.AsyncFunction;
 import org.junit.Assert;
 import org.junit.Test;
 

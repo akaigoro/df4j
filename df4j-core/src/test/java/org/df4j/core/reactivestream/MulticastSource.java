@@ -1,8 +1,8 @@
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.boundconnector.reactivestream.ReactiveMulticastOutput;
-import org.df4j.core.tasknode.Action;
-import org.df4j.core.tasknode.messagescalar.AllOf;
+import org.df4j.core.connector.ReactiveMulticastOutput;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.ext.AllOf;
 import org.reactivestreams.Subscriber;
 
 /**

@@ -1,8 +1,8 @@
 package org.df4j.core.tutorial;
 
-import org.df4j.core.boundconnector.messagestream.StreamInput;
-import org.df4j.core.tasknode.Action;
-import org.df4j.core.tasknode.messagestream.Actor;
+import org.df4j.core.connector.StreamInput;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.Actor;
 import org.junit.Test;
 
 public class HelloWorld {

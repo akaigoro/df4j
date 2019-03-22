@@ -1,15 +1,10 @@
 package org.df4j.core.messagestream;
 
-import org.df4j.core.simplenode.messagestream.PickPoint;
-import org.df4j.core.tasknode.messagestream.Actor;
 import org.junit.Test;
 
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
