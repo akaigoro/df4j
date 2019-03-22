@@ -9,9 +9,9 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.boundconnector.messagestream.MulticastStreamOutput;
-import org.df4j.core.tasknode.Action;
-import org.df4j.core.tasknode.AsyncAction;
+import org.df4j.core.connector.MulticastStreamOutput;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncAction;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;

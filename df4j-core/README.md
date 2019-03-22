@@ -9,15 +9,25 @@ it does not use procedure stack and so does not wastes core memory.
 As a result, we can manage millions of asynchronous procedures,
 while 10000 threads is already a heavy load. This can be important, for example, when constructing a web-server.
 
-To build an asynchronous procedure, first we need is to move parameters out of procedure stack to the heap.
-Second, we need to build an object which calls requred procedure as soon as all the arguments are received.
+An asynchronous procedure differs from ordinary synchronous procedure in the following way:
+ - it resides in the heap and not on a thread's stack
+ - its input and output parameters are not simple variables but separate objects in the heap
+ 
+Parameter objects are tightly connected to the asynchronous procedure object. Parameters cooperate to detect the moment when all the parameters are ready, and then submit the procedure to athread pool.
 
-That's it.
+Input parameters are connected to output parameters of other procedures. As a result, the whole program is represented as a (dataflow) graph.
+Each parameter implements some connecting protocol. Connected parameters must belong to the same protocol. A protocol defines:
 
-Create an object which knows which ordinary procedure to call, and bound asynchronous paramerters to it.
+- what kind of tokens are transferred through the connection: pure events or events with values. In terms of Petri Nets, these are black and colored tokens, respectively. 
+- how many tokens can be transferred through the liftime of the connection: one or many
+- is backpressure supported
 
-Sounds simple, but in practice most async libraries tries to oversymplify and do not allow to create parameters separately from
-the async procedure. The result is overcomplicated API, which simultanousely is limited in expressiveness.
+The dataflow graph can have cycles. The connections through the cycles must allow transfer of multiple tokens.
+
+For simplicity, only two kinds of connection interfaces are used: for black and for colored tokens. Implementations which allow single tokens and that which allow streams of tokens, use the same interfaces. Intrefaces for colored tokens are borrowed from 
+the Project Reactor (https://projectreactor.io/).   
+
+In practice most async libraries tries to oversymplify and do not allow to create parameters separately from the body of async procedure. The result is overcomplicated API, which simultanousely is limited in expressiveness.
 
 For example, let's create an async computation to compute value of x^2+y^2, each arithmetic operation computed in its own asynchronous procedure call.
 
@@ -25,34 +35,34 @@ First, we need to create 2 classes, one to compute a square of a value, and seco
 
 
 ```java
-public class Square extends AsyncProc {
-    final CompletablePromise<Double> result = new CompletablePromise<>();
-    final ScalarInput<Double> param = new ScalarInput<>(this);
 
-    @Action
-    public void compute(Double arg) {
-      double res = arg*arg;
-      result.complete(res);
+    public static class Square extends AsyncProc {
+        final CompletablePromise<Integer> result = new CompletablePromise<>();
+        final ScalarInput<Integer> param = new ScalarInput<>(this);
+
+        public void run() {
+            Integer arg = param.current();
+            int res = arg*arg;
+            result.complete(res);
+        }
     }
-}
 ```
-Here we see a node with one output connector `result` and one input connector `param` bound to the node.
-Note the bound connectors have additional parameter - a reference to the parent node.
-
-The magic behind the annotation `@Action` calls the annotated method with an argument, extracted from all the bound parameters.
+Here we see a node with one output parameter `result` and one input parameter `param` bound to the node.
+Note the bound parameter constructor has additional parameter - a reference to the parent node.
 
 ```java
-public class Sum extends AsyncProc {
-    final CompletablePromise<Double> result = new CompletablePromise<>();
-    final ScalarInput<Double> paramX = new ScalarInput<>(this);
-    final ScalarInput<Double> paramY = new ScalarInput<>(this);
+    public static class Sum extends AsyncProc {
+        final CompletablePromise<Integer> result = new CompletablePromise<>();
+        final ScalarInput<Integer> paramX = new ScalarInput<>(this);
+        final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 
-    @Action
-    public void compute(Double argX, Double argY) {
-      double res = argX + argY;
-      result.complete(res);
+        public void run() {
+            Integer argX = paramX.current();
+            Integer argY = paramY.current();
+            int res = argX + argY;
+            result.complete(res);
+        }
     }
-}
 ```
 Here we see an async proc with 2 parameters and one result.
 
@@ -62,7 +72,7 @@ Now we can create the dataflow graph, pass arguments to it and get the result:
 public class SumSquareTest {
 
     @Test
-    public void test() throws ExecutionException, InterruptedException {
+    public void testAP() throws ExecutionException, InterruptedException {
         // create 3 nodes
         Square sqX = new Square();
         Square sqY = new Square();
@@ -70,13 +80,9 @@ public class SumSquareTest {
         // make 2 connections
         sqX.result.subscribe(sum.paramX);
         sqY.result.subscribe(sum.paramY);
-        // start all the nodes
-        sqX.start();
-        sqY.start();
-        sum.start();
         // provide input information:
-        sqX.param.post(3);
-        sqY.param.post(4);
+        sqX.param.onNext(3);
+        sqY.param.onNext(4);
         // get the result
         int res = sum.result.get();
         Assert.assertEquals(25, res);
@@ -162,7 +168,7 @@ In short, actors are repeatable asynchronous procedures.
 After processing first set of arguments, they purge them out of parameters and wait until next set of arguments is ready.
 So the main difference is parameters which can keep a sequence of values. The node classes differ only that after calling the action procedure,
 the method `AsyncTask.start()` is called again. 
-The node class even can be [AsyncProc](src/main/java/org/df4j/core/tasknode/AsyncProc.java) itself, with method `AsyncProc::start()`
+The node class even can be [AsyncProc](src/main/java/org/df4j/core/node/AsyncProc.java) itself, with method `AsyncProc::start()`
 called by a user-defined method. 
 An interesting case is calling `start()` in an asynchronous callback like in
  [AsyncServerSocketChannel](../df4j-nio2/src/main/java/org/df4j/nio2/net/AsyncServerSocketChannel.java).   
@@ -175,12 +181,12 @@ which consists of 2 steps:
 - a value is passed and the connection is closed: `subscriber.post(value);`.
 
 Connectors for this interface are located in the  package [connector/messagescalar](src/main/java/org/df4j/core/boundconnector/messagescalar). 
-Nodes that support only scalar connectors are located in the  package [node/messagescalar](src/main/java/org/df4j/core/tasknode/messagescalar). 
+Nodes that support only scalar connectors are located in the  package [node/messagescalar](src/main/java/org/df4j/core/node/messagescalar). 
 The subsequent subscriptions of the same or other subscribers can receive the same or different values. 
 In the above example, all subscribers receive the same value, and this is natural, 
 because the value is the result of concrete calculation. 
 But publishers which provide different values for different connections can easily be implemented. 
-One of such publishers is  [PickPoint](src/main/java/org/df4j/core/tasknode/messagestream/PickPoint.java). 
+One of such publishers is  [PickPoint](src/main/java/org/df4j/core/node/messagestream/PickPoint.java). 
 It receives stream of messages and delivers each message to single subscriber.
 It is asynchronous analogue of `java.util.concurrent.BlockingQueue`.
 It even implements the `BlockingQueue` interface, and so it can connect both threads and asynchronous procedures in all combinations.
@@ -193,7 +199,7 @@ On the input side it uses **message stream** protocol, which consists of 3 steps
 
 Connectors for this interface are located in the  package [connector/messagestream](src/main/java/org/df4j/core/boundconnector/messagestream). 
 Nodes that support both scalar and stream connectors are located in the 
-package [node/messagestream](src/main/java/org/df4j/core/tasknode/messagestream). 
+package [node/messagestream](src/main/java/org/df4j/core/node/messagestream). 
 
 The protocol **permit stream** is the same as **message stream** protocol,
  but transmited tokens does not carry any value and are indistinguishable.

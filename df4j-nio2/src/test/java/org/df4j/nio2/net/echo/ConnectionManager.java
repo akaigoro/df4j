@@ -1,8 +1,8 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.boundconnector.permitstream.Semafor;
-import org.df4j.core.tasknode.Action;
-import org.df4j.core.tasknode.AsyncAction;
+import org.df4j.core.connector.Semafor;
+import org.df4j.core.node.Action;
+import org.df4j.core.node.AsyncAction;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.ServerConnection;
 

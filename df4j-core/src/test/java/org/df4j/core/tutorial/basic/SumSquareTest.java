@@ -2,8 +2,7 @@ package org.df4j.core.tutorial.basic;
 
 import org.df4j.core.connector.ScalarInput;
 import org.df4j.core.connectornode.CompletablePromise;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.AsyncAction;
+import org.df4j.core.node.AsyncProc;
 import org.df4j.core.node.ext.AsyncBiFunction;
 import org.df4j.core.node.ext.AsyncFunction;
 import org.junit.Assert;
@@ -15,24 +14,26 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class SumSquareTest {
-    public static class Square extends AsyncAction {
+
+    public static class Square extends AsyncProc {
         final CompletablePromise<Integer> result = new CompletablePromise<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
-        @Action
-        public void compute(Integer arg) {
+        public void run() {
+            Integer arg = param.current();
             int res = arg*arg;
             result.complete(res);
         }
     }
 
-    public static class Sum extends AsyncAction {
+    public static class Sum extends AsyncProc {
         final CompletablePromise<Integer> result = new CompletablePromise<>();
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 
-        @Action
-        public void compute(Integer argX, Integer argY) {
+        public void run() {
+            Integer argX = paramX.current();
+            Integer argY = paramY.current();
             int res = argX + argY;
             result.complete(res);
         }
@@ -47,10 +48,6 @@ public class SumSquareTest {
         // make 2 connections
         sqX.result.subscribe(sum.paramX);
         sqY.result.subscribe(sum.paramY);
-        // start all the nodes
-        sqX.start();
-        sqY.start();
-        sum.start();
         // provide input information:
         sqX.param.onNext(3);
         sqY.param.onNext(4);

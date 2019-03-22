@@ -1,6 +1,6 @@
 package org.df4j.core.util;
 
-import org.df4j.core.boundconnector.permitstream.PermitSubscriber;
+import org.df4j.core.PermitSubscriber;
 
 import java.util.Timer;
 import java.util.TimerTask;

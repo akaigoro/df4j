@@ -1,6 +1,6 @@
 package org.df4j.core.util;
 
-import org.df4j.core.tasknode.Action;
+import org.df4j.core.node.Action;
 import org.df4j.core.util.invoker.AbstractInvoker;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.MethodInvoker;
