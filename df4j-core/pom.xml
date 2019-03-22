@@ -24,13 +24,6 @@
             <version>2.1.3</version>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams-tck -->
-        <dependency>
-            <groupId>org.reactivestreams</groupId>
-            <artifactId>reactive-streams-tck</artifactId>
-            <version>1.0.2</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>

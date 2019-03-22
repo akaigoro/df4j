@@ -1,4 +1,4 @@
-package org.reactivestreams.tck;
+package org.df4j.tck;
 
 
 import org.df4j.core.reactivestream.UnicastSource;

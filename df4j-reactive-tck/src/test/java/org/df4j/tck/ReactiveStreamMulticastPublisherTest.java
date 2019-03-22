@@ -1,9 +1,11 @@
-package org.reactivestreams.tck;
+package org.df4j.tck;
 
 
 import org.df4j.core.reactivestream.MulticastSource;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.tck.PublisherVerification;
+import org.reactivestreams.tck.TestEnvironment;
 
 import java.lang.reflect.Field;
 
