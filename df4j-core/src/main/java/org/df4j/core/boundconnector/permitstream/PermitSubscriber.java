@@ -1,13 +1,10 @@
 package org.df4j.core.boundconnector.permitstream;
 
-import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
-
 /**
  *  inlet for permits.
  *
- *  method descriptions are taken from description of class {@link Subscription}.
  */
-public interface PermitSubscriber extends ScalarPermitSubscriber {
+public interface PermitSubscriber extends Runnable {
     /**
      * Adds the given number {@code n} of items to the current
      * unfulfilled demand for this subscription.  If {@code n} is
@@ -26,4 +23,7 @@ public interface PermitSubscriber extends ScalarPermitSubscriber {
         release(1);
     }
 
+    default void run() {
+        release(1);
+    }
 }

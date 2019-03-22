@@ -1,7 +1,7 @@
 package org.df4j.core.util.asyncmon;
 
+import org.df4j.core.boundconnector.permitstream.PermitSubscriber;
 import org.reactivestreams.Subscriber;
-import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
 import org.df4j.core.simplenode.messagescalar.CompletablePromise;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.tasknode.AsyncProc;
@@ -29,7 +29,7 @@ public class ProducerConsumerAsync extends AllOf {
             registerAsyncDaemon(scalarPublisher);
         }
 
-        public void put(T item, ScalarPermitSubscriber connector) {
+        public void put(T item, Runnable connector) {
             super.exec((AsyncMonitor monitor) -> {
                     if (count == maxItems) {
                         monitor.doWait();
@@ -38,7 +38,7 @@ public class ProducerConsumerAsync extends AllOf {
                     buf.add(item);
                     count++;
                     monitor.doNotifyAll();
-                    connector.release();
+                    connector.run();
                 }
             );
         }

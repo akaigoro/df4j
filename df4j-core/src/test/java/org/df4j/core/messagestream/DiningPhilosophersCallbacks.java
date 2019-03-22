@@ -1,12 +1,11 @@
 package org.df4j.core.messagestream;
 
 import org.df4j.core.boundconnector.Port;
-import org.df4j.core.boundconnector.permitscalar.ScalarPermitSubscriber;
+import org.df4j.core.boundconnector.permitstream.PermitSubscriber;
 import org.df4j.core.simplenode.messagestream.PickPoint;
 import org.df4j.core.tasknode.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
-import org.reactivestreams.Subscriber;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -85,7 +84,7 @@ public class DiningPhilosophersCallbacks {
             return rand.nextLong() % 15 + 17;
         }
 
-        public void setNextTimedAction(long delay, ScalarPermitSubscriber action) {
+        public void setNextTimedAction(long delay, Runnable action) {
             nextAction = () -> timer.subscribe(action, delay);
             start();
         }
