@@ -101,8 +101,8 @@ public class SumSquareTest {
  
 Actually, the order of these steps can vary.
 
-We can avoid creating new node classes, if out computation procedures are of standard java functional types like `Function`, 
-`biFunction` etc:
+We can avoid creating new node classes, if our computation procedures are of standard java functional types like `Function`, 
+`BiFunction` etc:
 
 ```java
     @Test

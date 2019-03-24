@@ -28,23 +28,26 @@ Activities compute tokens (values and signals), connectors pass them between act
   - reference to an Executor, and
   - an object that glues all that components together. Below this object is referenced as a "node of dataflow graph", or just a "node".
 4. Connector has several important characteristics:
- -  it can be bound to a node and serve as a mandatory asyncronous parameter.
- The execution of the node starts exactly after all such parameters are filled with tokens. 
- This mechanism is the actor of asynchronoys computations.
+ -  it can be bound to a node and serve as a mandatory asyncronous parameter. The execution of the node starts exactly after all such parameters are filled with tokens. 
  - can be used for input or output.
+ - can connect asynchronous procedures and/or threads
+ 
 Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output connectors are necessary. 
 A node can have multiple input and multiple output connectors.
 Nodes are connected by their connectors: output connector of one node is connected to input connector of another node.
  - Connectors can implement different exchange protocols. Connected connectors must implement the same protocol.
  
-The main result is differentiation between connectors and nodes. 
+The main results of this work are:
+
+1. Differentiation between connectors and nodes. 
 This allows to develop connectors independently of nodes and make use of new protocols with already developed node types.
 As a result, this library is very compact. 
 It does not contain fluent API and do not tries to implement [all combinations of all capabilities](https://www.google.ru/search?q="all+combinations+of+all+capabilities),
 but allow developers to freely combine existing and newly developed capabilities.
 
-Another interesting result is that the notorious reactive streams are just implementation of a specific protocol, and that protocol is no more
-but a combination of two more simple protocols. 
+2. Actors (e.g. [Akka](https://akka.io/)) are no more than repeatable asynchronous procedures.
+
+3. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
 
@@ -59,8 +62,13 @@ Submodiles:
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
+[df4j-reactive-tck](/df4j-reactive-tck) - runs df4j against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
+ 
 Version history
 ---------------
+2019/03/24
+Branch API-7 and tag ver7.0 created.
+
 2018/07/15
 Branch API-5 and tag ver5.0.1 created.
 
