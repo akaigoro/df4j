@@ -168,7 +168,7 @@ public abstract class AsyncProc implements Runnable {
          * locks the pin
          * called when a token is consumed and the pin become empty
          */
-        protected void turnOff() {
+        protected void block() {
             if (blocked) {
                 return;
             }
@@ -176,7 +176,7 @@ public abstract class AsyncProc implements Runnable {
             blockedPinCount.incrementAndGet();
         }
 
-        protected boolean turnOn() {
+        protected boolean unblock() {
             if (!blocked) {
                 return false;
             }
@@ -234,7 +234,7 @@ public abstract class AsyncProc implements Runnable {
 
         protected void unRegister() {
             if (blocked) {
-                turnOn();
+                unblock();
             }
             locks.remove(this);
         }
@@ -295,7 +295,7 @@ public abstract class AsyncProc implements Runnable {
                 throw new IllegalStateException("token set already");
             }
             current = message;
-            turnOn();
+            unblock();
         }
 
         @Override
@@ -337,7 +337,7 @@ public abstract class AsyncProc implements Runnable {
                 throw new IllegalStateException("cannot unregister connector after start");
             }
             if (blocked) {
-                turnOn();
+                unblock();
             }
             asyncParams.remove(this);
         }

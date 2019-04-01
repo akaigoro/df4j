@@ -49,7 +49,7 @@ public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements 
         }
         subscriptions.forEach((sub)->sub.onComplete());
         completed = true;
-        super.turnOff();
+        super.block();
     }
 
     public void onError(Throwable throwable) {
@@ -60,14 +60,14 @@ public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements 
         boolean wasEmpty = activeSubscriptions.isEmpty();
         activeSubscriptions.add(subscription);
         if (wasEmpty) {
-            super.turnOn();
+            super.unblock();
         }
     }
 
     protected synchronized void activeSubscriptionsRemove() {
         activeSubscriptions.remove();
         if (activeSubscriptions.isEmpty()) {
-            super.turnOff();
+            super.block();
         }
     }
 
@@ -75,7 +75,7 @@ public class ReactiveUnicastOutput<T> extends UnicastStreamOutput<T> implements 
         super.cancel(subscription);
         activeSubscriptions.remove(subscription);
         if (activeSubscriptions.isEmpty()) {
-            super.turnOff();
+            super.block();
         }
     }
 

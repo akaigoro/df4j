@@ -53,7 +53,7 @@ public class AllOf extends AsyncSupplier<Void> {
 
         @Override
         public void onNext(Object value) {
-            super.turnOn();
+            super.unblock();
         }
 
         @Override

@@ -52,7 +52,7 @@ public class AsyncAction<R> extends AsyncProc {
         if (stopped) {
             throw new IllegalStateException();
         }
-        controlLock.turnOn();
+        controlLock.unblock();
     }
 
     public synchronized void start(Executor executor) {
@@ -61,7 +61,7 @@ public class AsyncAction<R> extends AsyncProc {
     }
 
     protected void blockStarted() {
-        controlLock.turnOff();
+        controlLock.block();
     }
 
     public synchronized void stop() {

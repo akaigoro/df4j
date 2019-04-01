@@ -36,7 +36,7 @@ public class ScalarInput<T> extends AsyncProc.ConstInput<T> {
             // value remains the same, the pin remains turned on
         } else {
             current = null;
-            turnOff();
+            block();
         }
         return res;
     }

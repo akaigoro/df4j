@@ -63,7 +63,7 @@ public class UnicastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, P
     public synchronized void onComplete() {
         forEachSubscription(SimpleSubscription::onComplete);
         subscriptions = null;
-        super.turnOff();
+        super.block();
     }
 
     public synchronized void cancel(SimpleSubscription subscription) {

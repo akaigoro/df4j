@@ -25,7 +25,7 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
     @Override
     public synchronized void subscribe(Subscriber<? super T> subscriber) {
         currentValuePublisher.subscribe(subscriber);
-        turnOn();
+        unblock();
     }
 
     protected synchronized boolean isCompleted() {
@@ -49,7 +49,7 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
         if (isCompleted()) {
             throw new IllegalStateException("completed already");
         }
-        super.turnOff();
+        super.block();
         ValuePublisher currentSubscriptionsLoc = currentValuePublisher;
         currentSubscriptionsLoc.onError(throwable);
     }
@@ -58,7 +58,7 @@ public class ReactiveMulticastOutput<T> extends AsyncProc.Lock implements Port<T
         if (isCompleted()) {
             throw new IllegalStateException("completed already");
         }
-        super.turnOff();
+        super.block();
         ValuePublisher currentSubscriptionsLoc = currentValuePublisher;
         currentSubscriptionsLoc.onComplete();
     }

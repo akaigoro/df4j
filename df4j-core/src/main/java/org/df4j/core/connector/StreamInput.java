@@ -47,7 +47,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
         }
         if (current == null) {
             current = token;
-            turnOn();
+            unblock();
         } else {
             queue.add(token);
         }
@@ -64,7 +64,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
         }
         closeRequested = true;
         if (current == null) {
-            turnOn();
+            unblock();
         }
     }
 
@@ -112,7 +112,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
         if (pushback) {
             pushback = false;
         } else if (!moveNext()) {
-            turnOff();
+            block();
         }
     }
 

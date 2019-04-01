@@ -37,7 +37,7 @@ public class Semafor extends AsyncProc.Lock implements PermitSubscriber {
         long prev = count;
         count+= delta;
         if (prev <= 0 && count > 0 ) {
-            turnOn();
+            unblock();
         }
     }
 
@@ -52,13 +52,13 @@ public class Semafor extends AsyncProc.Lock implements PermitSubscriber {
         long prev = count;
         count -= delta;
         if (prev > 0 && count <= 0 ) {
-            turnOff();
+            block();
         }
     }
 
     public synchronized void drainPermits() {
         count = 0;
-        turnOff();
+        block();
     }
 
     @Override
