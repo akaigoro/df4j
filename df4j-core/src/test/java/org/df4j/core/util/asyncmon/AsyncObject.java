@@ -1,7 +1,8 @@
 package org.df4j.core.util.asyncmon;
 
-import org.df4j.core.scalar.CompletablePromise;
-import org.df4j.core.stream.ext.Actor1;
+
+import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.asynchproc.CompletablePromise;
 
 import java.util.ArrayDeque;
 import java.util.Queue;

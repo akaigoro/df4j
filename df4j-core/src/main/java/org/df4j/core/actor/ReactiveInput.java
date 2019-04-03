@@ -1,7 +1,7 @@
-package org.df4j.core.reactivestream;
+package org.df4j.core.actor;
 
-import org.df4j.core.stream.StreamInput;
-import org.df4j.core.scalar.AsyncProc;
+import org.df4j.core.actor.ext.StreamInput;
+import org.df4j.core.asynchproc.AsyncProc;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -29,7 +29,7 @@ public class ReactiveInput<T> extends StreamInput<T> implements Subscriber<T> {
         this(actor, 4);
     }
 
-    protected int size() {
+    public int size() {
         return queue.size();
     }
 

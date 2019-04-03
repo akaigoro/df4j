@@ -1,9 +1,9 @@
 package org.df4j.core.messagescalar;
 
-import org.df4j.core.scalar.CompletablePromise;
-import org.df4j.core.scalar.ext.Action;
-import org.df4j.core.scalar.ext.AsyncBiFunction;
-import org.df4j.core.scalar.ext.AsyncSupplier;
+import org.df4j.core.asynchproc.CompletablePromise;
+import org.df4j.core.asynchproc.ext.Action;
+import org.df4j.core.asynchproc.ext.AsyncBiFunction;
+import org.df4j.core.asynchproc.ext.AsyncSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
@@ -11,8 +11,6 @@ import org.reactivestreams.Publisher;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import static org.df4j.core.scalar.CompletablePromise.completedPromise;
 
 public class AsyncProcTest {
 
@@ -43,7 +41,7 @@ public class AsyncProcTest {
             CompletablePromise<Double> sp = new CompletablePromise<>();
             Blocker<Double, Double> blocker = new Blocker<>();
             pa.subscribe(blocker.arg);
-            completedPromise(1.0).subscribe(param1);
+            CompletablePromise.completedPromise(1.0).subscribe(param1);
             new Mult(pa, pb).subscribe(param2);
         }
     }
@@ -127,7 +125,7 @@ public class AsyncProcTest {
     }
 
     public void calcRootsAndCheck(double a, double b, double d, double... expected) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletablePromise<double[]> rc = calcRoots(a, b, completedPromise(d));
+        CompletablePromise<double[]> rc = calcRoots(a, b, CompletablePromise.completedPromise(d));
         double[] result = rc.get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }

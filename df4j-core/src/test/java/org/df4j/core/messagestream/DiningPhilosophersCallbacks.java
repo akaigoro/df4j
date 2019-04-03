@@ -1,8 +1,8 @@
 package org.df4j.core.messagestream;
 
 import org.df4j.core.Port;
-import org.df4j.core.scalar.PickPoint;
-import org.df4j.core.scalar.ext.AsyncAction;
+import org.df4j.core.asynchproc.PickPoint;
+import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 

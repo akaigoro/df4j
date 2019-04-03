@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.core.scalar;
+package org.df4j.core.asynchproc;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;

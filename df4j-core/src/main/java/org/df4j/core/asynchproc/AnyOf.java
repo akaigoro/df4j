@@ -1,4 +1,4 @@
-package org.df4j.core.scalar;
+package org.df4j.core.asynchproc;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;

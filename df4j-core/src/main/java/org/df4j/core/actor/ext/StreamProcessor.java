@@ -1,7 +1,6 @@
-package org.df4j.core.stream.ext;
+package org.df4j.core.actor.ext;
 
-import org.df4j.core.stream.MulticastStreamOutput;
-import org.df4j.core.stream.ext.Actor1;
+import org.df4j.core.actor.MulticastStreamOutput;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 

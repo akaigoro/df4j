@@ -1,4 +1,4 @@
-package org.df4j.core.scalar;
+package org.df4j.core.asynchproc;
 
 import org.df4j.core.PermitSubscriber;
 import org.reactivestreams.Subscription;

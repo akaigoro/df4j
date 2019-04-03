@@ -1,11 +1,11 @@
 package org.df4j.core.permitstream;
 
-import org.df4j.core.stream.MulticastStreamOutput;
-import org.df4j.core.scalar.Semafor;
-import org.df4j.core.scalar.AllOf;
-import org.df4j.core.stream.Actor;
-import org.df4j.core.stream.ext.Actor1;
-import org.df4j.core.stream.ext.StreamProcessor;
+import org.df4j.core.actor.MulticastStreamOutput;
+import org.df4j.core.asynchproc.AllOf;
+import org.df4j.core.asynchproc.Semafor;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.actor.ext.StreamProcessor;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;

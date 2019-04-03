@@ -1,4 +1,4 @@
-package org.df4j.core.scalar;
+package org.df4j.core.asynchproc;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.

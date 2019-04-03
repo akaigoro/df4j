@@ -1,8 +1,8 @@
-package org.df4j.core.stream;
+package org.df4j.core.actor.ext;
 
 import org.df4j.core.Port;
-import org.df4j.core.scalar.AsyncProc;
-import org.df4j.core.scalar.ScalarInput;
+import org.df4j.core.asynchproc.AsyncProc;
+import org.df4j.core.asynchproc.ScalarInput;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -31,7 +31,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
         this.queue = queue;
     }
 
-    protected int size() {
+    public int size() {
         return queue.size();
     }
 

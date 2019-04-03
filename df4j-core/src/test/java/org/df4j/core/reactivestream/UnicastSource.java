@@ -1,6 +1,6 @@
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.scalar.AllOf;
+import org.df4j.core.asynchproc.AllOf;
 import org.reactivestreams.Subscriber;
 
 import static org.df4j.core.reactivestream.ReactiveStreamExampleBase.println;

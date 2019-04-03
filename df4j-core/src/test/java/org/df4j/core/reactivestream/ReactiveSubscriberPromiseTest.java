@@ -1,6 +1,6 @@
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.scalar.CompletablePromise;
+import org.df4j.core.asynchproc.CompletablePromise;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -1,30 +1,30 @@
-package org.df4j.core.stream;
+package org.df4j.core.actor.ext;
 
 import org.df4j.core.Port;
+import org.df4j.core.asynchproc.AsyncProc;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.df4j.core.scalar.AsyncProc;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * each input token it transferred to all subscribers
+ * each input token it transferred to a single subscriber
  *
  * @param <T> type of tokens
  */
-public class MulticastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publisher<T> {
+public class UnicastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publisher<T> {
     protected AsyncProc actor;
     protected Set<SimpleSubscription> subscriptions = new HashSet<>();
 
-    public MulticastStreamOutput(AsyncProc actor, boolean blocked) {
+    public UnicastStreamOutput(AsyncProc actor, boolean blocked) {
         actor.super(blocked);
         this.actor = actor;
     }
 
-    public MulticastStreamOutput(AsyncProc actor) {
+    public UnicastStreamOutput(AsyncProc actor) {
         this(actor, false);
     }
 
@@ -111,7 +111,7 @@ public class MulticastStreamOutput<T> extends AsyncProc.Lock implements Port<T>,
             if (subscriber == null) {
                 return;
             }
-            MulticastStreamOutput.this.cancel(this);
+            UnicastStreamOutput.this.cancel(this);
             subscriber = null;
         }
     }

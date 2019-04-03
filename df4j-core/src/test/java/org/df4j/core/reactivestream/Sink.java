@@ -1,8 +1,9 @@
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.scalar.ext.Action;
-import org.df4j.core.scalar.AllOf;
-import org.df4j.core.stream.Actor;
+import org.df4j.core.actor.ReactiveInput;
+import org.df4j.core.asynchproc.AllOf;
+import org.df4j.core.asynchproc.ext.Action;
+import org.df4j.core.actor.Actor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 

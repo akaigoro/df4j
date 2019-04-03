@@ -1,7 +1,7 @@
-package org.df4j.core.reactivestream;
+package org.df4j.core.actor;
 
 import org.df4j.core.Port;
-import org.df4j.core.scalar.AsyncProc;
+import org.df4j.core.asynchproc.AsyncProc;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;

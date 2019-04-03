@@ -1,7 +1,7 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.scalar.CompletablePromise;
-import org.df4j.core.stream.ext.Actor1;
+import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.asynchproc.CompletablePromise;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;
 import org.junit.Assert;

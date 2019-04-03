@@ -1,7 +1,7 @@
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.scalar.AllOf;
-import org.df4j.core.stream.Actor;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.asynchproc.AllOf;
 import org.reactivestreams.Publisher;
 
 public abstract class Source<T> extends Actor implements Publisher<T> {

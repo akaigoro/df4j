@@ -1,4 +1,4 @@
-package org.df4j.core.scalar.ext;
+package org.df4j.core.asynchproc.ext;
 
 import org.reactivestreams.Subscriber;
 import org.df4j.core.util.invoker.ConsumerInvoker;

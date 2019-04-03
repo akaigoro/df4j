@@ -1,12 +1,12 @@
 package org.df4j.core.messagestream;
 
-import org.df4j.core.scalar.ScalarInput;
-import org.df4j.core.scalar.Semafor;
-import org.df4j.core.scalar.PickPoint;
-import org.df4j.core.scalar.ext.Action;
-import org.df4j.core.scalar.ext.AsyncAction;
-import org.df4j.core.scalar.AllOf;
-import org.df4j.core.stream.Actor;
+import org.df4j.core.asynchproc.AllOf;
+import org.df4j.core.asynchproc.ScalarInput;
+import org.df4j.core.asynchproc.Semafor;
+import org.df4j.core.asynchproc.PickPoint;
+import org.df4j.core.asynchproc.ext.Action;
+import org.df4j.core.asynchproc.ext.AsyncAction;
+import org.df4j.core.actor.Actor;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 

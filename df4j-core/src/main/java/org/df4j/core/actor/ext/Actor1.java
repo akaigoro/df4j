@@ -7,11 +7,10 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.core.stream.ext;
+package org.df4j.core.actor.ext;
 
 import org.df4j.core.Port;
-import org.df4j.core.stream.StreamInput;
-import org.df4j.core.stream.Actor;
+import org.df4j.core.actor.Actor;
 
 /**
  * A dataflow Actor with one predefined input stream port.

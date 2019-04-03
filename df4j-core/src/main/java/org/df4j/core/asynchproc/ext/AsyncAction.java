@@ -1,7 +1,7 @@
-package org.df4j.core.scalar.ext;
+package org.df4j.core.asynchproc.ext;
 
-import org.df4j.core.scalar.AsyncProc;
-import org.df4j.core.scalar.CompletablePromise;
+import org.df4j.core.asynchproc.AsyncProc;
+import org.df4j.core.asynchproc.CompletablePromise;
 import org.df4j.core.util.ActionCaller;
 import org.df4j.core.util.invoker.Invoker;
 
