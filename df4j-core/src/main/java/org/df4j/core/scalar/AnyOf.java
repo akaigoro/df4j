@@ -1,4 +1,4 @@
-package org.df4j.core.connectornode;
+package org.df4j.core.scalar;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;

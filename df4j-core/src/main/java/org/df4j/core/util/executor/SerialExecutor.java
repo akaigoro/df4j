@@ -1,6 +1,6 @@
 package org.df4j.core.util.executor;
 
-import org.df4j.core.node.ext.Actor1;
+import org.df4j.core.stream.ext.Actor1;
 
 import java.util.concurrent.Executor;
 

@@ -9,8 +9,8 @@
  */
 package org.df4j.core.reactivestream;
 
-import org.df4j.core.node.AsyncProc;
-import org.df4j.core.node.ext.AllOf;
+import org.df4j.core.scalar.AsyncProc;
+import org.df4j.core.scalar.AllOf;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

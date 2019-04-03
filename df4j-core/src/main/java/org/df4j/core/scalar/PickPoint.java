@@ -1,6 +1,7 @@
-package org.df4j.core.connectornode;
+package org.df4j.core.scalar;
 
 import org.df4j.core.Port;
+import org.df4j.core.scalar.CompletablePromise;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 

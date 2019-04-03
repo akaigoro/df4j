@@ -1,7 +1,8 @@
-package org.df4j.core.node.ext;
+package org.df4j.core.scalar;
 
 import org.df4j.core.Port;
-import org.df4j.core.node.AsyncAction;
+import org.df4j.core.scalar.ext.AsyncAction;
+import org.df4j.core.scalar.ext.AsyncSupplier;
 import org.reactivestreams.Publisher;
 
 public class AllOf extends AsyncSupplier<Void> {

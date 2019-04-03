@@ -1,6 +1,6 @@
-package org.df4j.core.node;
+package org.df4j.core.stream;
 
-import org.df4j.core.node.AsyncAction;
+import org.df4j.core.scalar.ext.AsyncAction;
 
 /**
  * Actor is a reusable AsyncProc: after execution, it executes again as soon as new array of arguments is ready.

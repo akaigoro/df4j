@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.core.node;
+package org.df4j.core.scalar;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -168,7 +168,7 @@ public abstract class AsyncProc implements Runnable {
          * locks the pin
          * called when a token is consumed and the pin become empty
          */
-        protected void block() {
+        public void block() {
             if (blocked) {
                 return;
             }
@@ -176,7 +176,7 @@ public abstract class AsyncProc implements Runnable {
             blockedPinCount.incrementAndGet();
         }
 
-        protected boolean unblock() {
+        public boolean unblock() {
             if (!blocked) {
                 return false;
             }

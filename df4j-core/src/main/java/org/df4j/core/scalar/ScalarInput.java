@@ -1,6 +1,4 @@
-package org.df4j.core.connector;
-
-import org.df4j.core.node.AsyncProc;
+package org.df4j.core.scalar;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.

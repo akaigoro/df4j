@@ -1,4 +1,4 @@
-package org.df4j.core.node;
+package org.df4j.core.scalar.ext;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

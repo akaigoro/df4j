@@ -1,7 +1,7 @@
 package org.df4j.core.rxjava2;
 
 import io.reactivex.functions.Consumer;
-import org.df4j.core.node.ext.AsyncBiFunction;
+import org.df4j.core.scalar.ext.AsyncBiFunction;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;

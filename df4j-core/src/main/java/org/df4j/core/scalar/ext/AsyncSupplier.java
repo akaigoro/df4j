@@ -1,8 +1,7 @@
-package org.df4j.core.node.ext;
+package org.df4j.core.scalar.ext;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import org.df4j.core.node.AsyncAction;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
 import org.df4j.core.util.invoker.SupplierInvoker;

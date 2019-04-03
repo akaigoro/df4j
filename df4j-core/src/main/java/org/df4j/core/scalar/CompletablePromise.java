@@ -1,4 +1,4 @@
-package org.df4j.core.connectornode;
+package org.df4j.core.scalar;
 
 import org.df4j.core.Port;
 import org.reactivestreams.Publisher;

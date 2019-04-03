@@ -1,7 +1,8 @@
-package org.df4j.core.connector;
+package org.df4j.core.stream;
 
 import org.df4j.core.Port;
-import org.df4j.core.node.AsyncProc;
+import org.df4j.core.scalar.AsyncProc;
+import org.df4j.core.scalar.ScalarInput;
 
 import java.util.ArrayDeque;
 import java.util.Queue;

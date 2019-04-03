@@ -1,10 +1,10 @@
-package org.df4j.core.connector;
+package org.df4j.core.stream;
 
 import org.df4j.core.Port;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.df4j.core.node.AsyncProc;
+import org.df4j.core.scalar.AsyncProc;
 
 import java.util.HashSet;
 import java.util.Set;

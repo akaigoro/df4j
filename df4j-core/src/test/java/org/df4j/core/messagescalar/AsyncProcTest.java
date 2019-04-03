@@ -1,9 +1,9 @@
 package org.df4j.core.messagescalar;
 
-import org.df4j.core.connectornode.CompletablePromise;
-import org.df4j.core.node.Action;
-import org.df4j.core.node.ext.AsyncBiFunction;
-import org.df4j.core.node.ext.AsyncSupplier;
+import org.df4j.core.scalar.CompletablePromise;
+import org.df4j.core.scalar.ext.Action;
+import org.df4j.core.scalar.ext.AsyncBiFunction;
+import org.df4j.core.scalar.ext.AsyncSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
@@ -12,7 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.df4j.core.connectornode.CompletablePromise.completedPromise;
+import static org.df4j.core.scalar.CompletablePromise.completedPromise;
 
 public class AsyncProcTest {
 

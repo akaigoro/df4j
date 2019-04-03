@@ -1,11 +1,11 @@
 package org.df4j.core.util.asyncmon;
 
 import org.reactivestreams.Subscriber;
-import org.df4j.core.connectornode.CompletablePromise;
-import org.df4j.core.node.AsyncAction;
-import org.df4j.core.node.AsyncProc;
-import org.df4j.core.node.ext.AllOf;
-import org.df4j.core.node.ext.Actor1;
+import org.df4j.core.scalar.CompletablePromise;
+import org.df4j.core.scalar.ext.AsyncAction;
+import org.df4j.core.scalar.AsyncProc;
+import org.df4j.core.scalar.AllOf;
+import org.df4j.core.stream.ext.Actor1;
 import org.junit.Assert;
 import org.junit.Test;
 

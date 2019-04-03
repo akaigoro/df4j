@@ -1,6 +1,7 @@
-package org.df4j.core.connector;
+package org.df4j.core.reactivestream;
 
-import org.df4j.core.node.AsyncProc;
+import org.df4j.core.stream.StreamInput;
+import org.df4j.core.scalar.AsyncProc;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 

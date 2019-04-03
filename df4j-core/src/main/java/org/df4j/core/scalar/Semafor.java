@@ -1,8 +1,7 @@
-package org.df4j.core.connector;
+package org.df4j.core.scalar;
 
 import org.df4j.core.PermitSubscriber;
 import org.reactivestreams.Subscription;
-import org.df4j.core.node.AsyncProc;
 
 /**
  * Counting semaphore

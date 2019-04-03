@@ -1,4 +1,4 @@
-package org.df4j.core.node.ext;
+package org.df4j.core.scalar.ext;
 
 import org.df4j.core.util.invoker.BiConsumerInvoker;
 import org.df4j.core.util.invoker.BiFunctionInvoker;
