@@ -25,8 +25,8 @@ public class AllOf extends AsyncSupplier<Void> {
         source.subscribe(new Enter());
     }
 
-    public synchronized void registerAsyncResult(AsyncAction... sources) {
-        for (AsyncAction source: sources) {
+    public synchronized void registerAsyncResult(AsyncProc... sources) {
+        for (AsyncProc source: sources) {
             registerAsyncResult(source.asyncResult());
         }
     }

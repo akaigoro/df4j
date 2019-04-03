@@ -21,7 +21,6 @@ public class ReactiveStreamMulticastTest extends ReactiveStreamExampleBase {
         from.subscribe(to1);
         Sink to2 = new Sink(this, sinkNumber, "sink2");
         from.subscribe(to2);
-        super.start(); // after all components created
         from.start();
         asyncResult().get(1, TimeUnit.SECONDS);
         // publisher always sends all tokens, even if all subscribers unsubscribed.

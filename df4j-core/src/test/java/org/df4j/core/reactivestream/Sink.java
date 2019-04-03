@@ -1,16 +1,16 @@
 package org.df4j.core.reactivestream;
 
 import org.df4j.core.actor.ReactiveInput;
+import org.df4j.core.actor.ext.FancyActor;
 import org.df4j.core.asynchproc.AllOf;
 import org.df4j.core.asynchproc.ext.Action;
-import org.df4j.core.actor.Actor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 /**
  * receives totalNumber of Longs and cancels the subscription
  */
-class Sink extends Actor implements Subscriber<Long> {
+class Sink extends FancyActor implements Subscriber<Long> {
     int maxNumber;
     ReactiveInput<Long> subscriber;
     int received = 0;

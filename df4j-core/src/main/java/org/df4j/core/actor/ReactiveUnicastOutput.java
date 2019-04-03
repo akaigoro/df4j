@@ -1,7 +1,6 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.Port;
-import org.df4j.core.actor.ext.StreamInput;
 import org.df4j.core.asynchproc.Semafor;
 import org.df4j.core.asynchproc.AsyncProc;
 import org.reactivestreams.Publisher;

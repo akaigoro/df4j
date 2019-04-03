@@ -18,7 +18,6 @@ public class RxJavaUnitTest {
     public void returnAValue() throws InterruptedException, ExecutionException, TimeoutException {
         BiFunction<? super Integer, ? super Integer, ? extends Double> piph = (a, b) -> Math.sqrt(a*a + b*b);
         AsyncBiFunctionRx<Integer, Integer, Double> asyncPiph = new AsyncBiFunctionRx<Integer, Integer, Double>(piph);
-        asyncPiph.start();
 
         Observable.just(3).subscribe(asyncPiph.rxparam1);
         Observable.just(4).subscribe(asyncPiph.rxparam2);

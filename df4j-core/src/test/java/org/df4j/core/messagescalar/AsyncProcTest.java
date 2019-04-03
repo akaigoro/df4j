@@ -77,7 +77,6 @@ public class AsyncProcTest {
         d.pa.onNext(a);
         d.pb.onNext(b);
         d.pc.onNext(c);
-        d.start();
         return d.asyncResult();
     }
 
@@ -120,7 +119,6 @@ public class AsyncProcTest {
         rc.pa.onNext(a);
         rc.pb.onNext(b);
         d.subscribe(rc.pd);
-        rc.start();
         return rc.asyncResult();
     }
 
@@ -155,7 +153,6 @@ public class AsyncProcTest {
 
         public Plus() {
             super((Double val1, Double val2) -> val1 + val2);
-            start();
         }
 
         protected Plus(Publisher pa, Publisher pb) {
@@ -169,7 +166,6 @@ public class AsyncProcTest {
 
         public Minus() {
             super((Double val1, Double val2) -> val1 - val2);
-            start();
         }
 
         protected Minus(Publisher pa, Publisher pb) {
@@ -183,7 +179,6 @@ public class AsyncProcTest {
 
         public Mult() {
             super((Double val1, Double val2) -> val1 * val2);
-            start();
         }
 
         protected Mult(Publisher pa, Publisher pb) {
@@ -197,7 +192,6 @@ public class AsyncProcTest {
 
         public Div() {
             super((Double val1, Double val2) -> val1 / val2);
-            start();
         }
 
         protected Div(Publisher pa, Publisher pb) {

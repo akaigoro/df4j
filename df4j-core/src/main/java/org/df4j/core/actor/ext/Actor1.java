@@ -11,6 +11,7 @@ package org.df4j.core.actor.ext;
 
 import org.df4j.core.Port;
 import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.StreamInput;
 
 /**
  * A dataflow Actor with one predefined input stream port.

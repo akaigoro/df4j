@@ -1,8 +1,8 @@
 package org.df4j.core.tutorial;
 
-import org.df4j.core.actor.ext.StreamInput;
+import org.df4j.core.actor.ext.FancyActor;
+import org.df4j.core.actor.StreamInput;
 import org.df4j.core.asynchproc.ext.Action;
-import org.df4j.core.actor.Actor;
 import org.junit.Test;
 
 public class HelloWorld {
@@ -10,7 +10,7 @@ public class HelloWorld {
      * collects strings
      * prints collected strings when argument is an empty string
      */
-    class Collector extends Actor {
+    class Collector extends FancyActor {
 
         StreamInput<String> input = new StreamInput<String>(this); // actor's parameter
         StringBuilder sb = new StringBuilder();

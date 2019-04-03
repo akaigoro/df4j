@@ -10,6 +10,7 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.actor.MulticastStreamOutput;
+import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.asynchproc.ext.Action;
 import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.core.util.Logger;
@@ -36,7 +37,7 @@ import java.nio.channels.CompletionHandler;
  *
  */
 public class AsyncServerSocketChannel
-        extends AsyncAction
+        extends LazyActor
         implements Publisher<AsynchronousSocketChannel>,
         CompletionHandler<AsynchronousSocketChannel, Subscriber<? super AsynchronousSocketChannel>>
 {
@@ -77,18 +78,6 @@ public class AsyncServerSocketChannel
         }
     }
 
-    //====================== Dataflow backend
-
-    @Action
-    protected void act(Subscriber<? super AsynchronousSocketChannel> arg) throws Exception {
-        try {
-            assc.accept(arg, this);
-        } catch (Exception e) {
-            close();
-        }
-        // no start() at this point, it will be called later in the handler
-    }
-
     //====================== CompletionHandler's backend
 
     @Override
@@ -111,5 +100,10 @@ public class AsyncServerSocketChannel
         } else {
             this.start(); // TODO deside if we should allow next call to assc.accept() after failure?
         }
+    }
+
+    @Override
+    protected void runAction() throws Throwable {
+
     }
 }

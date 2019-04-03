@@ -1,8 +1,8 @@
-package org.df4j.core.messagestream;
+package org.df4j.core.philosophers;
 
 import org.df4j.core.Port;
+import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.asynchproc.PickPoint;
-import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Demonstrates how coroutines can be emulated.
  */
-public class DiningPhilosophersCallbacks {
+public class DiningPhilosophers {
     static final int num = 5; // number of phylosofers
     static int N = 4; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];
@@ -28,7 +28,7 @@ public class DiningPhilosophersCallbacks {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.onNext("Fork_" + k);
+            forkPlace.onNext(new Fork(k));
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -42,7 +42,22 @@ public class DiningPhilosophersCallbacks {
         assertTrue(counter.await(2, TimeUnit.SECONDS));
     }
 
-    static class ForkPlace extends PickPoint<String> {
+    enum State {Thinking, Hungry1, Hungry2, Eating, Replete, Died}
+
+    static class Fork {
+        public final String id;
+
+        Fork(int id) {
+            this.id = "Fork_" + id;
+        }
+
+        @Override
+        public String toString() {
+            return id;
+        }
+    }
+
+    static class ForkPlace extends PickPoint<Fork> {
         int id;
         String label;
 
@@ -50,14 +65,18 @@ public class DiningPhilosophersCallbacks {
             id = k;
             label = "Forkplace_" + id;
         }
+
+        public void subscribe(Port<Fork> subscriber) {
+            super.subscribe(subscriber);
+        }
     }
 
-    class Philosopher extends AsyncAction {
-        Runnable nextAction;
+    class Philosopher extends LazyActor {
+        State state;
         Random rand = new Random();
         int id;
         ForkPlace firstPlace, secondPlace;
-        String firstFork, secondFork;
+        Fork first, second;
         String indent;
         int rounds = 0;
 
@@ -79,73 +98,74 @@ public class DiningPhilosophersCallbacks {
             System.out.println("Ph no. " + id + ": first place = " + firstPlace.id + "; second place = " + secondPlace.id + ".");
         }
 
-        protected long randDelay() {
-            return rand.nextLong() % 15 + 17;
-        }
-
-        public void setNextTimedAction(long delay, Runnable action) {
-            nextAction = () -> timer.subscribe(action, delay);
-            start();
-        }
-
-        public void setNextAction(Runnable action) {
-            nextAction = action;
-            start();
-        }
-
         public void startThinking() {
-            nextAction =  () -> timer.subscribe(this::endThinking, randDelay());
+            state = State.Thinking;
             start();
         }
 
         public void endThinking() {
-            println("Request first (" + firstPlace.id + ")");
-            nextAction = () -> {
-                Port<String> getFork1 = this::getFork1;
-                firstPlace.subscribe(getFork1);
-            };
+            state = State.Hungry1;
             start();
         }
 
-        public void getFork1(String fork) {
-            firstFork = fork;
+        public void post1(Fork fork) {
+            println("Request first (" + firstPlace.id + ")");
+            first = fork;
+            state = State.Hungry2;
+            start();
+        }
+
+        public void post2(Fork fork) {
             println("Request second (" + secondPlace.id + ")");
-            setNextAction(() -> {
-                secondPlace.subscribe((Port<String>) this::startEating);
-            });
-        }
-
-        public void startEating(String fork) {
-            secondFork = fork;
-            setNextTimedAction(randDelay(), this::endEating);
-        }
-
-        public void eating() {
-            println("Release first (" + firstPlace.id + ")");
-            firstPlace.onNext(firstFork);
-            firstFork = null;
-            println("Release second (" + secondPlace.id + ")");
-            secondPlace.onNext(secondFork);
-            secondFork = null;
-            rounds++;
-            if (rounds < N) {
-                println("Ph no. " + id + ": continue round " + rounds);
-                startThinking();
-            } else {
-                println("Ph no. " + id + ": died at round " + rounds);
-                counter.countDown();
-                nextAction = null;
-                stop();
-            }
+            second = fork;
+            state = State.Eating;
+            start();
         }
 
         public void endEating() {
-            setNextAction(this::eating);
+            state = State.Replete;
+            start();
         }
 
         @Override
         public void runAction() {
-            nextAction.run();
+            switch (state) {
+                case Thinking:
+                    timer.subscribe(this::endThinking, rand.nextLong() % 17 + 23);
+                    return;
+                case Hungry1:
+                    /**
+                     * collect forks one by one
+                     */
+                    firstPlace.subscribe(this::post1);
+                    return;
+                case Hungry2:
+                    secondPlace.subscribe(this::post2);
+                    return;
+                case Eating:
+                    timer.subscribe(this::endEating, rand.nextLong() % 11 + 13);
+                    return;
+                case Replete:
+                    println("Release first (" + firstPlace.id + ")");
+                    firstPlace.onNext(first);
+                    first = null;
+                    println("Release second (" + secondPlace.id + ")");
+                    secondPlace.onNext(second);
+                    second = null;
+                    rounds++;
+                    if (rounds < N) {
+                        println("Ph no. " + id + ": continue round " + rounds);
+                        startThinking();
+                    } else {
+                        println("Ph no. " + id + ": died at round " + rounds);
+                        state = State.Died;
+                        counter.countDown();
+                        stop();
+                    }
+                    return;
+                default:
+                    throw new IllegalStateException();
+            }
         }
 
         private void println(String s) {

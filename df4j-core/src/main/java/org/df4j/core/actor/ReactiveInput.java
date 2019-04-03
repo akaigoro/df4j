@@ -1,6 +1,5 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.actor.ext.StreamInput;
 import org.df4j.core.asynchproc.AsyncProc;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;

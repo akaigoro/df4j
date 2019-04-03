@@ -1,10 +1,10 @@
-package org.df4j.core.messagestream;
+package org.df4j.core.philosophers;
 
+import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.asynchproc.AllOf;
 import org.df4j.core.asynchproc.ScalarInput;
 import org.df4j.core.asynchproc.Semafor;
 import org.df4j.core.asynchproc.PickPoint;
-import org.df4j.core.asynchproc.ext.Action;
 import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.util.TimeSignalPublisher;
@@ -49,7 +49,6 @@ public class DiningPhilosophersMultistate {
         for (int k=0; k<num; k++) {
             philosophers[k].start();
         }
-        listener.start();
         listener.get(2, TimeUnit.SECONDS);
     }
 
@@ -118,7 +117,6 @@ public class DiningPhilosophersMultistate {
         }
 
         public void start() {
-            super.start();
             // start state is thinking;
             thinking.start();
         }
@@ -130,7 +128,7 @@ public class DiningPhilosophersMultistate {
         /**
          * in order to route possible errors to the enclosing Philosopher instance
          */
-        class State extends AsyncAction {
+        abstract class State extends LazyActor {
             {
                 Philosopher.this.registerAsyncResult(asyncResult());
             }
@@ -174,8 +172,8 @@ public class DiningPhilosophersMultistate {
                 super.start();
             }
 
-            @Action
-            public void getFork(Fork fork) {
+            public void runAction() {
+                Fork fork = input.current();
                 if (first == null) {
                     first = fork;
                     println("Request second (" + secondPlace.id + ")");

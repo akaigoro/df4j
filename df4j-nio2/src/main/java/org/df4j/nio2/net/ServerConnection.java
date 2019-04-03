@@ -12,10 +12,9 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.actor.ext.StreamInput;
 import org.df4j.core.actor.MulticastStreamOutput;
-import org.df4j.core.asynchproc.ext.Action;
-import org.df4j.core.asynchproc.ext.AsyncAction;
+import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.StreamInput;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -118,7 +117,7 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
     /**
      * an actor with delayed restart of the action
      */
-    public abstract class BuffProcessor extends AsyncAction
+    public abstract class BuffProcessor extends LazyActor
             implements CompletionHandler<Integer, ByteBuffer>
     {
         protected final Logger LOG = Logger.getLogger(getClass().getName());
@@ -134,8 +133,9 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
 
         //-------------------- datafloe backend
 
-        @Action
-        protected void start_IO (ByteBuffer buffer) {
+        @Override
+        protected void runAction() {
+            ByteBuffer buffer = input.current();
             if (input.isClosed()) {
                 output.onComplete();
                 output.onError(new AsynchronousCloseException());

@@ -5,7 +5,7 @@ import org.junit.Test;
 
 import java.util.ArrayDeque;
 
-public class ProducerConsumerSync {
+public class ProducerConsumerSyncTest {
 
     static class BlockingQ<T> {
         private final int maxItems;

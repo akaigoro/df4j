@@ -6,7 +6,7 @@ package org.df4j.core.asynchproc;
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends AsyncProc.ConstInput<T> {
+public class ScalarInput<T> extends AsyncProc<T>.ConstInput<T> {
     protected AsyncProc task;
     protected boolean pushback = false; // if true, do not consume
 

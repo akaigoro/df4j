@@ -3,7 +3,7 @@ package org.df4j.core.reactivestream;
 import org.df4j.core.Port;
 import org.df4j.core.asynchproc.AsyncProc;
 import org.df4j.core.asynchproc.Semafor;
-import org.df4j.core.actor.ext.UnicastStreamOutput;
+import org.df4j.core.actor.UnicastStreamOutput;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 

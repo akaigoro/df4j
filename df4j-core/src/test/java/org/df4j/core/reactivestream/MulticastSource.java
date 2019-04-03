@@ -29,8 +29,8 @@ public class MulticastSource extends Source<Long> {
         pub.subscribe(subscriber);
     }
 
-    @Action
-    public void act() {
+    @Override
+    protected void runAction() {
         if (val == 0) {
             ReactiveStreamMulticastTest.println("MulticastSource.pub.complete()");
             pub.onComplete();

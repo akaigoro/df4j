@@ -1,8 +1,7 @@
 package org.df4j.nio2.net.echo;
 
+import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.asynchproc.Semafor;
-import org.df4j.core.asynchproc.ext.Action;
-import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.ServerConnection;
 
@@ -14,7 +13,7 @@ import java.util.function.Consumer;
  * generates {@link ServerConnection}s and passes them to AsyncServerSocketChannel to initialize
  *
  */
-public class ConnectionManager extends AsyncAction {
+public class ConnectionManager extends LazyActor {
     private final AsyncServerSocketChannel assc;
     Semafor allowedConnections = new Semafor(this);
     int serialnum=0;
@@ -28,8 +27,9 @@ public class ConnectionManager extends AsyncAction {
         allowedConnections.release(connCount);
     }
 
-    @Action
-    protected void act() {
+
+    @Override
+    protected void runAction() throws Throwable {
         ServerConnection conn = new EchoServer(backport);
         conn.name = "EchoServerConnection"+(serialnum++);
         assc.subscribe(conn);

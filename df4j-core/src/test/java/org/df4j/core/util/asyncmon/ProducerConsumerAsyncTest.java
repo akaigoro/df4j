@@ -1,20 +1,20 @@
 package org.df4j.core.util.asyncmon;
 
+import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.asynchproc.AllOf;
 import org.df4j.core.asynchproc.AsyncProc;
 import org.df4j.core.asynchproc.CompletablePromise;
-import org.reactivestreams.Subscriber;
-import org.df4j.core.asynchproc.ext.AsyncAction;
-import org.df4j.core.actor.ext.Actor1;
 import org.junit.Assert;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class ProducerConsumerAsync extends AllOf {
+public class ProducerConsumerAsyncTest extends AllOf {
 
     class NonBlockingQ<T> extends AsyncObject {
         private final int maxItems;
@@ -58,11 +58,11 @@ public class ProducerConsumerAsync extends AllOf {
         }
     }
 
-    /** this is an implicit Actor, which restarts only after
+    /** this is a manually controlled Actor, which restarts only after
      * blockingQ.put() finished
      *
      */
-    class IntProducer extends AsyncAction {
+    class IntProducer extends LazyActor {
 
         final NonBlockingQ<Integer> nonBlockingQ;
         int k = 0;
@@ -81,6 +81,7 @@ public class ProducerConsumerAsync extends AllOf {
                 stop();
             }
         }
+
     }
 
     class IntConsumer extends Actor1<Integer> {
@@ -114,7 +115,6 @@ public class ProducerConsumerAsync extends AllOf {
         NonBlockingQ blockingQ = new NonBlockingQ(5);
         IntProducer producer = new IntProducer(blockingQ);
         IntConsumer consumer = new IntConsumer(blockingQ);
-        super.start(); // only after all components created
         producer.start();
         consumer.start();
         asyncResult().get(1, TimeUnit.SECONDS);
