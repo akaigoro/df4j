@@ -2,7 +2,7 @@ package org.df4j.core.util.asyncmon;
 
 
 import org.df4j.core.actor.ext.Actor1;
-import org.df4j.core.asynchproc.CompletablePromise;
+import org.df4j.core.asyncproc.AsyncResult;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -14,7 +14,7 @@ public class AsyncObject {
         monitor.onNext(task);
     }
 
-    protected CompletablePromise<?> asyncResult() {
+    protected AsyncResult asyncResult() {
         return monitor.asyncResult();
     }
 

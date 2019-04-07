@@ -1,15 +1,12 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asynchproc.AsyncProc;
-import org.df4j.core.asynchproc.Semafor;
+import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.asyncproc.Semafor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * Non-blocking analogue of blocking queue.

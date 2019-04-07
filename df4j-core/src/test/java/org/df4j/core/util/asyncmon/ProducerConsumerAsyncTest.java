@@ -1,10 +1,10 @@
 package org.df4j.core.util.asyncmon;
 
-import org.df4j.core.actor.ext.Actor1;
 import org.df4j.core.actor.LazyActor;
-import org.df4j.core.asynchproc.AllOf;
-import org.df4j.core.asynchproc.AsyncProc;
-import org.df4j.core.asynchproc.CompletablePromise;
+import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.asyncproc.AllOf;
+import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.asyncproc.AsyncResult;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
@@ -24,7 +24,7 @@ public class ProducerConsumerAsyncTest extends AllOf {
         public NonBlockingQ(int maxItems) {
             this.maxItems = maxItems;
             buf = new ArrayDeque(maxItems);
-            CompletablePromise<?> scalarPublisher = super.asyncResult();
+            AsyncResult scalarPublisher = super.asyncResult();
             registerAsyncDaemon(scalarPublisher);
         }
 

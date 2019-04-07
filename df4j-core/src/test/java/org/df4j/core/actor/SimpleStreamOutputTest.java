@@ -9,7 +9,7 @@
  */
 package org.df4j.core.actor;
 
-import org.df4j.core.asynchproc.CompletablePromise;
+import org.df4j.core.asyncproc.AsyncResult;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -68,7 +68,7 @@ public class SimpleStreamOutputTest {
             from.subscribe(to);
         }
         from.start();
-        CompletablePromise<Void> result = from.asyncResult();
+        AsyncResult result = from.asyncResult();
         result.get(1, TimeUnit.SECONDS);
         // publisher always sends all tokens, even if all subscribers unsubscribed.
         int expected = Math.min(sourceNumber, sinkCount*sinkNumber);

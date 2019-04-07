@@ -1,6 +1,6 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asynchproc.AsyncProc;
+import org.df4j.core.asyncproc.AsyncProc;
 
 import java.util.concurrent.Executor;
 

@@ -1,7 +1,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.Port;
-import org.df4j.core.asynchproc.CompletablePromise;
+import org.df4j.core.asyncproc.AsyncResult;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
@@ -69,7 +69,7 @@ public class PickPoint<T> implements Publisher<T>, Port<T> {
                 return resources.remove();
             }
         }
-        CompletablePromise<T> future = new CompletablePromise<>();
+        AsyncResult<T> future = new AsyncResult<>();
         subscribe(future);
         try {
             return future.get();
@@ -84,7 +84,7 @@ public class PickPoint<T> implements Publisher<T>, Port<T> {
                 return resources.remove();
             }
         }
-        CompletablePromise<T> future = new CompletablePromise<>();
+        AsyncResult<T> future = new AsyncResult<>();
         subscribe(future);
         try {
             return future.get(timeout, unit);

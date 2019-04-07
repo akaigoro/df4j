@@ -1,8 +1,8 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.Port;
-import org.df4j.core.asynchproc.AsyncProc;
-import org.df4j.core.asynchproc.Transition;
+import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;

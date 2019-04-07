@@ -1,6 +1,6 @@
 package org.df4j.core.util;
 
-import org.df4j.core.asynchproc.ext.Action;
+import org.df4j.core.asyncproc.ext.Action;
 import org.df4j.core.util.invoker.AbstractInvoker;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.MethodInvoker;

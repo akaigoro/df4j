@@ -1,12 +1,11 @@
 package org.df4j.core.tutorial.basic;
 
-import org.df4j.core.asynchproc.AsyncProc;
-import org.df4j.core.asynchproc.CompletablePromise;
-import org.df4j.core.asynchproc.ScalarInput;
-import org.df4j.core.asynchproc.ext.AsyncBiFunction;
-import org.df4j.core.asynchproc.ext.AsyncFunction;
+import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.asyncproc.AsyncResult;
+import org.df4j.core.asyncproc.ScalarInput;
+import org.df4j.core.asyncproc.ext.AsyncBiFunction;
+import org.df4j.core.asyncproc.ext.AsyncFunction;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.*;
@@ -16,7 +15,7 @@ import java.util.function.Function;
 public class SumSquareTest {
 
     public static class Square extends AsyncProc {
-        final CompletablePromise<Integer> result = new CompletablePromise<>();
+        final AsyncResult<Integer> result = new AsyncResult<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
         public void run() {
@@ -27,7 +26,7 @@ public class SumSquareTest {
     }
 
     public static class Sum extends AsyncProc {
-        final CompletablePromise<Integer> result = new CompletablePromise<>();
+        final AsyncResult<Integer> result = new AsyncResult<>();
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 
