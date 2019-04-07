@@ -76,10 +76,10 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements Publisher<R>, Fu
     }
 
     @Override
-    public void run() {
+    protected void run() {
         try {
             R res = callAction();
-            asyncResult().complete(res);
+            result.complete(res);
         } catch (Throwable e) {
             result.completeExceptionally(e);
         }

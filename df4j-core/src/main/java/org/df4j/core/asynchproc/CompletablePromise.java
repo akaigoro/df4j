@@ -16,6 +16,11 @@ import java.util.function.BiConsumer;
 public class CompletablePromise<R> extends CompletableFuture<R> implements Port<R>, Publisher<R> {
 
     @Override
+    public void subscribe(Subscriber<? super R> subscriber) {
+        new ScalarSubscription(subscriber);
+    }
+
+    @Override
     public void onNext(R message) {
         super.complete(message);
     }
@@ -26,8 +31,8 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Port<
     }
 
     @Override
-    public void subscribe(Subscriber<? super R> subscriber) {
-        new ScalarSubscription(subscriber);
+    public void onComplete() {
+        super.complete(null);
     }
 
     /**
@@ -43,11 +48,6 @@ public class CompletablePromise<R> extends CompletableFuture<R> implements Port<
         result.complete(value);
         return result;
     }
-
-    public void onComplete() {
-        super.complete(null);
-    }
-
 
     class ScalarSubscription implements Subscription, BiConsumer<R, Throwable> {
 

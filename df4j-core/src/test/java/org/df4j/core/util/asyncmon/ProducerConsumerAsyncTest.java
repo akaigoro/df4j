@@ -1,7 +1,7 @@
 package org.df4j.core.util.asyncmon;
 
 import org.df4j.core.actor.ext.Actor1;
-import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.asynchproc.AllOf;
 import org.df4j.core.asynchproc.AsyncProc;
 import org.df4j.core.asynchproc.CompletablePromise;

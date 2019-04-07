@@ -2,7 +2,8 @@ package org.df4j.core.actor;
 
 import org.df4j.core.Port;
 import org.df4j.core.asynchproc.AsyncProc;
-import org.df4j.core.asynchproc.ScalarInput;
+import org.df4j.core.asynchproc.Transition;
+import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -12,27 +13,52 @@ import java.util.Queue;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
-    protected Queue<T> queue;
-    protected boolean closeRequested = false;
+public class StreamInput<T> extends Transition.Pin implements Port<T>, org.reactivestreams.Subscriber<T> {
+    protected int capacity;
+    protected Queue<T> tokens;
+    /** to monitor existence of the room for additional tokens */
+    protected Transition.Pin roomLock;
+    /** extracted token */
+    protected T current = null;
+    protected Subscription subscription;
+    protected boolean completed = false;
+    protected Throwable completionException;
+    protected boolean pushback = false; // if true, do not consume
+
+    public StreamInput(AsyncProc actor, int fullCapacity) {
+        actor.super();
+        if (fullCapacity <= 0) {
+            throw new IllegalArgumentException();
+        }
+        this.capacity = fullCapacity-1;
+        if (fullCapacity > 0) {
+            this.tokens = new ArrayDeque<>(fullCapacity);
+        }
+    }
 
     public StreamInput(AsyncProc actor) {
-        super(actor);
-        this.queue = new ArrayDeque<>();
+        this(actor, 9);
     }
 
-    public StreamInput(AsyncProc actor, int capacity) {
-        super(actor);
-        this.queue = new ArrayDeque<>(capacity);
-    }
-
-    public StreamInput(AsyncProc actor, Queue<T> queue) {
-        super(actor);
-        this.queue = queue;
+    public synchronized void setRoomLockIn(AsyncProc outerActor) {
+        if (this.roomLock != null) {
+            throw new IllegalStateException();
+        }
+        this.roomLock = outerActor.new Pin(isFull());
     }
 
     public int size() {
-        return queue.size();
+        return  current == null? 0: (1+tokens.size());
+    }
+
+    public boolean isFull() {
+        return  current == null? false: tokens.size() == capacity;
+    }
+
+    @Override
+    public synchronized void onSubscribe(Subscription s) {
+        this.subscription = s;
+        s.request(capacity - size());
     }
 
     @Override
@@ -40,37 +66,28 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
         if (token == null) {
             throw new NullPointerException();
         }
-        if (closeRequested) {
+        if (completed) {
             throw new IllegalStateException("closed already");
-        }
-        if (exception != null) {
-            throw new IllegalStateException("token set already");
         }
         if (current == null) {
             current = token;
             unblock();
         } else {
-            queue.add(token);
+            tokens.add(token);
+            if (roomLock!=null && isFull()) {
+                roomLock.block();
+            }
+        }
+    }
+
+    public void cancel() {
+        if (subscription != null) {
+            subscription.cancel();
         }
     }
 
     /**
-     * Signals the end of the stream. Turns this pin on. Removed value is
-     * null (null cannot be send with Subscriber.add(message)).
-     */
-    @Override
-    public synchronized void onComplete() {
-        if (closeRequested) {
-            return;
-        }
-        closeRequested = true;
-        if (current == null) {
-            unblock();
-        }
-    }
-
-    /**
-     * in order to reuse same token in subsequent async call
+     * in order to reuse same token in subsequent actor step
      */
     protected void pushback() {
         if (pushback) {
@@ -80,7 +97,7 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
     }
 
     /**
-     * in order to reuse another token in subsequent async call
+     * in order to reuse another token in subsequent actor step
      */
     protected synchronized void pushback(T value) {
         if (value == null) {
@@ -92,43 +109,91 @@ public class StreamInput<T> extends ScalarInput<T> implements Port<T> {
             if (this.current == null) {
                 throw new IllegalStateException();
             }
-            queue.add(this.current);
+            tokens.add(this.current);
             this.current = value;
+            if (roomLock!=null && isFull()) {
+                roomLock.block();
+            }
+
         }
     }
 
     /**
-     * in order to use next token in the same async call
+     * in order to use next token in the same actor step
      *
      * @return
      */
-    public boolean moveNext() {
+    public synchronized boolean moveNext() {
+        boolean wasFull = isFull();
         boolean wasNotNull = (current != null);
-        current = queue.poll();
-        return current != null || (closeRequested && wasNotNull);
+        current = tokens.poll();
+        if (current == null) {
+            // no more tokens for now
+            if (completed) {
+                return wasNotNull;
+            } else {
+                return false;
+            }
+        }
+        if (roomLock!=null && wasFull) {
+            roomLock.unblock();
+        }
+        return true;
     }
 
     @Override
-    public synchronized void purge() {
-        if (pushback) {
-            pushback = false;
-        } else if (!moveNext()) {
-            block();
+    public  void purge() {
+        int delta;
+        synchronized (this) {
+            int sizeBefore = size();
+            if (pushback) {
+                pushback = false;
+            } else if (!moveNext()) {
+                block();
+            }
+            delta = sizeBefore - size();
+        }
+        if (delta > 0 && subscription != null) {
+            subscription.request(delta);
         }
     }
 
-    @Override
     public synchronized T next() {
         purge();
-        return current();
+        return current;
     }
 
-    @Override
     public boolean hasNext() {
         return current != null;
     }
 
-    public synchronized boolean  isClosed() {
-        return closeRequested && (current == null);
+    protected boolean isParameter() {
+        return true;
+    }
+
+    public synchronized T current() {
+        return current;
+    }
+
+    public synchronized Throwable getCompletionException() {
+        return completionException;
+    }
+
+    public synchronized boolean isCompleted() {
+        return completed;
+    }
+
+    @Override
+    public synchronized void onError(Throwable throwable) {
+        onComplete();
+        this.completionException = throwable;
+    }
+
+    public synchronized void onComplete() {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        unblock();
     }
 }

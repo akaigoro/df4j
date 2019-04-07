@@ -13,7 +13,7 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.actor.MulticastStreamOutput;
-import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.actor.StreamInput;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Subscriber;
@@ -131,12 +131,12 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
 
         long timeout=0;
 
-        //-------------------- datafloe backend
+        //-------------------- dataflow backend
 
         @Override
         protected void runAction() {
             ByteBuffer buffer = input.current();
-            if (input.isClosed()) {
+            if (input.isCompleted()) {
                 output.onComplete();
                 output.onError(new AsynchronousCloseException());
                 LOG.finest("conn "+ name+": input.isClosed()");

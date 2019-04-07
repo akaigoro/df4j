@@ -1,7 +1,6 @@
 package org.df4j.core.asynchproc;
 
 import org.df4j.core.Port;
-import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.core.asynchproc.ext.AsyncSupplier;
 import org.reactivestreams.Publisher;
 
@@ -50,7 +49,7 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResultExceptionally(ex);
     }
 
-    class Enter extends Lock implements Port<Object> {
+    class Enter extends Pin implements Port<Object> {
 
         @Override
         public void onNext(Object value) {

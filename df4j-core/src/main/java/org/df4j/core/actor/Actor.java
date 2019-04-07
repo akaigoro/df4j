@@ -6,21 +6,19 @@ import java.util.concurrent.Executor;
 
 /**
  * Actor is a reusable AsyncProc: after execution, it executes again as soon as new array of arguments is ready.
+ *
+ * Overlapping of execution of the same instance is prevented by controlling {@link Actor#controlLock}
  */
 public abstract class Actor extends AsyncProc {
     /**
      * blocked initially, until {@link #start} called.
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
-    protected Lock controlLock = new Lock();
+    private Pin controlLock = new Pin();
     /**
      * if true, this action cannot be restarted
      */
-    protected volatile boolean stopped = false;
-
-    public boolean isStarted() {
-        return !controlLock.isBlocked();
-    }
+    private volatile boolean stopped = false;
 
     public boolean isStopped() {
         return stopped;
@@ -51,8 +49,7 @@ public abstract class Actor extends AsyncProc {
 
     protected abstract void runAction() throws Throwable;
 
-    @Override
-    public void run() {
+    protected void run() {
         try {
             blockStarted();
             runAction();

@@ -10,9 +10,7 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.actor.MulticastStreamOutput;
-import org.df4j.core.actor.ext.LazyActor;
-import org.df4j.core.asynchproc.ext.Action;
-import org.df4j.core.asynchproc.ext.AsyncAction;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -36,7 +34,8 @@ import java.nio.channels.CompletionHandler;
  *  when there are no ServerConnection on the input, client requests are not accepted.
  *
  */
-public class AsyncServerSocketChannel
+public class
+AsyncServerSocketChannel
         extends LazyActor
         implements Publisher<AsynchronousSocketChannel>,
         CompletionHandler<AsynchronousSocketChannel, Subscriber<? super AsynchronousSocketChannel>>

@@ -8,7 +8,7 @@ import org.reactivestreams.Subscription;
  * holds token counter without data.
  * counter can be negative.
  */
-public class Semafor extends AsyncProc.Lock implements PermitSubscriber {
+public class Semafor extends Transition.Pin implements PermitSubscriber {
     protected final AsyncProc actor;
     private long count = 0;
     protected Subscription subscription;

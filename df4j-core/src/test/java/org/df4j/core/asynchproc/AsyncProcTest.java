@@ -1,6 +1,5 @@
-package org.df4j.core.messagescalar;
+package org.df4j.core.asynchproc;
 
-import org.df4j.core.asynchproc.CompletablePromise;
 import org.df4j.core.asynchproc.ext.Action;
 import org.df4j.core.asynchproc.ext.AsyncBiFunction;
 import org.df4j.core.asynchproc.ext.AsyncSupplier;
@@ -30,7 +29,7 @@ public class AsyncProcTest {
     }
 
     public static class Blocker<T,R> extends AsyncSupplier<R> {
-        ConstInput<T> arg = new ConstInput<>();
+        ConstInput<T> arg = new ConstInput<>(this);
     }
 
     class Mult2 extends Mult {
@@ -62,9 +61,9 @@ public class AsyncProcTest {
 
     /* D = b^2 - 4ac */
     class Discr extends AsyncSupplier<Double> {
-        ConstInput<Double> pa = new ConstInput<>();
-        ConstInput<Double> pb = new ConstInput<>();
-        ConstInput<Double> pc = new ConstInput<>();
+        ConstInput<Double> pa = new ConstInput<>(this);
+        ConstInput<Double> pb = new ConstInput<>(this);
+        ConstInput<Double> pc = new ConstInput<>(this);
 
         @Action
         public double act(Double a, Double b, Double c) {
@@ -97,9 +96,9 @@ public class AsyncProcTest {
      * (-b +/- sqrt(D))/2a
      */
     class RootCalc extends AsyncSupplier<double[]> {
-        ConstInput<Double> pa = new ConstInput<>();
-        ConstInput<Double> pb = new ConstInput<>();
-        ConstInput<Double> pd = new ConstInput<>();
+        ConstInput<Double> pa = new ConstInput<>(this);
+        ConstInput<Double> pb = new ConstInput<>(this);
+        ConstInput<Double> pd = new ConstInput<>(this);
 
         @Action
         public double[] act(Double a, Double b, Double d) {

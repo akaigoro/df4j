@@ -2,6 +2,7 @@ package org.df4j.core.actor;
 
 import org.df4j.core.Port;
 import org.df4j.core.asynchproc.AsyncProc;
+import org.df4j.core.asynchproc.Transition;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -15,7 +16,7 @@ import java.util.function.Consumer;
  *
  * @param <T> type of tokens
  */
-public class MulticastStreamOutput<T> extends AsyncProc.Lock implements Port<T>, Publisher<T> {
+public class MulticastStreamOutput<T> extends Transition.Pin implements Port<T>, Publisher<T> {
     protected AsyncProc actor;
     protected Set<SimpleSubscription> subscriptions = new HashSet<>();
 

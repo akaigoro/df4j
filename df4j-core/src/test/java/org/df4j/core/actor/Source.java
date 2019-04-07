@@ -1,6 +1,5 @@
-package org.df4j.core.reactivestream;
+package org.df4j.core.actor;
 
-import org.df4j.core.actor.Actor;
 import org.df4j.core.asynchproc.AllOf;
 import org.reactivestreams.Publisher;
 

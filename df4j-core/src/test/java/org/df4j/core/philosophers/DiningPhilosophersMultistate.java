@@ -1,10 +1,10 @@
 package org.df4j.core.philosophers;
 
-import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.StreamInput;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.asynchproc.AllOf;
-import org.df4j.core.asynchproc.ScalarInput;
 import org.df4j.core.asynchproc.Semafor;
-import org.df4j.core.asynchproc.PickPoint;
+import org.df4j.core.actor.PickPoint;
 import org.df4j.core.asynchproc.ext.AsyncAction;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.util.TimeSignalPublisher;
@@ -163,7 +163,7 @@ public class DiningPhilosophersMultistate {
          * after the second fork is obtained, activates next state.
          */
         class Hungry extends State {
-            ScalarInput<Fork> input = new ScalarInput<Fork>(this);
+            StreamInput<Fork> input = new StreamInput<>(this);
 
             @Override
             public synchronized void start() {

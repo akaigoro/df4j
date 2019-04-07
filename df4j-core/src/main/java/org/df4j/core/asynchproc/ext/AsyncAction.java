@@ -36,7 +36,7 @@ public class AsyncAction<R> extends AsyncProc<R> {
     }
 
     @Override
-    public void run() {
+    protected void run() {
         try {
             runAction();
         } catch (Throwable e) {

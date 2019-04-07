@@ -1,4 +1,4 @@
-package org.df4j.core.reactivestream;
+package org.df4j.core.asynchproc;
 
 import org.df4j.core.asynchproc.CompletablePromise;
 import org.junit.Assert;

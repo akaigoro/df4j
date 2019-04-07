@@ -9,24 +9,25 @@
  */
 package org.df4j.core.asynchproc;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.df4j.core.util.executor.CurrentThreadExecutor;
 
-import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * this class contains components, likely useful in each async task node:
+ * AsyncProc is an Asynchronous Procedure.
+ *
+ * It consists of asynchronous connectors, implemented as inner classes,
+ * user-defined asynchronous procedure, and a mechanism to call that procedure
+ * using supplied {@link Executor} as soon as all connectors are unblocked.
+ *
+ * This class contains predefined components, likely useful in each async task node:
  *  - reference to an executor
- *  - control pin -- prevents concurrent execution of the same AsyncAction
  *  - scalar result. Even if this action will produce a stream of results or no result at all,
- *  it can be used as a channel for unexpected errors.
+ *  it can be used as a place for unexpected errors.
  */
-public abstract class AsyncProc<R> extends BaseAsyncProc implements Runnable {
+public abstract class AsyncProc<R> extends Transition {
     public static final Executor directExec = (Runnable r)->r.run();
     public static final CurrentThreadExecutor currentThreadExec = new CurrentThreadExecutor();
     public static final Executor newThreadExec = (Runnable r)->new Thread(r).start();
@@ -42,25 +43,24 @@ public abstract class AsyncProc<R> extends BaseAsyncProc implements Runnable {
         }
     };
 
-    private Executor executor;
-
-    public void setExecutor(Executor exec) {
-        this.executor = exec;
-    }
-
-    protected final CompletablePromise<R> result = new CompletablePromise<>();
-
     /**
      * for debug purposes, call
      * <pre>
      *    setThreadLocalExecutor(AsyncProc.currentThreadExec);
      * </pre>
-     * before creating {@link BaseAsyncProc} instances.
+     * before creating {@link Transition} instances.
      *
      * @param exec default executor
      */
     public static void setThreadLocalExecutor(Executor exec) {
         threadLocalExecutor.set(exec);
+    }
+
+    private Executor executor;
+    protected final CompletablePromise<R> result = new CompletablePromise<>();
+
+    public void setExecutor(Executor exec) {
+        this.executor = exec;
     }
 
     public CompletablePromise<R> asyncResult() {
@@ -80,7 +80,8 @@ public abstract class AsyncProc<R> extends BaseAsyncProc implements Runnable {
                 executor = threadLocalExecutor.get();
             }
         }
-        executor.execute(this);
+        executor.execute(this::run);
     }
 
+    protected abstract void run();
 }

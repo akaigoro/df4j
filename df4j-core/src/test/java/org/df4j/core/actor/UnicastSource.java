@@ -1,19 +1,18 @@
-package org.df4j.core.reactivestream;
+package org.df4j.core.actor;
 
-import org.df4j.core.asynchproc.AllOf;
 import org.reactivestreams.Subscriber;
-
-import static org.df4j.core.reactivestream.ReactiveStreamExampleBase.println;
 
 /**
  * emits totalNumber of Longs and closes the stream
  */
 public class UnicastSource extends Source<Long> {
-    public ReactiveUnicastOutput<Long> pub = new ReactiveUnicastOutput<>(this);
+    Logger log;
+    public StreamOutput<Long> output = new StreamOutput<>(this);
     long val = 0;
 
-    public UnicastSource(AllOf parent, int totalNumber) {
+    public UnicastSource(Logger parent, int totalNumber) {
         super(parent);
+        log = parent;
         this.val = totalNumber;
     }
 
@@ -26,18 +25,18 @@ public class UnicastSource extends Source<Long> {
 
     @Override
     public void subscribe(Subscriber<? super Long> subscriber) {
-        pub.subscribe(subscriber);
+        output.subscribe(subscriber);
     }
 
     @Override
     protected void runAction() {
         if (val > 0) {
-            println("Source.pub.post("+val+")");
-            pub.onNext(val);
+            log.println("Source.pub.post("+val+")");
+            output.onNext(val);
             val--;
         } else {
-            pub.onComplete();
-            println("Source.pub.complete()");
+            log.println("Source.pub.complete()");
+            output.onComplete();
             stop();
         }
     }

@@ -1,7 +1,7 @@
 package org.df4j.tck;
 
 
-import org.df4j.core.reactivestream.UnicastSource;
+import org.df4j.core.actor.UnicastSource;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.tck.PublisherVerification;
@@ -66,7 +66,7 @@ static class FailedUnicastSource extends UnicastSource {
 
     @Override
     protected void runAction() {
-        pub.onError(new RuntimeException());
+        output.onError(new RuntimeException());
     }
     }
 }

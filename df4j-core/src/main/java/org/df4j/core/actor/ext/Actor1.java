@@ -12,6 +12,7 @@ package org.df4j.core.actor.ext;
 import org.df4j.core.Port;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.StreamInput;
+import org.reactivestreams.Subscription;
 
 /**
  * A dataflow Actor with one predefined input stream port.
@@ -20,8 +21,21 @@ import org.df4j.core.actor.StreamInput;
  *
  * @param <M> the type of messages, accepted via predefined port.
  */
-public abstract class Actor1<M> extends Actor implements Port<M> {
-    protected final StreamInput<M> mainInput = new StreamInput<M>(this);
+public abstract class Actor1<M> extends FancyActor implements Port<M> {
+    protected final StreamInput<M> mainInput;
+
+    public Actor1(int capacity) {
+        mainInput = new StreamInput<M>(this, capacity);
+    }
+
+    public Actor1() {
+        this(16);
+    }
+
+    @Override
+    public void onSubscribe(Subscription s) {
+        mainInput.onSubscribe(s);
+    }
 
     @Override
     public void onNext(M m) {
@@ -41,10 +55,6 @@ public abstract class Actor1<M> extends Actor implements Port<M> {
         mainInput.onComplete();
     }
 
-    public boolean isClosed() {
-        return mainInput.isClosed();
-    }
-
     @Override
     protected void runAction() throws Exception {
         M message = mainInput.current();
@@ -52,12 +62,12 @@ public abstract class Actor1<M> extends Actor implements Port<M> {
             runAction(message);
         } else {
             completion();
+            stop();
         }
     }
 
     protected abstract void runAction(M arg) throws Exception;
 
     protected void completion() throws Exception {
-        stop();
     }
 }

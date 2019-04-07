@@ -6,12 +6,10 @@ import org.df4j.core.asynchproc.ScalarInput;
 import org.df4j.core.asynchproc.ext.AsyncBiFunction;
 import org.df4j.core.asynchproc.ext.AsyncFunction;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -54,12 +52,12 @@ public class SumSquareTest {
         sqX.param.onNext(3);
         sqY.param.onNext(4);
         // get the result
-        int res = sum.result.get(1000, TimeUnit.SECONDS);
+        int res = sum.result.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
 
     @Test
-    public void testDFF() throws ExecutionException, InterruptedException {
+    public void testDFF() throws ExecutionException, InterruptedException, TimeoutException {
         Function<Integer, Integer> square = arg -> arg * arg;
         BiFunction<Integer, Integer, Integer> plus = (argX, argY) -> argX + argY;
         // create nodes and connect them
@@ -73,7 +71,7 @@ public class SumSquareTest {
         sqX.onNext(3);
         sqY.onNext(4);
         // get the result
-        int res = sum.asyncResult().get();
+        int res = sum.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
 

@@ -1,6 +1,7 @@
-package org.df4j.core.asynchproc;
+package org.df4j.core.actor;
 
 import org.df4j.core.Port;
+import org.df4j.core.asynchproc.CompletablePromise;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
