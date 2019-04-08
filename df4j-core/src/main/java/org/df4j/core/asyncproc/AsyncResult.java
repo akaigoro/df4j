@@ -18,10 +18,13 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
     protected volatile boolean done;
     protected volatile T value;
     protected volatile Throwable completionException;
-    protected SubscriptionQueue<T> subscriptions = new SubscriptionQueue<>();
+    protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
+    /** in case this instance have supscribed to some other Publisher */
+    protected Subscription subscription;
 
     @Override
     public void onSubscribe(Subscription s) {
+        subscription = s;
         s.request(1);
     }
 
@@ -35,7 +38,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
             value = t;
             notifyAll();
         }
-        SubscriptionQueue.ScalaSubscription subscription = subscriptions.poll();
+        ScalarSubscription subscription = subscriptions.poll();
         for (; subscription != null; subscription = subscriptions.poll()) {
             subscription.onNext(value);
         }
@@ -51,7 +54,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
             completionException = t;
             notifyAll();
         }
-        SubscriptionQueue.ScalaSubscription subscription = subscriptions.poll();
+        ScalarSubscription subscription = subscriptions.poll();
         for (; subscription != null; subscription = subscriptions.poll()) {
             subscription.onError(completionException);
         }
@@ -73,18 +76,31 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
     }
 
     /**
-     * Should not be used.
-     * @param mayInterruptIfRunning
-     * @return false
+     * Cancels subscription, and not the task, as interfece {@link Future} assumes.
+     * @param mayInterruptIfRunning not used
+     * @return false if was not subscribed
+     *         true if was subscribed and subscription cancelled
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
+        Subscription subscriptionLoc;
+        synchronized(this) {
+            subscriptionLoc = subscription;
+            if (subscriptionLoc == null) {
+                return false;
+            }
+        }
+        subscriptionLoc.cancel();
+        return true;
     }
 
+    /**
+     *
+     * @return true if not subscribed
+     */
     @Override
     public synchronized boolean isCancelled() {
-        return false;
+        return subscription == null;
     }
 
     @Override

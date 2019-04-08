@@ -40,6 +40,14 @@ public class StreamInput<T> extends Transition.Pin implements Port<T>, org.react
         this(actor, 9);
     }
 
+    protected boolean isParameter() {
+        return true;
+    }
+
+    public synchronized T current() {
+        return current;
+    }
+
     public synchronized void setRoomLockIn(AsyncProc outerActor) {
         if (this.roomLock != null) {
             throw new IllegalStateException();
@@ -84,6 +92,10 @@ public class StreamInput<T> extends Transition.Pin implements Port<T>, org.react
         if (subscription != null) {
             subscription.cancel();
         }
+    }
+
+    public synchronized void remove(T item) {
+        tokens.remove(item);
     }
 
     /**
@@ -165,14 +177,6 @@ public class StreamInput<T> extends Transition.Pin implements Port<T>, org.react
 
     public boolean hasNext() {
         return current != null;
-    }
-
-    protected boolean isParameter() {
-        return true;
-    }
-
-    public synchronized T current() {
-        return current;
     }
 
     public synchronized Throwable getCompletionException() {

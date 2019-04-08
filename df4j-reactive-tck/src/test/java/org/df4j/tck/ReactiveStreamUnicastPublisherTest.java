@@ -57,16 +57,16 @@ public class ReactiveStreamUnicastPublisherTest extends PublisherVerification<Lo
     }
 
 
-static class FailedUnicastSource extends UnicastSource {
-    @Override
-    public void subscribe(Subscriber<? super Long> subscriber) {
-        super.subscribe(subscriber);
-        subscriber.onError(new RuntimeException());
-    }
+    static class FailedUnicastSource extends UnicastSource {
+        @Override
+        public void subscribe(Subscriber<? super Long> subscriber) {
+            super.subscribe(subscriber);
+            subscriber.onError(new RuntimeException());
+        }
 
-    @Override
-    protected void runAction() {
-        output.onError(new RuntimeException());
-    }
+        @Override
+        protected void runAction() {
+            output.onError(new RuntimeException());
+        }
     }
 }

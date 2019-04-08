@@ -2,25 +2,15 @@ package org.df4j.core.actor;
 
 import org.reactivestreams.Subscriber;
 
-/**
- * emits totalNumber of Longs and closes the stream
- */
-public class UnicastSource extends Source<Long> {
+public class StreamSubscriptionSource extends Source<Long> {
     Logger log;
     public StreamSubscriptionQueue<Long> output = new StreamSubscriptionQueue<>(this);
     long val = 0;
 
-    public UnicastSource(Logger parent, int totalNumber) {
+    public StreamSubscriptionSource(Logger parent, int totalNumber) {
         super(parent);
         log = parent;
         this.val = totalNumber;
-    }
-
-    public UnicastSource(long totalNumber) {
-        this.val = totalNumber;
-    }
-
-    public UnicastSource() {
     }
 
     @Override
@@ -37,7 +27,7 @@ public class UnicastSource extends Source<Long> {
             val--;
         } else {
             log.println("Source.pub.complete()");
-            subscription.onComplete();
+            output.onComplete();
             stop();
         }
     }

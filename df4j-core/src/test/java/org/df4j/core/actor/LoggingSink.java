@@ -1,5 +1,7 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.asyncproc.AsyncResult;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -7,6 +9,7 @@ import java.io.PrintStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LoggingSink<T> implements Subscriber<T> {
+    private final AsyncResult<T> asyncResult = new AsyncResult<T>();
     Logger parent;
     final String name;
     AtomicInteger received = new AtomicInteger(0);
@@ -15,6 +18,7 @@ public class LoggingSink<T> implements Subscriber<T> {
     public LoggingSink(Logger parent, int maxNumber, String name) {
         this.parent = parent;
         this.name = name;
+        parent.registerAsyncResult(asyncResult);
     }
 
     @Override
@@ -32,12 +36,14 @@ public class LoggingSink<T> implements Subscriber<T> {
     public void onError(Throwable t) {
         parent.println(name+": onError after "+received.get()+" onNext");
         this.completed = true;
+        asyncResult.onError(t);
     }
 
     @Override
     public void onComplete() {
         parent.println(name+": onComplete after "+received.get()+" onNext");
         this.completed = true;
+        asyncResult.onComplete();
     }
 
     @Override

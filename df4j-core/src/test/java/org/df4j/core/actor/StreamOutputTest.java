@@ -10,7 +10,6 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.AsyncResult;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -22,27 +21,27 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-@Ignore
 @RunWith(Parameterized.class)
 public class StreamOutputTest {
 
     @Parameterized.Parameters(name = "{index}: {0} => {1}*{2}")
     public static Iterable<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {0, 1, 1},
+                   {0, 1, 1},
                 {1, 2, 2},
-                {4, 5, 3},
-                {9, 10, 4},
-                {1, 0, 1},
-                {5, 4, 3},
-                {0, 1, 2},
-                {1, 1, 3},
-                {2, 2, 4},
-                {5, 5, 5},
-                {2, 1, 2},
-                {8, 2, 4},
-                {10, 5, 2}
+                        {4, 5, 3},
+                        {9, 10, 4},
+                        {1, 0, 1},
+                        {5, 4, 3},
+                        {0, 1, 2},
+                        {1, 1, 3},
+                        {2, 2, 4},
+                        {5, 5, 5},
+                        {2, 1, 2},
+                        {8, 2, 4},
+                        {10, 5, 2}
         });
     }
 
@@ -57,25 +56,32 @@ public class StreamOutputTest {
     }
 
     @Test
-    public void testUnicastSource() throws InterruptedException, ExecutionException, TimeoutException {
+    public void testUnicastSource() throws InterruptedException, ExecutionException {
         Logger parent = new Logger(true);
         String testName="1 sink "+sourceNumber+"."+sinkNumber;
         parent.println("=== test started:"+testName);
-        Source<Long> from = new UnicastSource(parent, sourceNumber);
-        ArrayList<ActorSink> sinks = new ArrayList<>();
+ //       Source<Long> from = new UnicastSource(parent, sourceNumber);
+        Source<Long> from = new StreamSubscriptionSource(parent, sourceNumber);
+        ArrayList<LoggingSink> sinks = new ArrayList<>();
         for (int k=0; k<sinkCount; k++) {
-            ActorSink to = new ActorSink(parent, sinkNumber, "sink"+k);
+            LoggingSink to = new LoggingSink(parent,Integer.MAX_VALUE,"sink"+k);
             sinks.add(to);
             from.subscribe(to);
         }
         from.start();
-        AsyncResult<Void> result = parent.asyncResult();
-        result.get(1, TimeUnit.SECONDS);
-        // publisher always sends all tokens, even if all subscribers unsubscribed.
+        AsyncResult result = from.asyncResult();
+        try {
+            result.get(200, TimeUnit.MILLISECONDS);
+            assertTrue(sinkCount>0);
+        } catch (TimeoutException e) {
+            assertTrue(sinkCount==0);
+        }
         int expected = Math.min(sourceNumber, sinkCount*sinkNumber);
         int actual = 0;
         for (int k=0; k<sinkCount; k++) {
-            actual+=sinks.get(k).received.get();
+            LoggingSink sink = sinks.get(k);
+            assertTrue(sink.name+" not completed", sink.completed);
+            actual+= sink.received.get();
         }
         assertEquals(expected, actual);
         parent.println("=== test ended:"+testName+'\n');
