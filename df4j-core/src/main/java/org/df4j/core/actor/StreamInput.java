@@ -3,6 +3,7 @@ package org.df4j.core.actor;
 import org.df4j.core.Port;
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.asyncproc.Transition;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
@@ -11,9 +12,12 @@ import java.util.Queue;
 /**
  * A Queue of tokens
  *
+ * blocks when there are no input tokens in the input buffer,
+ * and also can manage additional {@link Transition.Pin} blocked when the buffer is full.
+ *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends Transition.Pin implements Port<T>, org.reactivestreams.Subscriber<T> {
+public class StreamInput<T> extends Transition.Pin implements Port<T>, Subscriber<T> {
     protected int capacity;
     protected Queue<T> tokens;
     /** to monitor existence of the room for additional tokens */

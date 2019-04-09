@@ -34,15 +34,20 @@ public class StreamSubscriptionQueue<T> extends Transition.Pin
 
     @Override
     public void subscribe(Subscriber<? super T> s) {
+        StreamSubscription subscription;
         synchronized(this) {
-            if (!completed) {
-                StreamSubscription subscription = new StreamSubscription(this, s);
+            if (completed) {
+                subscription = null;
+            } else {
+                subscription = new StreamSubscription(this, s);
                 passiveSubscriptions.add(subscription);
-                s.onSubscribe(subscription);
-                return;
             }
         }
-        complete(s);
+        if (subscription == null) {
+            complete(s);
+        } else {
+            s.onSubscribe(subscription);
+        }
     }
 
     public void onError(Throwable ex) {
@@ -102,11 +107,15 @@ public class StreamSubscriptionQueue<T> extends Transition.Pin
             return passiveSubscriptions.remove(subscription);
         } else {
             boolean res = activeSubscriptions.remove(subscription);
-            if (activeSubscriptions.isEmpty()) {
+            if (isFull()) {
                 block();
             }
             return res;
         }
+    }
+
+    protected boolean isFull() {
+        return activeSubscriptions.isEmpty();
     }
 
 

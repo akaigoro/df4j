@@ -1,11 +1,11 @@
 package org.df4j.core.actor.ext;
 
-import org.df4j.core.actor.MulticastStreamOutput;
+import org.df4j.core.actor.StreamOutput;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 public abstract class StreamProcessor<M, R> extends Actor1<M> implements Publisher<R> {
-	protected final MulticastStreamOutput<R> output = new MulticastStreamOutput<>(this);
+	protected final StreamOutput<R> output = new StreamOutput<>(this);
 
     @Override
     public void subscribe(Subscriber<? super R> subscriber) {
