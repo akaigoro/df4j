@@ -21,6 +21,7 @@ import java.util.function.BiFunction;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class StreamOutputTest {
 
@@ -58,15 +59,24 @@ public class StreamOutputTest {
         AsyncResult result = from.asyncResult();
         try {
             result.get(200, TimeUnit.MILLISECONDS);
-            assertTrue(sinkCount>0);
+            if (sinkCount==0) {
+                parent.println("no sinks, but result.get()succseeds-> no TimeoutException");
+            }
         } catch (TimeoutException e) {
-            assertTrue(sinkCount==0);
+            if (sinkCount==0) {
+                parent.println("no sinks, TimeoutException as expected");
+            } else {
+                for (int k=0; k<sinkCount; k++) {
+                    LoggingSink sink = sinks.get(k);
+                    assertTrue(sink.name+" not completed", sink.completed);
+                }
+                fail("result.get()->TimeoutException");
+            }
         }
         int expected = Math.min(sourceNumber, sinkCount*sinkNumber);
         int actual = 0;
         for (int k=0; k<sinkCount; k++) {
             LoggingSink sink = sinks.get(k);
-            assertTrue(sink.name+" not completed", sink.completed);
             actual+= sink.received.get();
         }
         assertEquals(expected, actual);
@@ -80,12 +90,17 @@ public class StreamOutputTest {
     }
 
     @Test
+    public void specifictest() throws InterruptedException, ExecutionException {
+        testSource(1,1,1,(sourceNumber, parent) -> new UnicastUnbufferedSource(parent, sourceNumber));
+    }
+
+    @Test
     public void testUnBufferedSource() throws InterruptedException, ExecutionException {
-        testSource((sourceNumber, parent) -> new UnicastUnbuffereSource(parent, sourceNumber));
+        testSource((sourceNumber, parent) -> new UnicastUnbufferedSource(parent, sourceNumber));
     }
 
     @Test
     public void testBufferedSource() throws InterruptedException, ExecutionException {
-        testSource((sourceNumber, parent) -> new UnicastBuffereSource(parent, sourceNumber));
+        testSource((sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
     }
 }

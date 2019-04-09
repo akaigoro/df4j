@@ -37,6 +37,9 @@ public class StreamSubscription<T> extends ScalarSubscription<T> {
     @Override
     public void onNext(T value) {
         synchronized (this) {
+            if (isCancelled()) {
+                return;
+            }
             if (requested == 0) {
                 throw new IllegalArgumentException();
             }
@@ -46,9 +49,15 @@ public class StreamSubscription<T> extends ScalarSubscription<T> {
     }
 
     public void onComplete() {
-        Subscriber subscriberLoc = extractSubscriber();
-        if (subscriberLoc == null) {
-            return;
+        Subscriber subscriberLoc;
+        synchronized (this) {
+            if (isCancelled()) {
+                return;
+            }
+            subscriberLoc = extractSubscriber();
+            if (subscriberLoc == null) {
+                return;
+            }
         }
         subscriberLoc.onComplete();
     }

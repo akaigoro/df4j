@@ -25,7 +25,7 @@ public abstract class SubscriptionQueue<T, S extends ScalarSubscription<T>> exte
 
             @Override
             public boolean hasNext() {
-                next = current==null?first: (S) current.prev;
+                next = current == null? first: (S) current.prev;
                 return next != null;
             }
 
@@ -38,18 +38,7 @@ public abstract class SubscriptionQueue<T, S extends ScalarSubscription<T>> exte
 
             @Override
             public void remove() {
-                if (current != first) {
-                    prev.prev = current.prev;
-                    if (current == last) {
-                        last = prev;
-                    }
-                } else if (first == last) {
-                    first = last = null;
-                } else {
-                    first = (S) current.prev;
-                }
-                current.prev = null;
-                size--;
+                throw new UnsupportedOperationException();
             }
         };
     }
@@ -123,7 +112,7 @@ public abstract class SubscriptionQueue<T, S extends ScalarSubscription<T>> exte
         return true;
     }
 
-    public void serveRequest(ScalarSubscription simpleSubscription) {
+    public void serveRequest(S simpleSubscription) {
         throw new UnsupportedOperationException();
     }
 

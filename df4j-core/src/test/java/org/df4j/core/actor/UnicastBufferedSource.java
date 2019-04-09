@@ -5,16 +5,16 @@ import org.reactivestreams.Subscriber;
 /**
  * emits totalNumber of Longs and closes the stream
  */
-public class UnicastUnbuffereSource extends Source<Long> {
-    public StreamSubscriptionBlockingQueue<Long> output = new StreamSubscriptionBlockingQueue<>(this);
+public class UnicastBufferedSource extends Source<Long> {
+    public StreamOutput<Long> output = new StreamOutput<>(this);
     long val = 0;
 
-    public UnicastUnbuffereSource(Logger parent, int totalNumber) {
+    public UnicastBufferedSource(Logger parent, int totalNumber) {
         super(parent);
         this.val = totalNumber;
     }
 
-    public UnicastUnbuffereSource(long totalNumber) {
+    public UnicastBufferedSource(long totalNumber) {
         this.val = totalNumber;
     }
 
@@ -27,15 +27,11 @@ public class UnicastUnbuffereSource extends Source<Long> {
     protected void runAction() {
         try {
             if (val > 0) {
-                StreamSubscription<Long> subscription = output.current();
-                if (subscription == null) {
-                    return;
-                }
-                println("UnicastSource:subscription.onNext("+val+")");
-                subscription.onNext(val);
+                println("UnicastSource: subscription.onNext("+val+")");
+                output.onNext(val);
                 val--;
             } else {
-                println("UnicastSource:subscription.onComplete()");
+                println("UnicastSource: subscription.onComplete()");
                 output.onComplete();
                 stop();
             }

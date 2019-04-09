@@ -2,7 +2,7 @@ package org.df4j.tck;
 
 
 import org.df4j.core.actor.Source;
-import org.df4j.core.actor.UnicastUnbuffereSource;
+import org.df4j.core.actor.UnicastUnbufferedSource;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.tck.PublisherVerification;
@@ -25,7 +25,7 @@ public class ReactiveStreamUnicastPublisherTest extends PublisherVerification<Lo
 
     @Override
     public Publisher<Long> createPublisher(long elements) {
-        Source flowPublisher = new UnicastUnbuffereSource(elements);
+        Source flowPublisher = new UnicastUnbufferedSource(elements);
         flowPublisher.start();
         return flowPublisher;
     }
@@ -59,7 +59,7 @@ public class ReactiveStreamUnicastPublisherTest extends PublisherVerification<Lo
     }
 
 
-     static class FailedUnicastSource extends UnicastUnbuffereSource {
+     static class FailedUnicastSource extends UnicastUnbufferedSource {
 
         public FailedUnicastSource() {
             super(1);
