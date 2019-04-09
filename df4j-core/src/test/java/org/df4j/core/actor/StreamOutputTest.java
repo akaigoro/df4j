@@ -80,12 +80,12 @@ public class StreamOutputTest {
     }
 
     @Test
-    public void testUnicastSource() throws InterruptedException, ExecutionException {
-        testSource((sourceNumber, parent) -> new UnicastSource(parent, sourceNumber));
+    public void testUnBufferedSource() throws InterruptedException, ExecutionException {
+        testSource((sourceNumber, parent) -> new UnicastUnbuffereSource(parent, sourceNumber));
     }
 
     @Test
-    public void testMulticastSource() throws InterruptedException, ExecutionException {
-        testSource((sourceNumber, parent) -> new MulticastSource(parent, sourceNumber));
+    public void testBufferedSource() throws InterruptedException, ExecutionException {
+        testSource((sourceNumber, parent) -> new UnicastBuffereSource(parent, sourceNumber));
     }
 }

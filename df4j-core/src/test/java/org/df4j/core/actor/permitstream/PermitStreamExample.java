@@ -1,6 +1,6 @@
 package org.df4j.core.actor.permitstream;
 
-import org.df4j.core.actor.MulticastStreamOutput;
+import org.df4j.core.actor.StreamOutput;
 import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.asyncproc.Semafor;
 import org.df4j.core.actor.Actor;
@@ -43,7 +43,7 @@ public class PermitStreamExample {
 
     public static class Source extends Actor {
         Semafor backPressureActuator = new Semafor(this);
-        MulticastStreamOutput<Integer> pub = new MulticastStreamOutput<>(this);
+        StreamOutput<Integer> pub = new StreamOutput<>(this);
         int count;
 
         Source(int count) {

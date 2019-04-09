@@ -12,9 +12,9 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.actor.MulticastStreamOutput;
 import org.df4j.core.actor.LazyActor;
 import org.df4j.core.actor.StreamInput;
+import org.df4j.core.actor.StreamOutput;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -123,7 +123,7 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
         protected final Logger LOG = Logger.getLogger(getClass().getName());
 
         public final StreamInput<ByteBuffer> input = new StreamInput<ByteBuffer>(this);
-        public final MulticastStreamOutput<ByteBuffer> output = new MulticastStreamOutput<>(this);
+        public final StreamOutput<ByteBuffer> output = new StreamOutput<>(this);
 
         {
             LOG.info(getClass().getName()+" "+name+" created");

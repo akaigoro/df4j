@@ -9,14 +9,14 @@ import java.util.HashSet;
 /**
  * unblocks when there are active subscribers
  */
-public class StreamSubscriptionQueue<T> extends Transition.Pin
+public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
         implements SubscriptionListener<T, StreamSubscription<T>>, Publisher<T> {
     protected ScalarSubscriptionQueue<T> activeSubscriptions = new ScalarSubscriptionQueue<>();
     protected HashSet<StreamSubscription<T>> passiveSubscriptions = new HashSet<>();
     protected boolean completed = false;
     protected volatile Throwable completionException;
 
-    public StreamSubscriptionQueue(AsyncProc actor) {
+    public StreamSubscriptionBlockingQueue(AsyncProc actor) {
         actor.super();
     }
 

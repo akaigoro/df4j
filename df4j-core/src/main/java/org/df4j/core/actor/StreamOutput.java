@@ -2,26 +2,20 @@ package org.df4j.core.actor;
 
 import org.df4j.core.Port;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
-import java.util.HashSet;
 import java.util.Queue;
-import java.util.Set;
-import java.util.function.Consumer;
 
 /**
- * Adds token buffer for {@link StreamSubscriptionQueue}.
+ * Adds token buffer for {@link StreamSubscriptionBlockingQueue}.
  * Blocks when there are no room in the token buffer
  *
  * Each input token it transferred to only single subscriber.
  *
  * @param <T> type of tokens
  */
-public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Port<T>, Publisher<T> {
+public class StreamOutput<T> extends StreamSubscriptionBlockingQueue<T> implements Port<T>, Publisher<T> {
     protected int capacity;
     protected Queue<T> tokens;
     protected volatile boolean completionRequested = false;
