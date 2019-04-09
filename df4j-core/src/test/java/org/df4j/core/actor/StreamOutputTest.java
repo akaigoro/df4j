@@ -11,24 +11,21 @@ package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.AsyncResult;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(Parameterized.class)
 public class StreamOutputTest {
 
-    @Parameterized.Parameters(name = "{index}: {0} => {1}*{2}")
-    public static Iterable<Object[]> data() {
-        return Arrays.asList(new Object[][]{
+    public static Iterable<int[]> data() {
+        return Arrays.asList(new int[][]{
                    {0, 1, 1},
                 {1, 2, 2},
                         {4, 5, 3},
@@ -45,22 +42,12 @@ public class StreamOutputTest {
         });
     }
 
-    private int sourceNumber;
-    private int sinkNumber;
-    private int sinkCount;
-
-    public StreamOutputTest(int sourceNumber, int sinkCount, int sinkNumber) {
-        this.sourceNumber = sourceNumber;
-        this.sinkNumber = sinkNumber;
-        this.sinkCount = sinkCount;
-    }
-
-    @Test
-    public void testUnicastSource() throws InterruptedException, ExecutionException {
+    public void testSource(int sourceNumber, int sinkCount, int sinkNumber,
+                                          BiFunction<Integer, Logger, Source<Long>> createSource) throws InterruptedException, ExecutionException {
         Logger parent = new Logger(true);
         String testName="1 sink "+sourceNumber+"."+sinkNumber;
         parent.println("=== test started:"+testName);
-        Source<Long> from = new UnicastSource(parent, sourceNumber);
+        Source<Long> from = createSource.apply(sourceNumber, parent);
         ArrayList<LoggingSink> sinks = new ArrayList<>();
         for (int k=0; k<sinkCount; k++) {
             LoggingSink to = new LoggingSink(parent,Integer.MAX_VALUE,"sink"+k);
@@ -84,5 +71,21 @@ public class StreamOutputTest {
         }
         assertEquals(expected, actual);
         parent.println("=== test ended:"+testName+'\n');
+    }
+
+    public void testSource(BiFunction<Integer, Logger, Source<Long>> createSource) throws InterruptedException, ExecutionException {
+        for (int[] row: data()) {
+            testSource(row[0], row[0], row[0], createSource);
+        }
+    }
+
+    @Test
+    public void testUnicastSource() throws InterruptedException, ExecutionException {
+        testSource((sourceNumber, parent) -> new UnicastSource(parent, sourceNumber));
+    }
+
+    @Test
+    public void testMulticastSource() throws InterruptedException, ExecutionException {
+        testSource((sourceNumber, parent) -> new MulticastSource(parent, sourceNumber));
     }
 }
