@@ -20,9 +20,6 @@ public class UnicastSource extends Source<Long> {
         this.val = totalNumber;
     }
 
-    public UnicastSource() {
-    }
-
     @Override
     public void subscribe(Subscriber<? super Long> subscriber) {
         output.subscribe(subscriber);
@@ -30,15 +27,28 @@ public class UnicastSource extends Source<Long> {
 
     @Override
     protected void runAction() {
-        StreamSubscription<Long> subscription = output.current();
-        if (val > 0) {
-            log.println("Source.pub.post("+val+")");
-            subscription.onNext(val);
-            val--;
+        try {
+            StreamSubscription<Long> subscription = output.current();
+            if (val > 0) {
+                println("UnicastSource:subscription.onNext("+val+")");
+                subscription.onNext(val);
+                val--;
+            } else {
+                println("UnicastSource:subscription.onComplete()");
+                subscription.onComplete();
+                stop();
+            }
+        } catch (Throwable t) {
+            println("UnicastSource: catch"+t);
+            t.printStackTrace();
+        }
+    }
+
+    private void println(String s) {
+        if (log != null) {
+            log.println(s);
         } else {
-            log.println("Source.pub.complete()");
-            subscription.onComplete();
-            stop();
+            System.out.println(s); // TODO remove
         }
     }
 }

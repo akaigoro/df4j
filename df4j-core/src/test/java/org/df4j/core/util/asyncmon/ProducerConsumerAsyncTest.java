@@ -111,7 +111,6 @@ public class ProducerConsumerAsyncTest extends AllOf {
 
     @Test
     public void test() throws InterruptedException, ExecutionException, TimeoutException {
-        AsyncProc.setThreadLocalExecutor(AsyncProc.currentThreadExec);
         NonBlockingQ blockingQ = new NonBlockingQ(5);
         IntProducer producer = new IntProducer(blockingQ);
         IntConsumer consumer = new IntConsumer(blockingQ);

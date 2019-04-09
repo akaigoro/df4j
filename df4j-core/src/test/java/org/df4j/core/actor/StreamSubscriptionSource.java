@@ -13,6 +13,10 @@ public class StreamSubscriptionSource extends Source<Long> {
         this.val = totalNumber;
     }
 
+    public StreamSubscriptionSource(long totalNumber) {
+        this.val = totalNumber;
+    }
+
     @Override
     public void subscribe(Subscriber<? super Long> subscriber) {
         output.subscribe(subscriber);

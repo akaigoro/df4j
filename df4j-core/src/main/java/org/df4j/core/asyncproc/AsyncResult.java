@@ -1,26 +1,45 @@
 package org.df4j.core.asyncproc;
 
 
+import org.df4j.core.asyncproc.ext.AsyncBiFunction;
+import org.df4j.core.asyncproc.ext.AsyncFunction;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
-/**
+/** implements Subscriber<T>, CompletionStage<T> {
  * Universal standalone connector for single value.
  * Has both synchronous and asynchronous interfaces on output end.
  */
-public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
+public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionStage<T>, Future<T> {
+    private void debug(String s) {
+ //       System.out.println(s);  // must be commented out
+    }
     protected volatile boolean done;
     protected volatile T value;
     protected volatile Throwable completionException;
     protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
     /** in case this instance have supscribed to some other Publisher */
     protected Subscription subscription;
+
+    public AsyncResult() {
+    }
+
+    public AsyncResult(CompletionStage<? extends T> completionStage) {
+        completionStage.whenComplete((value, ex)->{
+            if (ex == null) {
+                onNext(value);
+            } else {
+                onError(ex);
+            }
+        });
+    }
 
     @Override
     public void onSubscribe(Subscription s) {
@@ -32,10 +51,12 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
     public synchronized void onNext(T t) {
         synchronized(this) {
             if (done) { // this is how CompletableFuture#complete works
+                debug("onNext done already");
                 return;
             }
             done = true;
             value = t;
+            debug("onNext done, notifyAll");
             notifyAll();
         }
         ScalarSubscription subscription = subscriptions.poll();
@@ -75,6 +96,11 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
         }
     }
 
+    public void subscribe(CompletableFuture<T> cf) {
+        Subscriber<? super T> s = new CompletableFutureySubscriber<>(cf);
+        subscribe(s);
+    }
+
     /**
      * Cancels subscription, and not the task, as interfece {@link Future} assumes.
      * @param mayInterruptIfRunning not used
@@ -110,7 +136,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
 
     @Override
     public synchronized T get() throws InterruptedException, ExecutionException {
-        while (!isDone()) {
+        while (!done) {
             wait();
         }
         if (completionException == null) {
@@ -124,7 +150,8 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
     public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         long millis = unit.toMillis(timeout);
         long targetTime = System.currentTimeMillis()+ millis;
-        while (!isDone()) {
+        while (!done) {
+            debug("get !done, wait");
             wait(millis);
             millis = targetTime - System.currentTimeMillis();
             if (millis <= 0) {
@@ -132,8 +159,10 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
             }
         }
         if (completionException == null) {
+            debug("get done, value");
             return value;
         } else {
+            debug("get done, throw");
             throw new ExecutionException(completionException);
         }
     }
@@ -156,4 +185,291 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, Future<T> {
         return result;
     }
 
+    @Override
+    public <U> AsyncResult<U> thenApply(Function<? super T, ? extends U> function) {
+        return thenApplyAsync(function, AsyncProc.directExec);
+    }
+
+    @Override
+    public <U> AsyncResult<U> thenApplyAsync(Function<? super T, ? extends U> function) {
+        return thenApplyAsync(function, null);
+    }
+
+    @Override
+    public <U> AsyncResult<U> thenApplyAsync(Function<? super T, ? extends U> function, Executor executor) {
+        AsyncFunction af = new AsyncFunction(function);
+        af.setExecutor(executor);
+        subscribe(af);
+        return af.asyncResult();
+    }
+
+    @Override
+    public AsyncResult<Void> thenAccept(Consumer<? super T> consumer) {
+        return thenAcceptAsync(consumer, AsyncProc.directExec);
+    }
+
+    @Override
+    public AsyncResult<Void> thenAcceptAsync(Consumer<? super T> consumer) {
+        return thenAcceptAsync(consumer, null);
+    }
+
+    @Override
+    public AsyncResult<Void> thenAcceptAsync(Consumer<? super T> consumer, Executor executor) {
+        AsyncFunction af = new AsyncFunction(consumer);
+        af.setExecutor(executor);
+        subscribe(af);
+        return af.asyncResult();
+    }
+
+    @Override
+    public AsyncResult<Void> thenRun(Runnable runnable) {
+        return thenRunAsync(runnable, AsyncProc.directExec);
+    }
+
+    @Override
+    public AsyncResult<Void> thenRunAsync(Runnable runnable) {
+        return thenRunAsync(runnable, null);
+    }
+
+    @Override
+    public AsyncResult<Void> thenRunAsync(Runnable runnable, Executor executor) {
+        AsyncFunction af = new AsyncFunction(runnable);
+        af.setExecutor(executor);
+        subscribe(af);
+        return af.asyncResult();
+    }
+
+    @Override
+    public <U, V> AsyncResult<V> thenCombine(CompletionStage<? extends U> completionStage, BiFunction<? super T, ? super U, ? extends V> biFunction) {
+        return thenCombineAsync(completionStage, biFunction, AsyncProc.directExec);
+    }
+
+    @Override
+    public <U, V> AsyncResult<V> thenCombineAsync(CompletionStage<? extends U> completionStage, BiFunction<? super T, ? super U, ? extends V> biFunction) {
+        return thenCombineAsync(completionStage, biFunction, null);
+    }
+
+    @Override
+    public <U, V> AsyncResult<V> thenCombineAsync(CompletionStage<? extends U> completionStage, BiFunction<? super T, ? super U, ? extends V> biFunction, Executor executor) {
+        AsyncBiFunction af = new AsyncBiFunction(biFunction);
+        af.setExecutor(executor);
+        this.subscribe(af.param1);
+        AsyncResult other = new AsyncResult(completionStage);
+        other.subscribe(af.param2);
+        return af.asyncResult();
+    }
+
+    @Override
+    public <U> AsyncResult<Void> thenAcceptBoth(CompletionStage<? extends U> completionStage, BiConsumer<? super T, ? super U> biConsumer) {
+        return thenAcceptBothAsync(completionStage, biConsumer, AsyncProc.directExec);
+    }
+
+    @Override
+    public <U> AsyncResult<Void> thenAcceptBothAsync(CompletionStage<? extends U> completionStage, BiConsumer<? super T, ? super U> biConsumer) {
+        return thenAcceptBothAsync(completionStage, biConsumer, null);
+    }
+
+    @Override
+    public <U> AsyncResult<Void> thenAcceptBothAsync(CompletionStage<? extends U> completionStage, BiConsumer<? super T, ? super U> biConsumer, Executor executor) {
+        AsyncBiFunction af = new AsyncBiFunction(biConsumer);
+        af.setExecutor(executor);
+        this.subscribe(af.param1);
+        AsyncResult other = new AsyncResult(completionStage);
+        other.subscribe(af.param2);
+        return af.asyncResult();
+    }
+
+    @Override
+    public AsyncResult<Void> runAfterBoth(CompletionStage<?> completionStage, Runnable runnable) {
+        return runAfterBothAsync(completionStage, runnable, AsyncProc.directExec);
+    }
+
+    @Override
+    public AsyncResult<Void> runAfterBothAsync(CompletionStage<?> completionStage, Runnable runnable) {
+        return runAfterBothAsync(completionStage, runnable, null);
+    }
+
+    @Override
+    public AsyncResult<Void> runAfterBothAsync(CompletionStage<?> completionStage, Runnable runnable, Executor executor) {
+        AsyncBiFunction af = new AsyncBiFunction(runnable);
+        af.setExecutor(executor);
+        this.subscribe(af.param1);
+        AsyncResult other = new AsyncResult(completionStage);
+        other.subscribe(af.param2);
+        return af.asyncResult();
+    }
+
+    @Override
+    public <U> AsyncResult<U> applyToEither(CompletionStage<? extends T> completionStage, Function<? super T, U> function) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> applyToEitherAsync(CompletionStage<? extends T> completionStage, Function<? super T, U> function) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> applyToEitherAsync(CompletionStage<? extends T> completionStage, Function<? super T, U> function, Executor executor) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<Void> acceptEither(CompletionStage<? extends T> completionStage, Consumer<? super T> consumer) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<Void> acceptEitherAsync(CompletionStage<? extends T> completionStage, Consumer<? super T> consumer) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<Void> acceptEitherAsync(CompletionStage<? extends T> completionStage, Consumer<? super T> consumer, Executor executor) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<Void> runAfterEither(CompletionStage<?> completionStage, Runnable runnable) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<Void> runAfterEitherAsync(CompletionStage<?> completionStage, Runnable runnable) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<Void> runAfterEitherAsync(CompletionStage<?> completionStage, Runnable runnable, Executor executor) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> function) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> function) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> function, Executor executor) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<T> exceptionally(Function<Throwable, ? extends T> function) {
+        return null;
+    }
+
+    @Override
+    public AsyncResult<T> whenComplete(BiConsumer<? super T, ? super Throwable> biConsumer) {
+        return whenCompleteAsync(biConsumer, AsyncProc.directExec);
+    }
+
+    @Override
+    public AsyncResult<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> biConsumer) {
+        return whenCompleteAsync(biConsumer, null);
+    }
+
+    @Override
+    public AsyncResult<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> biConsumer, Executor executor) {
+        Subscriber<? super T> subscriber = new BiconsumerSubscriber<>(biConsumer, executor);
+        subscribe(subscriber);
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> handle(BiFunction<? super T, Throwable, ? extends U> biFunction) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> biFunction) {
+        return null;
+    }
+
+    @Override
+    public <U> AsyncResult<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> biFunction, Executor executor) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<T> toCompletableFuture() {
+        CompletableFuture<T> res = new CompletableFuture<>();
+        this.subscribe(res);
+        return res;
+    }
+
+    public static class CompletableFutureySubscriber<T> implements Subscriber<T> {
+        private final CompletableFuture<T> cf;
+
+        public CompletableFutureySubscriber(CompletableFuture<T> cf) {
+            this.cf = cf;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(T t) {
+            cf.complete(t);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            cf.completeExceptionally(t);
+        }
+
+        @Override
+        public void onComplete() {
+            cf.complete(null);
+        }
+    }
+
+    private class BiconsumerSubscriber<T> extends AsyncProc implements Subscriber<T> {
+        private final BiConsumer<? super T, ? super Throwable> biConsumer;
+        private T value;
+        private Throwable ex;
+
+        public BiconsumerSubscriber(BiConsumer<? super T, ? super Throwable> biConsumer, Executor executor) {
+            this.biConsumer = biConsumer;
+            setExecutor(executor);
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(T t) {
+            asyncRun(t, null);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            asyncRun(null, t);
+        }
+
+        @Override
+        public void onComplete() {
+            asyncRun(null, null);
+        }
+
+        private void asyncRun(T value, Throwable ex) {
+            this.value = value;
+            this.ex = ex;
+            fire();
+        }
+
+        @Override
+        public void run() {
+            biConsumer.accept(value, ex);
+        }
+    }
 }

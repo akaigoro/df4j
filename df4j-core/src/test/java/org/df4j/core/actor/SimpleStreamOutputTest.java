@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-public class StreamOutputTest {
+public class SimpleStreamOutputTest {
 
     @Parameterized.Parameters(name = "{index}: {0} => {1}*{2}")
     public static Iterable<Object[]> data() {
@@ -49,7 +49,7 @@ public class StreamOutputTest {
     private int sinkNumber;
     private int sinkCount;
 
-    public StreamOutputTest(int sourceNumber, int sinkCount, int sinkNumber) {
+    public SimpleStreamOutputTest(int sourceNumber, int sinkCount, int sinkNumber) {
         this.sourceNumber = sourceNumber;
         this.sinkNumber = sinkNumber;
         this.sinkCount = sinkCount;
@@ -60,6 +60,7 @@ public class StreamOutputTest {
         Logger parent = new Logger(true);
         String testName="1 sink "+sourceNumber+"."+sinkNumber;
         parent.println("=== test started:"+testName);
+ //       Source<Long> from = new UnicastSource(parent, sourceNumber);
         Source<Long> from = new StreamSubscriptionSource(parent, sourceNumber);
         ArrayList<LoggingSink> sinks = new ArrayList<>();
         for (int k=0; k<sinkCount; k++) {

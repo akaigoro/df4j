@@ -9,7 +9,8 @@ import java.util.HashSet;
 /**
  * unblocks when there are active subscribers
  */
-public class StreamSubscriptionQueue<T> extends Transition.Pin implements SubscriptionListener, Publisher<T> {
+public class StreamSubscriptionQueue<T> extends Transition.Pin
+        implements SubscriptionListener<T, StreamSubscription<T>>, Publisher<T> {
     protected ScalarSubscriptionQueue<T> activeSubscriptions = new ScalarSubscriptionQueue<>();
     protected HashSet<StreamSubscription<T>> passiveSubscriptions = new HashSet<>();
     protected boolean completed = false;
@@ -96,7 +97,7 @@ public class StreamSubscriptionQueue<T> extends Transition.Pin implements Subscr
      * @return true if suscription was removed
      *         false if subscription not found
      */
-    public synchronized boolean remove(ScalarSubscription subscription) {
+    public synchronized boolean remove(StreamSubscription<T> subscription) {
         if (subscription.getRequested() == 0) {
             return passiveSubscriptions.remove(subscription);
         } else {
@@ -108,7 +109,9 @@ public class StreamSubscriptionQueue<T> extends Transition.Pin implements Subscr
         }
     }
 
-    public synchronized void serveRequest(ScalarSubscription subscription) {
+
+    @Override
+    public void serveRequest(StreamSubscription<T> subscription) {
         if (completed) {
             return;
         }

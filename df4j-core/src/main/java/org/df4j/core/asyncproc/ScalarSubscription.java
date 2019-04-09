@@ -4,9 +4,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 public class ScalarSubscription<T> implements Subscription {
-    SubscriptionListener listener;
+    protected SubscriptionListener listener;
     protected Subscriber subscriber;
-    long requested = 0;
 
     protected ScalarSubscription prev;
 
@@ -15,30 +14,12 @@ public class ScalarSubscription<T> implements Subscription {
         this.subscriber = subscriber;
     }
 
-    public long getRequested() {
-        return requested;
-    }
-
     public synchronized boolean isCancelled() {
         return subscriber == null;
     }
 
     @Override
     public synchronized void request(long n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException();
-        }
-        if (isCancelled()) {
-            return;
-        }
-        boolean wasPassive = requested == 0;
-        requested += n;
-        if (requested < 0) { // overflow
-            requested = Long.MAX_VALUE;
-        }
-        if (wasPassive) {
-            listener.serveRequest(this);
-        }
     }
 
     @Override
@@ -51,15 +32,15 @@ public class ScalarSubscription<T> implements Subscription {
     }
 
     protected Subscriber extractSubscriber() {
-        Subscriber subscriberLoc;
         synchronized (this) {
             if (isCancelled()) {
-                subscriberLoc = null;
+                return null;
+            } else {
+                Subscriber subscriberLoc = subscriber;
+                subscriber = null;
+                return subscriberLoc;
             }
-            subscriberLoc = subscriber;
-            subscriber = null;
         }
-        return subscriberLoc;
     }
 
     public void onNext(T value) {
