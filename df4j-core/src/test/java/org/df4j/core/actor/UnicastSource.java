@@ -6,13 +6,11 @@ import org.reactivestreams.Subscriber;
  * emits totalNumber of Longs and closes the stream
  */
 public class UnicastSource extends Source<Long> {
-    Logger log;
     public StreamSubscriptionQueue<Long> output = new StreamSubscriptionQueue<>(this);
     long val = 0;
 
     public UnicastSource(Logger parent, int totalNumber) {
         super(parent);
-        log = parent;
         this.val = totalNumber;
     }
 
@@ -28,27 +26,22 @@ public class UnicastSource extends Source<Long> {
     @Override
     protected void runAction() {
         try {
-            StreamSubscription<Long> subscription = output.current();
             if (val > 0) {
+                StreamSubscription<Long> subscription = output.current();
+                if (subscription == null) {
+                    return;
+                }
                 println("UnicastSource:subscription.onNext("+val+")");
                 subscription.onNext(val);
                 val--;
             } else {
                 println("UnicastSource:subscription.onComplete()");
-                subscription.onComplete();
+                output.onComplete();
                 stop();
             }
         } catch (Throwable t) {
             println("UnicastSource: catch"+t);
             t.printStackTrace();
-        }
-    }
-
-    private void println(String s) {
-        if (log != null) {
-            log.println(s);
-        } else {
-            System.out.println(s); // TODO remove
         }
     }
 }

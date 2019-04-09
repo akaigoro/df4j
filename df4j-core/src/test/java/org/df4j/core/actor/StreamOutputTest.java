@@ -60,7 +60,7 @@ public class StreamOutputTest {
         Logger parent = new Logger(true);
         String testName="1 sink "+sourceNumber+"."+sinkNumber;
         parent.println("=== test started:"+testName);
-        Source<Long> from = new StreamSubscriptionSource(parent, sourceNumber);
+        Source<Long> from = new UnicastSource(parent, sourceNumber);
         ArrayList<LoggingSink> sinks = new ArrayList<>();
         for (int k=0; k<sinkCount; k++) {
             LoggingSink to = new LoggingSink(parent,Integer.MAX_VALUE,"sink"+k);

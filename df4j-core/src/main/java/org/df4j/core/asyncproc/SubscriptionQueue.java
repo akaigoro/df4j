@@ -73,6 +73,25 @@ public abstract class SubscriptionQueue<T, S extends ScalarSubscription<T>> exte
         return true;
     }
 
+    private void clearCancelled() {
+        for (;;) {
+            if (first == null) {
+                return;
+            }
+            if (!first.isCancelled()) {
+                return;
+            }
+            S cancelled = first;
+            if (first == last) {
+                last = first = null;
+            } else {
+                first = (S) cancelled.prev;
+            }
+            cancelled.prev = null;
+        }
+    }
+
+
     @Override
     public synchronized S poll() {
         if (first == null) {
@@ -86,6 +105,7 @@ public abstract class SubscriptionQueue<T, S extends ScalarSubscription<T>> exte
         }
         res.prev = null;
         size--;
+        clearCancelled();
         return res;
     }
 
@@ -95,13 +115,12 @@ public abstract class SubscriptionQueue<T, S extends ScalarSubscription<T>> exte
     }
 
     public synchronized boolean remove(S subscription) {
-        for  (Iterator<S> it = iterator(); it.hasNext();) {
-            if (it.next() == subscription) {
-                it.remove();
-                return true;
-            }
+        if (subscription.prev == null) {
+            return false; // removed already
         }
-        return false;
+        size--;
+        clearCancelled();
+        return true;
     }
 
     public void serveRequest(ScalarSubscription simpleSubscription) {
