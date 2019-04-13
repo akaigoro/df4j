@@ -12,35 +12,28 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
     private S first = null;
     private S last = null;
     private volatile int size = 0;
-/*
-    @Override
-    public abstract void subscribe(Subscriber<? super T> s);
-*/
+
+    private S remove(S next, S current) {
+        size--;
+        if (next == null) {
+            first = current.prev;
+        } else {
+            next = current.prev;
+        }
+        current.prev = null;
+        if (current == last) {
+            if (next == null) {
+                first = last = null;
+            } else {
+                last = next;
+            }
+        }
+        return next;
+    }
+
     @Override
     public Iterator<S> iterator() {
-        return new Iterator<S>(){
-            S prev;
-            S current = null;
-            S next;
-
-            @Override
-            public boolean hasNext() {
-                next = current == null? first: current.prev;
-                return next != null;
-            }
-
-            @Override
-            public S next() {
-                prev = current;
-                current = next;
-                return current;
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return new SubscriptionIterator();
     }
 
     @Override
@@ -63,38 +56,8 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
         return true;
     }
 
-    /**
-     * For simplicity, cancelled subscription is actually removed only
-     * when it reaches the first position.
-     */
-    private void clearCancelled() {
-        S newFirst = first;
-        if (newFirst == null) {
-            return;
-        }
-        if (!newFirst.isCancelled()) {
-            return;
-        }
-        for (;;) {
-            newFirst.prev = null;
-            newFirst = newFirst.prev;
-            if (newFirst == null) {
-                break;
-            }
-            if (!newFirst.isCancelled()) {
-                break;
-            }
-        }
-        first = newFirst;
-        if (newFirst == null) {
-            last = null;
-        }
-    }
-
-
     @Override
     public synchronized S poll() {
-        clearCancelled();
         if (first == null) {
             return null;
         }
@@ -115,9 +78,13 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
     }
 
     public synchronized void remove(S subscription) {
-        size--;
-        if (subscription == first) {
-            clearCancelled();
+        S next = null;
+        S current = first;
+        while (current != null) {
+            if (subscription == current) {
+                next = remove(next, current);
+                return;
+            }
         }
     }
 
@@ -125,4 +92,27 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
         throw new UnsupportedOperationException();
     }
 
+    private class SubscriptionIterator implements Iterator<S> {
+        S next;
+        S current = null;
+        S prev;
+
+        @Override
+        public boolean hasNext() {
+            next = current == null ? first : current.prev;
+            return next != null;
+        }
+
+        @Override
+        public S next() {
+            prev = current;
+            current = next;
+            return current;
+        }
+
+        @Override
+        public void remove() {
+            SubscriptionQueue.this.remove(next, current);
+        }
+    }
 }

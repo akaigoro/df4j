@@ -25,23 +25,18 @@ public class UnicastUnbufferedSource extends Source<Long> {
 
     @Override
     protected void runAction() {
-        try {
-            if (val > 0) {
-                StreamSubscription<Long> subscription = output.current();
-                if (subscription == null) {
-                    return;
-                }
-                println("UnicastSource:subscription.onNext("+val+")");
-                subscription.onNext(val);
-                val--;
-            } else {
-                println("UnicastSource:subscription.onComplete()");
-                output.onComplete();
-                stop();
+        if (val > 0) {
+            StreamSubscription<Long> subscription = output.current();
+            if (subscription == null) {
+                return;
             }
-        } catch (Throwable t) {
-            println("UnicastSource: catch"+t);
-            t.printStackTrace();
+            println("UnicastUnbufferedSource:subscription.onNext("+val+")");
+            subscription.onNext(val);
+            val--;
+        } else {
+            println("UnicastUnbufferedSource:subscription.onComplete()");
+            output.onComplete();
+            stop();
         }
     }
 }

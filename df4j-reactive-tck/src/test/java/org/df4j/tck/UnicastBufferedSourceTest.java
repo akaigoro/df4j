@@ -3,6 +3,7 @@ package org.df4j.tck;
 
 import org.df4j.core.actor.Source;
 import org.df4j.core.actor.UnicastBufferedSource;
+import org.junit.Ignore;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.tck.TestEnvironment;

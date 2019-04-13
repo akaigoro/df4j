@@ -103,6 +103,10 @@ public abstract class Transition {
             activePinCount++;
         }
 
+        public boolean isBlocked() {
+            return blocked;
+        }
+
         public synchronized boolean isCompleted() {
             return completed;
         }

@@ -27,26 +27,26 @@ public class StreamOutputTest {
 
     public static Iterable<int[]> data() {
         return Arrays.asList(new int[][]{
-                   {0, 1, 1},
+                {0, 1, 1},
                 {1, 2, 2},
-                        {4, 5, 3},
-                        {9, 10, 4},
-                        {1, 0, 1},
-                        {5, 4, 3},
-                        {0, 1, 2},
-                        {1, 1, 3},
-                        {2, 2, 4},
-                        {5, 5, 5},
-                        {2, 1, 2},
-                        {8, 2, 4},
-                        {10, 5, 2}
+                {4, 5, 3},
+                {9, 10, 4},
+                {1, 0, 1},
+                {5, 4, 3},
+                {0, 1, 2},
+                {1, 1, 3},
+                {2, 2, 4},
+                {5, 5, 5},
+                {2, 1, 2},
+                {8, 2, 4},
+                {10, 5, 2}
         });
     }
 
     public void testSource(int sourceNumber, int sinkCount, int sinkNumber,
                                           BiFunction<Integer, Logger, Source<Long>> createSource) throws InterruptedException, ExecutionException {
         Logger parent = new Logger(true);
-        String testName="1 sink "+sourceNumber+"."+sinkNumber;
+        String testName="source count:"+sourceNumber+"; sinks:"+sinkCount+"; sink number:"+sinkNumber;
         parent.println("=== test started:"+testName);
         Source<Long> from = createSource.apply(sourceNumber, parent);
         ArrayList<LoggingSink> sinks = new ArrayList<>();
@@ -85,13 +85,18 @@ public class StreamOutputTest {
 
     public void testSource(BiFunction<Integer, Logger, Source<Long>> createSource) throws InterruptedException, ExecutionException {
         for (int[] row: data()) {
-            testSource(row[0], row[0], row[0], createSource);
+            testSource(row[0], row[1], row[2], createSource);
         }
     }
 
     @Test
-    public void specifictest() throws InterruptedException, ExecutionException {
-        testSource(1,1,1,(sourceNumber, parent) -> new UnicastUnbufferedSource(parent, sourceNumber));
+    public void test011() throws InterruptedException, ExecutionException {
+        testSource(0,1,1,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
+    }
+
+    @Test
+    public void test101() throws InterruptedException, ExecutionException {
+        testSource(1,0,1,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
     }
 
     @Test

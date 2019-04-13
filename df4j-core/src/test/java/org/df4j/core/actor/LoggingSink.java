@@ -8,8 +8,8 @@ import org.reactivestreams.Subscription;
 import java.io.PrintStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class LoggingSink<T> implements Subscriber<T> {
-    private final AsyncResult<T> asyncResult = new AsyncResult<T>();
+public class LoggingSink implements Subscriber<Long> {
+    private final AsyncResult<Long> asyncResult = new AsyncResult<Long>();
     Logger parent;
     final String name;
     AtomicInteger received = new AtomicInteger(0);
@@ -27,7 +27,10 @@ public class LoggingSink<T> implements Subscriber<T> {
     }
 
     @Override
-    public void onNext(T t) {
+    public void onNext(Long t) {
+        if (t<0) {
+            throw new IllegalArgumentException();
+        }
         parent.println(name+": onNext "+t);
         received.incrementAndGet();
     }

@@ -62,11 +62,10 @@ public class StreamSubscriptionQueue<T> extends SubscriptionQueue<T, StreamSubsc
             }
             completed = true;
         }
-        for (Iterator<StreamSubscription<T>> it = passiveSubscriptions.iterator(); it.hasNext();) {
-            StreamSubscription<T> subs = it.next();
-            it.remove();
+        for (StreamSubscription<T> subs: passiveSubscriptions) {
             subs.onComplete();
         }
+        passiveSubscriptions.clear();
         for (StreamSubscription subs = poll(); subs != null; subs = poll()) {
             subs.onComplete();
         }

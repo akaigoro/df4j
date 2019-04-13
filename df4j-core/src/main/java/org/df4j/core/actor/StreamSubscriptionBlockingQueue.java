@@ -8,7 +8,8 @@ import org.reactivestreams.Subscriber;
  * blocks when there are no active subscribers
  */
 public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
-        implements SubscriptionListener<T, StreamSubscription<T>>, Publisher<T> {
+        implements SubscriptionListener<T, StreamSubscription<T>>, Publisher<T>
+{
     protected StreamSubscriptionQueue<T> subscriptions =  new StreamSubscriptionQueue<>(this);
 
     public StreamSubscriptionBlockingQueue(AsyncProc actor) {

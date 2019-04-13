@@ -18,7 +18,6 @@ public class UnicastBufferedSource extends Source<Long> {
         this.val = totalNumber;
         if (totalNumber == 0) {
             output.onComplete();
-            stop();
         }
     }
 
@@ -29,18 +28,14 @@ public class UnicastBufferedSource extends Source<Long> {
 
     @Override
     protected void runAction() {
-        try {
-            println("UnicastSource: subscription.onNext("+val+")");
+        if (val > 0) {
+            println("UnicastBufferedSource:subscription.onNext("+val+")");
             output.onNext(val);
             val--;
-            if (val == 0) {
-                println("UnicastSource: subscription.onComplete()");
-                output.onComplete();
-                stop();
-            }
-        } catch (Throwable t) {
-            println("UnicastSource: catch"+t);
-            t.printStackTrace();
+        } else {
+            println("UnicastBufferedSource:subscription.onComplete()");
+            output.onComplete();
+            stop();
         }
     }
 }

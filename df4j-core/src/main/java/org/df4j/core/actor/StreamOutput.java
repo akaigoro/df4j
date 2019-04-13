@@ -1,38 +1,37 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.Port;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.SubscriptionListener;
 import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Adds token buffer for {@link StreamSubscriptionQueue}.
- * Blocks when there are no room in the token buffer
+ * Non-blocking analogue of blocking queue.
+ * Serves multiple consumers (subscribers)
+ * demonstrates usage of class {@link Semafor} for handling back pressure?
  *
- * Each input token it transferred to only single subscriber.
+ * Each message is routed to exactly one subscriber. When no one subscriber exists, blocks.
+ * Has limited buffer for messages.
  *
- * @param <T> type of tokens
+ * @param <T> the type of transferred messages
+ *
+ *  Though it extends {@link Actor}, it is a connector and not an independent node.
  */
-public class StreamOutput<T>  extends Transition.Pin
-        implements SubscriptionListener<T, StreamSubscription<T>>, Publisher<T> {
-    protected StreamSubscriptionQueue<T> subscriptions = new StreamSubscriptionQueue<>(this);
-    protected int capacity;
-    protected Queue<T> tokens;
-    protected volatile boolean completionRequested = false;
-    protected volatile Throwable completionException;
+public class StreamOutput<T> extends Actor implements Port<T>, Publisher<T> {
+    protected StreamInput<T> tokens = new StreamInput<>(this);
+    protected StreamSubscriptionBlockingQueue subscriptions = new StreamSubscriptionBlockingQueue(this);
 
-    public StreamOutput(AsyncProc actor, int capacity) {
-        actor.super();
-        if (capacity <= 0) {
-            throw new IllegalArgumentException();
-        }
+    protected final Transition.Pin outerLock;
+    protected final int capacity;
+    protected boolean completed = false;
+    protected Throwable completionException = null;
+
+    public StreamOutput(AsyncProc outerActor, int capacity) {
+        outerLock = outerActor.new Pin(true);
         this.capacity = capacity;
-        this.tokens = new ArrayDeque<>(capacity);
-        unblock(); // tokens have room
     }
 
     public StreamOutput(AsyncProc actor) {
@@ -40,59 +39,53 @@ public class StreamOutput<T>  extends Transition.Pin
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> s) {
-        subscriptions.subscribe(s);
+    public void subscribe(Subscriber<? super T> subscriber) {
+        StreamSubscription<T> newSubscription = new StreamSubscription(subscriptions, subscriber);
+        subscriber.onSubscribe(newSubscription);
     }
 
-    public void onError(Throwable ex) {
-        subscriptions.onError(ex);
+    public synchronized boolean isCompleted() {
+        return completed;
     }
 
-    public void onComplete() {
-        subscriptions.onComplete();
-        super.complete();
-    }
-
-    @Override
-    public void remove(StreamSubscription<T> subscription) {
-        subscriptions.remove(subscription);
-    }
-
-    @Override
-    public void activate(StreamSubscription<T> subscription) {
-        T token;
-        synchronized (this) {
-            token = tokens.poll();
+    public synchronized void onNext(T item) {
+        if (tokens.size() >= capacity) {
+            throw new IllegalStateException("buffer overflow");
         }
-        if (token == null) {
-            subscriptions.activate(subscription);
-        } else {
+        tokens.onNext(item);
+        if (tokens.size() >= capacity) {
+            outerLock.block();
+        }
+    }
+
+    public synchronized void onComplete() {
+        if (completed) {
+            return; // completed already
+        }
+        completed = true;
+        outerLock.block();
+    }
+
+    @Override
+    public synchronized void onError(Throwable throwable) {
+        completionException = throwable;
+        onComplete();
+    }
+
+    AtomicBoolean working = new AtomicBoolean(false);
+
+    @Override
+    protected void runAction() throws Throwable {
+        T token = tokens.current();
+        StreamSubscription subscription = subscriptions.current();
+        if (token != null) {
             subscription.onNext(token);
-            if (completionRequested) {
-                if (completionException == null) {
-                    subscriptions.onComplete();
-                } else {
-                    subscriptions.onError(completionException);
-                }
-            }
-        }
-    }
-
-    public synchronized void onNext(T token) {
-        if (token == null) {
-            throw new NullPointerException();
-        }
-        if (completionRequested) {
-            return;
-        }
-        StreamSubscription<T> firstSubscription = subscriptions.current();
-        if (firstSubscription == null) {
-            tokens.add(token);
-            if (tokens.size() == capacity) {
-                block();
-            }
+        } else if (!tokens.completed) {
+            throw new RuntimeException();
+        } else if (tokens.completionException == null) {
+            subscription.onComplete();
         } else {
-            firstSubscription.onNext(token);
+            subscription.onError(tokens.completionException);
         }
     }
 }
