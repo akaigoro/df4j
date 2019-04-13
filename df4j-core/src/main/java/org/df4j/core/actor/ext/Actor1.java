@@ -51,7 +51,7 @@ public abstract class Actor1<M> extends FancyActor implements Port<M> {
      */
     @Override
     public void onComplete() {
-        mainInput.onComplete();
+        mainInput.complete();
     }
 
     @Override

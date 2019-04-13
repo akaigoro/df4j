@@ -1,10 +1,11 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.asyncproc.LinkedSubscription;
 import org.df4j.core.asyncproc.ScalarSubscription;
 import org.df4j.core.asyncproc.SubscriptionListener;
 import org.reactivestreams.Subscriber;
 
-public class StreamSubscription<T> extends ScalarSubscription<T> {
+public class StreamSubscription<T> extends LinkedSubscription<T, StreamSubscription<T>> {
     protected long requested = 0;
 
     public StreamSubscription(SubscriptionListener listener, Subscriber subscriber) {
@@ -18,7 +19,7 @@ public class StreamSubscription<T> extends ScalarSubscription<T> {
     @Override
     public synchronized void request(long n) {
         if (n <= 0) {
-            subscriber.onError(new IllegalArgumentException());
+            super.onError(new IllegalArgumentException());
             return;
         }
         if (isCancelled()) {
@@ -30,7 +31,7 @@ public class StreamSubscription<T> extends ScalarSubscription<T> {
             requested = Long.MAX_VALUE;
         }
         if (wasPassive) {
-            listener.serveRequest(this);
+            listener.activate(this);
         }
     }
 
@@ -41,11 +42,13 @@ public class StreamSubscription<T> extends ScalarSubscription<T> {
                 return;
             }
             if (requested == 0) {
-                throw new IllegalArgumentException();
+                super.onError(new IllegalArgumentException());
+//                throw new IllegalArgumentException();
+                return;
             }
             requested--;
         }
-        subscriber.onNext(value);
+        super.onNext(value);
     }
 
     public void onComplete() {

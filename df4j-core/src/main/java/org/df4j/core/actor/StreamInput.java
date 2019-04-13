@@ -193,11 +193,11 @@ public class StreamInput<T> extends Transition.Pin implements Port<T>, Subscribe
 
     @Override
     public synchronized void onError(Throwable throwable) {
-        onComplete();
+        complete();
         this.completionException = throwable;
     }
 
-    public synchronized void onComplete() {
+    public synchronized void complete() {
         if (completed) {
             return;
         }

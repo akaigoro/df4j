@@ -50,21 +50,22 @@ public class StreamOutput<T>  extends Transition.Pin
 
     public void onComplete() {
         subscriptions.onComplete();
+        super.complete();
     }
 
     @Override
-    public boolean remove(StreamSubscription<T> subscription) {
-        return false;
+    public void remove(StreamSubscription<T> subscription) {
+        subscriptions.remove(subscription);
     }
 
     @Override
-    public void serveRequest(StreamSubscription<T> subscription) {
+    public void activate(StreamSubscription<T> subscription) {
         T token;
         synchronized (this) {
             token = tokens.poll();
         }
         if (token == null) {
-            subscriptions.serveRequest(subscription);
+            subscriptions.activate(subscription);
         } else {
             subscription.onNext(token);
             if (completionRequested) {

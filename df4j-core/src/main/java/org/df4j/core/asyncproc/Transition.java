@@ -32,6 +32,11 @@ public abstract class Transition {
      * total number of created pins
      */
     private int blockedPinCount = 0;
+    private int activePinCount = 0;
+
+    public synchronized int lockCount() {
+        return activePinCount;
+    }
 
     protected int getParamCount() {
         return paramCount;
@@ -70,8 +75,20 @@ public abstract class Transition {
     public class Pin {
         protected int pinNumber; // distinct for all other connectors of this node
         protected boolean blocked;
+        protected boolean completed = false;
 
         public Pin(boolean blocked) {
+            register(blocked);
+        }
+
+        /**
+         * by default, initially in blocked state
+         */
+        public Pin() {
+            register(true);
+        }
+
+        private synchronized void register(boolean blocked) {
             this.blocked = blocked;
             if (blocked) {
                 blockedPinCount++;
@@ -83,13 +100,11 @@ public abstract class Transition {
                 locks.add(this);
             }
             this.pinNumber = locks.size();
+            activePinCount++;
         }
 
-        /**
-         * by default, initially in blocked state
-         */
-        public Pin() {
-            this(true);
+        public synchronized boolean isCompleted() {
+            return completed;
         }
 
         protected boolean isParameter() {
@@ -109,6 +124,9 @@ public abstract class Transition {
          * called when a token is consumed and the pin become empty
          */
         public synchronized void block() {
+            if (completed) {
+                return;
+            }
             if (blocked) {
                 return;
             }
@@ -118,6 +136,28 @@ public abstract class Transition {
 
         public void unblock() {
             synchronized (this) {
+                if (completed) {
+                    return;
+                }
+                if (!blocked) {
+                    return;
+                }
+                blocked = false;
+                blockedPinCount--;
+                if (blockedPinCount > 0) {
+                    return;
+                }
+            }
+            fire();
+        }
+
+        protected synchronized void complete() {
+            synchronized (this) {
+                if (completed) {
+                    return;
+                }
+                completed = true;
+                activePinCount--;
                 if (!blocked) {
                     return;
                 }

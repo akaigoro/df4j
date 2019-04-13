@@ -3,6 +3,7 @@ package org.df4j.core.asyncproc;
 import org.df4j.core.Port;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 
 public class AllOf extends AsyncSupplier<Void> {
 
@@ -50,6 +51,12 @@ public class AllOf extends AsyncSupplier<Void> {
     }
 
     class Enter extends Pin implements Port<Object> {
+        Subscription subscription;
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.subscription = s;
+        }
 
         @Override
         public void onNext(Object value) {

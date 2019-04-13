@@ -24,7 +24,7 @@ public class PermitStreamExample {
      */
     @Test
     public void piplineTest() throws InterruptedException, TimeoutException, ExecutionException {
-        int totalCount = 10;
+        int totalCount = 3;
         Source first = new Source(totalCount);
         TestProcessor testProcessor = new TestProcessor();
         TestProcessor testProcessor1 = new TestProcessor();

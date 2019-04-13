@@ -16,6 +16,10 @@ public class UnicastBufferedSource extends Source<Long> {
 
     public UnicastBufferedSource(long totalNumber) {
         this.val = totalNumber;
+        if (totalNumber == 0) {
+            output.onComplete();
+            stop();
+        }
     }
 
     @Override
@@ -26,11 +30,10 @@ public class UnicastBufferedSource extends Source<Long> {
     @Override
     protected void runAction() {
         try {
-            if (val > 0) {
-                println("UnicastSource: subscription.onNext("+val+")");
-                output.onNext(val);
-                val--;
-            } else {
+            println("UnicastSource: subscription.onNext("+val+")");
+            output.onNext(val);
+            val--;
+            if (val == 0) {
                 println("UnicastSource: subscription.onComplete()");
                 output.onComplete();
                 stop();

@@ -30,6 +30,7 @@ public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
 
     public void onComplete() {
         subscriptions.onComplete();
+        super.complete();
     }
 
     @Override
@@ -43,17 +44,16 @@ public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
      * @return true if no active subcriptions remain
      *         false otherwise
      */
-    public synchronized boolean remove(StreamSubscription<T> subscription) {
-        boolean noActive = subscriptions.remove(subscription);
-        if (noActive) {
+    public synchronized void remove(StreamSubscription<T> subscription) {
+        subscriptions.remove(subscription);
+        if (subscriptions.noActiveSubscribers()) {
             block();
         }
-        return noActive;
     }
 
     @Override
-    public synchronized void serveRequest(StreamSubscription<T> subscription) {
-        subscriptions.serveRequest(subscription);
+    public synchronized void activate(StreamSubscription<T> subscription) {
+        subscriptions.activate(subscription);
         unblock();
     }
 

@@ -19,13 +19,13 @@ import java.util.function.Function;
  */
 public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionStage<T>, Future<T> {
     private void debug(String s) {
- //       System.out.println(s);  // must be commented out
+        System.out.println(s);  // must be commented out
     }
+    protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
     protected volatile boolean done;
     protected volatile T value;
     protected volatile Throwable completionException;
-    protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
-    /** in case this instance have supscribed to some other Publisher */
+    /** in case this instance have subscribed to some other Publisher */
     protected Subscription subscription;
 
     public AsyncResult() {
@@ -85,7 +85,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
     public void subscribe(Subscriber<? super T> s) {
         synchronized(this) {
             if (!isDone()) {
-                subscriptions.subscribe(s);
+                subscriptions.addLast(s);
                 return;
             }
         }

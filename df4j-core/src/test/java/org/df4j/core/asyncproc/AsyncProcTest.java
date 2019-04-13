@@ -29,41 +29,14 @@ public class AsyncProcTest {
     }
 
     public static class Blocker<T,R> extends AsyncSupplier<R> {
-        ConstInput<T> arg = new ConstInput<>(this);
-    }
-
-    class Mult2 extends Mult {
-        AsyncResult<Double> pa = new AsyncResult<>();
-        AsyncResult<Double> pb = new AsyncResult<>();
-
-        protected Mult2() {
-            AsyncResult<Double> sp = new AsyncResult<>();
-            Blocker<Double, Double> blocker = new Blocker<>();
-            pa.subscribe(blocker.arg);
-            AsyncResult.completedResult(1.0).subscribe(param1);
-            new Mult(pa, pb).subscribe(param2);
-        }
-    }
-
-    public void computeMult2(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
-        Mult2 mult = new Mult2();
-        mult.pa.complete(a);
-        mult.pb.complete(b);
-        double result = mult.asyncResult().get(1, TimeUnit.SECONDS);
-        Assert.assertEquals(expected, result, 0.001);
-    }
-
-    @Test
-    public void runMultTest2() throws InterruptedException, ExecutionException, TimeoutException {
-        computeMult2(3.0, 4.0, 12.0);
-        computeMult2(-1.0, -2.0, 2.0);
+        ScalarInput<T> arg = new ScalarInput<>(this);
     }
 
     /* D = b^2 - 4ac */
     class Discr extends AsyncSupplier<Double> {
-        ConstInput<Double> pa = new ConstInput<>(this);
-        ConstInput<Double> pb = new ConstInput<>(this);
-        ConstInput<Double> pc = new ConstInput<>(this);
+        ScalarInput<Double> pa = new ScalarInput<>(this);
+        ScalarInput<Double> pb = new ScalarInput<>(this);
+        ScalarInput<Double> pc = new ScalarInput<>(this);
 
         @Action
         public double act(Double a, Double b, Double c) {
@@ -96,9 +69,9 @@ public class AsyncProcTest {
      * (-b +/- sqrt(D))/2a
      */
     class RootCalc extends AsyncSupplier<double[]> {
-        ConstInput<Double> pa = new ConstInput<>(this);
-        ConstInput<Double> pb = new ConstInput<>(this);
-        ConstInput<Double> pd = new ConstInput<>(this);
+        ScalarInput<Double> pa = new ScalarInput<>(this);
+        ScalarInput<Double> pb = new ScalarInput<>(this);
+        ScalarInput<Double> pd = new ScalarInput<>(this);
 
         @Action
         public double[] act(Double a, Double b, Double d) {

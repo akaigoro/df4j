@@ -1,6 +1,6 @@
 package org.df4j.core.asyncproc.ext;
 
-import org.df4j.core.asyncproc.ConstInput;
+import org.df4j.core.asyncproc.ScalarInput;
 import org.reactivestreams.Subscriber;
 import org.df4j.core.util.invoker.ConsumerInvoker;
 import org.df4j.core.util.invoker.FunctionInvoker;
@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class AsyncFunction<T, R> extends AsyncSupplier<R> implements Subscriber<T> {
-    protected final ConstInput<T> argument = new ConstInput<>(this);
+    protected final ScalarInput<T> argument = new ScalarInput<>(this);
     private Subscription s;
 
     public AsyncFunction() { }

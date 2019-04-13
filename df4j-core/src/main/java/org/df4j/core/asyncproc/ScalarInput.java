@@ -1,5 +1,6 @@
 package org.df4j.core.asyncproc;
 
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 /**
@@ -8,13 +9,11 @@ import org.reactivestreams.Subscription;
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends Transition.Pin implements org.reactivestreams.Subscriber<T> {
+public class ScalarInput<T> extends Transition.Pin implements Subscriber<T> {
     protected AsyncProc task;
     /** extracted token */
     protected T current = null;
-    protected boolean completed = false;
     protected Throwable completionException;
-    protected boolean pushback = false; // if true, do not consume
     protected Subscription subscription;
 
     public ScalarInput(AsyncProc task) {
@@ -26,40 +25,12 @@ public class ScalarInput<T> extends Transition.Pin implements org.reactivestream
         return true;
     }
 
-    // ===================== backend
-
-    public boolean hasNext() {
-        return !isCompleted();
-    }
-
-    public synchronized T next() {
-        if (completionException != null) {
-            throw new RuntimeException(completionException);
-        }
-        if (current == null) {
-            throw new IllegalStateException();
-        }
-        T res = current;
-        if (pushback) {
-            pushback = false;
-            // value remains the same, the pin remains turned on
-        } else {
-            current = null;
-            block();
-        }
-        return res;
-    }
-
     public synchronized T current() {
         return current;
     }
 
     public synchronized Throwable getCompletionException() {
         return completionException;
-    }
-
-    public synchronized boolean isCompleted() {
-        return completed;
     }
 
     @Override
@@ -70,31 +41,38 @@ public class ScalarInput<T> extends Transition.Pin implements org.reactivestream
 
     @Override
     public synchronized void onNext(T message) {
-        if (message == null) {
-            throw new IllegalArgumentException();
+        synchronized(this) {
+            if (message == null) {
+                throw new IllegalArgumentException();
+            }
+            if (isCompleted()) {
+                return;
+            }
+            if (current != null) {
+                throw new IllegalStateException("token set already");
+            }
+            current = message;
         }
-        if (isCompleted()) {
-            return;
-        }
-        if (current != null) {
-            throw new IllegalStateException("token set already");
-        }
-        current = message;
-        unblock();
+        complete();
     }
 
     @Override
     public synchronized void onError(Throwable throwable) {
-        onComplete();
-        this.completionException = throwable;
+        synchronized(this) {
+            if (throwable == null) {
+                throw new IllegalArgumentException();
+            }
+            if (isCompleted()) {
+                return;
+            }
+            this.completionException = throwable;
+        }
+        complete();
     }
 
-    public synchronized void onComplete() {
-        if (completed) {
-            return;
-        }
-        completed = true;
-        unblock();
+    @Override
+    public void onComplete() {
+        complete();
     }
 
 }

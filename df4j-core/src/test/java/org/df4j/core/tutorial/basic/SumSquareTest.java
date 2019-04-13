@@ -14,7 +14,7 @@ import java.util.function.Function;
 
 public class SumSquareTest {
 
-    public static class Square extends AsyncProc {
+    public static class Square extends AsyncProc<Integer> {
         final AsyncResult<Integer> result = new AsyncResult<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
@@ -25,8 +25,7 @@ public class SumSquareTest {
         }
     }
 
-    public static class Sum extends AsyncProc {
-        final AsyncResult<Integer> result = new AsyncResult<>();
+    public static class Sum extends AsyncProc<Integer> {
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 
@@ -38,6 +37,12 @@ public class SumSquareTest {
         }
     }
 
+    /**
+     * computes arithmetic expression sum = 3*3 + 4*4
+     * @throws ExecutionException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
     @Test
     public void testAP() throws ExecutionException, InterruptedException, TimeoutException {
         // create 3 nodes
@@ -51,10 +56,16 @@ public class SumSquareTest {
         sqX.param.onNext(3);
         sqY.param.onNext(4);
         // get the result
-        int res = sum.result.get(1, TimeUnit.SECONDS);
+        int res = sum.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
 
+    /**
+     * computes arithmetic expression sum = 3*3 + 4*4
+     * @throws ExecutionException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
     @Test
     public void testDFF() throws ExecutionException, InterruptedException, TimeoutException {
         Function<Integer, Integer> square = arg -> arg * arg;
@@ -70,7 +81,8 @@ public class SumSquareTest {
         sqX.onNext(3);
         sqY.onNext(4);
         // get the result
-        int res = sum.asyncResult().get(1, TimeUnit.SECONDS);
+        AsyncResult<Integer> result = sum.asyncResult();
+        int res = result.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
 

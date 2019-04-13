@@ -4,8 +4,12 @@ import org.reactivestreams.Subscriber;
 
 public class ScalarSubscriptionQueue<T> extends SubscriptionQueue<T, ScalarSubscription<T>> {
 
-    @Override
-    public void subscribe(Subscriber<? super T> s) {
-        add(new ScalarSubscription(this, s));
+    public void addLast(Subscriber<? super T> s) {
+        ScalarSubscription subscription = new ScalarSubscription(this, s);
+        synchronized (this) {
+            add(subscription);
+        }
+        s.onSubscribe(subscription);
+        subscription.setInitialized();
     }
 }
