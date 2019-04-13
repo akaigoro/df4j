@@ -1,15 +1,9 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.Port;
-import org.df4j.core.asyncproc.AsyncResult;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import org.df4j.core.asyncproc.ScalarPublisher;
+import org.df4j.core.asyncproc.ScalarSubscriber;
+import org.df4j.core.asyncproc.ScalarSubscription;
+import org.df4j.core.asyncproc.ScalarSubscriptionBlockingQueue;
 
 /**
  *  An asynchronous analogue of BlockingQueue
@@ -17,79 +11,24 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> implements Publisher<T>, Port<T> {
-    protected ArrayDeque<T> resources = new ArrayDeque<>();
-    protected boolean completed = false;
-	/** place for demands */
-	private Queue<org.reactivestreams.Subscriber> requests = new ArrayDeque<>();
+public class PickPoint<T> extends Actor implements ScalarPublisher<T> {
+    protected StreamInput<T> resources = new StreamInput<>(this);
+    /** place for demands */
+    protected ScalarSubscriptionBlockingQueue<T> requests = new ScalarSubscriptionBlockingQueue<>(this);
 
-    public synchronized boolean isCompleted() {
-        return completed;
+    @Override
+    public void subscribe(ScalarSubscriber<? super T> s) {
+        requests.subscribe(s);
     }
 
     @Override
-	public synchronized void onNext(T token) {
-        if (completed) {
-            throw new IllegalStateException();
-        }
-	    if (requests.isEmpty()) {
-            resources.add(token);
-        } else {
-	        requests.poll().onNext(token);
-        }
-	}
-
-	@Override
-	public synchronized void onComplete() {
-        if (completed) {
-            return;
-        }
-        completed = true;
-        for (org.reactivestreams.Subscriber subscriber: requests) {
-            subscriber.onComplete();
-        }
-        requests = null;
-	}
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        if (completed) {
-            throw new IllegalStateException();
-        }
-		if (resources.isEmpty()) {
-			requests.add(subscriber);
-		} else {
-			subscriber.onNext(resources.poll());
-		}
-	}
-
-    public T take() throws InterruptedException {
-        synchronized(this) {
-            if (!resources.isEmpty() && requests.isEmpty()) {
-                return resources.remove();
-            }
-        }
-        AsyncResult<T> future = new AsyncResult<>();
-        subscribe(future);
-        try {
-            return future.get();
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+    protected void runAction() {
+        T token = resources.current();
+        ScalarSubscription<T> subscription = requests.current();
+        subscription.onComplete(token);
     }
 
-    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        synchronized(this) {
-            if (!resources.isEmpty() && requests.isEmpty()) {
-                return resources.remove();
-            }
-        }
-        AsyncResult<T> future = new AsyncResult<>();
-        subscribe(future);
-        try {
-            return future.get(timeout, unit);
-        } catch (ExecutionException | TimeoutException e) {
-            throw new RuntimeException(e);
-        }
+    public void onNext(T t) {
+        resources.onNext(t);
     }
 }

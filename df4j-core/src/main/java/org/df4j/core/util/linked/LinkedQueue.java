@@ -1,19 +1,14 @@
-package org.df4j.core.asyncproc;
-
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+package org.df4j.core.util.linked;
 
 import java.util.AbstractQueue;
 import java.util.Iterator;
 
-public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> extends AbstractQueue<S>
-    implements SubscriptionListener<T, S>
-{
-    private S first = null;
-    private S last = null;
+public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<Link<L>> {
+    private Link<L> first = null;
+    private Link<L> last = null;
     private volatile int size = 0;
 
-    private S remove(S next, S current) {
+    private Link<L> remove(Link<L> next, Link<L> current) {
         size--;
         if (next == null) {
             first = current.prev;
@@ -32,8 +27,9 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
     }
 
     @Override
-    public Iterator<S> iterator() {
-        return new SubscriptionIterator();
+    public Iterator<Link<L>> iterator() {
+        Iterator subscriptionIterator = new SubscriptionIterator();
+        return subscriptionIterator;
     }
 
     @Override
@@ -42,7 +38,7 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
     }
 
     @Override
-    public synchronized boolean offer(S subscription) {
+    public synchronized boolean offer(Link<L> subscription) {
         if (subscription.isLinked()) {
             throw new IllegalStateException();
         }
@@ -57,29 +53,29 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
     }
 
     @Override
-    public synchronized S poll() {
+    public synchronized L poll() {
         if (first == null) {
             return null;
         }
-        S res = first;
+        Link<L> res = first;
         if (first == last) {
             last = first = null;
         } else {
-            first = (S) res.prev;
+            first = res.prev;
         }
         res.prev = null;
         size--;
-        return res;
+        return (L) res;
     }
 
     @Override
-    public S peek() {
-        return first;
+    public L peek() {
+        return (L) first;
     }
 
-    public synchronized void remove(S subscription) {
-        S next = null;
-        S current = first;
+    public synchronized void cancel(L subscription) {
+        Link<L> next = null;
+        Link<L> current = first;
         while (current != null) {
             if (subscription == current) {
                 next = remove(next, current);
@@ -88,14 +84,14 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
         }
     }
 
-    public void activate(S simpleSubscription) {
+    public void activate(L simpleSubscription) {
         throw new UnsupportedOperationException();
     }
 
-    private class SubscriptionIterator implements Iterator<S> {
-        S next;
-        S current = null;
-        S prev;
+    private class SubscriptionIterator implements Iterator<Link<L>> {
+        Link<L> next;
+        Link<L> current = null;
+        Link<L> prev;
 
         @Override
         public boolean hasNext() {
@@ -104,7 +100,7 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
         }
 
         @Override
-        public S next() {
+        public Link<L> next() {
             prev = current;
             current = next;
             return current;
@@ -112,7 +108,7 @@ public abstract class SubscriptionQueue<T, S extends LinkedSubscription<T,S>> ex
 
         @Override
         public void remove() {
-            SubscriptionQueue.this.remove(next, current);
+            LinkedQueue.this.remove(next, current);
         }
     }
 }

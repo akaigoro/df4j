@@ -1,18 +1,18 @@
 package org.df4j.core.asyncproc.ext;
 
 import org.df4j.core.asyncproc.ScalarInput;
-import org.reactivestreams.Subscriber;
+import org.df4j.core.asyncproc.ScalarSubscriber;
+import org.df4j.core.asyncproc.ScalarSubscription;
 import org.df4j.core.util.invoker.ConsumerInvoker;
 import org.df4j.core.util.invoker.FunctionInvoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
-import org.reactivestreams.Subscription;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class AsyncFunction<T, R> extends AsyncSupplier<R> implements Subscriber<T> {
+public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubscriber<T> {
     protected final ScalarInput<T> argument = new ScalarInput<>(this);
-    private Subscription s;
+    private ScalarSubscription s;
 
     public AsyncFunction() { }
 
@@ -29,22 +29,17 @@ public class AsyncFunction<T, R> extends AsyncSupplier<R> implements Subscriber<
     }
 
     @Override
-    public void onSubscribe(Subscription s) {
+    public void onSubscribe(ScalarSubscription s) {
         this.s = s;
     }
 
     @Override
-    public void onNext(T message) {
-        argument.onNext(message);
+    public void onComplete(T message) {
+        argument.onComplete(message);
     }
 
     @Override
     public void onError(Throwable throwable) {
         argument.onError(throwable);
-    }
-
-    @Override
-    public void onComplete() {
-        onNext(null);
     }
 }

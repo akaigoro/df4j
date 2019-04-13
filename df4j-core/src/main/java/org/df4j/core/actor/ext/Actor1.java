@@ -11,6 +11,7 @@ package org.df4j.core.actor.ext;
 
 import org.df4j.core.Port;
 import org.df4j.core.actor.StreamInput;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 /**
@@ -20,7 +21,7 @@ import org.reactivestreams.Subscription;
  *
  * @param <M> the type of messages, accepted via predefined port.
  */
-public abstract class Actor1<M> extends FancyActor implements Port<M> {
+public abstract class Actor1<M> extends FancyActor implements Subscriber<M> {
     protected final StreamInput<M> mainInput;
 
     public Actor1(int capacity) {
@@ -51,7 +52,7 @@ public abstract class Actor1<M> extends FancyActor implements Port<M> {
      */
     @Override
     public void onComplete() {
-        mainInput.complete();
+        mainInput.onComplete();
     }
 
     @Override

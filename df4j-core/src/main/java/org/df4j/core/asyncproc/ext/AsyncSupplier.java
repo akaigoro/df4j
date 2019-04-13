@@ -1,7 +1,7 @@
 package org.df4j.core.asyncproc.ext;
 
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+import org.df4j.core.asyncproc.ScalarPublisher;
+import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
 import org.df4j.core.util.invoker.SupplierInvoker;
@@ -21,7 +21,7 @@ import java.util.function.Supplier;
  *
  * @param <R> type of the result
  */
-public class AsyncSupplier<R> extends AsyncAction<R> implements Publisher<R>, Future<R> {
+public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R>, Future<R> {
 
     public AsyncSupplier() {}
 
@@ -38,16 +38,16 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements Publisher<R>, Fu
     }
 
     @Override
-    public void subscribe(Subscriber<? super R> subscriber) {
+    public void subscribe(ScalarSubscriber<? super R> subscriber) {
         asyncResult().subscribe(subscriber);
     }
 
     protected void completeResult(R res) {
-        asyncResult().complete(res);
+        asyncResult().onComplete(res);
     }
 
     protected void completeResultExceptionally(Throwable ex) {
-        result.completeExceptionally(ex);
+        result.onError(ex);
     }
 
     @Override
@@ -79,9 +79,9 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements Publisher<R>, Fu
     protected void run() {
         try {
             R res = callAction();
-            result.complete(res);
+            result.onComplete(res);
         } catch (Throwable e) {
-            result.completeExceptionally(e);
+            result.onError(e);
         }
     }
 }

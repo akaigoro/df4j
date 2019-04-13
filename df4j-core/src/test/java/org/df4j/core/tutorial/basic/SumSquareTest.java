@@ -21,7 +21,7 @@ public class SumSquareTest {
         public void run() {
             Integer arg = param.current();
             int res = arg*arg;
-            result.complete(res);
+            result.onComplete(res);
         }
     }
 
@@ -33,7 +33,7 @@ public class SumSquareTest {
             Integer argX = paramX.current();
             Integer argY = paramY.current();
             int res = argX + argY;
-            result.complete(res);
+            result.onComplete(res);
         }
     }
 
@@ -53,8 +53,8 @@ public class SumSquareTest {
         sqX.result.subscribe(sum.paramX);
         sqY.result.subscribe(sum.paramY);
         // provide input information:
-        sqX.param.onNext(3);
-        sqY.param.onNext(4);
+        sqX.param.onComplete(3);
+        sqY.param.onComplete(4);
         // get the result
         int res = sum.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
@@ -78,8 +78,8 @@ public class SumSquareTest {
         sqX.subscribe(sum.param1);
         sqY.subscribe(sum.param2);
         // provide input information:
-        sqX.onNext(3);
-        sqY.onNext(4);
+        sqX.onComplete(3);
+        sqY.onComplete(4);
         // get the result
         AsyncResult<Integer> result = sum.asyncResult();
         int res = result.get(1, TimeUnit.SECONDS);

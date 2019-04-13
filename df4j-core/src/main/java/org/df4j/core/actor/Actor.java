@@ -58,10 +58,11 @@ public abstract class Actor extends AsyncProc {
             }
             purgeAll();
             if (lockCount() > 1) {
-                start(); // restart execution only if not all connectors are completed
+                return;
             }
+            start(); // restart execution only if not all connectors are completed
         } catch (Throwable e) {
-            result.completeExceptionally(e);
+            result.onError(e);
             stop();
         }
     }

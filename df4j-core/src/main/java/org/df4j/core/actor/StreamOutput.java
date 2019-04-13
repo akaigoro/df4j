@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  *  Though it extends {@link Actor}, it is a connector and not an independent node.
  */
-public class StreamOutput<T> extends Actor implements Port<T>, Publisher<T> {
+public class StreamOutput<T> extends Actor implements Publisher<T> {
     protected StreamInput<T> tokens = new StreamInput<>(this);
     protected StreamSubscriptionBlockingQueue subscriptions = new StreamSubscriptionBlockingQueue(this);
 
@@ -66,7 +66,6 @@ public class StreamOutput<T> extends Actor implements Port<T>, Publisher<T> {
         outerLock.block();
     }
 
-    @Override
     public synchronized void onError(Throwable throwable) {
         completionException = throwable;
         onComplete();

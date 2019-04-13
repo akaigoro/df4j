@@ -15,7 +15,7 @@ public abstract class LazyActor extends Actor {
             blockStarted();
             runAction();
         } catch (Throwable e) {
-            result.completeExceptionally(e);
+            result.onError(e);
             stop();
         }
     }

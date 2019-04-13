@@ -18,7 +18,7 @@ public class AsyncResultSubscribeTest {
         publisher.subscribe(subscriber1);
         publisher.subscribe(subscriber2);
         double v = 4.0;
-        publisher.complete(v);
+        publisher.onComplete(v);
         double val1 = subscriber1.get(1, TimeUnit.SECONDS).doubleValue();
         Assert.assertEquals(v, val1, 0.0001);
         double val2 = subscriber2.get(1, TimeUnit.SECONDS).doubleValue();

@@ -17,7 +17,7 @@ import java.util.Queue;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends Transition.Pin implements Port<T>, Subscriber<T> {
+public class StreamInput<T> extends Transition.Pin implements Subscriber<T> {
     protected int capacity;
     protected Queue<T> tokens;
     /** to monitor existence of the room for additional tokens */
@@ -193,11 +193,11 @@ public class StreamInput<T> extends Transition.Pin implements Port<T>, Subscribe
 
     @Override
     public synchronized void onError(Throwable throwable) {
-        complete();
+        onComplete();
         this.completionException = throwable;
     }
 
-    public synchronized void complete() {
+    public synchronized void onComplete() {
         if (completed) {
             return;
         }

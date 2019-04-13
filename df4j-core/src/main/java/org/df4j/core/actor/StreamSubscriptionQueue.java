@@ -1,6 +1,7 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.*;
+import org.df4j.core.SubscriptionListener;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
@@ -12,7 +13,7 @@ import java.util.Iterator;
  *
  * @param <T>
  */
-public class StreamSubscriptionQueue<T> extends SubscriptionQueue<T, StreamSubscription<T>> implements Publisher<T> {
+public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T>> implements Publisher<T> {
     private final SubscriptionListener listener;
     protected HashSet<StreamSubscription<T>> passiveSubscriptions = new HashSet<>();
     protected boolean completed = false;
@@ -82,11 +83,11 @@ public class StreamSubscriptionQueue<T> extends SubscriptionQueue<T, StreamSubsc
      *         false otherwise
      */
     @Override
-    public synchronized void remove(StreamSubscription<T> subscription) {
+    public synchronized void cancel(StreamSubscription<T> subscription) {
         if (subscription.getRequested() == 0) {
             passiveSubscriptions.remove(subscription);
         } else {
-            super.remove(subscription);
+            super.cancel(subscription);
         }
     }
 

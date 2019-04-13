@@ -155,7 +155,7 @@ public abstract class Transition {
             fire();
         }
 
-        protected synchronized void complete() {
+        public synchronized void complete() {
             synchronized (this) {
                 if (completed) {
                     return;

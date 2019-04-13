@@ -1,17 +1,14 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.Port;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscription;
 
 public class AllOf extends AsyncSupplier<Void> {
 
     public AllOf() {
     }
 
-    public AllOf(Publisher<?>... sources) {
-        for (Publisher source: sources) {
+    public AllOf(ScalarPublisher<?>... sources) {
+        for (ScalarPublisher source: sources) {
             registerAsyncResult(source);
         }
     }
@@ -21,7 +18,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of completion. successfull or unseccessfull
      */
-    public synchronized void registerAsyncResult(Publisher source) {
+    public synchronized void registerAsyncResult(ScalarPublisher source) {
         source.subscribe(new Enter());
     }
 
@@ -29,16 +26,6 @@ public class AllOf extends AsyncSupplier<Void> {
         for (AsyncProc source: sources) {
             registerAsyncResult(source.asyncResult());
         }
-    }
-
-    /**
-     * does not blocks this instance from completion.
-     * Used to collect possible exceptions only
-     *
-     * @param source source of errors
-     */
-    public synchronized void registerAsyncDaemon(Publisher source) {
-        source.subscribe(new DaemonEnter());
     }
 
     @Override
@@ -50,29 +37,18 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResultExceptionally(ex);
     }
 
-    class Enter extends Pin implements Port<Object> {
-        Subscription subscription;
+    class Enter extends Pin implements ScalarSubscriber<Object> {
+        ScalarSubscription subscription;
 
         @Override
-        public void onSubscribe(Subscription s) {
+        public void onSubscribe(ScalarSubscription s) {
             this.subscription = s;
         }
 
         @Override
-        public void onNext(Object value) {
+        public void onComplete(Object value) {
             super.unblock();
         }
-
-        @Override
-        public void onError(Throwable ex) {
-            postGlobalFailure(ex);
-        }
-    }
-
-    class DaemonEnter implements Port<Object> {
-
-        @Override
-        public void onNext(Object value) { }
 
         @Override
         public void onError(Throwable ex) {

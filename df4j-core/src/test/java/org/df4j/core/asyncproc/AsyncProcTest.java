@@ -5,7 +5,6 @@ import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
 import org.junit.Assert;
 import org.junit.Test;
-import org.reactivestreams.Publisher;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -16,8 +15,8 @@ public class AsyncProcTest {
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         AsyncBiFunction<Double, Double, Double> mult = new Mult();
-        mult.param1.onNext(a);
-        mult.param2.onNext(b);
+        mult.param1.onComplete(a);
+        mult.param2.onComplete(b);
         double result = mult.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -46,9 +45,9 @@ public class AsyncProcTest {
 
     private AsyncResult<Double> computeDiscr(double a, double b, double c) {
         Discr d = new Discr();
-        d.pa.onNext(a);
-        d.pb.onNext(b);
-        d.pc.onNext(c);
+        d.pa.onComplete(a);
+        d.pb.onComplete(b);
+        d.pc.onComplete(c);
         return d.asyncResult();
     }
 
@@ -86,10 +85,10 @@ public class AsyncProcTest {
         }
     }
 
-    private AsyncResult<double[]> calcRoots(double a, double b, Publisher<Double> d) {
+    private AsyncResult<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
         RootCalc rc = new RootCalc();
-        rc.pa.onNext(a);
-        rc.pb.onNext(b);
+        rc.pa.onComplete(a);
+        rc.pb.onComplete(b);
         d.subscribe(rc.pd);
         return rc.asyncResult();
     }
@@ -127,7 +126,7 @@ public class AsyncProcTest {
             super((Double val1, Double val2) -> val1 + val2);
         }
 
-        protected Plus(Publisher pa, Publisher pb) {
+        protected Plus(ScalarPublisher pa, ScalarPublisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -140,7 +139,7 @@ public class AsyncProcTest {
             super((Double val1, Double val2) -> val1 - val2);
         }
 
-        protected Minus(Publisher pa, Publisher pb) {
+        protected Minus(ScalarPublisher pa, ScalarPublisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -153,7 +152,7 @@ public class AsyncProcTest {
             super((Double val1, Double val2) -> val1 * val2);
         }
 
-        protected Mult(Publisher pa, Publisher pb) {
+        protected Mult(ScalarPublisher pa, ScalarPublisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -166,7 +165,7 @@ public class AsyncProcTest {
             super((Double val1, Double val2) -> val1 / val2);
         }
 
-        protected Div(Publisher pa, Publisher pb) {
+        protected Div(ScalarPublisher pa, ScalarPublisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);

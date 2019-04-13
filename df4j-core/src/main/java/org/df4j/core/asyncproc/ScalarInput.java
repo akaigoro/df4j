@@ -1,20 +1,17 @@
 package org.df4j.core.asyncproc;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends Transition.Pin implements Subscriber<T> {
+public class ScalarInput<T> extends Transition.Pin implements ScalarSubscriber<T> {
     protected AsyncProc task;
     /** extracted token */
     protected T current = null;
     protected Throwable completionException;
-    protected Subscription subscription;
+    protected ScalarSubscription subscription;
 
     public ScalarInput(AsyncProc task) {
         task.super();
@@ -34,13 +31,13 @@ public class ScalarInput<T> extends Transition.Pin implements Subscriber<T> {
     }
 
     @Override
-    public synchronized void onSubscribe(Subscription s) {
+    public synchronized void onSubscribe(ScalarSubscription s) {
         this.subscription = s;
         s.request(1);
     }
 
     @Override
-    public synchronized void onNext(T message) {
+    public synchronized void onComplete(T message) {
         synchronized(this) {
             if (message == null) {
                 throw new IllegalArgumentException();
@@ -69,10 +66,4 @@ public class ScalarInput<T> extends Transition.Pin implements Subscriber<T> {
         }
         complete();
     }
-
-    @Override
-    public void onComplete() {
-        complete();
-    }
-
 }

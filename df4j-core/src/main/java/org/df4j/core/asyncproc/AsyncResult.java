@@ -1,11 +1,7 @@
 package org.df4j.core.asyncproc;
 
-
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncFunction;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
@@ -17,7 +13,7 @@ import java.util.function.Function;
  * Universal standalone connector for single value.
  * Has both synchronous and asynchronous interfaces on output end.
  */
-public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionStage<T>, Future<T> {
+public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, CompletionStage<T>, Future<T> {
     private void debug(String s) {
         System.out.println(s);  // must be commented out
     }
@@ -26,7 +22,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
     protected volatile T value;
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
-    protected Subscription subscription;
+    protected ScalarSubscription subscription;
 
     public AsyncResult() {
     }
@@ -34,7 +30,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
     public AsyncResult(CompletionStage<? extends T> completionStage) {
         completionStage.whenComplete((value, ex)->{
             if (ex == null) {
-                onNext(value);
+                onComplete(value);
             } else {
                 onError(ex);
             }
@@ -42,13 +38,13 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
     }
 
     @Override
-    public void onSubscribe(Subscription s) {
+    public void onSubscribe(ScalarSubscription s) {
         subscription = s;
         s.request(1);
     }
 
     @Override
-    public synchronized void onNext(T t) {
+    public synchronized void onComplete(T t) {
         synchronized(this) {
             if (done) { // this is how CompletableFuture#complete works
                 debug("onNext done already");
@@ -59,10 +55,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
             debug("onNext done, notifyAll");
             notifyAll();
         }
-        ScalarSubscription subscription = subscriptions.poll();
-        for (; subscription != null; subscription = subscriptions.poll()) {
-            subscription.onNext(value);
-        }
+        subscriptions.onComplete(t);
     }
 
     @Override
@@ -81,23 +74,22 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
         }
     }
 
-    @Override
-    public void subscribe(Subscriber<? super T> s) {
+    public void subscribe(ScalarSubscriber<? super T> s) {
         synchronized(this) {
             if (!isDone()) {
-                subscriptions.addLast(s);
+                subscriptions.subscribe(s);
                 return;
             }
         }
         if (completionException == null) {
-            s.onNext(value);
+            s.onComplete(value);
         } else {
             s.onError(completionException);
         }
     }
 
     public void subscribe(CompletableFuture<T> cf) {
-        Subscriber<? super T> s = new CompletableFutureySubscriber<>(cf);
+        ScalarSubscriber<? super T> s = new CompletableFutureySubscriber<>(cf);
         subscribe(s);
     }
 
@@ -109,7 +101,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        Subscription subscriptionLoc;
+        ScalarSubscription subscriptionLoc;
         synchronized(this) {
             subscriptionLoc = subscription;
             if (subscriptionLoc == null) {
@@ -167,21 +159,13 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
         }
     }
 
-    public void completeExceptionally(Throwable e) {
-        onError(e);
-    }
-
-    public void complete(T res) {
-        onNext(res);
-    }
-
     public void onComplete() {
-        onNext(null);
+        onComplete(null);
     }
 
     public static <U> AsyncResult<U> completedResult(U value) {
         AsyncResult<U> result = new AsyncResult<>();
-        result.complete(value);
+        result.onComplete(value);
         return result;
     }
 
@@ -376,7 +360,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
 
     @Override
     public AsyncResult<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> biConsumer, Executor executor) {
-        Subscriber<? super T> subscriber = new BiconsumerSubscriber<>(biConsumer, executor);
+        ScalarSubscriber<? super T> subscriber = new BiconsumerSubscriber<>(biConsumer, executor);
         subscribe(subscriber);
         return null;
     }
@@ -403,7 +387,7 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
         return res;
     }
 
-    public static class CompletableFutureySubscriber<T> implements Subscriber<T> {
+    public static class CompletableFutureySubscriber<T> implements ScalarSubscriber<T> {
         private final CompletableFuture<T> cf;
 
         public CompletableFutureySubscriber(CompletableFuture<T> cf) {
@@ -411,12 +395,12 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
         }
 
         @Override
-        public void onSubscribe(Subscription s) {
+        public void onSubscribe(ScalarSubscription s) {
             s.request(1);
         }
 
         @Override
-        public void onNext(T t) {
+        public void onComplete(T t) {
             cf.complete(t);
         }
 
@@ -424,14 +408,9 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
         public void onError(Throwable t) {
             cf.completeExceptionally(t);
         }
-
-        @Override
-        public void onComplete() {
-            cf.complete(null);
-        }
     }
 
-    private class BiconsumerSubscriber<T> extends AsyncProc implements Subscriber<T> {
+    private class BiconsumerSubscriber<T> extends AsyncProc implements ScalarSubscriber<T> {
         private final BiConsumer<? super T, ? super Throwable> biConsumer;
         private T value;
         private Throwable ex;
@@ -442,23 +421,18 @@ public class AsyncResult<T> implements Subscriber<T>, Publisher<T>, CompletionSt
         }
 
         @Override
-        public void onSubscribe(Subscription s) {
+        public void onSubscribe(ScalarSubscription s) {
             s.request(1);
         }
 
         @Override
-        public void onNext(T t) {
+        public void onComplete(T t) {
             asyncRun(t, null);
         }
 
         @Override
         public void onError(Throwable t) {
             asyncRun(null, t);
-        }
-
-        @Override
-        public void onComplete() {
-            asyncRun(null, null);
         }
 
         private void asyncRun(T value, Throwable ex) {

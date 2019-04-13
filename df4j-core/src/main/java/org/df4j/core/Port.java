@@ -10,8 +10,8 @@
 
 package org.df4j.core;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import org.df4j.core.asyncproc.ScalarSubscriber;
+import org.df4j.core.asyncproc.ScalarSubscription;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -23,9 +23,9 @@ import java.util.function.Consumer;
  * @param <T> the type of the message
  */
 @FunctionalInterface
-public interface Port<T> extends Subscriber<T>, Consumer<T>, BiConsumer<T, Throwable> {
+public interface Port<T> extends ScalarSubscriber<T>, Consumer<T>, BiConsumer<T, Throwable> {
 
-    default void onSubscribe(Subscription s) {}
+    default void onSubscribe(ScalarSubscription s) {}
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.
@@ -41,7 +41,7 @@ public interface Port<T> extends Subscriber<T>, Consumer<T>, BiConsumer<T, Throw
 
     @Override
     default void accept(T token) {
-        onNext(token);
+        onComplete(token);
     }
 
     /**
@@ -57,7 +57,7 @@ public interface Port<T> extends Subscriber<T>, Consumer<T>, BiConsumer<T, Throw
         if (throwable != null) {
             onError(throwable);
         } else {
-            onNext(r);
+            onComplete(r);
         }
     }
 
@@ -65,7 +65,7 @@ public interface Port<T> extends Subscriber<T>, Consumer<T>, BiConsumer<T, Throw
         return new Port<T>() {
 
             @Override
-            public void onNext(T message) {
+            public void onComplete(T message) {
                 completable.complete(message);
             }
 

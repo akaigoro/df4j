@@ -11,7 +11,7 @@ public class ScalarInputOnlyTest {
     public void test1() throws InterruptedException {
         ScalarInputActor actor = new ScalarInputActor();
         actor.start();
-        actor.inp.onNext(33);
+        actor.inp.onComplete(33);
     }
 
     static class ScalarInputActor extends Actor {

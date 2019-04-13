@@ -1,5 +1,6 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.SubscriptionListener;
 import org.df4j.core.asyncproc.*;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -45,8 +46,8 @@ public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
      * @return true if no active subcriptions remain
      *         false otherwise
      */
-    public synchronized void remove(StreamSubscription<T> subscription) {
-        subscriptions.remove(subscription);
+    public synchronized void cancel(StreamSubscription<T> subscription) {
+        subscriptions.cancel(subscription);
         if (subscriptions.noActiveSubscribers()) {
             block();
         }

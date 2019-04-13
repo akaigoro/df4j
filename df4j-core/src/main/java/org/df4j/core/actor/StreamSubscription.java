@@ -1,15 +1,19 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.LinkedSubscription;
-import org.df4j.core.asyncproc.ScalarSubscription;
-import org.df4j.core.asyncproc.SubscriptionListener;
+import org.df4j.core.SubscriptionListener;
+import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
-public class StreamSubscription<T> extends LinkedSubscription<T, StreamSubscription<T>> {
+public class StreamSubscription<T> extends Link<StreamSubscription<T>> implements Subscription {
     protected long requested = 0;
+    protected SubscriptionListener<T, StreamSubscription<T>> listener;
+    private Subscriber subscriber;
+    private boolean initialized = false; // todo get rid of it
 
     public StreamSubscription(SubscriptionListener listener, Subscriber subscriber) {
-        super(listener, subscriber);
+        this.listener = (SubscriptionListener<T, StreamSubscription<T>>) listener;
+        this.subscriber = subscriber;
     }
 
     public long getRequested() {
@@ -19,7 +23,7 @@ public class StreamSubscription<T> extends LinkedSubscription<T, StreamSubscript
     @Override
     public synchronized void request(long n) {
         if (n <= 0) {
-            super.onError(new IllegalArgumentException());
+            onError(new IllegalArgumentException());
             return;
         }
         if (isCancelled()) {
@@ -35,20 +39,26 @@ public class StreamSubscription<T> extends LinkedSubscription<T, StreamSubscript
         }
     }
 
-    @Override
     public void onNext(T value) {
         synchronized (this) {
             if (isCancelled()) {
                 return;
             }
             if (requested == 0) {
-                super.onError(new IllegalArgumentException());
+                onError(new IllegalArgumentException());
 //                throw new IllegalArgumentException();
                 return;
             }
             requested--;
         }
-        super.onNext(value);
+        Subscriber subscriberLoc;
+        synchronized (this) {
+            if (isCancelled()) {
+                return;
+            }
+            subscriberLoc = subscriber;
+        }
+        subscriberLoc.onNext(value);
     }
 
     public void onComplete() {
@@ -63,5 +73,56 @@ public class StreamSubscription<T> extends LinkedSubscription<T, StreamSubscript
             }
         }
         subscriberLoc.onComplete();
+    }
+
+    public synchronized boolean isCancelled() {
+        return subscriber == null;
+    }
+
+    public synchronized void setInitialized() {
+        initialized = true;
+        notifyAll();
+    }
+
+    public synchronized void waitInitialized() {
+        while (!initialized) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                if (subscriber!=null) {
+                    subscriber.onError(e);
+                }
+            }
+        }
+    }
+
+    @Override
+    public synchronized void cancel() {
+        if (isCancelled()) {
+            return;
+        }
+        subscriber = null;
+        listener.cancel((StreamSubscription<T>) this);
+    }
+
+    protected Subscriber extractSubscriber() {
+        synchronized (this) {
+            waitInitialized();
+            if (isCancelled()) {
+                return null;
+            } else {
+                Subscriber subscriberLoc = subscriber;
+                subscriber = null;
+                return subscriberLoc;
+            }
+        }
+    }
+
+    public void onError(Throwable t) {
+        Subscriber subscriberLoc = extractSubscriber();
+        if (subscriberLoc == null) {
+            return;
+        }
+        subscriberLoc.onError(t);
     }
 }

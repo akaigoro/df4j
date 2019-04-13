@@ -17,9 +17,9 @@ public class AnyOf<T> extends AsyncResult<T> implements BiConsumer<T, Throwable>
             return;
         }
         if (ex != null) {
-            completeExceptionally(ex);
+            onError(ex);
         } else {
-            complete(value);
+            onComplete(value);
         }
     }
 

@@ -14,9 +14,9 @@ import java.util.function.BiFunction;
  */
 public class AsyncBiFunctionRx<T,U,V> extends AsyncBiFunction<T,U,V> {
 
-    public final Consumer<T> rxparam1 = v->param1.onNext(v);
+    public final Consumer<T> rxparam1 = v->param1.onComplete(v);
 
-    public final Consumer<U> rxparam2 = v->param2.onNext(v);
+    public final Consumer<U> rxparam2 = v->param2.onComplete(v);
 
     public AsyncBiFunctionRx(BiFunction fn) {
         super(fn);

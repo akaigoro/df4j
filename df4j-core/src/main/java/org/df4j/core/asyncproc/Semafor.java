@@ -1,7 +1,6 @@
 package org.df4j.core.asyncproc;
 
 import org.df4j.core.PermitSubscriber;
-import org.reactivestreams.Subscription;
 
 /**
  * Counting semaphore
@@ -11,7 +10,6 @@ import org.reactivestreams.Subscription;
 public class Semafor extends Transition.Pin implements PermitSubscriber {
     protected final AsyncProc actor;
     private long count = 0;
-    protected Subscription subscription;
 
     public Semafor(AsyncProc actor, int count) {
         actor.super(count <= 0);

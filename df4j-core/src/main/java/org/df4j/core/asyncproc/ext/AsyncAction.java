@@ -40,7 +40,7 @@ public class AsyncAction<R> extends AsyncProc<R> {
         try {
             runAction();
         } catch (Throwable e) {
-            result.completeExceptionally(e);
+            result.onError(e);
         }
     }
 }
