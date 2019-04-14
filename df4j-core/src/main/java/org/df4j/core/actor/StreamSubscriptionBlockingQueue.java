@@ -8,17 +8,13 @@ import org.reactivestreams.Subscriber;
 /**
  * blocks when there are no active subscribers
  */
-public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
-        implements SubscriptionListener<T, StreamSubscription<T>>, Publisher<T>
+public class StreamSubscriptionBlockingQueue<T> extends Transition.Param<StreamSubscription<T>>
+        implements SubscriptionListener<StreamSubscription<T>>, Publisher<T>
 {
     protected StreamSubscriptionQueue<T> subscriptions =  new StreamSubscriptionQueue<>(this);
 
     public StreamSubscriptionBlockingQueue(AsyncProc actor) {
         actor.super();
-    }
-
-    protected boolean isParameter() {
-        return true;
     }
 
     @Override
@@ -60,7 +56,7 @@ public class StreamSubscriptionBlockingQueue<T> extends Transition.Pin
     }
 
     @Override
-    public synchronized void purge() {
-        subscriptions.purge();
+    public synchronized StreamSubscription<T> next() {
+        return subscriptions.next();
     }
 }

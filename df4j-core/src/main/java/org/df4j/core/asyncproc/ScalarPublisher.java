@@ -13,9 +13,9 @@ public interface ScalarPublisher<R> {
     /**
      * Request {@link ScalarPublisher} to start scalar data.
      * <p>
-     * This is a "factory method" and can be called multiple times, each time starting a new {@link ScalarSubscription}.
+     * This is a "factory method" and can be called multiple times, each time starting a new {@link ScalarSubscriptionQueue.ScalarSubscription}.
      * <p>
-     * Each {@link ScalarSubscription} will work for only a single {@link ScalarSubscriber}.
+     * Each {@link ScalarSubscriptionQueue.ScalarSubscription} will work for only a single {@link ScalarSubscriber}.
      * <p>
      * A {@link ScalarSubscriber} should only subscribe once to a single {@link ScalarPublisher}.
      * <p>

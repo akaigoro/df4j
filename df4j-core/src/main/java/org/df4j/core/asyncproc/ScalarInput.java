@@ -6,24 +6,15 @@ package org.df4j.core.asyncproc;
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends Transition.Pin implements ScalarSubscriber<T> {
+public class ScalarInput<T> extends Transition.Param<T> implements ScalarSubscriber<T> {
     protected AsyncProc task;
     /** extracted token */
-    protected T current = null;
     protected Throwable completionException;
-    protected ScalarSubscription subscription;
+    protected ScalarSubscriptionQueue.ScalarSubscription subscription;
 
     public ScalarInput(AsyncProc task) {
         task.super();
         this.task = task;
-    }
-
-    protected boolean isParameter() {
-        return true;
-    }
-
-    public synchronized T current() {
-        return current;
     }
 
     public synchronized Throwable getCompletionException() {
@@ -31,17 +22,13 @@ public class ScalarInput<T> extends Transition.Pin implements ScalarSubscriber<T
     }
 
     @Override
-    public synchronized void onSubscribe(ScalarSubscription s) {
+    public synchronized void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
         this.subscription = s;
-        s.request(1);
     }
 
     @Override
     public synchronized void onComplete(T message) {
         synchronized(this) {
-            if (message == null) {
-                throw new IllegalArgumentException();
-            }
             if (isCompleted()) {
                 return;
             }

@@ -6,26 +6,21 @@ import org.df4j.core.SubscriptionListener;
 /**
  * blocks when there are no active subscribers
  */
-public class ScalarSubscriptionBlockingQueue<T> extends ScalarSubscriptionQueue<T>
-        implements SubscriptionListener<T, ScalarSubscription<T>>
-{
-    private final Transition.Pin outerLock;
+public class ScalarSubscriptionBlockingQueue<T> extends ScalarSubscriptionQueue<T> {
+    private final Transition.Param outerLock;
 
     public ScalarSubscriptionBlockingQueue(AsyncProc outerActor) {
-        outerLock = outerActor.new Pin(true) {
-
-            protected boolean isParameter() {
-                return true;
-            }
+        outerLock = outerActor.new Param<ScalarSubscription<T>>(true) {
 
             @Override
-            public Object current() {
-                return ScalarSubscriptionBlockingQueue.this.current();
-            }
-
-            @Override
-            public void purge() {
-                ScalarSubscriptionBlockingQueue.this.purge();
+            public  ScalarSubscription<T> next() {
+                synchronized (ScalarSubscriptionBlockingQueue.this) {
+                    current = poll();
+                    if (size() == 0) {
+                        block();
+                    }
+                    return current;
+                }
             }
         };
     }
@@ -36,17 +31,8 @@ public class ScalarSubscriptionBlockingQueue<T> extends ScalarSubscriptionQueue<
         outerLock.unblock();
     }
 
-    public ScalarSubscription<T> current() {
+    public ScalarSubscription current() {
         return peek();
     }
 
-    public void purge() {
-        synchronized (this) {
-            poll();
-            if (size() > 0) {
-                return;
-            }
-        }
-        outerLock.block();
-    }
 }

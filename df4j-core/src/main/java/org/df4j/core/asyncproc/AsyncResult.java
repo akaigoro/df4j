@@ -22,7 +22,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     protected volatile T value;
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
-    protected ScalarSubscription subscription;
+    protected ScalarSubscriptionQueue.ScalarSubscription subscription;
 
     public AsyncResult() {
     }
@@ -38,9 +38,8 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     }
 
     @Override
-    public void onSubscribe(ScalarSubscription s) {
+    public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
         subscription = s;
-        s.request(1);
     }
 
     @Override
@@ -68,7 +67,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
             completionException = t;
             notifyAll();
         }
-        ScalarSubscription subscription = subscriptions.poll();
+        ScalarSubscriptionQueue.ScalarSubscription subscription = subscriptions.poll();
         for (; subscription != null; subscription = subscriptions.poll()) {
             subscription.onError(completionException);
         }
@@ -101,7 +100,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        ScalarSubscription subscriptionLoc;
+        ScalarSubscriptionQueue.ScalarSubscription subscriptionLoc;
         synchronized(this) {
             subscriptionLoc = subscription;
             if (subscriptionLoc == null) {
@@ -395,8 +394,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         }
 
         @Override
-        public void onSubscribe(ScalarSubscription s) {
-            s.request(1);
+        public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
         }
 
         @Override
@@ -421,8 +419,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         }
 
         @Override
-        public void onSubscribe(ScalarSubscription s) {
-            s.request(1);
+        public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
         }
 
         @Override

@@ -38,10 +38,10 @@ public class AllOf extends AsyncSupplier<Void> {
     }
 
     class Enter extends Pin implements ScalarSubscriber<Object> {
-        ScalarSubscription subscription;
+        ScalarSubscriptionQueue.ScalarSubscription subscription;
 
         @Override
-        public void onSubscribe(ScalarSubscription s) {
+        public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
             this.subscription = s;
         }
 

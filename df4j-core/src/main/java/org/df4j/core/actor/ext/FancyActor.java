@@ -11,15 +11,11 @@ public abstract class FancyActor extends Actor {
 
     protected Invoker actionCaller;
 
-    public String toString() {
-        return super.toString() + result.toString();
-    }
-
     protected void runAction() throws Throwable {
         if (actionCaller == null) {
             actionCaller = ActionCaller.findAction(this, getParamCount());
         }
-        Object[] args = collectTokens();
+        Object[] args = collectArgs();
         actionCaller.apply(args);
     }
 

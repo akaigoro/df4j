@@ -17,13 +17,12 @@ import java.util.Queue;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends Transition.Pin implements Subscriber<T> {
+public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T> {
     protected int capacity;
     protected Queue<T> tokens;
     /** to monitor existence of the room for additional tokens */
     protected Transition.Pin roomLock;
     /** extracted token */
-    protected T current = null;
     protected Subscription subscription;
     protected boolean completed = false;
     protected Throwable completionException;
@@ -42,14 +41,6 @@ public class StreamInput<T> extends Transition.Pin implements Subscriber<T> {
 
     public StreamInput(AsyncProc actor) {
         this(actor, 9);
-    }
-
-    protected boolean isParameter() {
-        return true;
-    }
-
-    public synchronized T current() {
-        return current;
     }
 
     public synchronized void setRoomLockIn(AsyncProc outerActor) {
@@ -157,8 +148,7 @@ public class StreamInput<T> extends Transition.Pin implements Subscriber<T> {
         return true;
     }
 
-    @Override
-    public  void purge() {
+    public synchronized T next() {
         int delta;
         synchronized (this) {
             int sizeBefore = size();
@@ -172,13 +162,10 @@ public class StreamInput<T> extends Transition.Pin implements Subscriber<T> {
         if (delta > 0 && subscription != null) {
             subscription.request(delta);
         }
-    }
-
-    public synchronized T next() {
-        purge();
         return current;
     }
 
+    // todo fix
     public boolean hasNext() {
         return current != null;
     }

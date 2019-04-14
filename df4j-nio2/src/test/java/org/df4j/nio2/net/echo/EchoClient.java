@@ -23,7 +23,7 @@ class EchoClient extends Actor1<ByteBuffer> {
 
     @Override
     public void onError(Throwable ex) {
-        result.completeExceptionally(ex);
+        result.onError(ex);
     }
 
     public EchoClient(SocketAddress addr, int count) throws IOException, InterruptedException {
@@ -42,7 +42,7 @@ class EchoClient extends Actor1<ByteBuffer> {
         count--;
         if (count==0) {
             LOG.info("client finished successfully");
-            result.complete(null);
+            result.onComplete(null);
             clientConn.close();
             stop();
             return;

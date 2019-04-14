@@ -3,12 +3,12 @@ package org.df4j.core.util.linked;
 import java.util.AbstractQueue;
 import java.util.Iterator;
 
-public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<Link<L>> {
-    private Link<L> first = null;
-    private Link<L> last = null;
+public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
+    private L first = null;
+    private L last = null;
     private volatile int size = 0;
 
-    private Link<L> remove(Link<L> next, Link<L> current) {
+    private L remove(L next, L current) {
         size--;
         if (next == null) {
             first = current.prev;
@@ -27,7 +27,7 @@ public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<Link<
     }
 
     @Override
-    public Iterator<Link<L>> iterator() {
+    public Iterator<L> iterator() {
         Iterator subscriptionIterator = new SubscriptionIterator();
         return subscriptionIterator;
     }
@@ -38,7 +38,7 @@ public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<Link<
     }
 
     @Override
-    public synchronized boolean offer(Link<L> subscription) {
+    public synchronized boolean offer(L subscription) {
         if (subscription.isLinked()) {
             throw new IllegalStateException();
         }
@@ -74,8 +74,8 @@ public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<Link<
     }
 
     public synchronized void cancel(L subscription) {
-        Link<L> next = null;
-        Link<L> current = first;
+        L next = null;
+        L current = first;
         while (current != null) {
             if (subscription == current) {
                 next = remove(next, current);
@@ -84,14 +84,10 @@ public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<Link<
         }
     }
 
-    public void activate(L simpleSubscription) {
-        throw new UnsupportedOperationException();
-    }
-
     private class SubscriptionIterator implements Iterator<Link<L>> {
-        Link<L> next;
-        Link<L> current = null;
-        Link<L> prev;
+        L next;
+        L current = null;
+        L prev;
 
         @Override
         public boolean hasNext() {

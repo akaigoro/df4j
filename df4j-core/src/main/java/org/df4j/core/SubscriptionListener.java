@@ -1,6 +1,6 @@
 package org.df4j.core;
 
-public interface SubscriptionListener<T, S extends org.reactivestreams.Subscription> {
+public interface SubscriptionListener<S> {
     void activate(S subscription);
     void cancel(S subscription);
 }

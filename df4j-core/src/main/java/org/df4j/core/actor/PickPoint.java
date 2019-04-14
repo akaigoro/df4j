@@ -1,9 +1,6 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.ScalarPublisher;
-import org.df4j.core.asyncproc.ScalarSubscriber;
-import org.df4j.core.asyncproc.ScalarSubscription;
-import org.df4j.core.asyncproc.ScalarSubscriptionBlockingQueue;
+import org.df4j.core.asyncproc.*;
 
 /**
  *  An asynchronous analogue of BlockingQueue
@@ -24,7 +21,7 @@ public class PickPoint<T> extends Actor implements ScalarPublisher<T> {
     @Override
     protected void runAction() {
         T token = resources.current();
-        ScalarSubscription<T> subscription = requests.current();
+        ScalarSubscriptionQueue.ScalarSubscription subscription = requests.current();
         subscription.onComplete(token);
     }
 

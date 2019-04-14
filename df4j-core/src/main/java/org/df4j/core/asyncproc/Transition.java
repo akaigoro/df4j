@@ -42,7 +42,7 @@ public abstract class Transition {
         return paramCount;
     }
 
-    protected synchronized Object[] collectTokens() {
+    protected synchronized Object[] collectArgs() {
         if (paramCount == 0) {
             return emptyArgs;
         } else {
@@ -54,9 +54,9 @@ public abstract class Transition {
         }
     }
 
-    protected void purgeAll() {
+    protected void nextAll() {
         for (int k = 0; k < locks.size(); k++) {
-            locks.get(k).purge();
+            locks.get(k).next();
         }
     }
 
@@ -88,6 +88,10 @@ public abstract class Transition {
             register(true);
         }
 
+        protected boolean isParameter() {
+            return false;
+        }
+
         private synchronized void register(boolean blocked) {
             this.blocked = blocked;
             if (blocked) {
@@ -109,10 +113,6 @@ public abstract class Transition {
 
         public synchronized boolean isCompleted() {
             return completed;
-        }
-
-        protected boolean isParameter() {
-            return false;
         }
 
         /** must be overriden in parameters
@@ -179,6 +179,32 @@ public abstract class Transition {
          * Invalidates current token
          * Signals to set state to off if no more tokens are in the place.
          */
-        public void purge() { }
+        public Object next() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public class Param<T> extends Pin {
+        protected T current;
+
+        public Param() {
+        }
+
+        public Param(boolean blocked) {
+            super((blocked));
+        }
+
+        @Override
+        protected boolean isParameter() {
+            return true;
+        }
+
+        public T current() {
+            return  current;
+        }
+
+        public T next() {
+            throw new UnsupportedOperationException();
+        }
     }
 }

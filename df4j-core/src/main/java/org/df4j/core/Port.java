@@ -11,7 +11,7 @@
 package org.df4j.core;
 
 import org.df4j.core.asyncproc.ScalarSubscriber;
-import org.df4j.core.asyncproc.ScalarSubscription;
+import org.df4j.core.asyncproc.ScalarSubscriptionQueue;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 @FunctionalInterface
 public interface Port<T> extends ScalarSubscriber<T>, Consumer<T>, BiConsumer<T, Throwable> {
 
-    default void onSubscribe(ScalarSubscription s) {}
+    default void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {}
 
     /**
      * If this ScalarSubscriber was not already completed, sets it completed state.

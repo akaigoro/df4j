@@ -7,12 +7,12 @@ import org.reactivestreams.Subscription;
 
 public class StreamSubscription<T> extends Link<StreamSubscription<T>> implements Subscription {
     protected long requested = 0;
-    protected SubscriptionListener<T, StreamSubscription<T>> listener;
+    protected SubscriptionListener<StreamSubscription<T>> listener;
     private Subscriber subscriber;
     private boolean initialized = false; // todo get rid of it
 
     public StreamSubscription(SubscriptionListener listener, Subscriber subscriber) {
-        this.listener = (SubscriptionListener<T, StreamSubscription<T>>) listener;
+        this.listener = (SubscriptionListener<StreamSubscription<T>>) listener;
         this.subscriber = subscriber;
     }
 

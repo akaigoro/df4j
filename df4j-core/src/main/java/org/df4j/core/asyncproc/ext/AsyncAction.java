@@ -26,7 +26,7 @@ public class AsyncAction<R> extends AsyncProc<R> {
         if (actionCaller == null) {
             actionCaller = ActionCaller.findAction(this, getParamCount());
         }
-        Object[] args = collectTokens();
+        Object[] args = collectArgs();
         R  res = (R) actionCaller.apply(args);
         return res;
     }

@@ -52,11 +52,11 @@ public abstract class Actor extends AsyncProc {
     protected void run() {
         try {
             blockStarted();
+            nextAll();
             runAction();
             if (isStopped()) {
                 return;
             }
-            purgeAll();
             if (lockCount() > 1) {
                 return;
             }
