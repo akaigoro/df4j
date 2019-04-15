@@ -94,6 +94,7 @@ public abstract class Transition {
 
         private synchronized void register(boolean blocked) {
             this.blocked = blocked;
+            this.pinNumber = locks.size();
             if (blocked) {
                 blockedPinCount++;
             }
@@ -103,7 +104,6 @@ public abstract class Transition {
             } else {
                 locks.add(this);
             }
-            this.pinNumber = locks.size();
             activePinCount++;
         }
 
@@ -174,13 +174,8 @@ public abstract class Transition {
             fire();
         }
 
-        /**
-         * Must be executed  before restart of the parent async action.
-         * Invalidates current token
-         * Signals to set state to off if no more tokens are in the place.
-         */
         public Object next() {
-            throw new UnsupportedOperationException();
+            return null;
         }
     }
 

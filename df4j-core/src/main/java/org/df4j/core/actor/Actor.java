@@ -57,6 +57,7 @@ public abstract class Actor extends AsyncProc {
             if (isStopped()) {
                 return;
             }
+            // to avoid infinite llop when all Pins are completed
             if (lockCount() > 1) {
                 return;
             }

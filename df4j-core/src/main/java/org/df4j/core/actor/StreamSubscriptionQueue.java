@@ -1,9 +1,10 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.SubscriptionListener;
+import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 /**
  * non-blocking queue of {@link StreamSubscription}
@@ -32,6 +33,15 @@ public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T
         }
         s.onSubscribe(subscription);
         subscription.setInitialized();
+    }
+
+    public void subscribe(ScalarSubscriber<? super T> s) {
+        Scalar2StreamSubscriber proxySubscriber = new Scalar2StreamSubscriber(s);
+        StreamSubscription subscription = new StreamSubscription(listener, proxySubscriber);
+        synchronized (this) {
+            add(subscription);
+        }
+        proxySubscriber.onSubscribe(subscription);
     }
 
     public synchronized void activate(StreamSubscription<T> simpleSubscription) {
@@ -84,5 +94,38 @@ public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T
 
     protected synchronized StreamSubscription<T> next() {
         return poll();
+    }
+
+    private static class Scalar2StreamSubscriber<T> implements Subscriber<T> {
+        private ScalarSubscriber scalarSubscriber;
+        private Subscription subscription;
+
+        public Scalar2StreamSubscriber(ScalarSubscriber<? super T> s) {
+            scalarSubscriber = s;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription = s;
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(T t) {
+            scalarSubscriber.onComplete(t);
+            subscription.cancel();
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            scalarSubscriber.onError(t);
+            subscription.cancel();
+        }
+
+        @Override
+        public void onComplete() {
+            scalarSubscriber.onComplete(null);
+            subscription.cancel();
+        }
     }
 }

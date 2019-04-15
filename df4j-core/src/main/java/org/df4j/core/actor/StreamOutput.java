@@ -1,6 +1,5 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.Port;
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Publisher;
@@ -11,7 +10,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Non-blocking analogue of blocking queue.
  * Serves multiple consumers (subscribers)
- * demonstrates usage of class {@link Semafor} for handling back pressure?
  *
  * Each message is routed to exactly one subscriber. When no one subscriber exists, blocks.
  * Has limited buffer for messages.
@@ -75,12 +73,9 @@ public class StreamOutput<T> extends Actor implements Publisher<T> {
 
     @Override
     protected void runAction() throws Throwable {
-        T token = tokens.current();
         StreamSubscription subscription = subscriptions.current();
-        if (token != null) {
-            subscription.onNext(token);
-        } else if (!tokens.completed) {
-            throw new RuntimeException();
+        if (!tokens.isCompleted()) {
+            subscription.onNext(tokens.current());
         } else if (tokens.completionException == null) {
             subscription.onComplete();
         } else {

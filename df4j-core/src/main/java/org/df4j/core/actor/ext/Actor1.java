@@ -9,7 +9,6 @@
  */
 package org.df4j.core.actor.ext;
 
-import org.df4j.core.Port;
 import org.df4j.core.actor.StreamInput;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;

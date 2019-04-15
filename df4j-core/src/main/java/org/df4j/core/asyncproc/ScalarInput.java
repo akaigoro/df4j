@@ -1,5 +1,7 @@
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.ScalarSubscriber;
+
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.
@@ -10,7 +12,7 @@ public class ScalarInput<T> extends Transition.Param<T> implements ScalarSubscri
     protected AsyncProc task;
     /** extracted token */
     protected Throwable completionException;
-    protected ScalarSubscriptionQueue.ScalarSubscription subscription;
+    protected ScalarSubscription subscription;
 
     public ScalarInput(AsyncProc task) {
         task.super();
@@ -22,7 +24,7 @@ public class ScalarInput<T> extends Transition.Param<T> implements ScalarSubscri
     }
 
     @Override
-    public synchronized void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
+    public synchronized void onSubscribe(ScalarSubscription s) {
         this.subscription = s;
     }
 

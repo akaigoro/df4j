@@ -1,6 +1,5 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.SubscriptionListener;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -83,7 +82,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         initialized = true;
         notifyAll();
     }
-
+/*
     public synchronized void waitInitialized() {
         while (!initialized) {
             try {
@@ -95,7 +94,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
             }
         }
     }
-
+*/
     @Override
     public synchronized void cancel() {
         if (isCancelled()) {
@@ -107,7 +106,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
 
     protected Subscriber extractSubscriber() {
         synchronized (this) {
-            waitInitialized();
+      //      waitInitialized();
             if (isCancelled()) {
                 return null;
             } else {

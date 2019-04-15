@@ -1,5 +1,7 @@
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.ScalarPublisher;
+import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncFunction;
 
@@ -12,6 +14,8 @@ import java.util.function.Function;
 /** implements Subscriber<T>, CompletionStage<T> {
  * Universal standalone connector for single value.
  * Has both synchronous and asynchronous interfaces on output end.
+ *
+ * It could named ScalarOutput.
  */
 public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, CompletionStage<T>, Future<T> {
     private void debug(String s) {
@@ -22,7 +26,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     protected volatile T value;
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
-    protected ScalarSubscriptionQueue.ScalarSubscription subscription;
+    protected ScalarSubscription subscription;
 
     public AsyncResult() {
     }
@@ -38,7 +42,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     }
 
     @Override
-    public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
+    public void onSubscribe(ScalarSubscription s) {
         subscription = s;
     }
 
@@ -67,7 +71,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
             completionException = t;
             notifyAll();
         }
-        ScalarSubscriptionQueue.ScalarSubscription subscription = subscriptions.poll();
+        ScalarSubscription subscription = subscriptions.poll();
         for (; subscription != null; subscription = subscriptions.poll()) {
             subscription.onError(completionException);
         }
@@ -100,7 +104,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        ScalarSubscriptionQueue.ScalarSubscription subscriptionLoc;
+        ScalarSubscription subscriptionLoc;
         synchronized(this) {
             subscriptionLoc = subscription;
             if (subscriptionLoc == null) {
@@ -394,7 +398,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         }
 
         @Override
-        public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
+        public void onSubscribe(ScalarSubscription s) {
         }
 
         @Override
@@ -419,7 +423,7 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         }
 
         @Override
-        public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
+        public void onSubscribe(ScalarSubscription s) {
         }
 
         @Override

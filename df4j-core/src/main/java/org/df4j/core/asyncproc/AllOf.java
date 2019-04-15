@@ -1,5 +1,7 @@
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.ScalarPublisher;
+import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
 
 public class AllOf extends AsyncSupplier<Void> {
@@ -38,10 +40,10 @@ public class AllOf extends AsyncSupplier<Void> {
     }
 
     class Enter extends Pin implements ScalarSubscriber<Object> {
-        ScalarSubscriptionQueue.ScalarSubscription subscription;
+        ScalarSubscription subscription;
 
         @Override
-        public void onSubscribe(ScalarSubscriptionQueue.ScalarSubscription s) {
+        public void onSubscribe(ScalarSubscription s) {
             this.subscription = s;
         }
 

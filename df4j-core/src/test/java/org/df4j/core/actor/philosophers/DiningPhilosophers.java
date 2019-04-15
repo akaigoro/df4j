@@ -1,8 +1,7 @@
 package org.df4j.core.actor.philosophers;
 
-import org.df4j.core.Port;
 import org.df4j.core.actor.LazyActor;
-import org.df4j.core.actor.PickPoint;
+import org.df4j.core.actor.ext.PickPoint;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
@@ -64,10 +63,6 @@ public class DiningPhilosophers {
         public ForkPlace(int k) {
             id = k;
             label = "Forkplace_" + id;
-        }
-
-        public void subscribe(Port<Fork> subscriber) {
-            super.subscribe(subscriber);
         }
     }
 

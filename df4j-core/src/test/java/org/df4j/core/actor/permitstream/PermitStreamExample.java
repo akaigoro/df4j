@@ -2,7 +2,7 @@ package org.df4j.core.actor.permitstream;
 
 import org.df4j.core.actor.StreamOutput;
 import org.df4j.core.asyncproc.AllOf;
-import org.df4j.core.asyncproc.Semafor;
+import org.df4j.core.actor.Semafor;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ext.Actor1;
 import org.df4j.core.actor.ext.StreamProcessor;
@@ -19,6 +19,21 @@ import static org.junit.Assert.assertTrue;
  *  This is a demonstration how backpressure can be implemented using plain {@link Semafor}
  */
 public class PermitStreamExample {
+
+    /** making a feedback loop: permits flow from {@link Sink} to {@link Source#backPressureActuator}.
+     */
+    @Test
+    public void minimalTest() throws InterruptedException, TimeoutException, ExecutionException {
+        int totalCount = 3;
+        Source first = new Source(totalCount);
+        Sink last = new Sink(first.backPressureActuator);
+        first.pub.subscribe(last);
+
+        AllOf all = new AllOf();
+        all.registerAsyncResult(first, last);
+        last.asyncResult().get(400, TimeUnit.MILLISECONDS);
+        assertEquals(totalCount, last.totalCount);
+    }
 
     /** making a feedback loop: permits flow from {@link Sink} to {@link Source#backPressureActuator}.
      */
