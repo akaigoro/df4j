@@ -18,6 +18,7 @@ public class UnicastBufferedSource extends Source<Long> {
         this.val = totalNumber;
         if (totalNumber == 0) {
             output.onComplete();
+            stop();
         }
     }
 

@@ -31,7 +31,9 @@ public class PermitStreamExample {
 
         AllOf all = new AllOf();
         all.registerAsyncResult(first, last);
-        last.asyncResult().get(400, TimeUnit.MILLISECONDS);
+
+        first.start();
+        all.asyncResult().get(400, TimeUnit.MILLISECONDS);
         assertEquals(totalCount, last.totalCount);
     }
 
@@ -63,6 +65,7 @@ public class PermitStreamExample {
 
         Source(int count) {
             this.count = count;
+            pub.asyncResult().subscribe(result);
         }
 
         protected void runAction() {
@@ -71,6 +74,7 @@ public class PermitStreamExample {
                 count--;
             } else {
                 pub.onComplete();
+                stop();
             }
         }
     }
@@ -86,6 +90,7 @@ public class PermitStreamExample {
         }
     }
 
+    // Actor1 is stopped when mainInput is completed
     static class Sink extends Actor1<Integer> {
         final Semafor backPressureActuator;
         int totalCount = 0;
@@ -99,11 +104,6 @@ public class PermitStreamExample {
         protected void runAction(Integer message) throws Exception {
             totalCount++;
             backPressureActuator.release();
-        }
-
-        @Override
-        protected void completion() throws Exception {
-            asyncResult().onComplete();
         }
     }
 }

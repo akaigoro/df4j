@@ -16,19 +16,23 @@ public class ScalarSubscriptionConnector<T> extends Transition.Param<ScalarSubsc
     }
 
     @Override
-    public  ScalarSubscription next() {
-        synchronized (ScalarSubscriptionConnector.this) {
-            current = scalarSubscriptionQueue.poll();
-            if (scalarSubscriptionQueue.size() == 0) {
-                block();
-            }
-            return current;
+    public synchronized boolean moveNext() {
+        current = scalarSubscriptionQueue.poll();
+        if ((current == null)) {
+            block();
+            return false;
         }
+        return true;
     }
 
     @Override
-    public void subscribe(ScalarSubscriber<? super T> s) {
-        scalarSubscriptionQueue.subscribe(s);
-        unblock();
+    public synchronized void subscribe(ScalarSubscriber<? super T> s) {
+        ScalarSubscription subscription = new ScalarSubscription(scalarSubscriptionQueue, s);
+        if (current == null) {
+            current = subscription;
+            unblock();
+        } else {
+            scalarSubscriptionQueue.subscribe(subscription);
+        }
     }
 }

@@ -56,7 +56,7 @@ public abstract class Transition {
 
     protected void nextAll() {
         for (int k = 0; k < locks.size(); k++) {
-            locks.get(k).next();
+            locks.get(k).moveNext();
         }
     }
 
@@ -73,7 +73,6 @@ public abstract class Transition {
      * This resembles firing of a Petri Net transition.
      */
     public class Pin {
-        protected int pinNumber; // distinct for all other connectors of this node
         protected boolean blocked;
         protected boolean completed = false;
 
@@ -94,7 +93,6 @@ public abstract class Transition {
 
         private synchronized void register(boolean blocked) {
             this.blocked = blocked;
-            this.pinNumber = locks.size();
             if (blocked) {
                 blockedPinCount++;
             }
@@ -155,7 +153,7 @@ public abstract class Transition {
             fire();
         }
 
-        public synchronized void complete() {
+        public void complete() {
             synchronized (this) {
                 if (completed) {
                     return;
@@ -174,8 +172,8 @@ public abstract class Transition {
             fire();
         }
 
-        public Object next() {
-            return null;
+        public boolean moveNext() {
+            return false;
         }
     }
 
@@ -198,7 +196,7 @@ public abstract class Transition {
             return  current;
         }
 
-        public T next() {
+        public boolean moveNext() {
             throw new UnsupportedOperationException();
         }
     }

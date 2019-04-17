@@ -15,14 +15,9 @@ public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T
     private final SubscriptionListener listener;
     protected boolean completed = false;
     protected volatile Throwable completionException;
-    private int activeNumber = 0;
 
     public StreamSubscriptionQueue(SubscriptionListener listener) {
         this.listener = listener;
-    }
-
-    public synchronized boolean noActiveSubscribers() {
-        return activeNumber == 0;
     }
 
     @Override
@@ -32,7 +27,6 @@ public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T
             add(subscription);
         }
         s.onSubscribe(subscription);
-        subscription.setInitialized();
     }
 
     public void subscribe(ScalarSubscriber<? super T> s) {
@@ -44,26 +38,7 @@ public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T
         proxySubscriber.onSubscribe(subscription);
     }
 
-    public synchronized void activate(StreamSubscription<T> simpleSubscription) {
-        activeNumber++;
-    }
-
-    @Override
-    public synchronized StreamSubscription<T> poll() {
-        for (;;) {
-            StreamSubscription<T> subscription = super.poll();
-            if (subscription == null) {
-                return null;
-            } else if (subscription.isCancelled()) {
-                continue;
-            } else if (subscription.requested > 0) {
-                activeNumber--;
-            }
-            return subscription;
-        }
-    }
-
-    public void onError(Throwable ex) {
+    public void complete(Throwable ex) {
         synchronized(this) {
             if (completed) {
                 return;
@@ -72,28 +47,8 @@ public class StreamSubscriptionQueue<T> extends LinkedQueue<StreamSubscription<T
             completed = true;
         }
         for (StreamSubscription subs = poll(); subs != null; subs = poll()) {
-            subs.onError(ex);
+            subs.complete(ex);
         }
-    }
-
-    public void onComplete() {
-        synchronized(this) {
-            if (completed) {
-                return;
-            }
-            completed = true;
-        }
-        for (StreamSubscription subs = poll(); subs != null; subs = poll()) {
-            subs.onComplete();
-        }
-    }
-
-    public synchronized StreamSubscription<T> current() {
-        return super.peek();
-    }
-
-    protected synchronized StreamSubscription<T> next() {
-        return poll();
     }
 
     private static class Scalar2StreamSubscriber<T> implements Subscriber<T> {

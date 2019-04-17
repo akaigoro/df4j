@@ -8,31 +8,32 @@ import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * subscribers can be scalar subscribers, stream subscribers, and CompletableFutures.
+ *
+ * @param <T>
+ */
 public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T>> implements ScalarPublisher<T> {
 
-    public void subscribe(ScalarSubscriber<? super T> s) {
-        ScalarSubscription subscription = new ScalarSubscription(this, s);
+    protected void subscribe(ScalarSubscription subscription) {
         synchronized (this) {
-            add(subscription);
+            offer(subscription);
         }
-        s.onSubscribe(subscription);
+        ScalarSubscriber subscriber = subscription.subscriber;
+        subscriber.onSubscribe(subscription);
+    }
+
+    public void subscribe(ScalarSubscriber<? super T> s) {
+        subscribe(new ScalarSubscription(this, s));
     }
 
     public void subscribe(Subscriber<? super T> s) {
-        Scalar2StreamSubscription subscription = new Scalar2StreamSubscription(this, s);
-        synchronized (this) {
-            add(subscription);
-        }
-        s.onSubscribe(subscription);
+        subscribe(new Scalar2StreamSubscription(this, s));
     }
 
     public void subscribe(CompletableFuture<? super T> cf) {
         ScalarSubscriber<T> proxySubscriber = new CompletableFuture2ScalarSubscriber<>(cf);
-        ScalarSubscription subscription = new ScalarSubscription(this, proxySubscriber);
-        synchronized (this) {
-            add(subscription);
-        }
-        proxySubscriber.onSubscribe(subscription);
+        subscribe(new ScalarSubscription(this, proxySubscriber));
     }
 
     public void onComplete(T value) {

@@ -61,8 +61,8 @@ public class Semafor extends Transition.Pin implements PermitSubscriber {
     }
 
     @Override
-    public synchronized Object next() {
+    public synchronized boolean moveNext() {
         acquire(1);
-        return null;
+        return true;
     }
 }

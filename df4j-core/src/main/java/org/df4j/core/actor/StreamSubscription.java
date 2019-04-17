@@ -4,19 +4,22 @@ import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+/**
+ *
+ * @param <T>
+ */
 public class StreamSubscription<T> extends Link<StreamSubscription<T>> implements Subscription {
-    protected long requested = 0;
+    private long requested = 0;
     protected SubscriptionListener<StreamSubscription<T>> listener;
     private Subscriber subscriber;
-    private boolean initialized = false; // todo get rid of it
 
-    public StreamSubscription(SubscriptionListener listener, Subscriber subscriber) {
-        this.listener = (SubscriptionListener<StreamSubscription<T>>) listener;
+    public StreamSubscription(SubscriptionListener<StreamSubscription<T>> listener, Subscriber subscriber) {
+        this.listener = listener;
         this.subscriber = subscriber;
     }
 
-    public long getRequested() {
-        return requested;
+    public boolean isActive() {
+        return requested > 0;
     }
 
     @Override
@@ -44,9 +47,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
                 return;
             }
             if (requested == 0) {
-                onError(new IllegalArgumentException());
-//                throw new IllegalArgumentException();
-                return;
+                throw new IllegalArgumentException();
             }
             requested--;
         }
@@ -60,41 +61,10 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         subscriberLoc.onNext(value);
     }
 
-    public void onComplete() {
-        Subscriber subscriberLoc;
-        synchronized (this) {
-            if (isCancelled()) {
-                return;
-            }
-            subscriberLoc = extractSubscriber();
-            if (subscriberLoc == null) {
-                return;
-            }
-        }
-        subscriberLoc.onComplete();
-    }
-
     public synchronized boolean isCancelled() {
         return subscriber == null;
     }
 
-    public synchronized void setInitialized() {
-        initialized = true;
-        notifyAll();
-    }
-/*
-    public synchronized void waitInitialized() {
-        while (!initialized) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                if (subscriber!=null) {
-                    subscriber.onError(e);
-                }
-            }
-        }
-    }
-*/
     @Override
     public synchronized void cancel() {
         if (isCancelled()) {
@@ -117,11 +87,29 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         }
     }
 
-    public void onError(Throwable t) {
-        Subscriber subscriberLoc = extractSubscriber();
-        if (subscriberLoc == null) {
-            return;
+    protected void complete(Throwable ex) {
+        Subscriber subscriberLoc;
+        synchronized (this) {
+            if (isCancelled()) {
+                return;
+            }
+            subscriberLoc = extractSubscriber();
+            if (subscriberLoc == null) {
+                return;
+            }
         }
-        subscriberLoc.onError(t);
+        if (ex == null) {
+            subscriberLoc.onComplete();
+        } else {
+            subscriberLoc.onError(ex);
+        }
+    }
+
+    public void onComplete() {
+        complete(null);
+    }
+
+    public void onError(Throwable ex) {
+        complete(ex);
     }
 }

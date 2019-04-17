@@ -23,9 +23,9 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
     protected Transition.Pin roomLock;
     /** extracted token */
     protected Subscription subscription;
+    protected boolean completionRequested = false;
     protected boolean completed = false;
     protected Throwable completionException;
-    protected boolean pushback = false; // if true, do not consume
 
     public StreamInput(AsyncProc actor, int fullCapacity) {
         actor.super();
@@ -58,27 +58,14 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
     }
 
     @Override
-    public synchronized void onSubscribe(Subscription s) {
-        this.subscription = s;
-        s.request(capacity - size());
-    }
-
-    @Override
-    public synchronized void onNext(T token) {
-        if (token == null) {
-            throw new NullPointerException();
+    public void onSubscribe(Subscription s) {
+        int requestNumber;
+        synchronized (this) {
+            this.subscription = s;
+            requestNumber = capacity - size();
         }
-        if (completed) {
-            throw new IllegalStateException("closed already");
-        }
-        if (current == null) {
-            current = token;
-            unblock();
-        } else {
-            tokens.add(token);
-            if (roomLock!=null && isFull()) {
-                roomLock.block();
-            }
+        if (requestNumber>0) {
+            s.request(requestNumber);
         }
     }
 
@@ -88,80 +75,44 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
         }
     }
 
-    public synchronized void remove(T item) {
-        tokens.remove(item);
-    }
-
-    /**
-     * in order to reuse same token in subsequent actor step
-     */
-    protected void pushback() {
-        if (pushback) {
-            throw new IllegalStateException();
-        }
-        pushback = true;
-    }
-
-    /**
-     * in order to reuse another token in subsequent actor step
-     */
-    protected synchronized void pushback(T value) {
-        if (value == null) {
-            throw new IllegalArgumentException();
-        }
-        if (!pushback) {
-            pushback = true;
-        } else {
-            if (this.current == null) {
-                throw new IllegalStateException();
-            }
-            tokens.add(this.current);
-            this.current = value;
-            if (roomLock!=null && isFull()) {
-                roomLock.block();
-            }
-
-        }
-    }
-
-    /**
-     * in order to use next token in the same actor step
-     *
-     * @return
-     */
     public synchronized boolean moveNext() {
-        boolean wasFull = isFull();
-        boolean wasNotNull = (current != null);
-        current = tokens.poll();
-        if (current == null) {
-            // no more tokens for now
+        boolean res;
+        int delta;
+        boolean doComplete = false;
+        boolean doRuumUnBlock = false;
+        Subscription subscriptionLoc;
+        synchronized (this) {
             if (completed) {
-                return wasNotNull;
-            } else {
                 return false;
             }
-        }
-        if (roomLock!=null && wasFull) {
-            roomLock.unblock();
-        }
-        return true;
-    }
-
-    public synchronized T next() {
-        int delta;
-        synchronized (this) {
             int sizeBefore = size();
-            if (pushback) {
-                pushback = false;
-            } else if (!moveNext()) {
-                block();
+            boolean wasFull = isFull();
+            current = tokens.poll();
+            res = current == null;
+            if (res) {
+                // no more tokens for now
+                if (completionRequested) {
+                    completed = true;
+                    doComplete = true; // complete is not synchronized, cannot be called from synchronized statement
+                } else {
+                    block(); // block is synchronized, can be called from synchronized statement
+                }
+            } else if (roomLock!=null && !completionRequested && wasFull) {
+                doRuumUnBlock = true;  // unblock is not synchronized, cannot be called from synchronized statement
             }
             delta = sizeBefore - size();
+            subscriptionLoc = subscription;
         }
-        if (delta > 0 && subscription != null) {
-            subscription.request(delta);
+        if (doRuumUnBlock) {
+            roomLock.unblock();
         }
-        return current;
+        if (doComplete) {
+            complete();
+        }
+        if (delta > 0 && subscriptionLoc != null) {
+            subscriptionLoc.request(delta);
+        }
+        return res;
     }
 
     // todo fix
@@ -178,16 +129,59 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
     }
 
     @Override
-    public synchronized void onError(Throwable throwable) {
-        onComplete();
-        this.completionException = throwable;
+    public synchronized void onNext(T token) {
+        if (token == null) {
+            throw new NullPointerException();
+        }
+        boolean doUnblock = false;
+        boolean doBlockRoomLock = false;
+        synchronized(this) {
+            if (completionRequested) {
+                return;
+            }
+            if (current == null) {
+                current = token;
+                doUnblock = true;
+            } else {
+                tokens.add(token);
+                if (roomLock!=null && isFull()) {
+                    doBlockRoomLock = true;
+                }
+            }
+        }
+        if (doUnblock) {
+            unblock();
+        }
+        if (doBlockRoomLock) {
+            roomLock.block();
+        }
     }
 
-    public synchronized void onComplete() {
-        if (completed) {
-            return;
+    public void complete(Throwable completionException) {
+        synchronized(this) {
+            if (completionRequested) {
+                return;
+            }
+            completionRequested = true;
+            this.completionException = completionException;
+            if (current != null) {
+                return;
+            }
+            completed = true;
         }
-        completed = true;
-        unblock();
+        complete();
     }
+
+    @Override
+    public void onError(Throwable throwable) {
+        if (throwable != null) {
+            throw  new IllegalArgumentException();
+        }
+        complete(throwable);
+    }
+
+    public void onComplete() {
+        complete(null);
+    }
+
 }

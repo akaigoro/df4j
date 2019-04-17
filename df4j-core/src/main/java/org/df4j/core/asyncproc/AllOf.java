@@ -30,6 +30,16 @@ public class AllOf extends AsyncSupplier<Void> {
         }
     }
 
+    /**
+     * does not blocks this instance from completion.
+     * Used to collect possible exceptions only
+     *
+     * @param source source of errors
+     */
+    public synchronized void registerAsyncDaemon(ScalarPublisher source) {
+        source.subscribe(new DaemonEnter());
+    }
+
     @Override
     protected void fire() {
         completeResult(null);
@@ -51,6 +61,17 @@ public class AllOf extends AsyncSupplier<Void> {
         public void onComplete(Object value) {
             super.unblock();
         }
+
+        @Override
+        public void onError(Throwable ex) {
+            postGlobalFailure(ex);
+        }
+    }
+
+    class DaemonEnter implements ScalarSubscriber<Object> {
+
+        @Override
+        public void onComplete(Object value) { }
 
         @Override
         public void onError(Throwable ex) {

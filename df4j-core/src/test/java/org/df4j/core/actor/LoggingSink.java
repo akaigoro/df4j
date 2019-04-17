@@ -36,17 +36,17 @@ public class LoggingSink implements Subscriber<Long> {
     }
 
     @Override
-    public void onError(Throwable t) {
-        parent.println(name+": onError after "+received.get()+" onNext");
-        this.completed = true;
-        asyncResult.onError(t);
-    }
-
-    @Override
     public void onComplete() {
         parent.println(name+": onComplete after "+received.get()+" onNext");
         this.completed = true;
         asyncResult.onComplete();
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        parent.println(name+": onError after "+received.get()+" onNext");
+        this.completed = true;
+        asyncResult.onError(t);
     }
 
     @Override

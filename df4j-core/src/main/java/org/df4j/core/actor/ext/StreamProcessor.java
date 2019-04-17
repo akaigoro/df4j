@@ -19,8 +19,8 @@ public abstract class StreamProcessor<M, R> extends Actor1<M> implements Publish
     }
 
     @Override
-    protected void completion() throws Exception {
-        output.onComplete();
+    protected void completion(Throwable completionException) throws Exception {
+        output.complete(completionException);
     }
 
     protected abstract R process(M message);

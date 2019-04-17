@@ -14,9 +14,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.function.BiFunction;
 
 import static org.junit.Assert.assertEquals;
@@ -24,6 +22,24 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class StreamOutputTest {
+    static class MainThreadExecutor implements Executor {
+        ConcurrentLinkedQueue<Runnable> queue = new ConcurrentLinkedQueue<>();
+
+        @Override
+        public void execute(Runnable command) {
+            queue.add(command);
+        }
+
+        void runAll(){
+            for (;;) {
+                Runnable command = queue.poll();
+                if (command == null) {
+                    return;
+                }
+                command.run();
+            }
+        }
+    }
 
     public static Iterable<int[]> data() {
         return Arrays.asList(new int[][]{
@@ -45,10 +61,12 @@ public class StreamOutputTest {
 
     public void testSource(int sourceNumber, int sinkCount, int sinkNumber,
                                           BiFunction<Integer, Logger, Source<Long>> createSource) throws InterruptedException, ExecutionException {
+        MainThreadExecutor executor = new MainThreadExecutor();
         Logger parent = new Logger(true);
         String testName="source count:"+sourceNumber+"; sinks:"+sinkCount+"; sink number:"+sinkNumber;
         parent.println("=== test started:"+testName);
         Source<Long> from = createSource.apply(sourceNumber, parent);
+        from.setExecutor(executor);
         ArrayList<LoggingSink> sinks = new ArrayList<>();
         for (int k=0; k<sinkCount; k++) {
             LoggingSink to = new LoggingSink(parent,Integer.MAX_VALUE,"sink"+k);
@@ -56,9 +74,10 @@ public class StreamOutputTest {
             from.subscribe(to);
         }
         from.start();
+        executor.runAll();
         AsyncResult result = from.asyncResult();
         try {
-            result.get(200, TimeUnit.MILLISECONDS);
+            parent.get(100, TimeUnit.MILLISECONDS);
             if (sinkCount==0) {
                 parent.println("no sinks, but result.get()succseeds-> no TimeoutException");
             }
@@ -90,18 +109,21 @@ public class StreamOutputTest {
     }
 
     @Test
-    public void test011() throws InterruptedException, ExecutionException {
+    public void specialTestUnBufferedSource() throws InterruptedException, ExecutionException {
+        testSource(1,0,1,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
         testSource(0,1,1,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
     }
 
     @Test
-    public void test101() throws InterruptedException, ExecutionException {
-        testSource(1,0,1,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
+    public void specialTestBufferedSource() throws InterruptedException, ExecutionException {
+        testSource(5,4,3,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
+        testSource(1,2,2,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
+        testSource(9,10,4,(sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
     }
 
     @Test
     public void testUnBufferedSource() throws InterruptedException, ExecutionException {
-        testSource((sourceNumber, parent) -> new UnicastUnbufferedSource(parent, sourceNumber));
+        testSource((sourceNumber, parent) -> new UnicastUnBufferedSource(parent, sourceNumber));
     }
 
     @Test
@@ -109,3 +131,4 @@ public class StreamOutputTest {
         testSource((sourceNumber, parent) -> new UnicastBufferedSource(parent, sourceNumber));
     }
 }
+

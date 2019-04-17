@@ -2,12 +2,15 @@ package org.df4j.core.actor.philosophers;
 
 import org.df4j.core.actor.LazyActor;
 import org.df4j.core.actor.ext.PickPoint;
+import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertTrue;
 
@@ -15,30 +18,33 @@ import static org.junit.Assert.assertTrue;
  * Demonstrates how coroutines can be emulated.
  */
 public class DiningPhilosophers {
-    static final int num = 5; // number of phylosofers
+    static final int num = 5; // number of phylosophers
     static int N = 4; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];
-    CountDownLatch counter = new CountDownLatch(num);
     Philosopher[] philosophers = new Philosopher[num];
     TimeSignalPublisher timer = new TimeSignalPublisher();
 
     @Test
-    public void test() throws InterruptedException {
+    public void test() throws InterruptedException, TimeoutException, ExecutionException {
+        AllOf all = new AllOf();
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
             forkPlace.onNext(new Fork(k));
             forkPlaces[k] = forkPlace;
+            all.registerAsyncDaemon(forkPlace.asyncResult());
         }
         // create philosophers
         for (int k = 0; k < num; k++) {
-            philosophers[k] = new Philosopher(k);
+            Philosopher philosopher = new Philosopher(k);
+            philosophers[k] = philosopher;
+            all.registerAsyncResult(philosopher.asyncResult());
         }
         // animate all philosophers
         for (int k = 0; k < num; k++) {
             philosophers[k].startThinking();
         }
-        assertTrue(counter.await(2, TimeUnit.SECONDS));
+        all.asyncResult().get(400, TimeUnit.MILLISECONDS);
     }
 
     enum State {Thinking, Hungry1, Hungry2, Eating, Replete, Died}
@@ -104,20 +110,21 @@ public class DiningPhilosophers {
         }
 
         public void post1(Fork fork) {
-            println("Request first (" + firstPlace.id + ")");
+            println("Got first (" + firstPlace.id + ")");
             first = fork;
             state = State.Hungry2;
             start();
         }
 
         public void post2(Fork fork) {
-            println("Request second (" + secondPlace.id + ")");
+            println("Got second (" + secondPlace.id + ")");
             second = fork;
             state = State.Eating;
             start();
         }
 
         public void endEating() {
+            println("Ended eating");
             state = State.Replete;
             start();
         }
@@ -126,9 +133,11 @@ public class DiningPhilosophers {
         public void runAction() {
             switch (state) {
                 case Thinking:
+                    println("Started thinking");
                     timer.subscribe(this::endThinking, rand.nextLong() % 17 + 23);
                     return;
                 case Hungry1:
+                    println("Ended thinking, looking for forks");
                     /**
                      * collect forks one by one
                      */
@@ -138,6 +147,7 @@ public class DiningPhilosophers {
                     secondPlace.subscribe(this::post2);
                     return;
                 case Eating:
+                    println("Started eating");
                     timer.subscribe(this::endEating, rand.nextLong() % 11 + 13);
                     return;
                 case Replete:
@@ -154,7 +164,6 @@ public class DiningPhilosophers {
                     } else {
                         println("Ph no. " + id + ": died at round " + rounds);
                         state = State.Died;
-                        counter.countDown();
                         stop();
                     }
                     return;

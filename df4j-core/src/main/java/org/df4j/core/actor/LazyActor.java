@@ -1,7 +1,5 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.actor.Actor;
-
 /**
  * does not restarts automatically.
  * To move to the next step,
@@ -12,7 +10,7 @@ public abstract class LazyActor extends Actor {
     @Override
     public void run() {
         try {
-            blockStarted();
+            blockControl();
             runAction();
         } catch (Throwable e) {
             result.onError(e);

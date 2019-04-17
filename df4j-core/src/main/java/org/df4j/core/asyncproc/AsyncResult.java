@@ -15,7 +15,7 @@ import java.util.function.Function;
  * Universal standalone connector for single value.
  * Has both synchronous and asynchronous interfaces on output end.
  *
- * It could named ScalarOutput.
+ * It could named CompletablePromise.
  */
 public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, CompletionStage<T>, Future<T> {
     private void debug(String s) {
@@ -50,12 +50,10 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     public synchronized void onComplete(T t) {
         synchronized(this) {
             if (done) { // this is how CompletableFuture#complete works
-                debug("onNext done already");
                 return;
             }
             done = true;
             value = t;
-            debug("onNext done, notifyAll");
             notifyAll();
         }
         subscriptions.onComplete(t);

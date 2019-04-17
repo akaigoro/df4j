@@ -26,11 +26,11 @@ public class TimeSignalPublisher {
         timer.schedule(task, delay);
     }
 
-    public void subscribe(Runnable sema, long delay) {
+    public void subscribe(Runnable taskBody, long delay) {
         TimerTask task = new TimerTask(){
             @Override
             public void run() {
-                sema.run();
+                taskBody.run();
             }
         };
         timer.schedule(task, delay);

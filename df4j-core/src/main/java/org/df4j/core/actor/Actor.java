@@ -36,35 +36,52 @@ public abstract class Actor extends AsyncProc {
         start();
     }
 
-    protected void blockStarted() {
+    protected void blockControl() {
         controlLock.block();
     }
 
-    public synchronized void stop() {
-        stopped = true;
-        if (!result.isDone()) {
-            result.onComplete();
+    public synchronized void stop(Object completiontValue) {
+        synchronized(this) {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
         }
+        result.onComplete(completiontValue);
+    }
+
+    public synchronized void stop() {
+        stop(null);
+    }
+
+    public synchronized void stopExceptionally(Throwable t) {
+        synchronized(this) {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
+        }
+        result.onError(t);
     }
 
     protected abstract void runAction() throws Throwable;
 
     protected void run() {
         try {
-            blockStarted();
-            nextAll();
+            blockControl();
             runAction();
             if (isStopped()) {
                 return;
             }
-            // to avoid infinite llop when all Pins are completed
-            if (lockCount() > 1) {
+            // when all the Pins except for the controlLock are completed,
+            // do not restart execution to avoid infinite loop.
+            if (lockCount() == 1) { // 1 means the controlLock
                 return;
             }
-            start(); // restart execution only if not all connectors are completed
+            nextAll();
+            start();
         } catch (Throwable e) {
-            result.onError(e);
-            stop();
+            stopExceptionally(e);
         }
     }
 }
