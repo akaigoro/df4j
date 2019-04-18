@@ -6,14 +6,12 @@ import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * Non-blocking analogue of blocking queue.
  * Serves multiple consumers (subscribers)
  *
  * Each message is routed to exactly one subscriber.
- * Has limited buffer for messages.  When toverflows, his buffer overflows, {@link StreamOutput#outerLock} blocks.
+ * Has limited buffer for messages.  When the buffer overflows, this {@link StreamOutput#outerLock} blocks.
  *
  * @param <T> the type of transferred messages
  *
@@ -21,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class StreamOutput<T> extends SyncActor implements Publisher<T> {
     protected StreamInput<T> tokens = new StreamInput<>(this);
-    protected StreamSubscriptionBlockingQueue<T> subscriptions = new StreamSubscriptionBlockingQueue<>(this);
+    protected StreamSubscriptionConnector<T> subscriptions = new StreamSubscriptionConnector<>(this);
 
     protected final Transition.Pin outerLock;
     protected final int capacity;

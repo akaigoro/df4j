@@ -1,8 +1,9 @@
-package org.df4j.core.actor.ext;
+package org.df4j.core.actor;
 
 import org.df4j.core.ScalarPublisher;
 import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.actor.StreamInput;
+import org.df4j.core.actor.ext.SyncActor;
 import org.df4j.core.asyncproc.*;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;

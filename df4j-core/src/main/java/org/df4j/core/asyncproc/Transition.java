@@ -184,7 +184,7 @@ public abstract class Transition {
         }
 
         public Param(boolean blocked) {
-            super((blocked));
+            super(blocked);
         }
 
         @Override
@@ -193,11 +193,19 @@ public abstract class Transition {
         }
 
         public T current() {
-            return  current;
+            return getCurrent();
         }
 
         public boolean moveNext() {
             throw new UnsupportedOperationException();
+        }
+
+        public T getCurrent() {
+            return current;
+        }
+
+        public void setCurrent(T current) {
+            this.current = current;
         }
     }
 }

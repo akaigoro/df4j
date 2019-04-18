@@ -50,11 +50,11 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
     }
 
     public int size() {
-        return  current == null? 0: (1+tokens.size());
+        return  getCurrent() == null? 0: (1+tokens.size());
     }
 
     public boolean isFull() {
-        return  current == null? false: tokens.size() == capacity;
+        return  getCurrent() == null? false: tokens.size() == capacity;
     }
 
     @Override
@@ -87,8 +87,8 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
             }
             int sizeBefore = size();
             boolean wasFull = isFull();
-            current = tokens.poll();
-            res = current == null;
+            setCurrent(tokens.poll());
+            res = getCurrent() == null;
             if (res) {
                 // no more tokens for now
                 if (completionRequested) {
@@ -117,7 +117,7 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
 
     // todo fix
     public boolean hasNext() {
-        return current != null;
+        return getCurrent() != null;
     }
 
     public synchronized Throwable getCompletionException() {
@@ -139,8 +139,8 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
             if (completionRequested) {
                 return;
             }
-            if (current == null) {
-                current = token;
+            if (getCurrent() == null) {
+                setCurrent(token);
                 doUnblock = true;
             } else {
                 tokens.add(token);
@@ -164,7 +164,7 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
             }
             completionRequested = true;
             this.completionException = completionException;
-            if (current != null) {
+            if (getCurrent() != null) {
                 return;
             }
             completed = true;

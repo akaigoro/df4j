@@ -24,9 +24,11 @@ public abstract class Actor extends AsyncProc {
         return stopped;
     }
 
-    public synchronized void start() {
-        if (stopped) {
-            throw new IllegalStateException();
+    public void start() {
+        synchronized(this) {
+            if (stopped) {
+                return;
+            }
         }
         controlLock.unblock();
     }

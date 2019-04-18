@@ -1,5 +1,6 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -12,14 +13,29 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
     private long requested = 0;
     protected SubscriptionListener<StreamSubscription<T>> listener;
     private Subscriber subscriber;
+    private volatile boolean inOnSubscribe = false;
 
     public StreamSubscription(SubscriptionListener<StreamSubscription<T>> listener, Subscriber subscriber) {
         this.listener = listener;
         this.subscriber = subscriber;
     }
 
+    public synchronized boolean isCancelled() {
+        return subscriber == null;
+    }
+
     public boolean isActive() {
         return requested > 0;
+    }
+
+    protected void unlink() {
+        super.unlink();
+    }
+
+    protected void onSubscribe() {
+        inOnSubscribe = true;
+        subscriber.onSubscribe(this);
+        inOnSubscribe = false;
     }
 
     @Override
@@ -28,15 +44,22 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
             onError(new IllegalArgumentException());
             return;
         }
-        if (isCancelled()) {
-            return;
-        }
-        boolean wasPassive = requested == 0;
-        requested += n;
-        if (requested < 0) { // overflow
-            requested = Long.MAX_VALUE;
+        boolean wasPassive;
+        synchronized (this) {
+            if (isCancelled()) {
+                return;
+            }
+            wasPassive = requested == 0;
+            requested += n;
+            if (requested < 0) { // overflow
+                requested = Long.MAX_VALUE;
+            }
+            if (inOnSubscribe) {
+                return;
+            }
         }
         if (wasPassive) {
+            unlink();
             listener.activate(this);
         }
     }
@@ -61,17 +84,18 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         subscriberLoc.onNext(value);
     }
 
-    public synchronized boolean isCancelled() {
-        return subscriber == null;
-    }
-
     @Override
-    public synchronized void cancel() {
-        if (isCancelled()) {
-            return;
+    public void cancel() {
+        synchronized(this){
+            if (isCancelled()) {
+                return;
+            }
+            subscriber = null;
+            if (inOnSubscribe) {
+                return;
+            }
         }
-        subscriber = null;
-        listener.cancel((StreamSubscription<T>) this);
+        listener.remove((StreamSubscription<T>) this);
     }
 
     protected Subscriber extractSubscriber() {
@@ -111,5 +135,38 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
 
     public void onError(Throwable ex) {
         complete(ex);
+    }
+
+    static class Scalar2StreamSubscriber<T> implements Subscriber<T> {
+        private ScalarSubscriber scalarSubscriber;
+        private Subscription subscription;
+
+        public Scalar2StreamSubscriber(ScalarSubscriber<? super T> s) {
+            scalarSubscriber = s;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription = s;
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(T t) {
+            scalarSubscriber.onComplete(t);
+            subscription.cancel();
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            scalarSubscriber.onError(t);
+            subscription.cancel();
+        }
+
+        @Override
+        public void onComplete() {
+            scalarSubscriber.onComplete(null);
+            subscription.cancel();
+        }
     }
 }

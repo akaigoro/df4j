@@ -4,7 +4,7 @@ import org.df4j.core.actor.LazyActor;
 import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.asyncproc.ScalarInput;
 import org.df4j.core.actor.Semafor;
-import org.df4j.core.actor.ext.PickPoint;
+import org.df4j.core.actor.PickPoint;
 import org.df4j.core.asyncproc.ext.AsyncAction;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.util.TimeSignalPublisher;

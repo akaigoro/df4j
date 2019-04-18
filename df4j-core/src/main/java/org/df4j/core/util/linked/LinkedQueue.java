@@ -3,7 +3,7 @@ package org.df4j.core.util.linked;
 import java.util.AbstractQueue;
 import java.util.Iterator;
 
-public abstract class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
+public class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
     private L header = (L) new Link<L>();
     private int size = 0;
 

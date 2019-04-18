@@ -4,6 +4,7 @@ import org.df4j.core.ScalarPublisher;
 import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncFunction;
+import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
@@ -76,6 +77,9 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     }
 
     public void subscribe(ScalarSubscriber<? super T> s) {
+        if (s == null) {
+            throw new NullPointerException();
+        }
         synchronized(this) {
             if (!isDone()) {
                 subscriptions.subscribe(s);
@@ -89,9 +93,39 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         }
     }
 
-    public void subscribe(CompletableFuture<T> cf) {
-        ScalarSubscriber<? super T> s = new CompletableFutureySubscriber<>(cf);
-        subscribe(s);
+    public void subscribe(CompletableFuture<? super T> cf) {
+        if (cf == null) {
+            throw new NullPointerException();
+        }
+        synchronized(this) {
+            if (!isDone()) {
+                subscriptions.subscribe(cf);
+                return;
+            }
+        }
+        if (completionException == null) {
+            cf.complete(value);
+        } else {
+            cf.completeExceptionally(completionException);
+        }
+    }
+
+    public void subscribe(Subscriber<? super T> streamSubscriber) {
+        if (streamSubscriber == null) {
+            throw new NullPointerException();
+        }
+        synchronized(this) {
+            if (!isDone()) {
+                subscriptions.subscribe(streamSubscriber);
+                return;
+            }
+        }
+        ScalarSubscriber<T> scalarSubscriber = new ScalarSubscription.Stream2ScalarSubscriber<T>(streamSubscriber);
+        if (completionException == null) {
+            scalarSubscriber.onComplete(value);
+        } else {
+            scalarSubscriber.onError(completionException);
+        }
     }
 
     /**
@@ -386,28 +420,6 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         CompletableFuture<T> res = new CompletableFuture<>();
         this.subscribe(res);
         return res;
-    }
-
-    public static class CompletableFutureySubscriber<T> implements ScalarSubscriber<T> {
-        private final CompletableFuture<T> cf;
-
-        public CompletableFutureySubscriber(CompletableFuture<T> cf) {
-            this.cf = cf;
-        }
-
-        @Override
-        public void onSubscribe(ScalarSubscription s) {
-        }
-
-        @Override
-        public void onComplete(T t) {
-            cf.complete(t);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            cf.completeExceptionally(t);
-        }
     }
 
     private class BiconsumerSubscriber<T> extends AsyncProc implements ScalarSubscriber<T> {

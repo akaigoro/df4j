@@ -34,10 +34,10 @@ public class ScalarInput<T> extends Transition.Param<T> implements ScalarSubscri
             if (isCompleted()) {
                 return;
             }
-            if (current != null) {
+            if (getCurrent() != null) {
                 throw new IllegalStateException("token set already");
             }
-            current = message;
+            setCurrent(message);
         }
         complete();
     }

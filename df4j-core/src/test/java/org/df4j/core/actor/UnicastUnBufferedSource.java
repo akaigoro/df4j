@@ -6,7 +6,7 @@ import org.reactivestreams.Subscriber;
  * emits totalNumber of Longs and closes the stream
  */
 public class UnicastUnBufferedSource extends Source<Long> {
-    public StreamSubscriptionBlockingQueue<Long> output = new StreamSubscriptionBlockingQueue<>(this);
+    public StreamSubscriptionConnector<Long> output = new StreamSubscriptionConnector<>(this);
     long val = 0;
 
     public UnicastUnBufferedSource(Logger parent, int totalNumber) {

@@ -1,13 +1,12 @@
 package org.df4j.core.actor.philosophers;
 
 import org.df4j.core.actor.LazyActor;
-import org.df4j.core.actor.ext.PickPoint;
+import org.df4j.core.actor.PickPoint;
 import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;

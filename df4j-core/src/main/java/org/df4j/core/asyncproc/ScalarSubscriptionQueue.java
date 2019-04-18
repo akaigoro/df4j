@@ -4,7 +4,6 @@ import org.df4j.core.ScalarPublisher;
 import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -16,24 +15,33 @@ import java.util.concurrent.CompletableFuture;
 public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T>> implements ScalarPublisher<T> {
 
     protected void subscribe(ScalarSubscription subscription) {
+        subscription.onSubscribe();
         synchronized (this) {
-            offer(subscription);
+            if (subscription.isCancelled()) {
+                return;
+            }
         }
-        ScalarSubscriber subscriber = subscription.subscriber;
-        subscriber.onSubscribe(subscription);
+        offer(subscription);
     }
 
     public void subscribe(ScalarSubscriber<? super T> s) {
+        if (s == null) {
+            throw new NullPointerException();
+        }
         subscribe(new ScalarSubscription(this, s));
     }
 
-    public void subscribe(Subscriber<? super T> s) {
-        subscribe(new Scalar2StreamSubscription(this, s));
+    public void subscribe(CompletableFuture<? super T> cf) {
+        if (cf == null) {
+            throw new NullPointerException();
+        }
+        ScalarSubscriber<T> proxySubscriber = new ScalarSubscription.CompletableFuture2ScalarSubscriber<>(cf);
+        subscribe(proxySubscriber);
     }
 
-    public void subscribe(CompletableFuture<? super T> cf) {
-        ScalarSubscriber<T> proxySubscriber = new CompletableFuture2ScalarSubscriber<>(cf);
-        subscribe(new ScalarSubscription(this, proxySubscriber));
+    public void subscribe(Subscriber<? super T> s) {
+        ScalarSubscription subscription = new ScalarSubscription.Scalar2StreamSubscription(this, s);
+        subscribe(subscription);
     }
 
     public void onComplete(T value) {
@@ -50,96 +58,4 @@ public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T
         }
     }
 
-    static class Scalar2StreamSubscription<T> extends ScalarSubscription<T> implements Subscription {
-        private Stream2ScalarSubscriber scalarSubscriber;
-
-        public Scalar2StreamSubscription(ScalarSubscriptionQueue<T> parent, Subscriber<T> streamSubscriber) {
-            super(parent, new Stream2ScalarSubscriber<T>(streamSubscriber));
-            scalarSubscriber = (Stream2ScalarSubscriber) super.subscriber;
-        }
-
-        @Override
-        public void request(long n) {
-            if (n <= 0) {
-                onError(new IllegalArgumentException());
-                return;
-            }
-            if (isCancelled()) {
-                return;
-            }
-            scalarSubscriber.request();
-        }
-    }
-
-    static class Stream2ScalarSubscriber<T> implements ScalarSubscriber<T> {
-        private final Subscriber<T> streamSubscriber;
-        private boolean requested = false;
-        private boolean completed = false;
-        private T completionValue;
-        private Throwable completionThrowable;
-
-        Stream2ScalarSubscriber(Subscriber<T> streamSubscriber) {
-            this.streamSubscriber = streamSubscriber;
-        }
-
-        public void request() {
-            requested = true;
-            if (!completed) {
-                return;
-            }
-            if (completionThrowable == null) {
-                streamSubscriber.onNext(completionValue);
-                streamSubscriber.onComplete();
-            } else {
-                streamSubscriber.onError(completionThrowable);
-            }
-        }
-
-        @Override
-        public void onSubscribe(ScalarSubscription subscription) {
-            streamSubscriber.onSubscribe((Subscription) subscription);
-        }
-
-        @Override
-        public void onComplete(T t) {
-            if (requested) {
-                streamSubscriber.onNext(t);
-                streamSubscriber.onComplete();
-            } else {
-                completionValue = t;
-                completed = true;
-            }
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            if (requested) {
-                streamSubscriber.onError(t);
-            } else {
-                completionThrowable = t;
-                completed = true;
-            }
-        }
-    }
-
-    static class CompletableFuture2ScalarSubscriber<T> implements ScalarSubscriber<T> {
-        private final CompletableFuture<? super T> cf;
-
-        public CompletableFuture2ScalarSubscriber(CompletableFuture<? super T> cf) {
-            this.cf = cf;
-        }
-
-        @Override
-        public void onSubscribe(ScalarSubscription s) {}
-
-        @Override
-        public void onComplete(T t) {
-            cf.complete(t);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            cf.completeExceptionally(t);
-        }
-    }
 }

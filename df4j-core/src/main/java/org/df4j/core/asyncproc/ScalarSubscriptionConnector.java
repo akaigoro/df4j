@@ -17,8 +17,8 @@ public class ScalarSubscriptionConnector<T> extends Transition.Param<ScalarSubsc
 
     @Override
     public synchronized boolean moveNext() {
-        current = scalarSubscriptionQueue.poll();
-        if ((current == null)) {
+        setCurrent(scalarSubscriptionQueue.poll());
+        if ((getCurrent() == null)) {
             block();
             return false;
         }
@@ -26,13 +26,16 @@ public class ScalarSubscriptionConnector<T> extends Transition.Param<ScalarSubsc
     }
 
     @Override
-    public synchronized void subscribe(ScalarSubscriber<? super T> s) {
-        ScalarSubscription subscription = new ScalarSubscription(scalarSubscriptionQueue, s);
-        if (current == null) {
-            current = subscription;
-            unblock();
-        } else {
-            scalarSubscriptionQueue.subscribe(subscription);
+    public void subscribe(ScalarSubscriber<? super T> s) {
+        synchronized(this) {
+            ScalarSubscription subscription = new ScalarSubscription(scalarSubscriptionQueue, s);
+            if (getCurrent() == null) {
+                setCurrent(subscription);
+            } else {
+                scalarSubscriptionQueue.subscribe(subscription);
+                return;
+            }
         }
+        unblock();
     }
 }
