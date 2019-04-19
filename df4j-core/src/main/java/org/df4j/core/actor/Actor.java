@@ -14,7 +14,7 @@ public abstract class Actor extends AsyncProc {
      * blocked initially, until {@link #start} called.
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
-    private Pin controlLock = new Pin();
+    private ControlPin controlLock = new ControlPin();
     /**
      * if true, this action cannot be restarted
      */
@@ -86,4 +86,6 @@ public abstract class Actor extends AsyncProc {
             stopExceptionally(e);
         }
     }
+
+    protected class ControlPin extends  Pin {}
 }

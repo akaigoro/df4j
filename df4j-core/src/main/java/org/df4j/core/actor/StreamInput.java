@@ -26,6 +26,7 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
     protected boolean completionRequested = false;
     protected boolean completed = false;
     protected Throwable completionException;
+    protected boolean pushback = false;
 
     public StreamInput(AsyncProc actor, int fullCapacity) {
         actor.super();
@@ -75,6 +76,10 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
         }
     }
 
+    public void pushBack() {
+        pushback = true;
+    }
+
     public synchronized boolean moveNext() {
         boolean res;
         int delta;
@@ -82,6 +87,9 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
         boolean doRuumUnBlock = false;
         Subscription subscriptionLoc;
         synchronized (this) {
+            if (pushback) {
+                return true;
+            }
             if (completed) {
                 return false;
             }

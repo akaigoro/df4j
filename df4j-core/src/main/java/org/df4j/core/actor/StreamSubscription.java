@@ -5,6 +5,8 @@ import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import java.util.concurrent.CancellationException;
+
 /**
  *
  * @param <T>
@@ -65,20 +67,15 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
     }
 
     public void onNext(T value) {
-        synchronized (this) {
-            if (isCancelled()) {
-                return;
-            }
-            if (requested == 0) {
-                throw new IllegalArgumentException();
-            }
-            requested--;
-        }
         Subscriber subscriberLoc;
         synchronized (this) {
             if (isCancelled()) {
-                return;
+                throw new CancellationException();
             }
+            if (requested == 0) {
+                throw new IllegalStateException();
+            }
+            requested--;
             subscriberLoc = subscriber;
         }
         subscriberLoc.onNext(value);

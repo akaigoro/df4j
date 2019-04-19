@@ -58,11 +58,7 @@ public class StreamSubscriptionConnector<T> extends StreamSubscriptionQueue<T> i
     public void subscribe(Subscriber<? super T> s) {
         StreamSubscription<T> subscription = new StreamSubscription<>(this, s);
         synchronized (this) {
-            if (parameter.getCurrent() == null) {
-                parameter.setCurrent(subscription);
-            } else {
-                super.add(subscription);
-            }
+            super.add(subscription);
         }
         s.onSubscribe(subscription);
     }

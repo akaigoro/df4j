@@ -6,6 +6,8 @@ import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import java.util.concurrent.CancellationException;
+
 /**
  * Non-blocking analogue of blocking queue.
  * Serves multiple consumers (subscribers)
@@ -69,7 +71,12 @@ public class StreamOutput<T> extends SyncActor implements Publisher<T> {
         T token = tokens.current();
         if (token != null) {
             StreamSubscription subscription = subscriptions.current();
-            subscription.onNext(token);
+            try {
+                subscription.onNext(token);
+            } catch (CancellationException e) {
+                // subscription cancelled while being current
+                tokens.pushBack();
+            }
         } else if (!tokens.isCompleted()) {
             throw new RuntimeException("tokens ampty and not completed, but unblocked");
         } else {

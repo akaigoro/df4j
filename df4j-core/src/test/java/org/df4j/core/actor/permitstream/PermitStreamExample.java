@@ -33,7 +33,7 @@ public class PermitStreamExample {
         all.registerAsyncResult(first, last);
 
         first.start();
-        all.asyncResult().get(400, TimeUnit.MILLISECONDS);
+        all.asyncResult().get(400000, TimeUnit.MILLISECONDS);
         assertEquals(totalCount, last.totalCount);
     }
 

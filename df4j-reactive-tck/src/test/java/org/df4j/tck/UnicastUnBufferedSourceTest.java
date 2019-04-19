@@ -27,18 +27,6 @@ public class UnicastUnBufferedSourceTest extends PublisherVerification {
         return flowPublisher;
     }
 
-    /* failed teste */
-
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne() throws Throwable {
-   //     super.optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne();
-    }
-
-    public void optional_spec111_registeredSubscribersMustReceiveOnNextOrOnCompleteSignals() throws Throwable {
-    }
-    public void required_createPublisher1MustProduceAStreamOfExactly1Element() throws Throwable {
-    }
-    public void required_createPublisher3MustProduceAStreamOfExactly3Elements() throws Throwable {
-    }
     static class FailedUnicastSource extends UnicastUnBufferedSource {
 
         public FailedUnicastSource() {

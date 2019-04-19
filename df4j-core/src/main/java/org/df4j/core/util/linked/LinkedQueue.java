@@ -74,9 +74,4 @@ public class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
             hasnext = false;
         }
     }
-
-    @Override
-    public String toString() {
-        return "org.df4j.core.util.linked.LinkedQueue{size="+size;
-    }
 }
