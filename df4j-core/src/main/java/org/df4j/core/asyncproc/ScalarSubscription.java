@@ -1,11 +1,14 @@
 package org.df4j.core.asyncproc;
 
 import org.df4j.core.ScalarSubscriber;
+import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
     private final ScalarSubscriptionQueue<T> parent;
@@ -47,9 +50,9 @@ public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
         parent.remove(this);
     }
 
-    protected synchronized ScalarSubscriber extractScalarSubscriber() {
+    protected synchronized ScalarSubscriber extractScalarSubscriber() throws SubscriptionCancelledException {
         if (isCancelled()) {
-            return null;
+            throw new SubscriptionCancelledException();
         } else {
             ScalarSubscriber subscriberLoc = subscriber;
             subscriber = null;
@@ -57,20 +60,12 @@ public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
         }
     }
 
-    public <T> void onComplete(T value) {
-        ScalarSubscriber subscriberLoc = extractScalarSubscriber();
-        if (subscriberLoc == null) {
-            return;
-        }
-        subscriberLoc.onComplete(value);
+    public <T> void onComplete(T value) throws SubscriptionCancelledException {
+        extractScalarSubscriber().onComplete(value);
     }
 
-    public void onError(Throwable t) {
-        ScalarSubscriber subscriberLoc = extractScalarSubscriber();
-        if (subscriberLoc == null) {
-            return;
-        }
-        subscriberLoc.onError(t);
+    public void onError(Throwable t) throws SubscriptionCancelledException {
+        extractScalarSubscriber().onError(t);
     }
 
     protected static class Scalar2StreamSubscription<T> extends ScalarSubscription<T> implements Subscription {
@@ -84,7 +79,7 @@ public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
         @Override
         public void request(long n) {
             if (n <= 0) {
-                onError(new IllegalArgumentException());
+                scalarSubscriber.onError(new IllegalArgumentException());
                 return;
             }
             if (isCancelled()) {

@@ -9,7 +9,7 @@ public class UnicastUnBufferedSource extends Source<Long> {
     public StreamSubscriptionConnector<Long> output = new StreamSubscriptionConnector<>(this);
     long val = 0;
 
-    public UnicastUnBufferedSource(Logger parent, int totalNumber) {
+    public UnicastUnBufferedSource(Logger parent, long totalNumber) {
         super(parent);
         this.val = totalNumber;
     }
@@ -26,12 +26,8 @@ public class UnicastUnBufferedSource extends Source<Long> {
     @Override
     protected void runAction() {
         if (val > 0) {
-            StreamSubscription<Long> subscription = output.current();
-            if (subscription == null) {
-                return;
-            }
             println("UnicastUnBufferedSource:subscription.onNext("+val+")");
-            subscription.onNext(val);
+            output.onNext(val);
             val--;
         } else {
             println("UnicastUnBufferedSource:subscription.onComplete()");

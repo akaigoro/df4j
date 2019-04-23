@@ -33,7 +33,7 @@ public class Link<L extends Link<L>> {
         this.next = this.prev = (L) this;
     }
 
-    public L peek() {
+    public L getNext() {
         return next;
     }
 }

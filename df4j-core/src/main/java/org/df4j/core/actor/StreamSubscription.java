@@ -12,7 +12,7 @@ import java.util.concurrent.CancellationException;
  * @param <T>
  */
 public class StreamSubscription<T> extends Link<StreamSubscription<T>> implements Subscription {
-    private long requested = 0;
+    protected long requested = 0;
     protected SubscriptionListener<StreamSubscription<T>> listener;
     private Subscriber subscriber;
     private volatile boolean inOnSubscribe = false;
@@ -62,7 +62,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         }
         if (wasPassive) {
             unlink();
-            listener.activate(this);
+            listener.add(this);
         }
     }
 

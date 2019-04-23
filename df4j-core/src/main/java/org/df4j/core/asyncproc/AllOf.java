@@ -49,8 +49,12 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResultExceptionally(ex);
     }
 
-    class Enter extends Pin implements ScalarSubscriber<Object> {
+    class Enter extends ScalarLock implements ScalarSubscriber<Object> {
         ScalarSubscription subscription;
+
+        public Enter() {
+            super(AllOf.this);
+        }
 
         @Override
         public void onSubscribe(ScalarSubscription s) {
@@ -59,7 +63,7 @@ public class AllOf extends AsyncSupplier<Void> {
 
         @Override
         public void onComplete(Object value) {
-            super.unblock();
+            super.complete();
         }
 
         @Override

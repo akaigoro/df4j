@@ -15,27 +15,4 @@ public abstract class PublisherVerification extends org.reactivestreams.tck.Publ
         this.env = (TestEnvironment) fenv.get(this);
     }
 
-    @Test
-    public void required_spec317_mustSupportACumulativePendingElementCountGreaterThenLongMaxValue() throws Throwable {
-//        final int totalElements = 50;
-        final int totalElements = 2;
-
-        activePublisherTest(totalElements, true, pub -> {
-            final TestEnvironment.ManualSubscriber<Long> sub = env.newManualSubscriber(pub);
-            new Thread(() -> sub.request(Long.MAX_VALUE)).start();
-            new Thread(() -> sub.request(Long.MAX_VALUE)).start();
-
-            sub.nextElements(totalElements);
-            sub.expectCompletion();
-
-            try {
-                env.verifyNoAsyncErrorsNoDelay();
-            } finally {
-                sub.cancel();
-            }
-
-        });
-    }
-
-
 }

@@ -2,6 +2,7 @@ package org.df4j.core.asyncproc;
 
 import org.df4j.core.ScalarPublisher;
 import org.df4j.core.ScalarSubscriber;
+import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Subscriber;
 
@@ -14,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T>> implements ScalarPublisher<T> {
 
-    protected void subscribe(ScalarSubscription subscription) {
+    public void subscribe(ScalarSubscription<T> subscription) {
         subscription.onSubscribe();
         synchronized (this) {
             if (subscription.isCancelled()) {
@@ -47,14 +48,20 @@ public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T
     public void onComplete(T value) {
         ScalarSubscription subscription = poll();
         for (; subscription != null; subscription = poll()) {
-            subscription.onComplete(value);
+            try {
+                subscription.onComplete(value);
+            } catch (SubscriptionCancelledException e) {
+            }
         }
     }
 
     public void onError(Throwable ex) {
         ScalarSubscription subscription = poll();
         for (; subscription != null; subscription = poll()) {
-            subscription.onError(ex);
+            try {
+                subscription.onError(ex);
+            } catch (SubscriptionCancelledException e) {
+            }
         }
     }
 

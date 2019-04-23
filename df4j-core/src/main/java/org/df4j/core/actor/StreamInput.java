@@ -1,7 +1,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.Transition;
+import org.df4j.core.asyncproc.ScalarLock;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -12,24 +12,25 @@ import java.util.Queue;
  * A Queue of tokens
  *
  * blocks when there are no input tokens in the input buffer,
- * and also can manage additional {@link Transition.Pin} blocked when the buffer is full.
+ * and also can manage additional {@link ScalarLock} blocked when the buffer is full.
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T> {
+public class StreamInput<T> extends StreamParam<T> implements Subscriber<T> {
     protected int capacity;
     protected Queue<T> tokens;
     /** to monitor existence of the room for additional tokens */
-    protected Transition.Pin roomLock;
+    protected StreamLock roomLock;
     /** extracted token */
     protected Subscription subscription;
     protected boolean completionRequested = false;
     protected boolean completed = false;
+    protected T current;
     protected Throwable completionException;
     protected boolean pushback = false;
 
     public StreamInput(AsyncProc actor, int fullCapacity) {
-        actor.super();
+        super(actor);
         if (fullCapacity <= 0) {
             throw new IllegalArgumentException();
         }
@@ -44,10 +45,23 @@ public class StreamInput<T> extends Transition.Param<T> implements Subscriber<T>
     }
 
     public synchronized void setRoomLockIn(AsyncProc outerActor) {
-        if (this.roomLock != null) {
+        if (roomLock != null) {
             throw new IllegalStateException();
         }
-        this.roomLock = outerActor.new Pin(isFull());
+        roomLock = new StreamLock(outerActor);
+        if (isFull()) {
+            roomLock.unblock();
+        }
+    }
+
+    @Override
+    public T getCurrent() {
+        return current;
+    }
+
+    public void setCurrent(T value) {
+        current = value;
+
     }
 
     public int size() {

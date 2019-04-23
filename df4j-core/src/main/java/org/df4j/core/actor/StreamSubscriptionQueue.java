@@ -16,36 +16,9 @@ public class StreamSubscriptionQueue<T> implements Publisher<T>, SubscriptionLis
     protected boolean completed = false;
     protected volatile Throwable completionException;
 
-    @Override
-    public void activate(StreamSubscription<T> subscription) {
-        activeSubscriptions.offer(subscription);
-    }
-
-    @Override
-    public synchronized void remove(StreamSubscription<T> subscription) {
-        subscription.unlink();
-    }
-
     protected void subscribe(StreamSubscription subscription) {
         subscription.onSubscribe();
         add(subscription);
-    }
-
-    protected void add(StreamSubscription subscription) {
-        synchronized (this) {
-            if (subscription.isCancelled()) {
-                return;
-            }
-            if (subscription.isActive()) {
-                activate(subscription);
-            } else {
-                passiveSubscriptions.offer(subscription);
-            }
-        }
-    }
-
-    protected StreamSubscription<T> poll() {
-        return activeSubscriptions.poll();
     }
 
     @Override
@@ -60,19 +33,26 @@ public class StreamSubscriptionQueue<T> implements Publisher<T>, SubscriptionLis
         subscribe(subscription);
     }
 
-    public void complete(Throwable ex) {
-        synchronized(this) {
-            if (completed) {
-                return;
-            }
-            completionException = ex;
-            completed = true;
+    public synchronized void add(StreamSubscription subscription) {
+        if (subscription.isCancelled()) {
+            return;
         }
-        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
-            subscription.complete(ex);
+        if (subscription.isActive()) {
+            activeSubscriptions.add(subscription);
+        } else {
+            passiveSubscriptions.offer(subscription);
         }
-        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
-            subscription.complete(ex);
+    }
+
+    @Override
+    public synchronized void remove(StreamSubscription<T> subscription) {
+        if (subscription.isCancelled()) {
+            return;
+        }
+        if (subscription.isActive()) {
+            activeSubscriptions.remove(subscription);
+        } else {
+            passiveSubscriptions.remove(subscription);
         }
     }
 

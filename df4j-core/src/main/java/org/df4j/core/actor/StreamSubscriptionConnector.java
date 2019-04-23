@@ -1,44 +1,55 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.*;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 /**
- * blocks when there are no active subscribers
+ * blocks when there are no active subscribers.
+ *
+ * This is a angerous connector.
+ * Since any subscription can be cancelled at any time,
+ * it may happen that parent actor may discover that this connector is unblocked but empty,
+ * and it has to recover in some way.
+ *
  */
-public class StreamSubscriptionConnector<T> extends StreamSubscriptionQueue<T> implements Publisher<T>
+public class StreamSubscriptionConnector<T> extends StreamLock
+        implements SubscriptionListener<StreamSubscription<T>>,Publisher<T>
 {
-    protected final SubscriptionParam parameter;
-    /** number of active subscripions in the queue
-     * parameter.current is always active or null
-     */
-    private int activeNumber = 0;
+    protected LinkedQueue<StreamSubscription<T>> activeSubscriptions = new LinkedQueue<StreamSubscription<T>>();
+    protected LinkedQueue<StreamSubscription<T>> passiveSubscriptions = new LinkedQueue<StreamSubscription<T>>();
+    protected volatile Throwable completionException;
 
     public StreamSubscriptionConnector(AsyncProc actor) {
-        parameter = new SubscriptionParam(actor);
+        super(actor);
     }
 
     public StreamSubscription<T> current() {
-        return parameter.current();
+        return activeSubscriptions.peek();
+    }
+
+    public StreamSubscription poll() {
+        return activeSubscriptions.poll();
     }
 
     public synchronized boolean noActiveSubscribers() {
-        return activeNumber == 0;
+        return activeSubscriptions.size() == 0;
     }
 
     @Override
-    public void activate(StreamSubscription<T> subscription) {
+    public void add(StreamSubscription<T> subscription) {
         synchronized(this) {
-            activeNumber++;
-            if (parameter.current() == null) {
-                parameter.setCurrent(subscription);
-            } else {
-                super.activate(subscription);
+            if (subscription.isCancelled()) {
                 return;
             }
+            if (!subscription.isActive()) {
+                passiveSubscriptions.offer(subscription);
+                return;
+            }
+            activeSubscriptions.offer(subscription);
         }
-        parameter.unblock();
+        unblock();
     }
 
     /**
@@ -47,78 +58,95 @@ public class StreamSubscriptionConnector<T> extends StreamSubscriptionQueue<T> i
      * @return true if no active subcriptions remain
      *         false otherwise
      */
-    public synchronized void remove(StreamSubscription<T> subscription) {
-        super.remove(subscription);
-        if (noActiveSubscribers()) {
-            parameter.block();
+    public void remove(StreamSubscription<T> subscription) {
+        synchronized(this) {
+            subscription.unlink();
+            if (!noActiveSubscribers()) {
+                return;
+            }
         }
+        block();
     }
 
     @Override
     public void subscribe(Subscriber<? super T> s) {
         StreamSubscription<T> subscription = new StreamSubscription<>(this, s);
-        synchronized (this) {
-            super.add(subscription);
-        }
-        s.onSubscribe(subscription);
+        subscription.onSubscribe();
+        add(subscription);
     }
 
-    public void complete(Throwable ex) {
-        StreamSubscription<T> current = parameter.getCurrent();
-        if (current != null) {
-            current.complete(ex);
-            parameter.setCurrent(null);
+    public void onNext(T val) {
+        StreamSubscription<T> subscription;
+        synchronized (this) {
+            System.out.println("activeSubscriptions:"+activeSubscriptions.size()+"; passiveSubscriptions:"+passiveSubscriptions.size());
+            subscription = activeSubscriptions.poll();
+            if (subscription == null) {
+                throw new IllegalStateException();
+            }
+            if (subscription.requested == 0) {
+                throw new IllegalStateException();
+            }
+            subscription.requested--;
+            if (subscription.isActive()) {
+                activeSubscriptions.add(subscription);
+            } else {
+                passiveSubscriptions.offer(subscription);
+            }
         }
-        super.complete(ex);
+        subscription.onNext(val);
     }
 
     public void onComplete() {
-        complete(null);
+        synchronized(this) {
+            if (completed) {
+                return;
+            }
+            completionException = null;
+            completed = true;
+        }
+        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
+            subscription.complete(null);
+        }
+        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
+            subscription.complete(null);
+        }
     }
 
     public void onError(Throwable ex) {
-        complete(ex);
+        synchronized(this) {
+            if (completed) {
+                return;
+            }
+            completionException = ex;
+            completed = true;
+        }
+        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
+            subscription.complete(ex);
+        }
+        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
+            subscription.complete(ex);
+        }
     }
 
-    class SubscriptionParam extends Transition.Param<StreamSubscription<T>> {
 
-        public SubscriptionParam(AsyncProc actor) {
-            actor.super();
-        }
-
-        @Override
-        public boolean moveNext() {
-            synchronized (StreamSubscriptionConnector.this) {
-                if (current != null) {
-                    if (!current.isCancelled()) {
-                        StreamSubscriptionConnector.this.add(current);
-                        if (current.isActive()) {
-                            activeNumber++;
-                        }
-                    }
-                    parameter.setCurrent(null);
-                }
-                if (activeNumber == 0) {
-                    block();
-                    return true;
-                } else {
-                    for (;;) {
-                        // skip non-ready super
-                        current = StreamSubscriptionConnector.this.poll();
-                        if (current == null) {
-                            block();
-                            return true;
-                        } else if (current.isCancelled()) {
-                            continue; // throw away cancelled
-                        } else if (current.isActive()) {
-                            activeNumber--;
-                            return false;
-                        } else {
-                            StreamSubscriptionConnector.this.add(current);
-                        }
-                    }
-                }
+    public void complete(Throwable ex) {//todo
+        synchronized(this) {
+            if (completed) {
+                return;
             }
+            this.completionException = ex;
+            completed = true;
         }
+        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
+            subscription.complete(ex);
+        }
+        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
+            subscription.complete(ex);
+        }
+    }
+
+    @Override
+    public boolean moveNext() {
+        return false;
     }
 }

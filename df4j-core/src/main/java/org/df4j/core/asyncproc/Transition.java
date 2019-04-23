@@ -14,29 +14,27 @@ import java.util.ArrayList;
 /**
  * This class is named following Petri Nets terminology.
  *
- * This class contains base class {@link Pin} for connectors (places),
+ * This class contains base class {@link ScalarLock} for connectors (places),
  * and a mechanism to count the number of blocked pins.
  * As soon as all connectors are unblocked, the method {@link #fire()} is called.
  */
 public abstract class Transition {
     private static final Object[] emptyArgs = new Object[0];
 
-    private int paramCount = 0;
-
-    /**
-     * first paramCount items are parameters, and the rest - pure locks
-     */
-    private ArrayList<Pin> locks = new ArrayList<>();
-
     /**
      * total number of created pins
      */
     private int blockedPinCount = 0;
-    private int activePinCount = 0;
 
-    public synchronized int lockCount() {
-        return activePinCount;
-    }
+    /**
+     * number of parameter pins
+     */
+    private int paramCount = 0;
+
+    /**
+     * first paramCount items are parameters, and the rest - pure pins
+     */
+    protected ArrayList<ScalarLock> pins = new ArrayList<>();
 
     protected int getParamCount() {
         return paramCount;
@@ -48,15 +46,9 @@ public abstract class Transition {
         } else {
             Object[] args = new Object[paramCount];
             for (int k = 0; k < paramCount; k++) {
-                args[k] = locks.get(k).current();
+                args[k] = pins.get(k).current();
             }
             return args;
-        }
-    }
-
-    protected void nextAll() {
-        for (int k = 0; k < locks.size(); k++) {
-            locks.get(k).moveNext();
         }
     }
 
@@ -65,147 +57,39 @@ public abstract class Transition {
      */
     protected abstract void fire();
 
-    /**
-     * Basic class for all locks and connectors (places for tokens).
-     * Can be considered as an asynchronous binary semaphore.
-     * Has 2 states: blocked or unblocked.
-     * When all pins become unblocked, method {@link #fire()} is called.
-     * This resembles firing of a Petri Net transition.
-     */
-    public class Pin {
-        protected boolean blocked;
-        protected boolean completed = false;
-
-        public Pin(boolean blocked) {
-            register(blocked);
+    public synchronized void register(ScalarLock pin) {
+        if (pin.isParameter()) {
+            pins.add(paramCount, pin);
+            paramCount++;
+        } else {
+            pins.add(pin);
         }
-
-        /**
-         * by default, initially in blocked state
-         */
-        public Pin() {
-            register(true);
-        }
-
-        protected boolean isParameter() {
-            return false;
-        }
-
-        private synchronized void register(boolean blocked) {
-            this.blocked = blocked;
-            if (blocked) {
-                blockedPinCount++;
-            }
-            if (isParameter()) {
-                locks.add(paramCount, this);
-                paramCount++;
-            } else {
-                locks.add(this);
-            }
-            activePinCount++;
-        }
-
-        public boolean isBlocked() {
-            return blocked;
-        }
-
-        public synchronized boolean isCompleted() {
-            return completed;
-        }
-
-        /** must be overriden in parameters
-         *
-         * @return curren value of the parameter
-         */
-        public Object current() {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         * locks the pin
-         * called when a token is consumed and the pin become empty
-         */
-        public synchronized void block() {
-            if (completed) {
-                return;
-            }
-            if (blocked) {
-                return;
-            }
-            blocked = true;
-            blockedPinCount++;
-        }
-
-        public void unblock() {
-            synchronized (this) {
-                if (completed) {
-                    return;
-                }
-                if (!blocked) {
-                    return;
-                }
-                blocked = false;
-                blockedPinCount--;
-                if (blockedPinCount > 0) {
-                    return;
-                }
-            }
-            fire();
-        }
-
-        public void complete() {
-            synchronized (this) {
-                if (completed) {
-                    return;
-                }
-                completed = true;
-                activePinCount--;
-                if (!blocked) {
-                    return;
-                }
-                blocked = false;
-                blockedPinCount--;
-                if (blockedPinCount > 0) {
-                    return;
-                }
-            }
-            fire();
-        }
-
-        public boolean moveNext() {
-            return false;
-        }
+        // all pins are created blocked
+        blockedPinCount++;
     }
 
-    public class Param<T> extends Pin {
-        protected T current;
+    public synchronized void incBlocked() {
+        blockedPinCount++;
+    }
 
-        public Param() {
+    public void decBlocked() {
+        synchronized (this) {
+            if (blockedPinCount == 0) {
+                throw new RuntimeException();
+            }
+            blockedPinCount--;
+            if (blockedPinCount > 0) {
+                return;
+            }
+            // debug todo remove
+            for (int k = 0; k < pins.size(); k++) {
+                ScalarLock lock = pins.get(k);
+                if (lock.isBlocked()) {
+                    throw new RuntimeException();
+                }
+            }
         }
-
-        public Param(boolean blocked) {
-            super(blocked);
-        }
-
-        @Override
-        protected boolean isParameter() {
-            return true;
-        }
-
-        public T current() {
-            return getCurrent();
-        }
-
-        public boolean moveNext() {
-            throw new UnsupportedOperationException();
-        }
-
-        public T getCurrent() {
-            return current;
-        }
-
-        public void setCurrent(T current) {
-            this.current = current;
-        }
+        fire();
     }
 }
+//V1.00(BWN.3)D0 21-Июн-2011 23:04

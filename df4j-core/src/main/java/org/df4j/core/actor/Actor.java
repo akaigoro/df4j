@@ -1,6 +1,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.asyncproc.ScalarLock;
 
 import java.util.concurrent.Executor;
 
@@ -75,17 +76,29 @@ public abstract class Actor extends AsyncProc {
             if (isStopped()) {
                 return;
             }
+            boolean allCompleted = true;
+            for (int k = 0; k < pins.size(); k++) {
+                ScalarLock pin = pins.get(k);
+                pin.moveNext();
+                if (pin != controlLock) {
+                    allCompleted &= pin.isCompleted();
+                }
+            }
             // when all the Pins except for the controlLock are completed,
             // do not restart execution to avoid infinite loop.
-            if (lockCount() == 1) { // 1 means the controlLock
+            if (allCompleted) {
+                stop();
                 return;
             }
-            nextAll();
             start();
         } catch (Throwable e) {
             stopExceptionally(e);
         }
     }
 
-    protected class ControlPin extends  Pin {}
+    protected class ControlPin extends StreamLock {
+        public ControlPin() {
+            super(Actor.this);
+        }
+    }
 }

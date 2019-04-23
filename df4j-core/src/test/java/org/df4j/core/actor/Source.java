@@ -1,7 +1,8 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.AllOf;
 import org.reactivestreams.Publisher;
+
+import static org.df4j.core.util.Utils.sneakyThrow;
 
 public abstract class Source<T> extends Actor implements Publisher<T> {
     Logger log;
@@ -11,7 +12,6 @@ public abstract class Source<T> extends Actor implements Publisher<T> {
 
     public Source(Logger parent) {
         log = parent;
-        parent.registerAsyncResult(asyncResult());
     }
 
     protected void println(String s) {
@@ -22,4 +22,9 @@ public abstract class Source<T> extends Actor implements Publisher<T> {
         }
     }
 
+    @Override
+    public synchronized void stopExceptionally(Throwable t) {
+        super.stopExceptionally(t);
+        sneakyThrow(t);
+    }
 }

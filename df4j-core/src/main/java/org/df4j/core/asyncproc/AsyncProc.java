@@ -9,8 +9,7 @@
  */
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.util.executor.CurrentThreadExecutor;
-
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
@@ -29,7 +28,7 @@ import java.util.concurrent.ForkJoinWorkerThread;
  */
 public abstract class AsyncProc<R> extends Transition {
     public static final Executor directExec = (Runnable r)->r.run();
-    public static final CurrentThreadExecutor currentThreadExec = new CurrentThreadExecutor();
+    public static final org.df4j.core.util.executor.CurrentThreadExecutor currentThreadExec = new org.df4j.core.util.executor.CurrentThreadExecutor();
     public static final Executor newThreadExec = (Runnable r)->new Thread(r).start();
     private static InheritableThreadLocal<Executor> threadLocalExecutor = new InheritableThreadLocal<Executor>(){
         @Override
@@ -50,14 +49,17 @@ public abstract class AsyncProc<R> extends Transition {
      * </pre>
      * before creating {@link Transition} instances.
      *
-     * @param exec default executor
      */
+    public static Executor getThreadLocalExecutor() {
+        return threadLocalExecutor.get();
+    }
+
     public static void setThreadLocalExecutor(Executor exec) {
         threadLocalExecutor.set(exec);
     }
 
     private Executor executor;
-    protected final AsyncResult<R> result = new AsyncResult<>();
+    protected final AsyncResult<R> result = new AsyncResult<>(this);
 
     public void setExecutor(Executor exec) {
         this.executor = exec;
@@ -84,4 +86,35 @@ public abstract class AsyncProc<R> extends Transition {
     }
 
     protected abstract void run();
+
+
+    /**
+     * for debugging
+     * Serial executor working on current thread
+     * <code>
+     *   {@link CurrentThreadExecutor executor} = new {@link CurrentThreadExecutor ()};
+     *   actor.setExecutor(executor);
+     *   actor.start();
+     *   executor.runAll();
+     * </code>
+     */
+    public static class CurrentThreadExecutor implements Executor {
+        ConcurrentLinkedQueue<Runnable> queue = new ConcurrentLinkedQueue<>();
+
+        @Override
+        public void execute(Runnable command) {
+            queue.add(command);
+        }
+
+        void runAll(){
+            for (;;) {
+                Runnable command = queue.poll();
+                if (command == null) {
+                    return;
+                }
+                command.run();
+            }
+        }
+    }
+
 }

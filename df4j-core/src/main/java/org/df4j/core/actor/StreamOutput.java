@@ -2,7 +2,6 @@ package org.df4j.core.actor;
 
 import org.df4j.core.actor.ext.SyncActor;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.Transition;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
@@ -23,20 +22,21 @@ public class StreamOutput<T> extends SyncActor implements Publisher<T> {
     protected StreamInput<T> tokens = new StreamInput<>(this);
     protected StreamSubscriptionConnector<T> subscriptions = new StreamSubscriptionConnector<>(this);
 
-    protected final Transition.Pin outerLock;
+    protected final StreamLock outerLock;
     protected final int capacity;
 
     public StreamOutput(AsyncProc outerActor, int capacity) {
-        outerLock = outerActor.new Pin(false);
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
         this.capacity = capacity;
+        outerLock = new StreamLock(outerActor);
+        outerLock.unblock();
         start();
     }
 
-    public StreamOutput(AsyncProc actor) {
-        this(actor, 16);
+    public StreamOutput(AsyncProc outerActor) {
+        this(outerActor, 16);
     }
 
     @Override
@@ -67,20 +67,16 @@ public class StreamOutput<T> extends SyncActor implements Publisher<T> {
     }
 
     @Override
-    protected void runAction() throws Throwable {
-        T token = tokens.current();
-        if (token != null) {
-            StreamSubscription subscription = subscriptions.current();
-            try {
-                subscription.onNext(token);
-            } catch (CancellationException e) {
-                // subscription cancelled while being current
-                tokens.pushBack();
-            }
-        } else if (!tokens.isCompleted()) {
-            throw new RuntimeException("tokens ampty and not completed, but unblocked");
-        } else {
+    protected void runAction() {
+        if (tokens.isCompleted()) {
             subscriptions.complete(tokens.getCompletionException());
+            return;
+        }
+        try {
+            subscriptions.onNext(tokens.current);
+        } catch (CancellationException e) {
+            // subscription cancelled while being current
+            tokens.pushBack();
         }
     }
 }

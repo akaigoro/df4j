@@ -7,19 +7,16 @@ import org.reactivestreams.Subscriber;
  */
 public class UnicastBufferedSource extends Source<Long> {
     public StreamOutput<Long> output = new StreamOutput<>(this);
-    long val = 0;
+    long val;
 
-    public UnicastBufferedSource(Logger parent, int totalNumber) {
+    public UnicastBufferedSource(Logger parent, long totalNumber) {
         super(parent);
-        this.val = totalNumber;
-    }
-
-    public UnicastBufferedSource(long totalNumber) {
         this.val = totalNumber;
         if (totalNumber == 0) {
             output.onComplete();
             stop();
         }
+        output.asyncResult().subscribe(result);
     }
 
     @Override

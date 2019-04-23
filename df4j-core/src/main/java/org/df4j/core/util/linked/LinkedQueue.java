@@ -39,11 +39,21 @@ public class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
 
     @Override
     public L peek() {
-        return header.peek();
+        L next = header.getNext();
+        if (next == header) {
+            return null;
+        } else {
+            return next;
+        }
     }
 
     public synchronized void remove(L subscription) {
         subscription.unlink();
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getName()+"(size="+size+")";
     }
 
     private class LinkIterator implements Iterator<Link<L>> {

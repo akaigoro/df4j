@@ -2,6 +2,7 @@ package org.df4j.core.asyncproc;
 
 import org.df4j.core.ScalarPublisher;
 import org.df4j.core.ScalarSubscriber;
+import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncFunction;
 import org.reactivestreams.Subscriber;
@@ -19,8 +20,10 @@ import java.util.function.Function;
  * It could named CompletablePromise.
  */
 public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, CompletionStage<T>, Future<T> {
+    private AsyncProc<T> parent;
+
     private void debug(String s) {
-        System.out.println(s);  // must be commented out
+ //       System.out.println(s);  // must be commented out
     }
     protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
     protected volatile boolean done;
@@ -28,6 +31,10 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
     protected ScalarSubscription subscription;
+
+    public AsyncResult(AsyncProc<T> parent) {
+        this.parent = parent;
+    }
 
     public AsyncResult() {
     }
@@ -72,7 +79,10 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         }
         ScalarSubscription subscription = subscriptions.poll();
         for (; subscription != null; subscription = subscriptions.poll()) {
-            subscription.onError(completionException);
+            try {
+                subscription.onError(completionException);
+            } catch (SubscriptionCancelledException e) {
+            }
         }
     }
 
@@ -449,7 +459,8 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         private void asyncRun(T value, Throwable ex) {
             this.value = value;
             this.ex = ex;
-            fire();
+            Executor executor = getThreadLocalExecutor();
+            executor.execute(this::run);
         }
 
         @Override

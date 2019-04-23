@@ -8,14 +8,14 @@ import org.df4j.core.ScalarSubscriber;
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends Transition.Param<T> implements ScalarSubscriber<T> {
+public class ScalarInput<T> extends ScalarParam<T> implements ScalarSubscriber<T> {
     protected AsyncProc task;
     /** extracted token */
     protected Throwable completionException;
     protected ScalarSubscription subscription;
 
     public ScalarInput(AsyncProc task) {
-        task.super();
+        super(task);
         this.task = task;
     }
 
@@ -33,9 +33,6 @@ public class ScalarInput<T> extends Transition.Param<T> implements ScalarSubscri
         synchronized(this) {
             if (isCompleted()) {
                 return;
-            }
-            if (getCurrent() != null) {
-                throw new IllegalStateException("token set already");
             }
             setCurrent(message);
         }

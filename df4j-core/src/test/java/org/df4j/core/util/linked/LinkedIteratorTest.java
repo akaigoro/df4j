@@ -1,10 +1,12 @@
 package org.df4j.core.util.linked;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class LinkedIteratorTest {
 
+    @Ignore
     @Test
     public void toStringTest() {
         MyQueue queue = new MyQueue();
