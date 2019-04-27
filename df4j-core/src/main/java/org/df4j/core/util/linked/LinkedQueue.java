@@ -19,7 +19,7 @@ public class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
     }
 
     @Override
-    public synchronized boolean offer(L subscription) {
+    public boolean offer(L subscription) {
         if (subscription.isLinked()) {
             throw new IllegalStateException();
         }
@@ -29,7 +29,7 @@ public class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
     }
 
     @Override
-    public synchronized L poll() {
+    public L poll() {
         if (size == 0) {
             return null;
         }
@@ -47,8 +47,13 @@ public class LinkedQueue<L extends Link<L>> extends AbstractQueue<L> {
         }
     }
 
-    public synchronized void remove(L subscription) {
-        subscription.unlink();
+    public boolean remove(L subscription) {
+        if (subscription.isLinked()) {
+            subscription.unlink();
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override

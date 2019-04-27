@@ -89,10 +89,5 @@ public abstract class StreamOutputTestBase {
         log.println("=== test ended:"+testName+'\n');
     }
 
-    public void testSource() throws InterruptedException, ExecutionException {
-        for (int[] row: data()) {
-            testSource(row[0], row[1], row[2]);
-        }
-    }
 }
 

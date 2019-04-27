@@ -8,19 +8,26 @@ import org.df4j.core.ScalarSubscriber;
  *
  * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends ScalarParam<T> implements ScalarSubscriber<T> {
+public class ScalarInput<T> extends ScalarLock implements ScalarSubscriber<T> {
     protected AsyncProc task;
     /** extracted token */
     protected Throwable completionException;
     protected ScalarSubscription subscription;
+    protected T current;
 
     public ScalarInput(AsyncProc task) {
         super(task);
         this.task = task;
     }
 
-    public synchronized Throwable getCompletionException() {
-        return completionException;
+    @Override
+    public boolean isParameter() {
+        return true;
+    }
+
+    @Override
+    public T current() {
+        return current;
     }
 
     @Override
@@ -34,17 +41,17 @@ public class ScalarInput<T> extends ScalarParam<T> implements ScalarSubscriber<T
             if (isCompleted()) {
                 return;
             }
-            setCurrent(message);
+            this.current = message;
         }
         complete();
     }
 
     @Override
     public synchronized void onError(Throwable throwable) {
+        if (throwable == null) {
+            throw new IllegalArgumentException();
+        }
         synchronized(this) {
-            if (throwable == null) {
-                throw new IllegalArgumentException();
-            }
             if (isCompleted()) {
                 return;
             }

@@ -50,7 +50,7 @@ public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
         parent.remove(this);
     }
 
-    protected synchronized ScalarSubscriber extractScalarSubscriber() throws SubscriptionCancelledException {
+    public synchronized ScalarSubscriber extractScalarSubscriber() throws SubscriptionCancelledException {
         if (isCancelled()) {
             throw new SubscriptionCancelledException();
         } else {

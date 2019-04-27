@@ -1,11 +1,12 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.actor.ext.SyncActor;
-import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.SubscriptionCancelledException;
+import org.df4j.core.asyncproc.*;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
-import java.util.concurrent.CancellationException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * Non-blocking analogue of blocking queue.
@@ -16,23 +17,26 @@ import java.util.concurrent.CancellationException;
  *
  * @param <T> the type of transferred messages
  *
- *  Though it extends {@link Actor}, it is a connector and not an independent node.
  */
-public class StreamOutput<T> extends SyncActor implements Publisher<T> {
-    protected StreamInput<T> tokens = new StreamInput<>(this);
-    protected StreamSubscriptionConnector<T> subscriptions = new StreamSubscriptionConnector<>(this);
+public class StreamOutput<T> extends StreamLock implements Publisher<T> {
 
-    protected final StreamLock outerLock;
-    protected final int capacity;
+    protected int capacity;
+    protected Queue<T> tokens;
+    protected boolean completionRequested = false;
+    protected boolean completed = false;
+    protected T current;
+    protected Throwable completionException;
 
-    public StreamOutput(AsyncProc outerActor, int capacity) {
+    /** place for demands */
+    protected StreamSubscriptionQueue<T> subscriptions = new StreamSubscriptionQueue<>();
+
+    public StreamOutput(AsyncProc actor, int capacity) {
+        super(actor);
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
         this.capacity = capacity;
-        outerLock = new StreamLock(outerActor);
-        outerLock.unblock();
-        start();
+        this.tokens = new ArrayDeque<>(capacity);
     }
 
     public StreamOutput(AsyncProc outerActor) {
@@ -44,39 +48,69 @@ public class StreamOutput<T> extends SyncActor implements Publisher<T> {
         subscriptions.subscribe(subscriber);
     }
 
-    public synchronized void onNext(T item) {
-        if (tokens.size() >= capacity) {
-            throw new IllegalStateException("buffer overflow");
+    public synchronized void onNext(T token) {
+        if (token == null) {
+            throw new NullPointerException();
         }
-        tokens.onNext(item);
-        if (tokens.size() >= capacity) {
-            outerLock.block();
+        for (;;) {
+            StreamSubscription<T> subscr;
+            synchronized(this) {
+                if (completionRequested) {
+                    return;
+                }
+                subscr = subscriptions.poll();
+                if (subscr == null) {
+                    if (tokens.size() >= capacity) {
+                        throw new IllegalStateException("buffer overflow");
+                    }
+                    tokens.add(token);
+                    if (tokens.size() >= capacity) {
+                        super.block();
+                    }
+                    return;
+                }
+            }
+            try {
+                subscr.onNext(token);
+                return;
+            } catch (SubscriptionCancelledException e) {
+                // subscription can be cancelled after exiting this synchronized block
+                // and before the call to  subscr.onNext(token);
+                // in t6his case we try to pass the token to the next subscription
+                // in order not to lost the token
+            }
         }
     }
 
-    public void complete(Throwable completionException) {
-        tokens.complete(completionException);
+    protected void completeInput(Throwable throwable) {
+        if (throwable != null) {
+            throw  new IllegalArgumentException();
+        }
+        synchronized(this) {
+            if (completionRequested) {
+                return;
+            }
+            completionRequested = true;
+            this.completionException = throwable;
+            if (tokens.isEmpty()) {
+                completed = true;
+                return;
+            }
+        }
     }
 
     public void onComplete() {
-        tokens.onComplete();
+        completeInput(null);
+        subscriptions.onComplete();
     }
 
-    public synchronized void onError(Throwable throwable) {
-        tokens.onError(throwable);
+    public void onError(Throwable throwable) {
+        completeInput(throwable);
+        subscriptions.onError(throwable);
     }
 
-    @Override
-    protected void runAction() {
-        if (tokens.isCompleted()) {
-            subscriptions.complete(tokens.getCompletionException());
-            return;
-        }
-        try {
-            subscriptions.onNext(tokens.current);
-        } catch (CancellationException e) {
-            // subscription cancelled while being current
-            tokens.pushBack();
-        }
+    public void completion(Throwable completionException) {
+        completeInput(completionException);
+        subscriptions.completion(completionException);
     }
 }

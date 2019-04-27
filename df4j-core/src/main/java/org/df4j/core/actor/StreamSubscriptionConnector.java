@@ -1,5 +1,6 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.asyncproc.*;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
@@ -15,10 +16,10 @@ import org.reactivestreams.Subscriber;
  *
  */
 public class StreamSubscriptionConnector<T> extends StreamLock
-        implements SubscriptionListener<StreamSubscription<T>>,Publisher<T>
+        implements SubscriptionListener<StreamSubscription<T>>, Publisher<T>
 {
-    protected LinkedQueue<StreamSubscription<T>> activeSubscriptions = new LinkedQueue<StreamSubscription<T>>();
-    protected LinkedQueue<StreamSubscription<T>> passiveSubscriptions = new LinkedQueue<StreamSubscription<T>>();
+    protected StreamSubscriptionQueue<T> subscriptions = new StreamSubscriptionQueue<>();
+    protected boolean completed = false;
     protected volatile Throwable completionException;
 
     public StreamSubscriptionConnector(AsyncProc actor) {
@@ -26,30 +27,25 @@ public class StreamSubscriptionConnector<T> extends StreamLock
     }
 
     public StreamSubscription<T> current() {
-        return activeSubscriptions.peek();
+        return subscriptions.peek();
     }
 
     public StreamSubscription poll() {
-        return activeSubscriptions.poll();
+        return subscriptions.poll();
     }
 
     public synchronized boolean noActiveSubscribers() {
-        return activeSubscriptions.size() == 0;
+        return subscriptions.noActiveSubscribers();
     }
 
     @Override
-    public void add(StreamSubscription<T> subscription) {
-        synchronized(this) {
-            if (subscription.isCancelled()) {
-                return;
-            }
-            if (!subscription.isActive()) {
-                passiveSubscriptions.offer(subscription);
-                return;
-            }
-            activeSubscriptions.offer(subscription);
+    public boolean offer(StreamSubscription<T> subscription) {
+        boolean added = subscriptions.offer(subscription);
+        if (added) {
+            unblock();
         }
         unblock();
+        return added;
     }
 
     /**
@@ -58,91 +54,69 @@ public class StreamSubscriptionConnector<T> extends StreamLock
      * @return true if no active subcriptions remain
      *         false otherwise
      */
-    public void remove(StreamSubscription<T> subscription) {
+    public boolean remove(StreamSubscription<T> subscription) {
+        boolean result;
         synchronized(this) {
-            subscription.unlink();
+            if (subscription.isLinked()) {
+                subscription.unlink();
+                result = true;
+            } else {
+                result = false;
+            }
             if (!noActiveSubscribers()) {
-                return;
+                return result;
             }
         }
         block();
+        return result;
     }
 
     @Override
     public void subscribe(Subscriber<? super T> s) {
         StreamSubscription<T> subscription = new StreamSubscription<>(this, s);
         subscription.onSubscribe();
-        add(subscription);
+        offer(subscription);
     }
 
-    public void onNext(T val) {
-        StreamSubscription<T> subscription;
-        synchronized (this) {
-            System.out.println("activeSubscriptions:"+activeSubscriptions.size()+"; passiveSubscriptions:"+passiveSubscriptions.size());
-            subscription = activeSubscriptions.poll();
-            if (subscription == null) {
-                throw new IllegalStateException();
-            }
-            if (subscription.requested == 0) {
-                throw new IllegalStateException();
-            }
-            subscription.requested--;
-            if (subscription.isActive()) {
-                activeSubscriptions.add(subscription);
-            } else {
-                passiveSubscriptions.offer(subscription);
-            }
+    /**
+     * delivers the token to exactly one subscriber,
+     * unless the stream is completed.
+     *
+     * @param token value to deliver
+     * @throws SubscriptionCancelledException if all active subscriptions cancelled,
+     *                and there is no one subscriber to deliver the token.
+     */
+    public void onNext(T token) throws SubscriptionCancelledException {
+        if (token == null) {
+            throw new NullPointerException();
         }
-        subscription.onNext(val);
+        for (;;) {
+            StreamSubscription<T> subscription;
+            synchronized(this) {
+                if (completed) {
+                    return;
+                }
+                subscription = subscriptions.poll();
+                if (subscription == null) {
+                    throw  new SubscriptionCancelledException();
+                }
+            }
+            subscription.onNext(token);
+        }
     }
 
     public void onComplete() {
-        synchronized(this) {
-            if (completed) {
-                return;
-            }
-            completionException = null;
-            completed = true;
-        }
-        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
-            subscription.complete(null);
-        }
-        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
-            subscription.complete(null);
-        }
+        subscriptions.onComplete();
     }
 
     public void onError(Throwable ex) {
-        synchronized(this) {
-            if (completed) {
-                return;
-            }
-            completionException = ex;
-            completed = true;
-        }
-        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
-            subscription.complete(ex);
-        }
-        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
-            subscription.complete(ex);
-        }
+        completionException = ex;
+        subscriptions.onError(ex);
     }
 
-
-    public void complete(Throwable ex) {//todo
-        synchronized(this) {
-            if (completed) {
-                return;
-            }
-            this.completionException = ex;
-            completed = true;
-        }
-        for (StreamSubscription subscription = activeSubscriptions.poll(); subscription != null; subscription = activeSubscriptions.poll()) {
-            subscription.complete(ex);
-        }
-        for (StreamSubscription subscription = passiveSubscriptions.poll(); subscription != null; subscription = passiveSubscriptions.poll()) {
-            subscription.complete(ex);
-        }
+    public void completion(Throwable ex) {//todo
+        completionException = ex;
+        subscriptions.completion(ex);
     }
 
     @Override

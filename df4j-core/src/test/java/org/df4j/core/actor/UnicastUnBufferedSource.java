@@ -1,5 +1,6 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.SubscriptionCancelledException;
 import org.reactivestreams.Subscriber;
 
 /**
@@ -27,8 +28,11 @@ public class UnicastUnBufferedSource extends Source<Long> {
     protected void runAction() {
         if (val > 0) {
             println("UnicastUnBufferedSource:subscription.onNext("+val+")");
-            output.onNext(val);
-            val--;
+            try {
+                output.onNext(val);
+                val--;
+            } catch (SubscriptionCancelledException e) {
+            }
         } else {
             println("UnicastUnBufferedSource:subscription.onComplete()");
             output.onComplete();

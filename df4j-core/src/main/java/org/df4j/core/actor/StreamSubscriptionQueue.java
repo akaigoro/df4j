@@ -1,6 +1,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.ScalarSubscriber;
+import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -18,7 +19,10 @@ public class StreamSubscriptionQueue<T> implements Publisher<T>, SubscriptionLis
 
     protected void subscribe(StreamSubscription subscription) {
         subscription.onSubscribe();
-        add(subscription);
+        /** initiall any subscription is passive;
+         * it is activated by method {@link org.reactivestreams.Subscription#request(long)}
+         */
+        passiveSubscriptions.offer(subscription);
     }
 
     @Override
@@ -33,27 +37,65 @@ public class StreamSubscriptionQueue<T> implements Publisher<T>, SubscriptionLis
         subscribe(subscription);
     }
 
-    public synchronized void add(StreamSubscription subscription) {
+    public boolean offer(StreamSubscription<T> subscription) {
         if (subscription.isCancelled()) {
-            return;
+            return false;
         }
         if (subscription.isActive()) {
             activeSubscriptions.add(subscription);
+            return true;
         } else {
-            passiveSubscriptions.offer(subscription);
+            passiveSubscriptions.add(subscription);
+            return false;
         }
     }
 
     @Override
-    public synchronized void remove(StreamSubscription<T> subscription) {
-        if (subscription.isCancelled()) {
-            return;
-        }
+    public boolean remove(StreamSubscription<T> subscription) {
         if (subscription.isActive()) {
-            activeSubscriptions.remove(subscription);
+            return activeSubscriptions.remove(subscription);
         } else {
-            passiveSubscriptions.remove(subscription);
+            return passiveSubscriptions.remove(subscription);
         }
     }
 
+    public void onComplete() {
+        StreamSubscription subscription = poll();
+        for (; subscription != null; subscription = poll()) {
+            try {
+                subscription.onComplete();
+            } catch (SubscriptionCancelledException e) {
+            }
+        }
+    }
+
+    public void onError(Throwable ex) {
+        StreamSubscription subscription = poll();
+        for (; subscription != null; subscription = poll()) {
+            try {
+                subscription.onError(ex);
+            } catch (SubscriptionCancelledException e) {
+            }
+        }
+    }
+
+    public void completion(Throwable completionException) {
+        if (completionException == null) {
+            onComplete();
+        } else {
+            onError(completionException);
+        }
+    }
+
+    public StreamSubscription<T> peek() {
+        return activeSubscriptions.peek();
+    }
+
+    public StreamSubscription poll() {
+        return activeSubscriptions.poll();
+    }
+
+    public boolean noActiveSubscribers() {
+        return activeSubscriptions.size() == 0;
+    }
 }

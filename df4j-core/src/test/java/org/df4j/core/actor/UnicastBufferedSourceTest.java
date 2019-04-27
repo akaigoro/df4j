@@ -9,11 +9,13 @@
  */
 package org.df4j.core.actor;
 
+import io.reactivex.Completable;
 import org.junit.Test;
 
 import java.util.concurrent.*;
 
 public class UnicastBufferedSourceTest extends StreamOutputTestBase {
+    Completable c;
 
     @Override
     public Source<Long> createPublisher(long elements) {
@@ -31,7 +33,9 @@ public class UnicastBufferedSourceTest extends StreamOutputTestBase {
 
     @Test
     public void testBufferedSource() throws InterruptedException, ExecutionException {
-        testSource();
+        for (int[] row: data()) {
+            testSource(row[0], row[1], row[2]);
+        }
     }
 }
 

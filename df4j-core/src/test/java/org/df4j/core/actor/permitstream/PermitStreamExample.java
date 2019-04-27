@@ -65,7 +65,6 @@ public class PermitStreamExample {
 
         Source(int count) {
             this.count = count;
-            pub.asyncResult().subscribe(result);
         }
 
         protected void runAction() {

@@ -16,7 +16,6 @@ public class UnicastBufferedSource extends Source<Long> {
             output.onComplete();
             stop();
         }
-        output.asyncResult().subscribe(result);
     }
 
     @Override

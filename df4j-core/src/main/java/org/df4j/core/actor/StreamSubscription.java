@@ -1,11 +1,10 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.ScalarSubscriber;
+import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-
-import java.util.concurrent.CancellationException;
 
 /**
  *
@@ -43,7 +42,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
     @Override
     public synchronized void request(long n) {
         if (n <= 0) {
-            onError(new IllegalArgumentException());
+            subscriber.onError(new IllegalArgumentException());
             return;
         }
         boolean wasPassive;
@@ -62,15 +61,15 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         }
         if (wasPassive) {
             unlink();
-            listener.add(this);
+            listener.offer(this);
         }
     }
 
-    public void onNext(T value) {
+    public void onNext(T value) throws SubscriptionCancelledException {
         Subscriber subscriberLoc;
         synchronized (this) {
             if (isCancelled()) {
-                throw new CancellationException();
+                throw new SubscriptionCancelledException();
             }
             if (requested == 0) {
                 throw new IllegalStateException();
@@ -92,14 +91,14 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
                 return;
             }
         }
-        listener.remove((StreamSubscription<T>) this);
+        listener.remove(this);
     }
 
-    protected Subscriber extractSubscriber() {
+    protected Subscriber extractSubscriber() throws SubscriptionCancelledException {
         synchronized (this) {
       //      waitInitialized();
             if (isCancelled()) {
-                return null;
+                throw new SubscriptionCancelledException();
             } else {
                 Subscriber subscriberLoc = subscriber;
                 subscriber = null;
@@ -108,7 +107,7 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         }
     }
 
-    protected void complete(Throwable ex) {
+    protected void complete(Throwable ex) throws SubscriptionCancelledException {
         Subscriber subscriberLoc;
         synchronized (this) {
             if (isCancelled()) {
@@ -126,11 +125,11 @@ public class StreamSubscription<T> extends Link<StreamSubscription<T>> implement
         }
     }
 
-    public void onComplete() {
+    public void onComplete() throws SubscriptionCancelledException {
         complete(null);
     }
 
-    public void onError(Throwable ex) {
+    public void onError(Throwable ex) throws SubscriptionCancelledException {
         complete(ex);
     }
 

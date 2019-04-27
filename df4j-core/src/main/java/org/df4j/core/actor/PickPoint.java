@@ -3,12 +3,11 @@ package org.df4j.core.actor;
 import org.df4j.core.ScalarPublisher;
 import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.SubscriptionCancelledException;
-import org.df4j.core.actor.ext.SyncActor;
-import org.df4j.core.asyncproc.*;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import org.df4j.core.asyncproc.ScalarSubscription;
+import org.df4j.core.asyncproc.ScalarSubscriptionQueue;
 
-import java.util.NoSuchElementException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  *  An asynchronous analogue of BlockingQueue
@@ -17,15 +16,27 @@ import java.util.NoSuchElementException;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> extends SyncActor implements Subscriber<T> , ScalarPublisher<T> {
+public class PickPoint<T> implements ScalarPublisher<T> {
 
-    protected final StreamInput<T> mainInput;
+    protected int capacity;
+    protected Queue<T> tokens;
+    /** to monitor existence of the room for additional tokens */
+    protected StreamLock roomLock;
+    /** extracted token */
+    protected boolean completionRequested = false;
+    protected boolean completed = false;
+    protected T current;
+    protected Throwable completionException;
+
     /** place for demands */
-    protected ScalarSubscriptionConnector<T> requests = new ScalarSubscriptionConnector<>(this);
+    private final ScalarSubscriptionQueue<T> scalarSubscriptionQueue = new ScalarSubscriptionQueue<T>();
 
-    public PickPoint(int capacity) {
-        this.mainInput = new StreamInput<T>(this, capacity);
-        start();
+    public PickPoint(int fullCapacity) {
+        if (fullCapacity <= 0) {
+            throw new IllegalArgumentException();
+        }
+        this.capacity = fullCapacity;
+        this.tokens = new ArrayDeque<>(fullCapacity);
     }
 
     public PickPoint() {
@@ -33,91 +44,78 @@ public class PickPoint<T> extends SyncActor implements Subscriber<T> , ScalarPub
     }
 
     @Override
-    public void subscribe(ScalarSubscriber<? super T> s) {
-        requests.subscribe(s);
-    }
-
-    @Override
-    public void onSubscribe(Subscription s) {
-        mainInput.onSubscribe(s);
-    }
-
-    @Override
-    public void onNext(T m) {
-        mainInput.onNext(m);
-    }
-
-    @Override
-    public void onError(Throwable ex) {
-        mainInput.onError(ex);
-    }
-
-    /**
-     * processes closing signal
-     */
-    @Override
-    public void onComplete() {
-        mainInput.onError(new NoSuchElementException());
-    }
-
-    @Override
-    protected void runAction() {
-        ScalarSubscription subscription = requests.current();
-        if (!mainInput.isCompleted()) {
-            try {
-                subscription.onComplete(mainInput.current());
-            } catch (SubscriptionCancelledException e) {
-                mainInput.pushBack();
-            }
-        } else {
-            try {
-                subscription.onError(mainInput.getCompletionException());
-            } catch (SubscriptionCancelledException e) {
-            }
-        }
-    }
-
-    /**
-     * blocks when there are no active subscribers
-     *
-     * This is a dangerous connector.
-     * Since any subscription can be cancelled at any time,
-     * it may happen that parent actor may discover that this connector is unblocked but empty,
-     * and it has to recover in some way.
-
-     */
-    public static class ScalarSubscriptionConnector<T> extends StreamParam<ScalarSubscription<T>>
-        implements ScalarPublisher<T>
-    {
-        private final ScalarSubscriptionQueue<T> scalarSubscriptionQueue = new ScalarSubscriptionQueue<T>();
-
-        public ScalarSubscriptionConnector(AsyncProc outerActor) {
-            super(outerActor);
-        }
-
-        @Override
-        public ScalarSubscription<T> getCurrent() {
-            return scalarSubscriptionQueue.peek();
-        }
-
-        @Override
-        public boolean moveNext() {
-            synchronized(this) {
-                if (scalarSubscriptionQueue.isEmpty()) {
-                    return true;
+    public void subscribe(ScalarSubscriber<? super T> subscriber) {
+        T nextValue = null;
+        synchronized(this) {
+            if (!completed) {
+                nextValue = tokens.poll();
+                if (nextValue == null) {
+                    ScalarSubscription<T> subscription = new ScalarSubscription(scalarSubscriptionQueue, subscriber);
+                    scalarSubscriptionQueue.subscribe(subscription);
+                    return;
                 }
             }
-            block();
-            return false;
         }
+        if (nextValue != null) {
+            subscriber.onComplete(nextValue);
+        } else if (completionException == null){
+            subscriber.onComplete(null);
+        } else {
+            subscriber.onError(completionException);
+        }
+    }
 
-        @Override
-        public void subscribe(ScalarSubscriber<? super T> s) {
-            synchronized(this) {
-                ScalarSubscription<T> subscription = new ScalarSubscription(scalarSubscriptionQueue, s);
-                scalarSubscriptionQueue.subscribe(subscription);
-            }
-            unblock();
+    /**
+     * delivers the token to exactly one subscriber,
+     * unless the stream is completed.
+     *
+     * @param token
+     */
+    public void onNext(T token) {
+        if (token == null) {
+            throw new NullPointerException();
         }
+        for (;;) {
+            ScalarSubscription<T> subs;
+            synchronized(this) {
+                if (completionRequested) {
+                    return;
+                }
+                subs = scalarSubscriptionQueue.poll();
+                if (subs == null) {
+                    tokens.add(token);
+                    return;
+                }
+            }
+            try {
+                subs.onComplete(token);
+                return;
+            } catch (SubscriptionCancelledException e) {
+            }
+        }
+    }
+
+    protected synchronized void completeInput(Throwable throwable) {
+        if (throwable != null) {
+            throw  new IllegalArgumentException();
+        }
+        if (completionRequested) {
+            return;
+        }
+        completionRequested = true;
+        this.completionException = throwable;
+        if (tokens.isEmpty()) {
+            completed = true;
+        }
+    }
+
+    public void onComplete() {
+        completeInput(null);
+        scalarSubscriptionQueue.onComplete(null);
+    }
+
+    public void onError(Throwable throwable) {
+        completeInput(throwable);
+        scalarSubscriptionQueue.onError(throwable);
     }
 }

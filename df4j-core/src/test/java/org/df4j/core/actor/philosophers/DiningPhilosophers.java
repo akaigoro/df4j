@@ -31,7 +31,7 @@ public class DiningPhilosophers {
             ForkPlace forkPlace = new ForkPlace(k);
             forkPlace.onNext(new Fork(k));
             forkPlaces[k] = forkPlace;
-            all.registerAsyncDaemon(forkPlace.asyncResult());
+//            all.registerAsyncDaemon(forkPlace.asyncResult());
         }
         // create philosophers
         for (int k = 0; k < num; k++) {

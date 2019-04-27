@@ -17,11 +17,6 @@ public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T
 
     public void subscribe(ScalarSubscription<T> subscription) {
         subscription.onSubscribe();
-        synchronized (this) {
-            if (subscription.isCancelled()) {
-                return;
-            }
-        }
         offer(subscription);
     }
 
@@ -64,5 +59,4 @@ public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T
             }
         }
     }
-
 }

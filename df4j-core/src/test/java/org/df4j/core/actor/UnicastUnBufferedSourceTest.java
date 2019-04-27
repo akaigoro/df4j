@@ -12,7 +12,6 @@ package org.df4j.core.actor;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
-import java.util.function.BiFunction;
 
 public class UnicastUnBufferedSourceTest extends StreamOutputTestBase {
 
@@ -32,7 +31,9 @@ public class UnicastUnBufferedSourceTest extends StreamOutputTestBase {
 
     @Test
     public void testUnBufferedSource() throws InterruptedException, ExecutionException {
-        testSource();
+        for (int[] row: data()) {
+            testSource(row[0], row[1], row[2]);
+        }
     }
 }
 
