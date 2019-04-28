@@ -2,100 +2,218 @@ package org.df4j.core.actor;
 
 import org.df4j.core.ScalarSubscriber;
 import org.df4j.core.SubscriptionCancelledException;
+import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * non-blocking queue of {@link StreamSubscription}
  *
  * @param <T>
  */
-public class StreamSubscriptionQueue<T> implements Publisher<T>, SubscriptionListener<StreamSubscription<T>> {
-    protected LinkedQueue<StreamSubscription<T>> activeSubscriptions = new LinkedQueue<StreamSubscription<T>>();
-    protected LinkedQueue<StreamSubscription<T>> passiveSubscriptions = new LinkedQueue<StreamSubscription<T>>();
+public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
+    protected final ReentrantLock locker = new ReentrantLock();
+    protected LinkedQueue<StreamSubscription> activeSubscriptions = new LinkedQueue<>();
+    protected LinkedQueue<StreamSubscription> passiveSubscriptions = new LinkedQueue<>();
     protected boolean completed = false;
-    protected volatile Throwable completionException;
-
-    protected void subscribe(StreamSubscription subscription) {
-        subscription.onSubscribe();
-        /** initiall any subscription is passive;
-         * it is activated by method {@link org.reactivestreams.Subscription#request(long)}
-         */
-        passiveSubscriptions.offer(subscription);
-    }
+    protected Throwable completionException;
 
     @Override
     public void subscribe(Subscriber<? super T> s) {
-        StreamSubscription subscription = new StreamSubscription(this, s);
-        subscribe(subscription);
-    }
-
-    public void subscribe(ScalarSubscriber<? super T> s) {
-        StreamSubscription.Scalar2StreamSubscriber proxySubscriber = new StreamSubscription.Scalar2StreamSubscriber(s);
-        StreamSubscription subscription = new StreamSubscription(this, proxySubscriber);
-        subscribe(subscription);
-    }
-
-    public boolean offer(StreamSubscription<T> subscription) {
-        if (subscription.isCancelled()) {
-            return false;
-        }
-        if (subscription.isActive()) {
-            activeSubscriptions.add(subscription);
-            return true;
-        } else {
-            passiveSubscriptions.add(subscription);
-            return false;
+        StreamSubscription subscription = new StreamSubscription(s);
+        subscription.lazyMode = true;
+        subscription.subscriber.onSubscribe(subscription);
+        subscription.lazyMode = false;
+        locker.lock();
+        try {
+            storeSubscription(subscription);
+            matchingLoop();
+        } finally {
+            locker.unlock();
         }
     }
 
-    @Override
-    public boolean remove(StreamSubscription<T> subscription) {
-        if (subscription.isActive()) {
-            return activeSubscriptions.remove(subscription);
-        } else {
-            return passiveSubscriptions.remove(subscription);
+    public void subscribe (ScalarSubscriber < ? super T > s){
+        Scalar2StreamSubscriber proxySubscriber = new Scalar2StreamSubscriber(s);
+        subscribe(proxySubscriber);
+    }
+
+    protected void matchingLoop() {
+        while (hasNextToken() && !activeSubscriptions.isEmpty()) {
+            T token = nextToken();
+            StreamSubscription subscription = activeSubscriptions.poll();
+            Subscriber subs = subscription.subscriber;
+            subscription.requested--;
+            subscription.lazyMode = true;
+            locker.unlock();
+            subs.onNext(token);
+            locker.lock();
+            subscription.lazyMode = false;
+            storeSubscription(subscription);
+        }
+        checkCompletion();
+    }
+
+    private void checkCompletion() {
+        if (completed && !hasNextToken()) {
+            completeSubscriptions(activeSubscriptions);
+            completeSubscriptions(passiveSubscriptions);
         }
     }
 
-    public void onComplete() {
-        StreamSubscription subscription = poll();
-        for (; subscription != null; subscription = poll()) {
+    private void storeSubscription(StreamSubscription subscription) {
+        if (!subscription.isCancelled()) {
+            if (subscription.requested > 0) {
+                activeSubscriptions.offer(subscription);
+            } else {
+                passiveSubscriptions.offer(subscription);
+            }     
+        }
+    }
+
+    private void completeSubscriptions(LinkedQueue<StreamSubscription> subscriptions) {
+        for (;;) {
+            StreamSubscription subscription = subscriptions.poll();
+            if (subscription == null) {
+                break;
+            }
+            subscription.lazyMode = true;
+            Subscriber subscriberLoc = subscription.subscriber;
+            subscription.makeCompleted();
+            locker.unlock();
+            if (completionException == null) {
+                subscriberLoc.onComplete();
+            } else {
+                subscriberLoc.onError(completionException);
+            }
+            locker.lock();
+        }
+    }
+
+    public void onComplete () {
+        completion(null);
+    }
+
+    public void onError (Throwable throwable){
+        if (throwable != null) {
+            throw  new IllegalArgumentException();
+        }
+        completion(throwable);
+    }
+
+    public void completion (Throwable completionException){
+        locker.lock();
+        try {
+            completed = true;
+            this.completionException = completionException;
+            checkCompletion();
+        } finally {
+            locker.unlock();
+        }
+    }
+
+    protected abstract boolean hasNextToken();
+
+    protected abstract T nextToken ();
+
+    public class StreamSubscription extends Link<StreamSubscription> implements Subscription {
+        protected long requested = 0;
+        private Subscriber subscriber;
+        private volatile boolean lazyMode = false;
+
+        public StreamSubscription(Subscriber subscriber) {
+            this.subscriber = subscriber;
+        }
+
+        public boolean isCancelled() {
+            return subscriber == null;
+        }
+
+        public boolean isActive() {
+            return requested > 0;
+        }
+
+        @Override
+        public void request(long n) {
+            if (n <= 0) {
+                subscriber.onError(new IllegalArgumentException());
+                return;
+            }
+            locker.lock();
             try {
-                subscription.onComplete();
-            } catch (SubscriptionCancelledException e) {
+                if (isCancelled()) {
+                    return;
+                }
+                boolean wasActive = isActive();
+                requested += n;
+                if (wasActive) {
+                    return;
+                }
+                unlink();
+                if (lazyMode) {
+                    return;
+                }
+                storeSubscription(this);
+                matchingLoop();                
+            } finally {
+                locker.unlock();
             }
         }
-    }
 
-    public void onError(Throwable ex) {
-        StreamSubscription subscription = poll();
-        for (; subscription != null; subscription = poll()) {
+        @Override
+        public void cancel() {
+            locker.lock();
             try {
-                subscription.onError(ex);
-            } catch (SubscriptionCancelledException e) {
+                if (isCancelled()) {
+                    return;
+                }
+                subscriber = null;
+                makeCompleted();
+            } finally {
+                locker.unlock();
             }
         }
-    }
 
-    public void completion(Throwable completionException) {
-        if (completionException == null) {
-            onComplete();
-        } else {
-            onError(completionException);
+        private void makeCompleted() {
+            completed = true;
+            unlink();
         }
     }
 
-    public StreamSubscription<T> peek() {
-        return activeSubscriptions.peek();
-    }
+    static class Scalar2StreamSubscriber<T> implements Subscriber<T> {
+        private ScalarSubscriber scalarSubscriber;
+        private Subscription subscription;
 
-    public StreamSubscription poll() {
-        return activeSubscriptions.poll();
-    }
+        public Scalar2StreamSubscriber(ScalarSubscriber<? super T> s) {
+            scalarSubscriber = s;
+        }
 
-    public boolean noActiveSubscribers() {
-        return activeSubscriptions.size() == 0;
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription = s;
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(T t) {
+            scalarSubscriber.onComplete(t);
+            subscription.cancel();
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            scalarSubscriber.onError(t);
+            subscription.cancel();
+        }
+
+        @Override
+        public void onComplete() {
+            scalarSubscriber.onComplete(null);
+            subscription.cancel();
+        }
     }
 }

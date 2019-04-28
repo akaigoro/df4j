@@ -3,7 +3,6 @@ package org.df4j.core.actor;
 import org.df4j.core.SubscriptionCancelledException;
 import org.df4j.core.asyncproc.*;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -18,20 +17,16 @@ import java.util.Queue;
  * @param <T> the type of transferred messages
  *
  */
-public class StreamOutput<T> extends StreamLock implements Publisher<T> {
+public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publisher<T> {
 
+    private final StreamLock streamLock;
     protected int capacity;
     protected Queue<T> tokens;
     protected boolean completionRequested = false;
-    protected boolean completed = false;
-    protected T current;
-    protected Throwable completionException;
-
-    /** place for demands */
-    protected StreamSubscriptionQueue<T> subscriptions = new StreamSubscriptionQueue<>();
 
     public StreamOutput(AsyncProc actor, int capacity) {
-        super(actor);
+        streamLock = new StreamLock(actor);
+        streamLock.unblock();
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
@@ -44,73 +39,54 @@ public class StreamOutput<T> extends StreamLock implements Publisher<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        subscriptions.subscribe(subscriber);
+    protected boolean hasNextToken() {
+        return !tokens.isEmpty();
     }
 
-    public synchronized void onNext(T token) {
+    @Override
+    protected T nextToken() {
+        T t = tokens.poll();
+        if (t != null) {
+            streamLock.unblock();
+        }
+        return t;
+    }
+
+    public void onNext(T token) {
         if (token == null) {
             throw new NullPointerException();
         }
-        for (;;) {
-            StreamSubscription<T> subscr;
-            synchronized(this) {
-                if (completionRequested) {
-                    return;
-                }
-                subscr = subscriptions.poll();
-                if (subscr == null) {
-                    if (tokens.size() >= capacity) {
-                        throw new IllegalStateException("buffer overflow");
-                    }
-                    tokens.add(token);
-                    if (tokens.size() >= capacity) {
-                        super.block();
-                    }
-                    return;
-                }
-            }
-            try {
-                subscr.onNext(token);
+        locker.lock();
+        try {
+            if (completionRequested) {
                 return;
-            } catch (SubscriptionCancelledException e) {
-                // subscription can be cancelled after exiting this synchronized block
-                // and before the call to  subscr.onNext(token);
-                // in t6his case we try to pass the token to the next subscription
-                // in order not to lost the token
             }
+            if (tokens.size() >= capacity) {
+                throw new IllegalStateException("buffer overflow");
+            }
+            tokens.add(token);
+            if (tokens.size() >= capacity) {
+                streamLock.block();
+            }
+            matchingLoop();
+        } finally {
+            locker.unlock();
         }
     }
 
-    protected void completeInput(Throwable throwable) {
-        if (throwable != null) {
-            throw  new IllegalArgumentException();
-        }
-        synchronized(this) {
+    public void completion(Throwable completionException) {
+        locker.lock();
+        try {
             if (completionRequested) {
                 return;
             }
             completionRequested = true;
-            this.completionException = throwable;
+            this.completionException = completionException;
             if (tokens.isEmpty()) {
-                completed = true;
-                return;
+                super.completion(completionException);
             }
+        } finally {
+            locker.unlock();
         }
-    }
-
-    public void onComplete() {
-        completeInput(null);
-        subscriptions.onComplete();
-    }
-
-    public void onError(Throwable throwable) {
-        completeInput(throwable);
-        subscriptions.onError(throwable);
-    }
-
-    public void completion(Throwable completionException) {
-        completeInput(completionException);
-        subscriptions.completion(completionException);
     }
 }

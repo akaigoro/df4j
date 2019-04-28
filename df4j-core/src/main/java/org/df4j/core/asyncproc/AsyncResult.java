@@ -190,6 +190,9 @@ public class AsyncResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, 
         while (!done) {
             debug("get !done, wait");
             wait(millis);
+            if (done) {
+                break;
+            }
             millis = targetTime - System.currentTimeMillis();
             if (millis <= 0) {
                 throw new TimeoutException();

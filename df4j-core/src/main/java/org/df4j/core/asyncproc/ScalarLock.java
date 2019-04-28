@@ -12,7 +12,7 @@ public class ScalarLock {
     protected boolean completed = false;
 
     /**
-     * by default, initially in blocked state
+     * initially in blocked state
      */
     public ScalarLock(Transition transition) {
         this.transition = transition;

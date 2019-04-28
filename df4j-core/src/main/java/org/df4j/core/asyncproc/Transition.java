@@ -81,13 +81,6 @@ public abstract class Transition {
             if (blockedPinCount > 0) {
                 return;
             }
-            // debug todo remove
-            for (int k = 0; k < pins.size(); k++) {
-                ScalarLock lock = pins.get(k);
-                if (lock.isBlocked()) {
-                    throw new RuntimeException();
-                }
-            }
         }
         fire();
     }
