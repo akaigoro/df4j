@@ -1,7 +1,6 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.ScalarSubscriber;
-import org.df4j.core.SubscriptionCancelledException;
+import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Publisher;
@@ -27,7 +26,11 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
     public void subscribe(Subscriber<? super T> s) {
         StreamSubscription subscription = new StreamSubscription(s);
         subscription.lazyMode = true;
-        subscription.subscriber.onSubscribe(subscription);
+        try {
+            subscription.subscriber.onSubscribe(subscription);
+        } catch (Throwable thr) {
+            subscription.subscriber.onError(thr);
+        }
         subscription.lazyMode = false;
         locker.lock();
         try {
@@ -191,7 +194,6 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
         }
 
         private void complete() {
-            lazyMode = true;
             Subscriber subscriberLoc = subscriber;
             makeCompleted();
             locker.unlock();

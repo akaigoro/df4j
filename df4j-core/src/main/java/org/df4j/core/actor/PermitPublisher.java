@@ -9,7 +9,7 @@
  * work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.*
  ************************************************************************/
 
-package org.df4j.core;
+package org.df4j.core.actor;
 
 import org.reactivestreams.Subscription;
 

@@ -1,10 +1,6 @@
-package org.df4j.core.actor;
+package org.df4j.core.asyncproc;
 
-import org.df4j.core.ScalarPublisher;
-import org.df4j.core.ScalarSubscriber;
-import org.df4j.core.SubscriptionCancelledException;
-import org.df4j.core.asyncproc.ScalarSubscription;
-import org.df4j.core.asyncproc.ScalarSubscriptionQueue;
+import org.df4j.core.util.SubscriptionCancelledException;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -20,8 +16,6 @@ public class PickPoint<T> implements ScalarPublisher<T> {
 
     protected int capacity;
     protected Queue<T> tokens;
-    /** to monitor existence of the room for additional tokens */
-    protected StreamLock roomLock;
     /** extracted token */
     protected boolean completionRequested = false;
     protected boolean completed = false;

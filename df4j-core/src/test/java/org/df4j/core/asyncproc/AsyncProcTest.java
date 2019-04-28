@@ -1,6 +1,5 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.ScalarPublisher;
 import org.df4j.core.asyncproc.ext.Action;
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;

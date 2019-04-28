@@ -52,6 +52,30 @@ public class UnicastBufferedSourceTest extends PublisherVerification {
         });
     }
 
+
+    // todo fix: test fails intermittently
+    @Override @Test
+    public void required_spec317_mustSupportACumulativePendingElementCountUpToLongMaxValue() throws Throwable {
+        final int totalElements = 3;
+
+        activePublisherTest(totalElements, true, pub -> {
+            final TestEnvironment.ManualSubscriber<Long> sub = env.newManualSubscriber(pub);
+            sub.request(Long.MAX_VALUE / 2); // pending = Long.MAX_VALUE / 2
+            sub.request(Long.MAX_VALUE / 2); // pending = Long.MAX_VALUE - 1
+            sub.request(1); // pending = Long.MAX_VALUE
+
+            sub.nextElements(totalElements);
+            sub.expectCompletion();
+
+            try {
+                env.verifyNoAsyncErrorsNoDelay();
+            } finally {
+                sub.cancel();
+            }
+        });
+    }
+
+
     static class FailedUnicastSource extends UnicastBufferedSource {
 
         public FailedUnicastSource(Logger parent) {

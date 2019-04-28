@@ -1,7 +1,5 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.ScalarSubscriber;
-
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.
@@ -36,7 +34,7 @@ public class ScalarInput<T> extends ScalarLock implements ScalarSubscriber<T> {
     }
 
     @Override
-    public synchronized void onComplete(T message) {
+    public void onComplete(T message) {
         synchronized(this) {
             if (isCompleted()) {
                 return;
@@ -47,7 +45,7 @@ public class ScalarInput<T> extends ScalarLock implements ScalarSubscriber<T> {
     }
 
     @Override
-    public synchronized void onError(Throwable throwable) {
+    public void onError(Throwable throwable) {
         if (throwable == null) {
             throw new IllegalArgumentException();
         }

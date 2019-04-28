@@ -16,7 +16,7 @@ import java.util.Queue;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends StreamParam<T> implements Subscriber<T> {
+public class StreamInput<T> extends StreamParameter<T> implements Subscriber<T> {
     protected int capacity;
     protected Queue<T> tokens;
     /** to monitor existence of the room for additional tokens */

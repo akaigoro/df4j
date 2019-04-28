@@ -2,9 +2,9 @@ package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.Transition;
 
-public abstract class StreamParam<T> extends StreamLock {
+public abstract class StreamParameter<T> extends StreamLock {
 
-    public StreamParam(Transition transition) {
+    public StreamParameter(Transition transition) {
         super(transition);
     }
 

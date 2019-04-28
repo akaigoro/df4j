@@ -1,14 +1,11 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.ScalarSubscriber;
-import org.df4j.core.SubscriptionCancelledException;
+import org.df4j.core.util.SubscriptionCancelledException;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
     private final ScalarSubscriptionQueue<T> parent;

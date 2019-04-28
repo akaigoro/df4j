@@ -1,6 +1,4 @@
-package org.df4j.core;
-
-import org.df4j.core.asyncproc.ScalarSubscription;
+package org.df4j.core.asyncproc;
 
 public interface ScalarSubscriber<T> {
     /**

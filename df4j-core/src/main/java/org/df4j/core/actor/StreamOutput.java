@@ -1,7 +1,6 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.SubscriptionCancelledException;
-import org.df4j.core.asyncproc.*;
+import org.df4j.core.asyncproc.AsyncProc;
 import org.reactivestreams.Publisher;
 
 import java.util.ArrayDeque;

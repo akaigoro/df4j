@@ -1,6 +1,5 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.PermitSubscriber;
 import org.df4j.core.asyncproc.AsyncProc;
 
 /**

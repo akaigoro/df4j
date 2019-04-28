@@ -1,4 +1,4 @@
-package org.df4j.core;
+package org.df4j.core.actor;
 
 /**
  *  inlet for permits.

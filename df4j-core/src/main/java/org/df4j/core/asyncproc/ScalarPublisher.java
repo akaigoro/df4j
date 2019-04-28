@@ -1,6 +1,4 @@
-package org.df4j.core;
-
-import org.df4j.core.asyncproc.ScalarSubscription;
+package org.df4j.core.asyncproc;
 
 /**
  * A {@link ScalarPublisher} is a provider of a single element, publishing it to a {@link ScalarSubscriber}(s).

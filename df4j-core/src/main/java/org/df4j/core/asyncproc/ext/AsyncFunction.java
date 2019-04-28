@@ -1,7 +1,7 @@
 package org.df4j.core.asyncproc.ext;
 
 import org.df4j.core.asyncproc.ScalarInput;
-import org.df4j.core.ScalarSubscriber;
+import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.asyncproc.ScalarSubscription;
 import org.df4j.core.util.invoker.ConsumerInvoker;
 import org.df4j.core.util.invoker.FunctionInvoker;
