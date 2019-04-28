@@ -22,7 +22,6 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publi
     private final StreamLock streamLock;
     protected int capacity;
     protected Queue<T> tokens;
-    protected boolean completionRequested = false;
 
     public StreamOutput(AsyncProc actor, int capacity) {
         streamLock = new StreamLock(actor);
@@ -74,19 +73,4 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publi
         }
     }
 
-    public void completion(Throwable completionException) {
-        locker.lock();
-        try {
-            if (completionRequested) {
-                return;
-            }
-            completionRequested = true;
-            this.completionException = completionException;
-            if (tokens.isEmpty()) {
-                super.completion(completionException);
-            }
-        } finally {
-            locker.unlock();
-        }
-    }
 }

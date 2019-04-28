@@ -35,11 +35,15 @@ public class Semafor extends StreamLock implements PermitSubscriber {
         if (delta < 0) {
             throw new IllegalArgumentException("resource counter delta must be >= 0");
         }
-        long prev = count;
-        count+= delta;
-        if (prev <= 0 && count > 0 ) {
-            unblock();
+        synchronized(this) {
+            long prev = count;
+            count+= delta;
+            if (prev > 0 || count <= 0) {
+                return;
+            }
         }
+        unblock();
+
     }
 
     /** decrements resource counter by delta

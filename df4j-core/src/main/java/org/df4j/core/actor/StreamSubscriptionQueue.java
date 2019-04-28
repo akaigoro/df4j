@@ -19,7 +19,8 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
     protected final ReentrantLock locker = new ReentrantLock();
     protected LinkedQueue<StreamSubscription> activeSubscriptions = new LinkedQueue<>();
     protected LinkedQueue<StreamSubscription> passiveSubscriptions = new LinkedQueue<>();
-    protected boolean completed = false;
+    protected volatile boolean completed = false;
+    protected volatile boolean completionRequested = false;
     protected Throwable completionException;
 
     @Override
@@ -30,8 +31,12 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
         subscription.lazyMode = false;
         locker.lock();
         try {
-            storeSubscription(subscription);
-            matchingLoop();
+            if (completed) {
+                subscription.complete();
+            } else {
+                storeSubscription(subscription);
+                matchingLoop();
+            }
         } finally {
             locker.unlock();
         }
@@ -46,11 +51,15 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
         while (hasNextToken() && !activeSubscriptions.isEmpty()) {
             T token = nextToken();
             StreamSubscription subscription = activeSubscriptions.poll();
-            Subscriber subs = subscription.subscriber;
+            Subscriber subscriber = subscription.subscriber;
             subscription.requested--;
             subscription.lazyMode = true;
             locker.unlock();
-            subs.onNext(token);
+            try {
+                subscriber.onNext(token);
+            } catch (Throwable thr) {
+                subscriber.onError(thr);
+            }
             locker.lock();
             subscription.lazyMode = false;
             storeSubscription(subscription);
@@ -59,7 +68,8 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
     }
 
     private void checkCompletion() {
-        if (completed && !hasNextToken()) {
+        if (completionRequested && !completed && !hasNextToken()) {
+            completed = true;
             completeSubscriptions(activeSubscriptions);
             completeSubscriptions(passiveSubscriptions);
         }
@@ -81,16 +91,7 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
             if (subscription == null) {
                 break;
             }
-            subscription.lazyMode = true;
-            Subscriber subscriberLoc = subscription.subscriber;
-            subscription.makeCompleted();
-            locker.unlock();
-            if (completionException == null) {
-                subscriberLoc.onComplete();
-            } else {
-                subscriberLoc.onError(completionException);
-            }
-            locker.lock();
+            subscription.complete();
         }
     }
 
@@ -105,10 +106,13 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
         completion(throwable);
     }
 
-    public void completion (Throwable completionException){
+    public void completion(Throwable completionException) {
         locker.lock();
         try {
-            completed = true;
+            if (completionRequested) {
+                return;
+            }
+            completionRequested = true;
             this.completionException = completionException;
             checkCompletion();
         } finally {
@@ -150,6 +154,9 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
                 }
                 boolean wasActive = isActive();
                 requested += n;
+                if (requested < 0) { // long arithmetic overflow
+                    requested = Long.MAX_VALUE;
+                }
                 if (wasActive) {
                     return;
                 }
@@ -181,6 +188,23 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
         private void makeCompleted() {
             completed = true;
             unlink();
+        }
+
+        private void complete() {
+            lazyMode = true;
+            Subscriber subscriberLoc = subscriber;
+            makeCompleted();
+            locker.unlock();
+            try {
+                if (completionException == null) {
+                    subscriberLoc.onComplete();
+                } else {
+                    subscriberLoc.onError(completionException);
+                }
+            } catch (Throwable thr) {
+                subscriberLoc.onError(thr);
+            }
+            locker.lock();
         }
     }
 

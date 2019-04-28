@@ -13,7 +13,7 @@ public class UnicastBufferedSourceTest extends PublisherVerification {
     static final  int defaultTimeout = 400;
 
     public UnicastBufferedSourceTest() throws NoSuchFieldException, IllegalAccessException {
-        super(new TestEnvironment(defaultTimeout));
+        super(defaultTimeout);
     }
 
     @Override
