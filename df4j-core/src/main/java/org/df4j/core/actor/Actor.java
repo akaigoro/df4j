@@ -16,18 +16,14 @@ public abstract class Actor extends AsyncProc {
      * blocked when this actor goes to executor, to ensure serial execution of the act() method.
      */
     private ControlPin controlLock = new ControlPin();
-    /**
-     * if true, this action cannot be restarted
-     */
-    private volatile boolean stopped = false;
 
     public boolean isStopped() {
-        return stopped;
+        return result.isDone();
     }
 
     public void start() {
         synchronized(this) {
-            if (stopped) {
+            if (isStopped()) {
                 return;
             }
         }
@@ -44,12 +40,6 @@ public abstract class Actor extends AsyncProc {
     }
 
     public synchronized void stop(Object completiontValue) {
-        synchronized(this) {
-            if (stopped) {
-                return;
-            }
-            stopped = true;
-        }
         result.onComplete(completiontValue);
     }
 
@@ -58,12 +48,6 @@ public abstract class Actor extends AsyncProc {
     }
 
     public synchronized void stopExceptionally(Throwable t) {
-        synchronized(this) {
-            if (stopped) {
-                return;
-            }
-            stopped = true;
-        }
         result.onError(t);
     }
 
@@ -97,8 +81,9 @@ public abstract class Actor extends AsyncProc {
     }
 
     protected class ControlPin extends StreamLock {
+
         public ControlPin() {
             super(Actor.this);
         }
-    }
+   }
 }

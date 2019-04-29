@@ -15,8 +15,4 @@ public abstract class PublisherVerification extends org.reactivestreams.tck.Publ
         this.env = (TestEnvironment) fenv.get(this);
     }
 
-
-    public PublisherVerification(int timeout) throws NoSuchFieldException, IllegalAccessException {
-        this(new TestEnvironment(timeout));
-    }
 }

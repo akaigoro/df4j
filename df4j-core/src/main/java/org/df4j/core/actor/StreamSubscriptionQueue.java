@@ -181,21 +181,20 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
                 if (isCancelled()) {
                     return;
                 }
-                subscriber = null;
-                makeCompleted();
+                makeCancelled();
             } finally {
                 locker.unlock();
             }
         }
 
-        private void makeCompleted() {
-            completed = true;
+        private void makeCancelled() {
+            subscriber = null;
             unlink();
         }
 
         private void complete() {
             Subscriber subscriberLoc = subscriber;
-            makeCompleted();
+            makeCancelled();
             locker.unlock();
             try {
                 if (completionException == null) {
