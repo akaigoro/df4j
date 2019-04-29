@@ -1,5 +1,8 @@
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.asyncproc.base.ScalarSubscription;
+import org.df4j.core.asyncproc.base.ScalarLock;
+
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.

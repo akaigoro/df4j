@@ -1,6 +1,5 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.AsyncResult;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -8,13 +7,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class AsyncResultSubscribeTest {
+public class CompletablePromiseSubscribeTest {
 
     @Test
     public void singlePublisherTest() throws InterruptedException, ExecutionException, TimeoutException {
-        AsyncResult<Double> publisher = new AsyncResult<>();
-        AsyncResult<Double> subscriber1 = new AsyncResult<>();
-        AsyncResult<Double> subscriber2 = new AsyncResult<>();
+        CompletablePromise<Double> publisher = new CompletablePromise<>();
+        CompletablePromise<Double> subscriber1 = new CompletablePromise<>();
+        CompletablePromise<Double> subscriber2 = new CompletablePromise<>();
         publisher.subscribe(subscriber1);
         publisher.subscribe(subscriber2);
         double v = 4.0;

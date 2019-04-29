@@ -1,4 +1,6 @@
-package org.df4j.core.actor;
+package org.df4j.core.actor.ext;
+
+import org.df4j.core.actor.Actor;
 
 /**
  * does not restarts automatically.

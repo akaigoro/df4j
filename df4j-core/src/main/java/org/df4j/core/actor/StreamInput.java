@@ -1,7 +1,9 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.actor.base.StreamLock;
+import org.df4j.core.actor.base.StreamParameter;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.ScalarLock;
+import org.df4j.core.asyncproc.base.ScalarLock;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 

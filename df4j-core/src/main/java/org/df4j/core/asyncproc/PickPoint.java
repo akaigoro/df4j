@@ -1,5 +1,7 @@
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.asyncproc.base.ScalarSubscription;
+import org.df4j.core.asyncproc.base.ScalarSubscriptionQueue;
 import org.df4j.core.util.SubscriptionCancelledException;
 
 import java.util.ArrayDeque;

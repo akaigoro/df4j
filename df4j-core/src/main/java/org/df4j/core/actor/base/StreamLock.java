@@ -1,7 +1,7 @@
-package org.df4j.core.actor;
+package org.df4j.core.actor.base;
 
-import org.df4j.core.asyncproc.ScalarLock;
-import org.df4j.core.asyncproc.Transition;
+import org.df4j.core.asyncproc.base.ScalarLock;
+import org.df4j.core.asyncproc.base.Transition;
 
 /**
  * Basic class for all pins and connectors (places for tokens).

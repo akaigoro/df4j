@@ -9,6 +9,8 @@
  */
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.asyncproc.base.Transition;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -59,13 +61,13 @@ public abstract class AsyncProc<R> extends Transition {
     }
 
     private Executor executor;
-    protected final AsyncResult<R> result = new AsyncResult<>(this);
+    protected final CompletablePromise<R> result = new CompletablePromise<>(this);
 
     public void setExecutor(Executor exec) {
         this.executor = exec;
     }
 
-    public AsyncResult<R> asyncResult() {
+    public CompletablePromise<R> asyncResult() {
         return result;
     }
 

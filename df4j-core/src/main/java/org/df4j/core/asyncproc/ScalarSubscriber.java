@@ -1,6 +1,10 @@
 package org.df4j.core.asyncproc;
 
-public interface ScalarSubscriber<T> {
+import org.df4j.core.asyncproc.base.ScalarSubscription;
+
+import java.util.function.BiConsumer;
+
+public interface ScalarSubscriber<T> extends BiConsumer<T, Throwable> {
     /**
      * Invoked after calling {@link ScalarPublisher#subscribe(ScalarSubscriber)}.
      *
@@ -24,4 +28,13 @@ public interface ScalarSubscriber<T> {
      * @param t the throwable signaled
      */
     default void onError(Throwable t) {}
+
+    @Override
+    default void accept(T t, Throwable throwable) {
+        if (throwable == null) {
+            onComplete(t);
+        } else {
+            onError(throwable);
+        }
+    }
 }

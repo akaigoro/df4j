@@ -9,15 +9,13 @@
  */
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.AsyncResult;
+import org.df4j.core.asyncproc.CompletablePromise;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.*;
-import java.util.function.BiFunction;
 
 import org.df4j.core.asyncproc.AsyncProc.CurrentThreadExecutor;
-import org.reactivestreams.Publisher;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -60,7 +58,7 @@ public abstract class StreamOutputTestBase {
   //      from.setExecutor(executor);
         from.start();
  //       executor.runAll();
-        AsyncResult result = from.asyncResult();
+        CompletablePromise result = from.asyncResult();
         try {
             log.get(100, TimeUnit.MILLISECONDS);
             if (sinkCount==0) {

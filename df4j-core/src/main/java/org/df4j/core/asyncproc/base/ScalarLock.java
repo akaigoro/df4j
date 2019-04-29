@@ -1,4 +1,6 @@
-package org.df4j.core.asyncproc;
+package org.df4j.core.asyncproc.base;
+
+import org.df4j.core.asyncproc.base.Transition;
 
 /**
  * Basic class for all pins and connectors (places for tokens).

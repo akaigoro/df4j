@@ -1,6 +1,7 @@
-package org.df4j.core.actor;
+package org.df4j.core.actor.base;
 
-import org.df4j.core.asyncproc.Transition;
+import org.df4j.core.actor.base.StreamLock;
+import org.df4j.core.asyncproc.base.Transition;
 
 public abstract class StreamParameter<T> extends StreamLock {
 

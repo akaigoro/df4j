@@ -1,5 +1,7 @@
 package org.df4j.core.asyncproc;
 
+import org.df4j.core.asyncproc.base.ScalarLock;
+import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
 
 public class AllOf extends AsyncSupplier<Void> {

@@ -1,5 +1,7 @@
-package org.df4j.core.asyncproc;
+package org.df4j.core.asyncproc.base;
 
+import org.df4j.core.asyncproc.ScalarPublisher;
+import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.SubscriptionCancelledException;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.reactivestreams.Subscriber;

@@ -1,4 +1,4 @@
-package org.df4j.core.actor;
+package org.df4j.core.actor.base;
 
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.linked.Link;

@@ -43,7 +43,7 @@ public class AsyncProcTest {
         }
     }
 
-    private AsyncResult<Double> computeDiscr(double a, double b, double c) {
+    private CompletablePromise<Double> computeDiscr(double a, double b, double c) {
         Discr d = new Discr();
         d.pa.onComplete(a);
         d.pb.onComplete(b);
@@ -52,7 +52,7 @@ public class AsyncProcTest {
     }
 
     public void computeDiscrAndScheck(double a, double b, double c, double expected) throws InterruptedException, ExecutionException, TimeoutException {
-        AsyncResult<Double> asyncResult = computeDiscr(a, b, c);
+        CompletablePromise<Double> asyncResult = computeDiscr(a, b, c);
         Double result = asyncResult.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -85,7 +85,7 @@ public class AsyncProcTest {
         }
     }
 
-    private AsyncResult<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
+    private CompletablePromise<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
         RootCalc rc = new RootCalc();
         rc.pa.onComplete(a);
         rc.pb.onComplete(b);
@@ -94,7 +94,7 @@ public class AsyncProcTest {
     }
 
     public void calcRootsAndCheck(double a, double b, double d, double... expected) throws InterruptedException, ExecutionException, TimeoutException {
-        AsyncResult<double[]> rc = calcRoots(a, b, AsyncResult.completedResult(d));
+        CompletablePromise<double[]> rc = calcRoots(a, b, CompletablePromise.completedResult(d));
         double[] result = rc.get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }
@@ -107,8 +107,8 @@ public class AsyncProcTest {
     }
 
     public void computeRoots(double a, double b, double c, double... expected) throws InterruptedException, ExecutionException, TimeoutException {
-        AsyncResult<Double> d = computeDiscr(a, b, c);
-        AsyncResult<double[]> rc = calcRoots(a, b, d);
+        CompletablePromise<Double> d = computeDiscr(a, b, c);
+        CompletablePromise<double[]> rc = calcRoots(a, b, d);
         double[] result = rc.get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }

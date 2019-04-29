@@ -1,5 +1,6 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.asyncproc.AsyncProc;
 
 /**

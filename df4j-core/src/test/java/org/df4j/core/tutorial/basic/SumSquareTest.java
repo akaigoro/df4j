@@ -1,7 +1,7 @@
 package org.df4j.core.tutorial.basic;
 
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.AsyncResult;
+import org.df4j.core.asyncproc.CompletablePromise;
 import org.df4j.core.asyncproc.ScalarInput;
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncFunction;
@@ -15,7 +15,6 @@ import java.util.function.Function;
 public class SumSquareTest {
 
     public static class Square extends AsyncProc<Integer> {
-        final AsyncResult<Integer> result = new AsyncResult<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
         public void run() {
@@ -50,8 +49,8 @@ public class SumSquareTest {
         Square sqY = new Square();
         Sum sum = new Sum();
         // make 2 connections
-        sqX.result.subscribe(sum.paramX);
-        sqY.result.subscribe(sum.paramY);
+        sqX.asyncResult().subscribe(sum.paramX);
+        sqY.asyncResult().subscribe(sum.paramY);
         // provide input information:
         sqX.param.onComplete(3);
         sqY.param.onComplete(4);
@@ -81,7 +80,7 @@ public class SumSquareTest {
         sqX.onComplete(3);
         sqY.onComplete(4);
         // get the result
-        AsyncResult<Integer> result = sum.asyncResult();
+        CompletablePromise<Integer> result = sum.asyncResult();
         int res = result.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
