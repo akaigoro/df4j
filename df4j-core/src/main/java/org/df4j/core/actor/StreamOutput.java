@@ -18,13 +18,13 @@ import java.util.Queue;
  */
 public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publisher<T> {
 
-    private final StreamLock streamLock;
+    private final StreamLock outerLock;
     protected int capacity;
     protected Queue<T> tokens;
 
     public StreamOutput(AsyncProc actor, int capacity) {
-        streamLock = new StreamLock(actor);
-        streamLock.unblock();
+        outerLock = new StreamLock(actor);
+        outerLock.unblock();
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
@@ -45,7 +45,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publi
     protected T nextToken() {
         T t = tokens.poll();
         if (t != null) {
-            streamLock.unblock();
+            outerLock.unblock();
         }
         return t;
     }
@@ -64,7 +64,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publi
             }
             tokens.add(token);
             if (tokens.size() >= capacity) {
-                streamLock.block();
+                outerLock.block();
             }
             matchingLoop();
         } finally {

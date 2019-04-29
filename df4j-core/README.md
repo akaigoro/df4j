@@ -36,14 +36,14 @@ First, we need to create 2 classes, one to compute a square of a value, and seco
 
 ```java
 
-    public static class Square extends AsyncProc {
-        final CompletablePromise<Integer> result = new CompletablePromise<>();
+    public static class Square extends AsyncProc<Integer> {
+        final AsyncResult<Integer> result = new AsyncResult<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
         public void run() {
             Integer arg = param.current();
             int res = arg*arg;
-            result.complete(res);
+            result.onComplete(res);
         }
     }
 ```
@@ -51,8 +51,7 @@ Here we see a node with one output parameter `result` and one input parameter `p
 Note the bound parameter constructor has additional parameter - a reference to the parent node.
 
 ```java
-    public static class Sum extends AsyncProc {
-        final CompletablePromise<Integer> result = new CompletablePromise<>();
+    public static class Sum extends AsyncProc<Integer> {
         final ScalarInput<Integer> paramX = new ScalarInput<>(this);
         final ScalarInput<Integer> paramY = new ScalarInput<>(this);
 
@@ -60,7 +59,7 @@ Note the bound parameter constructor has additional parameter - a reference to t
             Integer argX = paramX.current();
             Integer argY = paramY.current();
             int res = argX + argY;
-            result.complete(res);
+            result.onComplete(res);
         }
     }
 ```
@@ -81,10 +80,10 @@ public class SumSquareTest {
         sqX.result.subscribe(sum.paramX);
         sqY.result.subscribe(sum.paramY);
         // provide input information:
-        sqX.param.onNext(3);
-        sqY.param.onNext(4);
+        sqX.param.onComplete(3);
+        sqY.param.onComplete(4);
         // get the result
-        int res = sum.result.get();
+        int res = sum.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
 }

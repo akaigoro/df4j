@@ -7,7 +7,7 @@ import org.df4j.core.asyncproc.Transition;
  * Basic class for all pins and connectors (places for tokens).
  * Can be considered as an asynchronous binary semaphore.
  * Has 2 states: blocked or unblocked.
- * When all pins become unblocked, method {@link #fire()} is called.
+ * When all pins become unblocked, method {@link Transition#fire()} is called.
  * This resembles firing of a Petri Net transition.
  */
 public class StreamLock extends ScalarLock {

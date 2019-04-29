@@ -9,6 +9,8 @@ For those interested in history of dataflow programming, I recommend to start wi
 and then short introductory article "Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
 
 The primary goal of this library is to investigate the anatomy of asynchronous programming.
+So this project avoids highly optimized cryptic code usually found in such library. The main goal was to make readable code.
+
 The asynchronous programming always attracted Java programmers,
 and the absence of a complete asynchronous support in language and runtime only stimulated programmers to find their own solutions.
 Today some asynchronous libraries for Java are very popular, e.g. rx-java, vert.x, Akka.
@@ -17,9 +19,9 @@ df4j ia an attempt to discover the basic building elements of asynchronous compu
 and allow developer to freely combine those elements, and add new ones.
 It resembles children's building kit: a set of small parts which can be connected together and be assembled in arbitrary complex constructs.
 
-The main results of this work are listed below. Some of them look evident, but listed for completeness.
+The foundation principles are following:
 
-1. Parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
+1. Any parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
 Activities compute tokens (values and signals), connectors pass them between activities.
 2. Activities can be of two kinds: threads and asynchronous procedures.
 3. Asynchronous procedure consists of:
@@ -28,10 +30,17 @@ Activities compute tokens (values and signals), connectors pass them between act
   - reference to an Executor, and
   - an object that glues all that components together. Below this object is referenced as a "node of dataflow graph", or just a "node".
 4. Connector has several important characteristics:
- -  it can be bound to a node and serve as a mandatory asyncronous parameter. The execution of the node starts exactly after all such parameters are filled with tokens. 
+ - which protocol it implements
+ - can play the role of asyncronous parameter. The execution of the node starts exactly after all such parameters are filled with tokens.
  - can be used for input or output.
  - can connect asynchronous procedures and/or threads
- 
+
+This library has implementations for following protocols:
+
+1. Scalar messages: this is the protocol used in CompletableFuture. At most one message or an error is sent.
+2. Permit stream. This is the protocol used in Semahores. This library expands it to asynchronous connectors.
+3. Reactive message streams, as defined in the package org.reactivestreams.
+
 Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output connectors are necessary. 
 A node can have multiple input and multiple output connectors.
 Nodes are connected by their connectors: output connector of one node is connected to input connector of another node.
