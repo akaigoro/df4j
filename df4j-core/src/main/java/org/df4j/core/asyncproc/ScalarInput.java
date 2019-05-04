@@ -1,6 +1,6 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.base.ScalarSubscription;
+import io.reactivex.disposables.Disposable;
 import org.df4j.core.asyncproc.base.ScalarLock;
 
 /**
@@ -13,7 +13,7 @@ public class ScalarInput<T> extends ScalarLock implements ScalarSubscriber<T> {
     protected AsyncProc task;
     /** extracted token */
     protected Throwable completionException;
-    protected ScalarSubscription subscription;
+    protected Disposable subscription;
     protected T current;
 
     public ScalarInput(AsyncProc task) {
@@ -32,7 +32,7 @@ public class ScalarInput<T> extends ScalarLock implements ScalarSubscriber<T> {
     }
 
     @Override
-    public synchronized void onSubscribe(ScalarSubscription s) {
+    public synchronized void onSubscribe(Disposable s) {
         this.subscription = s;
     }
 

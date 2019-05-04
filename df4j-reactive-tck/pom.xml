@@ -5,13 +5,18 @@
     <parent>
         <artifactId>df4j</artifactId>
         <groupId>org.df4j</groupId>
-        <version>7.0</version>
+        <version>7.1</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>df4j-reactive-tck</artifactId>
 
     <dependencies>
+        <dependency>
+            <groupId>org.df4j</groupId>
+            <artifactId>df4j-rxjava2</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.df4j</groupId>
             <artifactId>df4j-core</artifactId>

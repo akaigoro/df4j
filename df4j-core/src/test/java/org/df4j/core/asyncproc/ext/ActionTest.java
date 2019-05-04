@@ -1,8 +1,8 @@
-package org.df4j.core.asyncproc;
+package org.df4j.core.asyncproc.ext;
 
-import org.df4j.core.asyncproc.ext.Action;
-import org.df4j.core.asyncproc.ext.AsyncBiFunction;
-import org.df4j.core.asyncproc.ext.AsyncSupplier;
+import org.df4j.core.asyncproc.ScalarInput;
+import org.df4j.core.asyncproc.ScalarPublisher;
+import org.df4j.core.asyncproc.ScalarResult;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class AsyncProcTest {
+public class ActionTest {
 
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
@@ -43,7 +43,7 @@ public class AsyncProcTest {
         }
     }
 
-    private CompletablePromise<Double> computeDiscr(double a, double b, double c) {
+    private ScalarResult<Double> computeDiscr(double a, double b, double c) {
         Discr d = new Discr();
         d.pa.onComplete(a);
         d.pb.onComplete(b);
@@ -52,7 +52,7 @@ public class AsyncProcTest {
     }
 
     public void computeDiscrAndScheck(double a, double b, double c, double expected) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletablePromise<Double> asyncResult = computeDiscr(a, b, c);
+        ScalarResult<Double> asyncResult = computeDiscr(a, b, c);
         Double result = asyncResult.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -85,7 +85,7 @@ public class AsyncProcTest {
         }
     }
 
-    private CompletablePromise<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
+    private ScalarResult<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
         RootCalc rc = new RootCalc();
         rc.pa.onComplete(a);
         rc.pb.onComplete(b);
@@ -94,7 +94,7 @@ public class AsyncProcTest {
     }
 
     public void calcRootsAndCheck(double a, double b, double d, double... expected) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletablePromise<double[]> rc = calcRoots(a, b, CompletablePromise.completedResult(d));
+        ScalarResult<double[]> rc = calcRoots(a, b, ScalarResult.completedResult(d));
         double[] result = rc.get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }
@@ -107,8 +107,8 @@ public class AsyncProcTest {
     }
 
     public void computeRoots(double a, double b, double c, double... expected) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletablePromise<Double> d = computeDiscr(a, b, c);
-        CompletablePromise<double[]> rc = calcRoots(a, b, d);
+        ScalarResult<Double> d = computeDiscr(a, b, c);
+        ScalarResult<double[]> rc = calcRoots(a, b, d);
         double[] result = rc.get(1, TimeUnit.SECONDS);
         Assert.assertArrayEquals(expected, result, 0.001);
     }

@@ -1,7 +1,7 @@
 package org.df4j.core.tutorial.basic;
 
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.CompletablePromise;
+import org.df4j.core.asyncproc.ScalarResult;
 import org.df4j.core.asyncproc.ScalarInput;
 import org.df4j.core.asyncproc.ext.AsyncBiFunction;
 import org.df4j.core.asyncproc.ext.AsyncFunction;
@@ -80,7 +80,7 @@ public class SumSquareTest {
         sqX.onComplete(3);
         sqY.onComplete(4);
         // get the result
-        CompletablePromise<Integer> result = sum.asyncResult();
+        ScalarResult<Integer> result = sum.asyncResult();
         int res = result.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }

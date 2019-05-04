@@ -1,5 +1,6 @@
 package org.df4j.nio2.net.echo;
 
+import org.df4j.core.asyncproc.ScalarResult;
 import org.junit.*;
 
 import java.io.IOException;
@@ -40,7 +41,8 @@ public  class EchoTest {
     public void ClientTest_1() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         EchoClient client = new EchoClient(local9990, 1);
         client.start();
-        client.result.get(1, TimeUnit.SECONDS);
+        ScalarResult<Void> result = client.result;
+        result.get(1, TimeUnit.SECONDS);
     }
 
     @Test

@@ -7,13 +7,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class CompletablePromiseSubscribeTest {
+public class ScalarResultSubscriberTest {
 
     @Test
     public void singlePublisherTest() throws InterruptedException, ExecutionException, TimeoutException {
-        CompletablePromise<Double> publisher = new CompletablePromise<>();
-        CompletablePromise<Double> subscriber1 = new CompletablePromise<>();
-        CompletablePromise<Double> subscriber2 = new CompletablePromise<>();
+        ScalarResult<Double> publisher = new ScalarResult<>();
+        ScalarResult<Double> subscriber1 = new ScalarResult<>();
+        ScalarResult<Double> subscriber2 = new ScalarResult<>();
         publisher.subscribe(subscriber1);
         publisher.subscribe(subscriber2);
         double v = 4.0;

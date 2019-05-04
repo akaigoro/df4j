@@ -1,6 +1,6 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.base.ScalarSubscription;
+import org.df4j.core.asyncproc.base.ScalarSubscriptionImpl;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionQueue;
 import org.df4j.core.util.SubscriptionCancelledException;
 
@@ -46,7 +46,7 @@ public class PickPoint<T> implements ScalarPublisher<T> {
             if (!completed) {
                 nextValue = tokens.poll();
                 if (nextValue == null) {
-                    ScalarSubscription<T> subscription = new ScalarSubscription(scalarSubscriptionQueue, subscriber);
+                    ScalarSubscriptionImpl<T> subscription = new ScalarSubscriptionImpl(scalarSubscriptionQueue, subscriber);
                     scalarSubscriptionQueue.subscribe(subscription);
                     return;
                 }
@@ -72,7 +72,7 @@ public class PickPoint<T> implements ScalarPublisher<T> {
             throw new NullPointerException();
         }
         for (;;) {
-            ScalarSubscription<T> subs;
+            ScalarSubscriptionImpl<T> subs;
             synchronized(this) {
                 if (completionRequested) {
                     return;

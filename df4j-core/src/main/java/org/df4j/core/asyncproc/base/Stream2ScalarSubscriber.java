@@ -1,5 +1,6 @@
 package org.df4j.core.asyncproc.base;
 
+import io.reactivex.disposables.Disposable;
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.reactivestreams.Subscriber;
 
@@ -23,8 +24,8 @@ public class Stream2ScalarSubscriber<T> implements ScalarSubscriber<T> {
     }
 
     @Override
-    public void onSubscribe(ScalarSubscription subscription) {
-        streamSubscriber.onSubscribe((ScalarSubscription.Scalar2StreamSubscription) subscription);
+    public void onSubscribe(Disposable subscription) {
+        streamSubscriber.onSubscribe((ScalarSubscriptionImpl.Scalar2StreamSubscription) subscription);
     }
 
     @Override

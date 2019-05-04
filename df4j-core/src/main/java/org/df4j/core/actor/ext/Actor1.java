@@ -9,7 +9,7 @@
  */
 package org.df4j.core.actor.ext;
 
-import com.sun.istack.internal.NotNull;
+import io.reactivex.annotations.NonNull;
 import org.df4j.core.actor.StreamInput;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -65,9 +65,9 @@ public abstract class Actor1<M> extends FancyActor implements Subscriber<M> {
         }
     }
 
-    protected abstract void runAction(@NotNull M arg) throws Exception;
+    protected abstract void runAction(@NonNull M arg) throws Exception;
 
-    protected void completion(@NotNull Throwable completionException) throws Exception {
+    protected void completion(@NonNull Throwable completionException) throws Exception {
         stop();
     }
 }

@@ -3,7 +3,6 @@ package org.df4j.core.actor;
 import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.actor.base.StreamSubscriptionQueue;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.reactivestreams.Publisher;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -18,7 +17,7 @@ import java.util.Queue;
  * @param <T> the type of transferred messages
  *
  */
-public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Publisher<T> {
+public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements StreamPublisher<T> {
 
     private final StreamLock outerLock;
     protected int capacity;

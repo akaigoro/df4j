@@ -67,6 +67,8 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Submodiles:
 
+[df4j-core](/df4j-rxjava2/README.md) - various predefined types of asynchronous nodes and connectors
+
 [df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and connectors
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
@@ -75,8 +77,9 @@ Submodiles:
  
 Version history
 ---------------
-2019/03/24
+2019/05/04
 Branch API-7 and tag ver7.0 created.
+tag ver7.1: scalars made compatible with RxJava2
 
 2018/07/15
 Branch API-5 and tag ver5.0.1 created.

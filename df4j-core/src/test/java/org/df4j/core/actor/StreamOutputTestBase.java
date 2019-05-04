@@ -9,7 +9,7 @@
  */
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.CompletablePromise;
+import org.df4j.core.asyncproc.ScalarResult;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,7 +58,7 @@ public abstract class StreamOutputTestBase {
   //      from.setExecutor(executor);
         from.start();
  //       executor.runAll();
-        CompletablePromise result = from.asyncResult();
+        ScalarResult result = from.asyncResult();
         try {
             log.get(100, TimeUnit.MILLISECONDS);
             if (sinkCount==0) {

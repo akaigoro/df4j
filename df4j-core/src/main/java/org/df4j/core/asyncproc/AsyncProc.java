@@ -61,13 +61,13 @@ public abstract class AsyncProc<R> extends Transition {
     }
 
     private Executor executor;
-    protected final CompletablePromise<R> result = new CompletablePromise<>(this);
+    protected final ScalarResult<R> result = new ScalarResult<>(this);
 
     public void setExecutor(Executor exec) {
         this.executor = exec;
     }
 
-    public CompletablePromise<R> asyncResult() {
+    public ScalarResult<R> asyncResult() {
         return result;
     }
 

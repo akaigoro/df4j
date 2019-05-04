@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.df4j</groupId>
 		<artifactId>df4j</artifactId>
-		<version>7.0</version>
+		<version>7.1</version>
 	</parent>
 
     <artifactId>df4j-nio2</artifactId>
@@ -13,11 +13,21 @@
 	<packaging>jar</packaging>
 
 	<dependencies>
-		<dependency>
-			<groupId>org.df4j</groupId>
-			<artifactId>df4j-core</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+        <dependency>
+            <groupId>org.df4j</groupId>
+            <artifactId>df4j-rxjava2</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.df4j</groupId>
+            <artifactId>df4j-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.reactivestreams</groupId>
+            <artifactId>reactive-streams</artifactId>
+            <version>1.0.2</version>
+        </dependency>
 	</dependencies>
 
     <build>

@@ -4,18 +4,17 @@ import org.df4j.core.asyncproc.ScalarPublisher;
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.SubscriptionCancelledException;
 import org.df4j.core.util.linked.LinkedQueue;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * subscribers can be scalar subscribers, stream subscribers, and CompletableFutures.
  *
  * @param <T>
  */
-public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T>> implements ScalarPublisher<T> {
+public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscriptionImpl<T>> implements ScalarPublisher<T>, Publisher<T>  {
 
-    public void subscribe(ScalarSubscription<T> subscription) {
+    public void subscribe(ScalarSubscriptionImpl<T> subscription) {
         subscription.onSubscribe();
         offer(subscription);
     }
@@ -24,24 +23,16 @@ public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T
         if (s == null) {
             throw new NullPointerException();
         }
-        subscribe(new ScalarSubscription(this, s));
-    }
-
-    public void subscribe(CompletableFuture<? super T> cf) {
-        if (cf == null) {
-            throw new NullPointerException();
-        }
-        ScalarSubscriber<T> proxySubscriber = new ScalarSubscription.CompletableFuture2ScalarSubscriber<>(cf);
-        subscribe(proxySubscriber);
+        subscribe(new ScalarSubscriptionImpl(this, s));
     }
 
     public void subscribe(Subscriber<? super T> s) {
-        ScalarSubscription subscription = new ScalarSubscription.Scalar2StreamSubscription(this, s);
+        ScalarSubscriptionImpl subscription = new ScalarSubscriptionImpl.Scalar2StreamSubscription(this, s);
         subscribe(subscription);
     }
 
     public void onComplete(T value) {
-        ScalarSubscription subscription = poll();
+        ScalarSubscriptionImpl subscription = poll();
         for (; subscription != null; subscription = poll()) {
             try {
                 subscription.onComplete(value);
@@ -51,7 +42,7 @@ public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscription<T
     }
 
     public void onError(Throwable ex) {
-        ScalarSubscription subscription = poll();
+        ScalarSubscriptionImpl subscription = poll();
         for (; subscription != null; subscription = poll()) {
             try {
                 subscription.onError(ex);

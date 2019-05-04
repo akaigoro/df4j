@@ -1,9 +1,9 @@
 package org.df4j.core.actor.base;
 
+import org.df4j.core.actor.StreamPublisher;
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkedQueue;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <T>
  */
-public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
+public abstract class StreamSubscriptionQueue<T> {
     protected final ReentrantLock locker = new ReentrantLock();
     protected LinkedQueue<StreamSubscription> activeSubscriptions = new LinkedQueue<>();
     protected LinkedQueue<StreamSubscription> passiveSubscriptions = new LinkedQueue<>();
@@ -22,7 +22,6 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
     protected volatile boolean completionRequested = false;
     protected Throwable completionException;
 
-    @Override
     public void subscribe(Subscriber<? super T> s) {
         StreamSubscription subscription = new StreamSubscription(s);
         subscription.lazyMode = true;
@@ -46,7 +45,7 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
     }
 
     public void subscribe (ScalarSubscriber < ? super T > s){
-        Scalar2StreamSubscriber proxySubscriber = new Scalar2StreamSubscriber(s);
+        StreamPublisher.Scalar2StreamSubscriber proxySubscriber = new StreamPublisher.Scalar2StreamSubscriber(s);
         subscribe(proxySubscriber);
     }
 
@@ -209,36 +208,4 @@ public abstract class StreamSubscriptionQueue<T> implements Publisher<T> {
         }
     }
 
-    static class Scalar2StreamSubscriber<T> implements Subscriber<T> {
-        private ScalarSubscriber scalarSubscriber;
-        private Subscription subscription;
-
-        public Scalar2StreamSubscriber(ScalarSubscriber<? super T> s) {
-            scalarSubscriber = s;
-        }
-
-        @Override
-        public void onSubscribe(Subscription s) {
-            subscription = s;
-            s.request(1);
-        }
-
-        @Override
-        public void onNext(T t) {
-            scalarSubscriber.onComplete(t);
-            subscription.cancel();
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            scalarSubscriber.onError(t);
-            subscription.cancel();
-        }
-
-        @Override
-        public void onComplete() {
-            scalarSubscriber.onComplete(null);
-            subscription.cancel();
-        }
-    }
 }

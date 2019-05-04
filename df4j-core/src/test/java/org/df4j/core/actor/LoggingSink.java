@@ -1,13 +1,13 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.asyncproc.CompletablePromise;
+import org.df4j.core.asyncproc.ScalarResult;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LoggingSink implements Subscriber<Long> {
-    private final CompletablePromise<Long> asyncResult = new CompletablePromise<Long>();
+    private final ScalarResult<Long> asyncResult = new ScalarResult<Long>();
     Logger parent;
     final String name;
     AtomicInteger received = new AtomicInteger(0);

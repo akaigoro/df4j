@@ -1,19 +1,18 @@
 package org.df4j.core.asyncproc.base;
 
+import io.reactivex.disposables.Disposable;
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.SubscriptionCancelledException;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import java.util.concurrent.CompletableFuture;
-
-public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
+public class ScalarSubscriptionImpl<T> extends Link<ScalarSubscriptionImpl<T>> implements Disposable {
     private final ScalarSubscriptionQueue<T> parent;
     protected ScalarSubscriber subscriber;
     private volatile boolean inOnSubscribe = false;
 
-    public ScalarSubscription(ScalarSubscriptionQueue<T> parent, ScalarSubscriber subscriber) {
+    public ScalarSubscriptionImpl(ScalarSubscriptionQueue<T> parent, ScalarSubscriber subscriber) {
         if (parent == null || subscriber == null) {
             throw new NullPointerException();
         }
@@ -66,7 +65,17 @@ public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
         extractScalarSubscriber().onError(t);
     }
 
-    public static class Scalar2StreamSubscription<T> extends ScalarSubscription<T> implements Subscription {
+    @Override
+    public void dispose() {
+        cancel();
+    }
+
+    @Override
+    public boolean isDisposed() {
+        return isCancelled();
+    }
+
+    public static class Scalar2StreamSubscription<T> extends ScalarSubscriptionImpl<T> implements Subscription {
         private Stream2ScalarSubscriber scalarSubscriber;
 
         public Scalar2StreamSubscription(ScalarSubscriptionQueue<T> parent, Subscriber<T> streamSubscriber) {
@@ -87,24 +96,4 @@ public class ScalarSubscription<T> extends Link<ScalarSubscription<T>> {
         }
     }
 
-    public static class CompletableFuture2ScalarSubscriber<T> implements ScalarSubscriber<T> {
-        private final CompletableFuture<? super T> cf;
-
-        public CompletableFuture2ScalarSubscriber(CompletableFuture<? super T> cf) {
-            this.cf = cf;
-        }
-
-        @Override
-        public void onSubscribe(ScalarSubscription s) {}
-
-        @Override
-        public void onComplete(T t) {
-            cf.complete(t);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            cf.completeExceptionally(t);
-        }
-    }
 }

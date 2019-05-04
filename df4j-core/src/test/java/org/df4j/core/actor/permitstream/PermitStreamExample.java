@@ -6,7 +6,7 @@ import org.df4j.core.actor.Semafor;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ext.Actor1;
 import org.df4j.core.actor.ext.StreamProcessor;
-import org.df4j.core.asyncproc.CompletablePromise;
+import org.df4j.core.asyncproc.ScalarResult;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -34,7 +34,7 @@ public class PermitStreamExample {
         all.registerAsyncResult(first, last);
 
         first.start();
-        CompletablePromise<Void> asyncResult = all.asyncResult();
+        ScalarResult<Void> asyncResult = all.asyncResult();
   //      Thread.sleep(400);
         asyncResult.get(400000, TimeUnit.MILLISECONDS);
         assertEquals(totalCount, last.totalCount);
