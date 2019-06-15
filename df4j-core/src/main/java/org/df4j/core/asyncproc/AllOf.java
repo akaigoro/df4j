@@ -1,6 +1,6 @@
 package org.df4j.core.asyncproc;
 
-import io.reactivex.disposables.Disposable;
+import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.base.ScalarLock;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
 
@@ -50,14 +50,14 @@ public class AllOf extends AsyncSupplier<Void> {
     }
 
     class Enter extends ScalarLock implements ScalarSubscriber<Object> {
-        Disposable subscription;
+        ScalarSubscription subscription;
 
         public Enter() {
             super(AllOf.this);
         }
 
         @Override
-        public void onSubscribe(Disposable s) {
+        public void onSubscribe(ScalarSubscription s) {
             this.subscription = s;
         }
 

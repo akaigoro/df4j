@@ -51,7 +51,7 @@ The main results of this work are:
 1. Differentiation between connectors and nodes. 
 This allows to develop connectors independently of nodes and make use of new protocols with already developed node types.
 As a result, this library is very compact. 
-It does not contain fluent API and do not tries to implement [all combinations of all capabilities](https://www.google.ru/search?q="all+combinations+of+all+capabilities),
+It does not contain fluent API and does not try to implement [all combinations of all capabilities](https://www.google.ru/search?q="all+combinations+of+all+capabilities),
 but allow developers to freely combine existing and newly developed capabilities.
 
 2. Actors (e.g. [Akka](https://akka.io/)) are no more than repeatable asynchronous procedures.
@@ -65,16 +65,16 @@ See examples and test directories for various custom-made dataflow objects and t
 If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
 
-Submodiles:
-
-[df4j-core](/df4j-rxjava2/README.md) - various predefined types of asynchronous nodes and connectors
+Submodules:
 
 [df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and connectors
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
 [df4j-reactive-tck](/df4j-reactive-tck) - runs df4j against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
- 
+
+[df4j-core](/df4j-rxjava2/README.md) - adapters to RxJava2
+
 Version history
 ---------------
 2019/05/04

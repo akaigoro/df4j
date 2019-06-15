@@ -1,11 +1,7 @@
 package org.df4j.core.asyncproc;
 
-import io.reactivex.SingleObserver;
-import io.reactivex.SingleSource;
-import io.reactivex.disposables.Disposable;
+import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionImpl;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -17,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @param <R> the type of element signaled.
  */
-public interface ScalarPublisher<R> extends SingleSource<R> {
+public interface ScalarPublisher<R> {
 
     /**
      * Request {@link ScalarPublisher} to start scalar data.
@@ -35,30 +31,6 @@ public interface ScalarPublisher<R> extends SingleSource<R> {
      */
     void subscribe(ScalarSubscriber<? super R> s);
 
-    @Override
-    default void subscribe(SingleObserver<? super R> observer) {
-        if (observer == null) {
-            throw new NullPointerException();
-        }
-        ScalarSubscriber<? super R> s = new ScalarSubscriber<R>() {
-            @Override
-            public void onSubscribe(Disposable s) {
-                observer.onSubscribe(s);
-            }
-
-            @Override
-            public void onComplete(R r) {
-                observer.onSuccess(r);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                observer.onError(t);
-            }
-        };
-        subscribe(s);
-    }
-
     default void subscribe(CompletableFuture<? super R> cf) {
         if (cf == null) {
             throw new NullPointerException();
@@ -66,7 +38,7 @@ public interface ScalarPublisher<R> extends SingleSource<R> {
         ScalarSubscriber<? super R> proxySubscriber = new ScalarSubscriber<R>() {
 
             @Override
-            public void onSubscribe(Disposable s) {}
+            public void onSubscribe(ScalarSubscription s) {}
 
             @Override
             public void onComplete(R t) {

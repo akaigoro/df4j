@@ -1,4 +1,4 @@
-package org.df4j.core.tutorial.basic;
+package org.df4j.core.tutorial.scalar;
 
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.asyncproc.ScalarResult;

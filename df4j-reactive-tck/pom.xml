@@ -14,11 +14,6 @@
     <dependencies>
         <dependency>
             <groupId>org.df4j</groupId>
-            <artifactId>df4j-rxjava2</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.df4j</groupId>
             <artifactId>df4j-core</artifactId>
             <version>${project.version}</version>
         </dependency>

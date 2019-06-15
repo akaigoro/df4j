@@ -1,4 +1,4 @@
-package org.df4j.core.tutorial;
+package org.df4j.core.tutorial.actor;
 
 import org.df4j.core.actor.ext.Actor1;
 import org.junit.Test;
@@ -16,7 +16,7 @@ public class HelloWorld1 {
             sb.append(" ");
         }
 
-        protected void onCompleted() {
+        public void onComplete() {
             System.out.println(sb.toString());
             sb.setLength(0);
         }

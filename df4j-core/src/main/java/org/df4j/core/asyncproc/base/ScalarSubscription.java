@@ -10,12 +10,12 @@
  * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See
  * the License for the specific language governing permissions and limitations under the License.
  */
-package io.reactivex.disposables;
+package org.df4j.core.asyncproc.base;
 
 /**
  * Represents a disposable resource.
  */
-public interface Disposable {
+public interface ScalarSubscription {
     /**
      * Dispose the resource, the operation should be idempotent.
      */

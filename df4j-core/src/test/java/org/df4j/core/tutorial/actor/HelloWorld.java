@@ -1,4 +1,4 @@
-package org.df4j.core.tutorial;
+package org.df4j.core.tutorial.actor;
 
 import org.df4j.core.actor.StreamInput;
 import org.df4j.core.actor.ext.FancyActor;
@@ -11,7 +11,6 @@ public class HelloWorld {
      * prints collected strings when argument is an empty string
      */
     class Collector extends FancyActor {
-
         StreamInput<String> input = new StreamInput<String>(this); // actor's parameter
         StringBuilder sb = new StringBuilder();
 

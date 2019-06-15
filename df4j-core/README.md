@@ -2,10 +2,10 @@
 
  Everything should be made as simple as possible, but not simpler. - Albert Einstein
 
-### How to implement an asynchronous procedure.
+### The Anatomy of Asynchronous procedure.
 ------------------------------------------
-An asynchronous procedure differs from a thread that while waiting for input information to be delivered, 
-it does not use procedure stack and so does not wastes core memory. 
+An asynchronous procedure is a kind of parallel activity, along with a Thread.
+It differs from a thread so that while waiting for input information to be delivered, it does not use procedure stack and so does not wastes core memory.
 As a result, we can manage millions of asynchronous procedures,
 while 10000 threads is already a heavy load. This can be important, for example, when constructing a web-server.
 
@@ -13,7 +13,8 @@ An asynchronous procedure differs from ordinary synchronous procedure in the fol
  - it resides in the heap and not on a thread's stack
  - its input and output parameters are not simple variables but separate objects in the heap
  
-Parameter objects are tightly connected to the asynchronous procedure object. Parameters cooperate to detect the moment when all the parameters are ready, and then submit the procedure to athread pool.
+Parameter objects are tightly connected to the asynchronous procedure object.
+Parameters cooperate to detect the moment when all the parameters are ready, and then submit the procedure to athread pool.
 
 Input parameters are connected to output parameters of other procedures. As a result, the whole program is represented as a (dataflow) graph.
 Each parameter implements some connecting protocol. Connected parameters must belong to the same protocol. A protocol defines:
@@ -22,22 +23,21 @@ Each parameter implements some connecting protocol. Connected parameters must be
 - how many tokens can be transferred through the liftime of the connection: one or many
 - is backpressure supported
 
-The dataflow graph can have cycles. The connections through the cycles must allow transfer of multiple tokens.
+### The two Realms of Asynchronous Programming
+### Scalar realm
 
-For simplicity, only two kinds of connection interfaces are used: for black and for colored tokens. Implementations which allow single tokens and that which allow streams of tokens, use the same interfaces. Intrefaces for colored tokens are borrowed from 
-the Project Reactor (https://projectreactor.io/).   
-
-In practice most async libraries tries to oversymplify and do not allow to create parameters separately from the body of async procedure. The result is overcomplicated API, which simultanousely is limited in expressiveness.
+The Scalar realm contains one-shot events and asynchronous procedure calls to handle them. In Java SE, it is represented by CompletableFuture class.
+Df4j has alternative implementation, interoperable with CompletableFuture - this the class org.df4j.core.asyncproc.AsyncProc.
+To create typical one-shot asynchronous procedure in Df4j, user has to extend class org.df4j.core.asyncproc.AsyncProc, declare one or more input parameters,
+and override the the computational method `run()`.
+The class AsyncProc declares default output parameter named "result", but additional output parameters cam be declared.
 
 For example, let's create an async computation to compute value of x^2+y^2, each arithmetic operation computed in its own asynchronous procedure call.
 
-First, we need to create 2 classes, one to compute a square of a value, and second to compute the sum.
-
+First, we need to create 2 classes, one to compute the square of a value, and second to compute the sum.
 
 ```java
-
     public static class Square extends AsyncProc<Integer> {
-        final AsyncResult<Integer> result = new AsyncResult<>();
         final ScalarInput<Integer> param = new ScalarInput<>(this);
 
         public void run() {
@@ -47,8 +47,7 @@ First, we need to create 2 classes, one to compute a square of a value, and seco
         }
     }
 ```
-Here we see a node with one output parameter `result` and one input parameter `param` bound to the node.
-Note the bound parameter constructor has additional parameter - a reference to the parent node.
+Note the constructor of a bound parameter has additional parameter - a reference to the parent node (this).
 
 ```java
     public static class Sum extends AsyncProc<Integer> {
@@ -63,16 +62,15 @@ Note the bound parameter constructor has additional parameter - a reference to t
         }
     }
 ```
-Here we see an async proc with 2 parameters and one result.
 
-Now we can create the dataflow graph, pass arguments to it and get the result:
+Now we can create the dataflow graph consisting of 3 nodes, pass arguments to it and get the result:
 
 ```java
 public class SumSquareTest {
 
     @Test
     public void testAP() throws ExecutionException, InterruptedException {
-        // create 3 nodes
+        // create nodes
         Square sqX = new Square();
         Square sqY = new Square();
         Sum sum = new Sum();
@@ -87,7 +85,43 @@ public class SumSquareTest {
         Assert.assertEquals(25, res);
     }
 }
-``` 
+```
+All the nodes in this graph execute once and cannot be reused.
+
+### Actor realm
+To handle streams of values efficiently, we need reusable nodes.
+The theory of asynchronous programming knows two kinds of reusable nodes: `Actors` and `Coroutines`.
+Df4J has actors only. because coroutines require compiler support or bytecode transformations.
+
+The actor realm in df4j is located at the package org.df4j.core.actor. The base node class is org.df4j.core.actor.Actor.
+It extends AsyncProc and so has the default result and can contain one-shot parameters (which can be set only once).
+
+`Actors` here are [dataflow actors whith arbitrary number of parameters] (https://pdfs.semanticscholar.org/2dfa/fb6ea86ac739b17641d4c4e51cc17d31a56f.pdf).
+After processing the first set of arguments, the actor purges them out of parameters and waits until next set of arguments is ready.
+The [Hewitt's actors](https://en.wikipedia.org/wiki/Actor_model) (e.g. [Akka](https://akka.io/)) with single predifined input parameter
+are trivial corner case of the dataflow actors. They are implemented in class class is org.df4j.core.actor.ext.Actor1.
+
+Typical df4j actor is programmed as follows:
+So the main difference is parameters which can keep a sequence of values. The node classes differ only that after calling the action procedure,
+the method `AsyncTask.start()` is called again.
+
+
+
+An interesting case is calling `start()` in an asynchronous callback like in
+ [AsyncServerSocketChannel](../df4j-nio2/src/main/java/org/df4j/nio2/net/AsyncServerSocketChannel.java).
+
+To effectively use Actors, they should declare stream parameters.
+
+For example. let's construct an Actor which computes the module (size) of vectors represented by their coordinates x and y:
+
+The dataflow graph can have cycles. The connections through the cycles must allow transfer of multiple tokens.
+
+For simplicity, only two kinds of connection interfaces are used: for black and for colored tokens.
+Implementations which allow single tokens and that which allow streams of tokens, use the same interfaces. Intrefaces for colored tokens are borrowed from
+the Project Reactor (https://projectreactor.io/).   
+
+In practice most async libraries tries to oversymplify and do not allow to create parameters separately from the body of async procedure. The result is overcomplicated API, which simultanousely is limited in expressiveness.
+
 
  The library also has a node class `AsyncFunc` which is an `Asynctask` with predefined output connector `result`.
  Using it, the code can be more compact, but we want to demonstrate the general plan to build asynchronous executions:
@@ -159,18 +193,7 @@ fluent API identical to that of _CompletableFuture_, only to demonstrate how a d
 Detailed explanation of that fluent API is in document [UnderTheHood](/UnderTheHood.md) (in Russian).
  
 
-### What are Actors compared to Asycnchronous Procedures?
 ----------------------------------------------------
-`Actors` here are both [Hewitt's actors](https://en.wikipedia.org/wiki/Actor_model) (e.g. [Akka](https://akka.io/)) 
-with single predifined input parameter, and dataflow actors whith arbitrary number of parameters. 
-In short, actors are repeatable asynchronous procedures. 
-After processing first set of arguments, they purge them out of parameters and wait until next set of arguments is ready.
-So the main difference is parameters which can keep a sequence of values. The node classes differ only that after calling the action procedure,
-the method `AsyncTask.start()` is called again. 
-The node class even can be [AsyncProc](src/main/java/org/df4j/core/node/AsyncProc.java) itself, with method `AsyncProc::start()`
-called by a user-defined method. 
-An interesting case is calling `start()` in an asynchronous callback like in
- [AsyncServerSocketChannel](../df4j-nio2/src/main/java/org/df4j/nio2/net/AsyncServerSocketChannel.java).   
 
 ### Supported protocols.
 -------------------

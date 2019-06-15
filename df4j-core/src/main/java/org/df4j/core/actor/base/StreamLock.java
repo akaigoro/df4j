@@ -32,10 +32,6 @@ public class StreamLock extends ScalarLock {
         return completed;
     }
 
-    /**
-     * pins the pin
-     * called when a token is consumed and the pin become empty
-     */
     public void block() {
         synchronized (this) {
             if (completed) {

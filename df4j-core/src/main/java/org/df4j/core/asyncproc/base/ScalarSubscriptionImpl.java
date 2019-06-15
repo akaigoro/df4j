@@ -1,13 +1,12 @@
 package org.df4j.core.asyncproc.base;
 
-import io.reactivex.disposables.Disposable;
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.SubscriptionCancelledException;
 import org.df4j.core.util.linked.Link;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-public class ScalarSubscriptionImpl<T> extends Link<ScalarSubscriptionImpl<T>> implements Disposable {
+public class ScalarSubscriptionImpl<T> extends Link<ScalarSubscriptionImpl<T>> implements ScalarSubscription {
     private final ScalarSubscriptionQueue<T> parent;
     protected ScalarSubscriber subscriber;
     private volatile boolean inOnSubscribe = false;

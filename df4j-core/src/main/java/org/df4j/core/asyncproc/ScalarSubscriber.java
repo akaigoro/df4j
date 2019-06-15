@@ -1,7 +1,6 @@
 package org.df4j.core.asyncproc;
 
-import io.reactivex.SingleObserver;
-import io.reactivex.disposables.Disposable;
+import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionImpl;
 
 import java.util.function.BiConsumer;
@@ -13,7 +12,7 @@ public interface ScalarSubscriber<T> extends BiConsumer<T, Throwable> {
      * @param s
      *            {@link ScalarSubscriptionImpl} that allows cancelling subscription via {@link ScalarSubscriptionImpl#cancel()} }
      */
-    default void onSubscribe(Disposable s) {}
+    default void onSubscribe(ScalarSubscription s) {}
 
     /**
      * Data notification sent by the {@link ScalarPublisher}
@@ -38,29 +37,5 @@ public interface ScalarSubscriber<T> extends BiConsumer<T, Throwable> {
         } else {
             onError(throwable);
         }
-    }
-
-    /**
-     * enables to subscribe to rxjava2 {@link io.reactivex.SingleSource}
-     * @return
-     */
-    default SingleObserver<T> asSingleObserver() {
-        return new SingleObserver<T>() {
-
-            @Override
-            public void onSubscribe(Disposable d) {
-                ScalarSubscriber.this.onSubscribe(d);
-            }
-
-            @Override
-            public void onSuccess(T o) {
-                onComplete(o);
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                ScalarSubscriber.this.onError(e);
-            }
-        };
     }
 }

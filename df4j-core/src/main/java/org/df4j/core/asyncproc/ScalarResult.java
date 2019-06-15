@@ -1,6 +1,6 @@
 package org.df4j.core.asyncproc;
 
-import io.reactivex.disposables.Disposable;
+import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionImpl;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionQueue;
 import org.df4j.core.asyncproc.base.Stream2ScalarSubscriber;
@@ -23,7 +23,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
     protected volatile T value;
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
-    protected Disposable subscription;
+    protected ScalarSubscription subscription;
 
     public ScalarResult(AsyncProc<T> parent) {
         this.parent = parent;
@@ -47,7 +47,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
     }
 
     @Override
-    public void onSubscribe(Disposable s) {
+    public void onSubscribe(ScalarSubscription s) {
         subscription = s;
     }
 
@@ -126,7 +126,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        Disposable subscriptionLoc;
+        ScalarSubscription subscriptionLoc;
         synchronized(this) {
             subscriptionLoc = subscription;
             if (subscriptionLoc == null) {

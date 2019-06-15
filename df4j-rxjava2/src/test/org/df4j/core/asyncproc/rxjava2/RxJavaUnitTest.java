@@ -5,6 +5,7 @@ import io.reactivex.SingleObserver;
 import io.reactivex.SingleSource;
 import io.reactivex.disposables.Disposable;
 import org.df4j.core.asyncproc.ScalarResult;
+import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
@@ -30,7 +31,8 @@ public class RxJavaUnitTest {
         final int val = 3;
         SingleSource<Integer> rxJavaSource = Single.just(val);
         ScalarResult<Integer> scalarResult = new ScalarResult<>();
-        rxJavaSource.subscribe(scalarResult.asSingleObserver());
+        SingleObserver<Integer> observer = new SingleObserverAdapter(scalarResult);
+        rxJavaSource.subscribe(observer);
         int res = scalarResult.get(200, TimeUnit.MILLISECONDS);
         assertEquals("", val, res);
     }
@@ -45,11 +47,12 @@ public class RxJavaUnitTest {
      *
      */
     @Test
-    public void tpRxJava() throws InterruptedException, ExecutionException, TimeoutException {
+    public void toRxJava() throws InterruptedException, ExecutionException, TimeoutException {
         final int val = 3;
         ScalarResult<Integer> scalarResult = new ScalarResult<>();
         CompletableObserver<Integer> rxJavaSink = new CompletableObserver<>();
-        scalarResult.subscribe((SingleObserver)rxJavaSink);
+        ScalarSubscriber<? super Integer> s = new ScalarSubscriberAdapter<>((SingleObserver)rxJavaSink);
+        scalarResult.subscribe(s);
         scalarResult.onComplete(val);
         int res = rxJavaSink.get(200, TimeUnit.MILLISECONDS);
         assertEquals("", val, res);

@@ -9,13 +9,11 @@
  */
 package org.df4j.core.actor;
 
-import io.reactivex.Completable;
 import org.junit.Test;
 
 import java.util.concurrent.*;
 
 public class UnicastBufferedSourceTest extends StreamOutputTestBase {
-    Completable c;
 
     @Override
     public Source<Long> createPublisher(long elements) {

@@ -26,8 +26,7 @@ public class ConnectionManager extends LazyActor {
         assc = new AsyncServerSocketChannel(addr);
         allowedConnections.release(connCount);
     }
-
-
+    
     @Override
     protected void runAction() throws Throwable {
         ServerConnection conn = new EchoServer(backport);

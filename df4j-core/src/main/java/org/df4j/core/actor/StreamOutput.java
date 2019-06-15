@@ -3,9 +3,15 @@ package org.df4j.core.actor;
 import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.actor.base.StreamSubscriptionQueue;
 import org.df4j.core.asyncproc.AsyncProc;
+import org.df4j.core.asyncproc.ScalarSubscriber;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
 
 /**
  * Non-blocking analogue of blocking queue.
@@ -73,4 +79,94 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Strea
         }
     }
 
+    /**
+     * Analogue to the method {@link BlockingQueue#take()}
+     * @return next value, or null if the stream is completed
+     * @throws InterruptedException - if interrupted while waiting
+     * @throws ExecutionException - if this stream was completed exceptionally
+     */
+    public T take() throws InterruptedException, ExecutionException {
+        locker.lock();
+        try {
+            T res = tokens.poll();
+            if (res != null) {
+                return res;
+            }
+            Condition cond = locker.newCondition();
+            MyScalarSubscriber<T> subscriber = new MyScalarSubscriber<>(cond);
+            subscribe(subscriber);
+            cond.await();
+            if (subscriber.thr != null) {
+                throw new ExecutionException(subscriber.thr);
+            } else {
+                return subscriber.res;
+            }
+        } finally {
+            locker.unlock();
+        }
+    }
+
+    /**
+     * Same as the {@link #take()} but with time-out
+     * @param timeout - how long to wait before giving up, in units of unit
+     * @param unit - a TimeUnit determining how to interpret the timeout parameter
+     * @return next value, or null if the stream completed
+     * @throws InterruptedException - if interrupted while waiting
+     * @throws ExecutionException - if this stream was completed exceptionally
+     * @throws TimeoutException - when timeout exceeded
+     */
+    public synchronized T take(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        locker.lock();
+        try {
+            T res = tokens.poll();
+            if (res != null) {
+                return res;
+            }
+            Condition cond = locker.newCondition();
+            MyScalarSubscriber<T> subscriber = new MyScalarSubscriber<>(cond);
+            subscribe(subscriber);
+            if (!cond.await(timeout, unit)) {
+                throw new TimeoutException();
+            }
+            if (subscriber.thr != null) {
+                throw new ExecutionException(subscriber.thr);
+            } else {
+                return subscriber.res;
+            }
+        } finally {
+            locker.unlock();
+        }
+    }
+
+    private class MyScalarSubscriber<T> implements ScalarSubscriber<T> {
+        final Condition cond;
+        T res;
+        Throwable thr;
+
+        private MyScalarSubscriber(Condition cond) {
+            this.cond = cond;
+        }
+
+        @Override
+        public void onComplete(T t) {
+            locker.lock();
+            try {
+                res = t;
+                cond.signal();
+            } finally {
+                locker.unlock();
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            locker.lock();
+            try {
+                thr = t;
+                cond.signal();
+            } finally {
+                locker.unlock();
+            }
+        }
+    }
 }

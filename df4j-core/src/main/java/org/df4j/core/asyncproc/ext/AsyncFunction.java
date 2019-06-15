@@ -1,6 +1,6 @@
 package org.df4j.core.asyncproc.ext;
 
-import io.reactivex.disposables.Disposable;
+import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.ScalarInput;
 import org.df4j.core.asyncproc.ScalarSubscriber;
 import org.df4j.core.util.invoker.ConsumerInvoker;
@@ -12,7 +12,7 @@ import java.util.function.Function;
 
 public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubscriber<T> {
     protected final ScalarInput<T> argument = new ScalarInput<>(this);
-    private Disposable s;
+    private ScalarSubscription s;
 
     public AsyncFunction() { }
 
@@ -29,7 +29,7 @@ public class AsyncFunction<T, R> extends AsyncSupplier<R> implements ScalarSubsc
     }
 
     @Override
-    public void onSubscribe(Disposable s) {
+    public void onSubscribe(ScalarSubscription s) {
         this.s = s;
     }
 
