@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.actor.ext.Hactor;
 import org.df4j.core.asyncproc.ScalarResult;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;
@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
 /** receives sends and receives limited number of messages
  *
  */
-class EchoClient extends Actor1<ByteBuffer> {
+class EchoClient extends Hactor<ByteBuffer> {
     protected static final Logger LOG = Logger.getLogger(EchoClient.class.getName());
 
     ScalarResult<Void> result = new ScalarResult<>();
@@ -42,7 +42,7 @@ class EchoClient extends Actor1<ByteBuffer> {
         count--;
         if (count==0) {
             LOG.info("client finished successfully");
-            result.onComplete(null);
+            result.onSuccess(null);
             clientConn.close();
             stop();
             return;

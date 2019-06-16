@@ -41,7 +41,7 @@ public abstract class Actor extends AsyncProc {
     }
 
     public synchronized void stop(Object completiontValue) {
-        result.onComplete(completiontValue);
+        result.onSuccess(completiontValue);
     }
 
     public synchronized void stop() {

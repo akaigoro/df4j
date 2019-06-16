@@ -1,12 +1,11 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.ScalarResult;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import org.df4j.core.protocols.Flow;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class LoggingSink implements Subscriber<Long> {
+public class LoggingSink implements Flow.Subscriber<Long> {
     private final ScalarResult<Long> asyncResult = new ScalarResult<Long>();
     Logger parent;
     final String name;
@@ -20,7 +19,7 @@ public class LoggingSink implements Subscriber<Long> {
     }
 
     @Override
-    public void onSubscribe(Subscription s) {
+    public void onSubscribe(Flow.Subscription s) {
         s.request(Long.MAX_VALUE);
     }
 

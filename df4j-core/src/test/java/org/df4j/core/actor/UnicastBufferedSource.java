@@ -1,6 +1,6 @@
 package org.df4j.core.actor;
 
-import org.reactivestreams.Subscriber;
+import org.df4j.core.protocols.Flow;
 
 /**
  * emits totalNumber of Longs and closes the stream
@@ -19,7 +19,7 @@ public class UnicastBufferedSource extends Source<Long> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super Long> subscriber) {
+    public void subscribe(Flow.Subscriber<? super Long> subscriber) {
         output.subscribe(subscriber);
     }
 

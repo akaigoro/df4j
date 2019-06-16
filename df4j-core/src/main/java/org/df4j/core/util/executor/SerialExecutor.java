@@ -1,13 +1,13 @@
 package org.df4j.core.util.executor;
 
-import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.actor.ext.Hactor;
 
 import java.util.concurrent.Executor;
 
 /**
  * works like a single-threaded Executor, but does not own a thread
  */
-public class SerialExecutor extends Actor1<Runnable> {
+public class SerialExecutor extends Hactor<Runnable> {
     {
         start();
     }

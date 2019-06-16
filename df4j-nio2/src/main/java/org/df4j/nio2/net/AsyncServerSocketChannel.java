@@ -11,9 +11,8 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.actor.StreamOutput;
 import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.protocols.Flow;
 import org.df4j.core.util.Logger;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -25,7 +24,7 @@ import java.nio.channels.CompletionHandler;
 /**
  * Accepts incoming connections, pushes them pu subscribers
  *
- * though it extends AsyncAction, it is effectively an Actor1&lt;Subscriber&gt;
+ * though it extends AsyncAction, it is effectively an Hactor&lt;Subscriber&gt;
  *
  *  its sole input is a stream of requests of type ServerConnection
  *  for each ServerConnection, AsyncServerSocketChannel accepts an incoming connection requests
@@ -37,8 +36,8 @@ import java.nio.channels.CompletionHandler;
 public class
 AsyncServerSocketChannel
         extends LazyActor
-        implements Publisher<AsynchronousSocketChannel>,
-        CompletionHandler<AsynchronousSocketChannel, Subscriber<? super AsynchronousSocketChannel>>
+        implements Flow.Publisher<AsynchronousSocketChannel>,
+        CompletionHandler<AsynchronousSocketChannel, Flow.Subscriber<? super AsynchronousSocketChannel>>
 {
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
 
@@ -59,7 +58,7 @@ AsyncServerSocketChannel
 
 
     @Override
-    public void subscribe(Subscriber<? super AsynchronousSocketChannel> subscriber) {
+    public void subscribe(Flow.Subscriber<? super AsynchronousSocketChannel> subscriber) {
         requests.subscribe(subscriber);
     }
 
@@ -80,7 +79,7 @@ AsyncServerSocketChannel
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel result, Subscriber<? super AsynchronousSocketChannel> connection) {
+    public void completed(AsynchronousSocketChannel result, Flow.Subscriber<? super AsynchronousSocketChannel> connection) {
         LOG.finest("AsynchronousServerSocketChannel: request accepted");
         connection.onNext(result);
         this.start(); // allow  next assc.accpt()
@@ -91,7 +90,7 @@ AsyncServerSocketChannel
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, Subscriber<? super AsynchronousSocketChannel> connection) {
+    public void failed(Throwable exc, Flow.Subscriber<? super AsynchronousSocketChannel> connection) {
         connection.onError(exc);
         if (exc instanceof AsynchronousCloseException) {
             // channel closed.

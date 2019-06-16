@@ -1,7 +1,7 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.base.ScalarSubscriptionImpl;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionQueue;
+import org.df4j.core.protocols.Scalar;
 import org.df4j.core.util.SubscriptionCancelledException;
 
 import java.util.ArrayDeque;
@@ -14,7 +14,7 @@ import java.util.Queue;
  *
  * @param <T> the type of the values passed through this token container
  */
-public class PickPoint<T> implements ScalarPublisher<T> {
+public class PickPoint<T> implements Scalar.Publisher<T> {
 
     protected int capacity;
     protected Queue<T> tokens;
@@ -40,22 +40,21 @@ public class PickPoint<T> implements ScalarPublisher<T> {
     }
 
     @Override
-    public void subscribe(ScalarSubscriber<? super T> subscriber) {
+    public void subscribe(Scalar.Subscriber<? super T> subscriber) {
         T nextValue = null;
         synchronized(this) {
             if (!completed) {
                 nextValue = tokens.poll();
                 if (nextValue == null) {
-                    ScalarSubscriptionImpl<T> subscription = new ScalarSubscriptionImpl(scalarSubscriptionQueue, subscriber);
-                    scalarSubscriptionQueue.subscribe(subscription);
+                    scalarSubscriptionQueue.subscribe(subscriber);
                     return;
                 }
             }
         }
         if (nextValue != null) {
-            subscriber.onComplete(nextValue);
+            subscriber.onSuccess(nextValue);
         } else if (completionException == null){
-            subscriber.onComplete(null);
+            subscriber.onSuccess(null);
         } else {
             subscriber.onError(completionException);
         }
@@ -72,7 +71,7 @@ public class PickPoint<T> implements ScalarPublisher<T> {
             throw new NullPointerException();
         }
         for (;;) {
-            ScalarSubscriptionImpl<T> subs;
+            ScalarSubscriptionQueue<T>.ScalarSubscriptionImpl subs;
             synchronized(this) {
                 if (completionRequested) {
                     return;
@@ -84,7 +83,7 @@ public class PickPoint<T> implements ScalarPublisher<T> {
                 }
             }
             try {
-                subs.onComplete(token);
+                subs.onSuccess(token);
                 return;
             } catch (SubscriptionCancelledException e) {
             }
@@ -107,7 +106,7 @@ public class PickPoint<T> implements ScalarPublisher<T> {
 
     public void onComplete() {
         completeInput(null);
-        scalarSubscriptionQueue.onComplete(null);
+        scalarSubscriptionQueue.onSuccess(null);
     }
 
     public void onError(Throwable throwable) {

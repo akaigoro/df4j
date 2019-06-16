@@ -17,7 +17,7 @@ public class AnyOf<T> extends ScalarResult<T> implements BiConsumer<T, Throwable
             return;
         }
         if (ex == null) {
-            onComplete(value);
+            onSuccess(value);
         } else {
             onError(ex);
         }

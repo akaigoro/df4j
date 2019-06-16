@@ -3,7 +3,7 @@ package org.df4j.core.actor;
 import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.actor.base.StreamSubscriptionQueue;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.asyncproc.ScalarSubscriber;
+import org.df4j.core.protocols.Flow;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -23,7 +23,7 @@ import java.util.concurrent.locks.Condition;
  * @param <T> the type of transferred messages
  *
  */
-public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements StreamPublisher<T> {
+public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Flow.Publisher<T> {
 
     private final StreamLock outerLock;
     protected int capacity;
@@ -93,7 +93,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Strea
                 return res;
             }
             Condition cond = locker.newCondition();
-            MyScalarSubscriber<T> subscriber = new MyScalarSubscriber<>(cond);
+            MySubscriber<T> subscriber = new MySubscriber<>(cond);
             subscribe(subscriber);
             cond.await();
             if (subscriber.thr != null) {
@@ -123,7 +123,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Strea
                 return res;
             }
             Condition cond = locker.newCondition();
-            MyScalarSubscriber<T> subscriber = new MyScalarSubscriber<>(cond);
+            MySubscriber<T> subscriber = new MySubscriber<>(cond);
             subscribe(subscriber);
             if (!cond.await(timeout, unit)) {
                 throw new TimeoutException();
@@ -138,24 +138,40 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Strea
         }
     }
 
-    private class MyScalarSubscriber<T> implements ScalarSubscriber<T> {
+    private class MySubscriber<T> implements Flow.Subscriber<T> {
         final Condition cond;
         T res;
         Throwable thr;
+        private Flow.Subscription subscription;
 
-        private MyScalarSubscriber(Condition cond) {
+        private MySubscriber(Condition cond) {
             this.cond = cond;
         }
 
         @Override
-        public void onComplete(T t) {
+        public void onSubscribe(Flow.Subscription subscription) {
+            this.subscription = subscription;
+            subscription.request(1);
+        }
+
+        @Override
+        public void onNext(T t) {
             locker.lock();
             try {
                 res = t;
                 cond.signal();
+                if (subscription != null) {
+                    subscription.cancel();
+                    subscription = null;
+                }
             } finally {
                 locker.unlock();
             }
+        }
+
+        @Override
+        public void onComplete() {
+            onNext(null);
         }
 
         @Override
@@ -164,6 +180,10 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Strea
             try {
                 thr = t;
                 cond.signal();
+                if (subscription != null) {
+                    subscription.cancel();
+                    subscription = null;
+                }
             } finally {
                 locker.unlock();
             }

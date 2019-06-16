@@ -4,7 +4,7 @@
 
     <groupId>org.df4j</groupId>
     <artifactId>df4j</artifactId>
-    <version>7.1</version>
+    <version>7.2</version>
     <packaging>pom</packaging>
     <name>df4j</name>
     <url>https://github.com/akaigoro/df4j</url>
@@ -29,7 +29,7 @@
     </scm>
 
     <properties>
-        <project.version>7.1</project.version>
+        <project.version>7.2</project.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -41,8 +41,9 @@
     <modules>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
-        <module>df4j-reactive-tck</module>
+        <module>df4j-reactivestreams</module>
         <module>df4j-rxjava2</module>
+        <module>df4j-protocols</module>
     </modules>
 
     <dependencies>

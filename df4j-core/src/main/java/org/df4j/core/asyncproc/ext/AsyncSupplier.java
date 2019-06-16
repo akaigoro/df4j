@@ -1,7 +1,6 @@
 package org.df4j.core.asyncproc.ext;
 
-import org.df4j.core.asyncproc.ScalarPublisher;
-import org.df4j.core.asyncproc.ScalarSubscriber;
+import org.df4j.core.protocols.Scalar;
 import org.df4j.core.util.invoker.Invoker;
 import org.df4j.core.util.invoker.RunnableInvoker;
 import org.df4j.core.util.invoker.SupplierInvoker;
@@ -21,7 +20,7 @@ import java.util.function.Supplier;
  *
  * @param <R> type of the result
  */
-public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<R>, Future<R> {
+public class AsyncSupplier<R> extends AsyncAction<R> implements Scalar.Publisher<R>, Future<R> {
 
     public AsyncSupplier() {}
 
@@ -38,12 +37,12 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     }
 
     @Override
-    public void subscribe(ScalarSubscriber<? super R> subscriber) {
+    public void subscribe(Scalar.Subscriber<? super R> subscriber) {
         asyncResult().subscribe(subscriber);
     }
 
     protected void completeResult(R res) {
-        asyncResult().onComplete(res);
+        asyncResult().onSuccess(res);
     }
 
     protected void completeResultExceptionally(Throwable ex) {
@@ -79,7 +78,7 @@ public class AsyncSupplier<R> extends AsyncAction<R> implements ScalarPublisher<
     protected void run() {
         try {
             R res = callAction();
-            result.onComplete(res);
+            result.onSuccess(res);
         } catch (Throwable e) {
             result.onError(e);
         }

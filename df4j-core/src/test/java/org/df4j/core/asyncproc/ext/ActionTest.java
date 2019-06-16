@@ -1,8 +1,8 @@
 package org.df4j.core.asyncproc.ext;
 
 import org.df4j.core.asyncproc.ScalarInput;
-import org.df4j.core.asyncproc.ScalarPublisher;
 import org.df4j.core.asyncproc.ScalarResult;
+import org.df4j.core.protocols.Scalar;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,8 +15,8 @@ public class ActionTest {
     // smoke test
     public void computeMult(double a, double b, double expected) throws InterruptedException, ExecutionException, TimeoutException {
         AsyncBiFunction<Double, Double, Double> mult = new Mult();
-        mult.param1.onComplete(a);
-        mult.param2.onComplete(b);
+        mult.param1.onSuccess(a);
+        mult.param2.onSuccess(b);
         double result = mult.asyncResult().get(1, TimeUnit.SECONDS);
         Assert.assertEquals(expected, result, 0.001);
     }
@@ -45,9 +45,9 @@ public class ActionTest {
 
     private ScalarResult<Double> computeDiscr(double a, double b, double c) {
         Discr d = new Discr();
-        d.pa.onComplete(a);
-        d.pb.onComplete(b);
-        d.pc.onComplete(c);
+        d.pa.onSuccess(a);
+        d.pb.onSuccess(b);
+        d.pc.onSuccess(c);
         return d.asyncResult();
     }
 
@@ -85,10 +85,10 @@ public class ActionTest {
         }
     }
 
-    private ScalarResult<double[]> calcRoots(double a, double b, ScalarPublisher<Double> d) {
+    private ScalarResult<double[]> calcRoots(double a, double b, Scalar.Publisher<Double> d) {
         RootCalc rc = new RootCalc();
-        rc.pa.onComplete(a);
-        rc.pb.onComplete(b);
+        rc.pa.onSuccess(a);
+        rc.pb.onSuccess(b);
         d.subscribe(rc.pd);
         return rc.asyncResult();
     }
@@ -126,7 +126,7 @@ public class ActionTest {
             super((Double val1, Double val2) -> val1 + val2);
         }
 
-        protected Plus(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Plus(Scalar.Publisher pa, Scalar.Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -139,7 +139,7 @@ public class ActionTest {
             super((Double val1, Double val2) -> val1 - val2);
         }
 
-        protected Minus(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Minus(Scalar.Publisher pa, Scalar.Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -152,7 +152,7 @@ public class ActionTest {
             super((Double val1, Double val2) -> val1 * val2);
         }
 
-        protected Mult(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Mult(Scalar.Publisher pa, Scalar.Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);
@@ -165,7 +165,7 @@ public class ActionTest {
             super((Double val1, Double val2) -> val1 / val2);
         }
 
-        protected Div(ScalarPublisher pa, ScalarPublisher pb) {
+        protected Div(Scalar.Publisher pa, Scalar.Publisher pb) {
             this();
             pa.subscribe(param1);
             pb.subscribe(param2);

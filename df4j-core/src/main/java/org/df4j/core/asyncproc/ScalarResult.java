@@ -1,12 +1,9 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.base.ScalarSubscription;
-import org.df4j.core.asyncproc.base.ScalarSubscriptionImpl;
 import org.df4j.core.asyncproc.base.ScalarSubscriptionQueue;
-import org.df4j.core.asyncproc.base.Stream2ScalarSubscriber;
+import org.df4j.core.protocols.Disposable;
+import org.df4j.core.protocols.Scalar;
 import org.df4j.core.util.SubscriptionCancelledException;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.*;
 
@@ -16,14 +13,14 @@ import java.util.concurrent.*;
  * interfaces on output end.
  *
  */
-public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>, Publisher<T>, Future<T> {
+public class ScalarResult<T> implements Scalar.Subscriber<T>, Scalar.Publisher<T>, Future<T> {
     protected AsyncProc<T> parent;
     protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
     protected volatile boolean done;
     protected volatile T value;
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
-    protected ScalarSubscription subscription;
+    protected Disposable subscription;
 
     public ScalarResult(AsyncProc<T> parent) {
         this.parent = parent;
@@ -35,7 +32,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
     public ScalarResult(CompletionStage<? extends T> completionStage) {
         completionStage.whenComplete((value, ex)->{
             if (ex == null) {
-                onComplete(value);
+                onSuccess(value);
             } else {
                 onError(ex);
             }
@@ -47,12 +44,12 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
     }
 
     @Override
-    public void onSubscribe(ScalarSubscription s) {
+    public void onSubscribe(Disposable s) {
         subscription = s;
     }
 
     @Override
-    public synchronized void onComplete(T t) {
+    public synchronized void onSuccess(T t) {
         synchronized(this) {
             if (done) { // this is how CompletableFuture#complete works
                 return;
@@ -61,7 +58,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
             value = t;
             notifyAll();
         }
-        subscriptions.onComplete(t);
+        subscriptions.onSuccess(t);
     }
 
     @Override
@@ -74,7 +71,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
             completionException = t;
             notifyAll();
         }
-        ScalarSubscriptionImpl subscription = subscriptions.poll();
+        ScalarSubscriptionQueue.ScalarSubscriptionImpl subscription = subscriptions.poll();
         for (; subscription != null; subscription = subscriptions.poll()) {
             try {
                 subscription.onError(completionException);
@@ -83,38 +80,23 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
         }
     }
 
-    public void subscribe(ScalarSubscriber<? super T> s) {
+    public void subscribe(Scalar.Subscriber<? super T> s) {
         if (s == null) {
             throw new NullPointerException();
         }
         synchronized(this) {
             if (!isDone()) {
+                if (s == null) {
+                    throw new NullPointerException();
+                }
                 subscriptions.subscribe(s);
                 return;
             }
         }
         if (completionException == null) {
-            s.onComplete(value);
+            s.onSuccess(value);
         } else {
             s.onError(completionException);
-        }
-    }
-
-    public void subscribe(Subscriber<? super T> streamSubscriber) {
-        if (streamSubscriber == null) {
-            throw new NullPointerException();
-        }
-        synchronized(this) {
-            if (!isDone()) {
-                subscriptions.subscribe(streamSubscriber);
-                return;
-            }
-        }
-        ScalarSubscriber<T> scalarSubscriber = new Stream2ScalarSubscriber<T>(streamSubscriber);
-        if (completionException == null) {
-            scalarSubscriber.onComplete(value);
-        } else {
-            scalarSubscriber.onError(completionException);
         }
     }
 
@@ -126,7 +108,7 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
      */
     @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-        ScalarSubscription subscriptionLoc;
+        Disposable subscriptionLoc;
         synchronized(this) {
             subscriptionLoc = subscription;
             if (subscriptionLoc == null) {
@@ -188,12 +170,12 @@ public class ScalarResult<T> implements ScalarSubscriber<T>, ScalarPublisher<T>,
     }
 
     public void onComplete() {
-        onComplete(null);
+        onSuccess(null);
     }
 
     public static <U> ScalarResult<U> completedResult(U value) {
         ScalarResult<U> result = new ScalarResult<>();
-        result.onComplete(value);
+        result.onSuccess(value);
         return result;
     }
 

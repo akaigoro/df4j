@@ -1,6 +1,6 @@
 package org.df4j.core.tutorial.actor;
 
-import org.df4j.core.actor.ext.Actor1;
+import org.df4j.core.actor.ext.Hactor;
 import org.junit.Test;
 
 public class HelloWorld1 {
@@ -8,7 +8,7 @@ public class HelloWorld1 {
      * collects strings
      * prints collected strings when argument is an empty string
      */
-    class Collector extends Actor1<String> {
+    class Collector extends Hactor<String> {
         StringBuilder sb = new StringBuilder();
 
         protected void runAction(String message) {

@@ -1,14 +1,13 @@
 package org.df4j.core.actor.ext;
 
 import org.df4j.core.actor.StreamOutput;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+import org.df4j.core.protocols.Flow;
 
-public abstract class StreamProcessor<M, R> extends Actor1<M> implements Publisher<R> {
+public abstract class StreamProcessor<M, R> extends Hactor<M> implements Flow.Publisher<R> {
 	protected final StreamOutput<R> output = new StreamOutput<>(this);
 
     @Override
-    public void subscribe(Subscriber<? super R> subscriber) {
+    public void subscribe(Flow.Subscriber<? super R> subscriber) {
         output.subscribe(subscriber);
     }
 

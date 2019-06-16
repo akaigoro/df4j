@@ -69,7 +69,7 @@ Now we can create the dataflow graph consisting of 3 nodes, pass arguments to it
 public class SumSquareTest {
 
     @Test
-    public void testAP() throws ExecutionException, InterruptedException {
+    public void testAP() throws ExecutionException {
         // create nodes
         Square sqX = new Square();
         Square sqY = new Square();
@@ -99,7 +99,7 @@ It extends AsyncProc and so has the default result and can contain one-shot para
 `Actors` here are [dataflow actors whith arbitrary number of parameters] (https://pdfs.semanticscholar.org/2dfa/fb6ea86ac739b17641d4c4e51cc17d31a56f.pdf).
 After processing the first set of arguments, the actor purges them out of parameters and waits until next set of arguments is ready.
 The [Hewitt's actors](https://en.wikipedia.org/wiki/Actor_model) (e.g. [Akka](https://akka.io/)) with single predifined input parameter
-are trivial corner case of the dataflow actors. They are implemented in class class is org.df4j.core.actor.ext.Actor1.
+are trivial corner case of the dataflow actors. They are implemented in class class is org.df4j.core.actor.ext.Hactor.
 
 Typical df4j actor is programmed as follows:
 So the main difference is parameters which can keep a sequence of values. The node classes differ only that after calling the action procedure,

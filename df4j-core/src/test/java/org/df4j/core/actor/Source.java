@@ -1,10 +1,10 @@
 package org.df4j.core.actor;
 
-import org.reactivestreams.Publisher;
+import org.df4j.core.protocols.Flow;
 
 import static org.df4j.core.util.Utils.sneakyThrow;
 
-public abstract class Source<T> extends Actor implements Publisher<T> {
+public abstract class Source<T> extends Actor implements Flow.Publisher<T> {
     Logger log;
 
     public Source() {

@@ -1,29 +1,26 @@
 package org.df4j.core.actor.base;
 
-import org.df4j.core.actor.StreamPublisher;
-import org.df4j.core.asyncproc.ScalarSubscriber;
+import org.df4j.core.protocols.Flow;
 import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkedQueue;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * non-blocking queue of {@link StreamSubscription}
+ * non-blocking queue of {@link FlowSubscriptionImpl}
  *
  * @param <T>
  */
 public abstract class StreamSubscriptionQueue<T> {
     protected final ReentrantLock locker = new ReentrantLock();
-    protected LinkedQueue<StreamSubscription> activeSubscriptions = new LinkedQueue<>();
-    protected LinkedQueue<StreamSubscription> passiveSubscriptions = new LinkedQueue<>();
+    protected LinkedQueue<FlowSubscriptionImpl> activeSubscriptions = new LinkedQueue<>();
+    protected LinkedQueue<FlowSubscriptionImpl> passiveSubscriptions = new LinkedQueue<>();
     protected volatile boolean completed = false;
     protected volatile boolean completionRequested = false;
     protected Throwable completionException;
 
-    public void subscribe(Subscriber<? super T> s) {
-        StreamSubscription subscription = new StreamSubscription(s);
+    public void subscribe(Flow.Subscriber<? super T> s) {
+        FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(s);
         subscription.lazyMode = true;
         try {
             subscription.subscriber.onSubscribe(subscription);
@@ -44,16 +41,11 @@ public abstract class StreamSubscriptionQueue<T> {
         }
     }
 
-    public void subscribe (ScalarSubscriber < ? super T > s){
-        StreamPublisher.Scalar2StreamSubscriber proxySubscriber = new StreamPublisher.Scalar2StreamSubscriber(s);
-        subscribe(proxySubscriber);
-    }
-
     protected void matchingLoop() {
         while (hasNextToken() && !activeSubscriptions.isEmpty()) {
             T token = nextToken();
-            StreamSubscription subscription = activeSubscriptions.poll();
-            Subscriber subscriber = subscription.subscriber;
+            FlowSubscriptionImpl subscription = activeSubscriptions.poll();
+            Flow.Subscriber subscriber = subscription.subscriber;
             subscription.requested--;
             subscription.lazyMode = true;
             locker.unlock();
@@ -77,7 +69,7 @@ public abstract class StreamSubscriptionQueue<T> {
         }
     }
 
-    private void storeSubscription(StreamSubscription subscription) {
+    private void storeSubscription(FlowSubscriptionImpl subscription) {
         if (!subscription.isCancelled()) {
             if (subscription.requested > 0) {
                 activeSubscriptions.offer(subscription);
@@ -87,9 +79,9 @@ public abstract class StreamSubscriptionQueue<T> {
         }
     }
 
-    private void completeSubscriptions(LinkedQueue<StreamSubscription> subscriptions) {
+    private void completeSubscriptions(LinkedQueue<FlowSubscriptionImpl> subscriptions) {
         for (;;) {
-            StreamSubscription subscription = subscriptions.poll();
+            FlowSubscriptionImpl subscription = subscriptions.poll();
             if (subscription == null) {
                 break;
             }
@@ -126,12 +118,12 @@ public abstract class StreamSubscriptionQueue<T> {
 
     protected abstract T nextToken ();
 
-    public class StreamSubscription extends Link<StreamSubscription> implements Subscription {
+    public class FlowSubscriptionImpl extends Link<FlowSubscriptionImpl> implements Flow.Subscription {
         protected long requested = 0;
-        private Subscriber subscriber;
+        private Flow.Subscriber subscriber;
         private volatile boolean lazyMode = false;
 
-        public StreamSubscription(Subscriber subscriber) {
+        public FlowSubscriptionImpl(Flow.Subscriber subscriber) {
             this.subscriber = subscriber;
         }
 
@@ -192,7 +184,7 @@ public abstract class StreamSubscriptionQueue<T> {
         }
 
         private void complete() {
-            Subscriber subscriberLoc = subscriber;
+            Flow.Subscriber subscriberLoc = subscriber;
             makeCancelled();
             locker.unlock();
             try {

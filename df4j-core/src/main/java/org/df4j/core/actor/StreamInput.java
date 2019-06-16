@@ -4,8 +4,7 @@ import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.actor.base.StreamParameter;
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.asyncproc.base.ScalarLock;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import org.df4j.core.protocols.Flow;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -18,13 +17,13 @@ import java.util.Queue;
  *
  * @param <T> type of tokens
  */
-public class StreamInput<T> extends StreamParameter<T> implements Subscriber<T> {
+public class StreamInput<T> extends StreamParameter<T> implements Flow.Subscriber<T> {
     protected int capacity;
     protected Queue<T> tokens;
     /** to monitor existence of the room for additional tokens */
     protected StreamLock roomLock;
     /** extracted token */
-    protected Subscription subscription;
+    protected Flow.Subscription subscription;
     protected boolean completionRequested = false;
     protected boolean completed = false;
     protected T current;
@@ -75,7 +74,7 @@ public class StreamInput<T> extends StreamParameter<T> implements Subscriber<T> 
     }
 
     @Override
-    public void onSubscribe(Subscription s) {
+    public void onSubscribe(Flow.Subscription s) {
         int requestNumber;
         synchronized (this) {
             this.subscription = s;
@@ -101,7 +100,7 @@ public class StreamInput<T> extends StreamParameter<T> implements Subscriber<T> 
         int delta;
         boolean doComplete = false;
         boolean doRuumUnBlock = false;
-        Subscription subscriptionLoc;
+        Flow.Subscription subscriptionLoc;
         synchronized (this) {
             if (pushback) {
                 return true;

@@ -67,8 +67,8 @@ public class SumSquareTest {
         sqX.subscribe(sum.param1);
         sqY.subscribe(sum.param2);
         // provide input information:
-        sqX.onComplete(3);
-        sqY.onComplete(4);
+        sqX.onSuccess(3);
+        sqY.onSuccess(4);
         // get the result
         ScalarResult<Integer> result = sum.asyncResult();
         int res = result.get(1, TimeUnit.SECONDS);

@@ -1,6 +1,6 @@
 package org.df4j.core.util;
 
-import org.df4j.core.actor.PermitSubscriber;
+import org.df4j.core.protocols.PermitStream;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -16,7 +16,7 @@ public class TimeSignalPublisher {
         this(new Timer());
     }
 
-    public void subscribe(PermitSubscriber sema, long delay) {
+    public void subscribe(PermitStream.Subscriber sema, long delay) {
         TimerTask task = new TimerTask(){
             @Override
             public void run() {

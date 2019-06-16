@@ -15,9 +15,8 @@ package org.df4j.nio2.net;
 import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.actor.StreamInput;
 import org.df4j.core.actor.StreamOutput;
+import org.df4j.core.protocols.Flow;
 import org.df4j.core.util.Logger;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,7 +40,7 @@ import java.util.function.Consumer;
  * IO requests can be posted immediately, but will be executed
  * only after connection completes.
  */
-public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
+public class ServerConnection implements Flow.Subscriber<AsynchronousSocketChannel> {
     protected static final Logger LOG = Logger.getLogger(ServerConnection.class.getName());
 
     private final Consumer<ServerConnection> backPort;
@@ -68,7 +67,7 @@ public class ServerConnection implements Subscriber<AsynchronousSocketChannel> {
     }
 
     @Override
-    public void onSubscribe(Subscription s) {
+    public void onSubscribe(Flow.Subscription s) {
 
     }
 

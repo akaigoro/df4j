@@ -1,16 +1,17 @@
 package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.base.ScalarSubscription;
 import org.df4j.core.asyncproc.base.ScalarLock;
 import org.df4j.core.asyncproc.ext.AsyncSupplier;
+import org.df4j.core.protocols.Disposable;
+import org.df4j.core.protocols.Scalar;
 
 public class AllOf extends AsyncSupplier<Void> {
 
     public AllOf() {
     }
 
-    public AllOf(ScalarPublisher<?>... sources) {
-        for (ScalarPublisher source: sources) {
+    public AllOf(Scalar.Publisher<?>... sources) {
+        for (Scalar.Publisher source: sources) {
             registerAsyncResult(source);
         }
     }
@@ -20,7 +21,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of completion. successfull or unseccessfull
      */
-    public synchronized void registerAsyncResult(ScalarPublisher source) {
+    public synchronized void registerAsyncResult(Scalar.Publisher source) {
         source.subscribe(new Enter());
     }
 
@@ -36,7 +37,7 @@ public class AllOf extends AsyncSupplier<Void> {
      *
      * @param source source of errors
      */
-    public synchronized void registerAsyncDaemon(ScalarPublisher source) {
+    public synchronized void registerAsyncDaemon(Scalar.Publisher source) {
         source.subscribe(new DaemonEnter());
     }
 
@@ -49,20 +50,20 @@ public class AllOf extends AsyncSupplier<Void> {
         completeResultExceptionally(ex);
     }
 
-    class Enter extends ScalarLock implements ScalarSubscriber<Object> {
-        ScalarSubscription subscription;
+    class Enter extends ScalarLock implements Scalar.Subscriber<Object> {
+        Disposable subscription;
 
         public Enter() {
             super(AllOf.this);
         }
 
         @Override
-        public void onSubscribe(ScalarSubscription s) {
+        public void onSubscribe(Disposable s) {
             this.subscription = s;
         }
 
         @Override
-        public void onComplete(Object value) {
+        public void onSuccess(Object value) {
             super.complete();
         }
 
@@ -72,10 +73,10 @@ public class AllOf extends AsyncSupplier<Void> {
         }
     }
 
-    class DaemonEnter implements ScalarSubscriber<Object> {
+    class DaemonEnter implements Scalar.Subscriber<Object> {
 
         @Override
-        public void onComplete(Object value) { }
+        public void onSuccess(Object value) { }
 
         @Override
         public void onError(Throwable ex) {
