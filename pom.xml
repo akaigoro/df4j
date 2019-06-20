@@ -39,11 +39,11 @@
     </properties>
 
     <modules>
+        <module>df4j-protocols</module>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
         <module>df4j-reactivestreams</module>
         <module>df4j-rxjava2</module>
-        <module>df4j-protocols</module>
     </modules>
 
     <dependencies>
