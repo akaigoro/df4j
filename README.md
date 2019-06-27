@@ -1,7 +1,7 @@
 # Data Flow For Java
 
 Simplicity is prerequisite for reliability. - Edsger W. Dijkstra
--------------------------
+------------------------------------------
 
 df4j is an abbreviation of "Data Flow for Java".
 It is a library to support asynchronous computations of all flavours: futures, promises, asynchronous procedure calls, actors, reactive streams.
