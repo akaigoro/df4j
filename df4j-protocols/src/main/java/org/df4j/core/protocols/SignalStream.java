@@ -27,7 +27,7 @@ public class SignalStream {
     public interface Subscriber extends Runnable {
 
         /**
-         * Invoked after calling {@link SignalStream.Publisher#subscribe(Subscriber)}.
+         * Invoked after calling {@link SignalStream.Publisher#subscribe(SignalStream.Subscriber)}.
          *
          * @param s
          *            {@link Disposable} that allows cancelling subscription via {@link Disposable#dispose()} }

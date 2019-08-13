@@ -8,7 +8,7 @@ import org.reactivestreams.Subscription;
  *
  * converts org.reactivestreams.Subscriber to a Flow.Subscriber
  *
- * @param <T>
+ * @param <T> type of tokens
  */
 public class Reactive2FlowSubscriber<T> implements Flow.Subscriber<T>, Subscription {
     private final Subscriber<T> subscriber;

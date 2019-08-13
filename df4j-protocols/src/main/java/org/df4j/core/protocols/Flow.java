@@ -4,9 +4,9 @@ import java.util.concurrent.Executor;
 
 /**
  * Interrelated interfaces and static methods for establishing
- * flow-controlled components in which {@link java.util.concurrent.Flow.Publisher Publishers}
- * produce items consumed by one or more {@link java.util.concurrent.Flow.Subscriber
- * Subscribers}, each managed by a {@link java.util.concurrent.Flow.Subscription
+ * flow-controlled components in which {@link Flow.Publisher Publishers}
+ * produce items consumed by one or more {@link Flow.Subscriber
+ * Subscribers}, each managed by a {@link Flow.Subscription
  * Subscription}.
  *
  * <p>These interfaces correspond to the <a
@@ -14,20 +14,19 @@ import java.util.concurrent.Executor;
  * specification.  They apply in both concurrent and distributed
  * asynchronous settings: All (seven) methods are defined in {@code
  * void} "one-way" message style. Communication relies on a simple form
- * of flow control (method {@link java.util.concurrent.Flow.Subscription#request}) that can be
+ * of flow control (method {@link Flow.Subscription#request}) that can be
  * used to avoid resource management problems that may otherwise occur
  * in "push" based systems.
  *
- * <p><b>Examples.</b> A {@link java.util.concurrent.Flow.Publisher} usually defines its own
- * {@link java.util.concurrent.Flow.Subscription} implementation; constructing one in method
+ * <p><b>Examples.</b> A {@link Flow.Publisher} usually defines its own
+ * {@link Flow.Subscription} implementation; constructing one in method
  * {@code subscribe} and issuing it to the calling {@link
- * java.util.concurrent.Flow.Subscriber}. It publishes items to the subscriber asynchronously,
+ * Flow.Subscriber}. It publishes items to the subscriber asynchronously,
  * normally using an {@link Executor}.  For example, here is a very
  * simple publisher that only issues (when requested) a single {@code
  * TRUE} item to a single subscriber.  Because the subscriber receives
  * only a single item, this class does not use buffering and ordering
- * control required in most implementations (for example {@link
- * SubmissionPublisher}).
+ * control required in most implementations (for example SubmissionPublisher).
  *
  * <pre> {@code
  * class OneShotPublisher implements Publisher<Boolean> {
@@ -72,8 +71,8 @@ import java.util.concurrent.Executor;
  *   }
  * }}</pre>
  *
- * <p>A {@link java.util.concurrent.Flow.Subscriber} arranges that items be requested and
- * processed.  Items (invocations of {@link java.util.concurrent.Flow.Subscriber#onNext}) are
+ * <p>A {@link Flow.Subscriber} arranges that items be requested and
+ * processed.  Items (invocations of {@link Flow.Subscriber#onNext}) are
  * not issued unless requested, but multiple items may be requested.
  * Many Subscriber implementations can arrange this in the style of
  * the following example, where a buffer size of 1 single-steps, and
@@ -81,7 +80,7 @@ import java.util.concurrent.Executor;
  * with less communication; for example with a value of 64, this keeps
  * total outstanding requests between 32 and 64.
  * Because Subscriber method invocations for a given {@link
- * java.util.concurrent.Flow.Subscription} are strictly ordered, there is no need for these
+ * Flow.Subscription} are strictly ordered, there is no need for these
  * methods to use locks or volatiles unless a Subscriber maintains
  * multiple Subscriptions (in which case it is better to instead
  * define multiple Subscribers, each with its own Subscription).
@@ -109,12 +108,6 @@ import java.util.concurrent.Executor;
  *   public void onError(Throwable ex) { ex.printStackTrace(); }
  *   public void onComplete() {}
  * }}</pre>
- *
- * <p>The default value of {@link #defaultBufferSize} may provide a
- * useful starting point for choosing request sizes and capacities in
- * Flow components based on expected rates, resources, and usages.
- * Or, when flow control is never needed, a subscriber may initially
- * request an effectively unbounded number of items, as in:
  *
  * <pre> {@code
  * class UnboundedSubscriber<T> implements Subscriber<T> {
@@ -260,7 +253,7 @@ public class Flow {
      *
      * converts Scalar.Subscriber to a Flow.Subscriber
      *
-     * @param <T>
+     * @param <T> token type
      */
     public static class Scalar2FlowSubscriber<T> implements Subscriber<T>, Disposable {
         private final Scalar.Subscriber<T> subscriber;

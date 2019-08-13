@@ -15,6 +15,8 @@ public class StreamLock extends ScalarLock {
 
     /**
      * initially in blocked state
+     *
+     * @param transition parent {@link Transition}
      */
     public StreamLock(Transition transition) {
         super(transition);

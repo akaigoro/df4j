@@ -9,7 +9,7 @@ import org.df4j.core.util.linked.LinkedQueue;
 /**
  * subscribers can be scalar subscribers, stream subscribers, and CompletableFutures.
  *
- * @param <T>
+ * @param <T> type of tokens
  */
 public class ScalarSubscriptionQueue<T> extends LinkedQueue<ScalarSubscriptionQueue<T>.ScalarSubscriptionImpl> implements Scalar.Publisher<T> {
 

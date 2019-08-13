@@ -81,7 +81,7 @@ public class Flood {
         public void onComplete();
 
         /**
-         * Invoked after calling {@link Scalar.Publisher#subscribe(Subscriber)}.
+         * Invoked after calling {@link Scalar.Publisher#subscribe(Scalar.Subscriber)}.
          *
          * @param s
          *            {@link Disposable} that allows cancelling subscription via {@link Disposable#dispose()} }
@@ -102,7 +102,7 @@ public class Flood {
      *
      * converts Scalar.Subscriber to a Flood.Subscriber
      *
-     * @param <T>
+     * @param <T> type of tokens
      */
     public static class Scalar2FloodSubscriber<T> implements Subscriber<T>, Disposable {
         private final Scalar.Subscriber<T> subscriber;

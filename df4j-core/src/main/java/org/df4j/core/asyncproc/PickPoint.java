@@ -64,7 +64,7 @@ public class PickPoint<T> implements Scalar.Publisher<T> {
      * delivers the token to exactly one subscriber,
      * unless the stream is completed.
      *
-     * @param token
+     * @param token type of tokens
      */
     public void onNext(T token) {
         if (token == null) {

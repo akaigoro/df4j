@@ -15,6 +15,7 @@ public class ScalarLock {
 
     /**
      * initially in blocked state
+     * @param transition parent Transition
      */
     public ScalarLock(Transition transition) {
         this.transition = transition;

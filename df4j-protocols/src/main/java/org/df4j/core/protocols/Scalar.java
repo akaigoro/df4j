@@ -10,7 +10,7 @@ public class Scalar {
     /**
      * A {@link Publisher} is a provider of a single element, publishing it to a {@link Subscriber}(s).
      * <p>
-     * A {@link Publisher} can serve multiple {@link Subscriber}s subscribed {@link #subscribe(Subscriber)} dynamically
+     * A {@link Publisher} can serve multiple {@link Subscriber}s subscribed dynamically
      * at various points in time.
      *
      * @param <T> the type of element signaled.
@@ -20,7 +20,7 @@ public class Scalar {
         /**
          * Request {@link Publisher} to start scalar data.
          * <p>
-         * This is a "factory method" and can be called multiple times, each time starting a new {@link ScalarSubscriptionImpl}.
+         * This is a "factory method" and can be called multiple times, each time starting a new {@link Disposable}.
          * <p>
          * Each {@link Disposable} will work for only a single {@link Subscriber}.
          * <p>
@@ -50,11 +50,11 @@ public class Scalar {
     }
 
     /**
-     * @param <T>
+     * @param <T>  type of tokens
      */
     public interface Subscriber<T> extends BiConsumer<T, Throwable> {
         /**
-         * Invoked after calling {@link Publisher#subscribe(Subscriber)}.
+         * Invoked after calling {@link Publisher#subscribe(Scalar.Subscriber)}.
          *
          * @param s
          *            {@link Disposable} that allows cancelling subscription via {@link Disposable#dispose()} }

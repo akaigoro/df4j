@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * non-blocking queue of {@link FlowSubscriptionImpl}
  *
- * @param <T>
+ * @param <T>  type of tokens
  */
 public abstract class StreamSubscriptionQueue<T> {
     protected final ReentrantLock locker = new ReentrantLock();

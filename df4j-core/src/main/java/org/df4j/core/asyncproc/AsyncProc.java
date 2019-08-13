@@ -51,6 +51,7 @@ public abstract class AsyncProc<R> extends Transition {
      * </pre>
      * before creating {@link Transition} instances.
      *
+     * @return an Executor ;ocal to current thread
      */
     public static Executor getThreadLocalExecutor() {
         return threadLocalExecutor.get();
