@@ -18,9 +18,9 @@ public class ConnectionManager extends LazyActor {
     Semafor allowedConnections = new Semafor(this);
     int serialnum=0;
 
-    Consumer<ServerConnection> backport = (asyncSocketChannel) -> {
+    void release(ServerConnection asyncSocketChannel) {
         allowedConnections.release();
-    };
+    }
 
     public ConnectionManager(SocketAddress addr, int connCount) throws IOException {
         assc = new AsyncServerSocketChannel(addr);
@@ -29,7 +29,7 @@ public class ConnectionManager extends LazyActor {
     
     @Override
     protected void runAction() throws Throwable {
-        ServerConnection conn = new EchoServer(backport);
+        ServerConnection conn = new EchoServer(this::release);
         conn.name = "EchoServerConnection"+(serialnum++);
         assc.subscribe(conn);
     }

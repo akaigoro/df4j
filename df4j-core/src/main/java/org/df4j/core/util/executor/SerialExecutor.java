@@ -5,18 +5,22 @@ import org.df4j.core.actor.ext.Hactor;
 import java.util.concurrent.Executor;
 
 /**
- * works like a single-threaded Executor, but does not own a thread
+ * works like a single-threaded Executor, but does not own a thread.
  */
-public class SerialExecutor extends Hactor<Runnable> {
-    {
-        start();
-    }
+public class SerialExecutor extends Hactor<Runnable> implements Executor {
 
     public SerialExecutor() {
+        start();
     }
 
     public SerialExecutor(Executor executor) {
         setExecutor(executor);
+        start();
+    }
+
+    @Override
+    public void execute(Runnable command) {
+        super.onNext(command);
     }
 
     @Override

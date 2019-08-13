@@ -1,4 +1,4 @@
 /**
- * low-level components of the {@link org.df4j.core.asyncproc} package
+ * low-level components of the parent package
  */
 package org.df4j.core.asyncproc.base;

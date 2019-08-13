@@ -2,14 +2,14 @@ package org.df4j.core.actor;
 
 import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.protocols.PermitStream;
+import org.df4j.core.protocols.SignalStream;
 
 /**
- * Counting semaphore
- * holds token counter without data.
- * counter can be negative.
+ * Asynchronous counting semaphore.
+ * Holds token counter.
+ * Counter can be negative.
  */
-public class Semafor extends StreamLock implements PermitStream.Subscriber {
+public class Semafor extends StreamLock implements SignalStream.Subscriber {
     protected final AsyncProc actor;
     private long count = 0;
 

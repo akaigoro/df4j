@@ -1,8 +1,8 @@
 package org.df4j.core.protocols;
 
-public class PermitStream {
+public class SignalStream {
 
-    private PermitStream() {}
+    private SignalStream() {}
 
     /**
      * A {@link Publisher} is a provider of a potentially unbounded number of permits
@@ -25,6 +25,15 @@ public class PermitStream {
      *
      */
     public interface Subscriber extends Runnable {
+
+        /**
+         * Invoked after calling {@link SignalStream.Publisher#subscribe(Subscriber)}.
+         *
+         * @param s
+         *            {@link Disposable} that allows cancelling subscription via {@link Disposable#dispose()} }
+         */
+        default void onSubscribe(Disposable s) {}
+
         /**
          * Adds the given number {@code n} of items to the current
          * unfulfilled demand for this subscription.  If {@code n} is

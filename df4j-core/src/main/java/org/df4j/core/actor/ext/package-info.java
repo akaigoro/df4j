@@ -1,4 +1,4 @@
 /**
- * extentions to the {@link org.df4j.core.actor} package
+ * extentions to the parent package
  */
 package org.df4j.core.actor.ext;

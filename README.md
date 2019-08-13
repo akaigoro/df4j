@@ -82,16 +82,16 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Submodules:
 
-[df4j-protocols(/df4j-protocols/README.md) - Communication interfaces for df4j.
+[df4j-protocols](/df4j-protocols/README.md) - Communication interfaces for df4j.
 
 [df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and connectors
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
-[df4j-reactive-tck](/df4j-reactivestreams) - Adapter classes to communicate with Reactive Streams Project.
+[df4j-reactivestreams](/df4j-reactivestreams) - Adapter classes to communicate with Reactive Streams Project.
 Also runs df4j against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
 
-[df4j-core](/df4j-rxjava2/README.md) - adapters to RxJava2.
+[df4j-rxjava2](/df4j-rxjava2/README.md) - adapters to RxJava2.
 
 Version history
 ---------------

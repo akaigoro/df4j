@@ -19,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 /**
  *  This is a demonstration how backpressure can be implemented using plain {@link Semafor}
  */
-public class PermitStreamExample {
+public class SignalStreamExample {
 
     /** making a feedback loop: permits flow from {@link Sink} to {@link Source#backPressureActuator}.
      */
