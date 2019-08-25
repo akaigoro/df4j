@@ -1,5 +1,7 @@
 package org.df4j.core.protocols;
 
+import java.util.concurrent.Flow;
+
 public class Flood {
 
     private Flood() {} // uninstantiable
@@ -28,7 +30,7 @@ public class Flood {
      * @param <T> the published item type
      */
     @FunctionalInterface
-    public static interface Publisher<T> {
+    public interface Publisher<T> {
         /**
          * Adds the given Subscriber if possible.  If already
          * subscribed, or the attempt to subscribe fails due to policy
@@ -43,7 +45,7 @@ public class Flood {
          * @param subscriber the subscriber
          * @throws NullPointerException if subscriber is null
          */
-        public void subscribe(Subscriber<? super T> subscriber);
+        void subscribe(Subscriber<? super T> subscriber);
 
         default void subscribe(Scalar.Subscriber<T> s) {
             Subscriber<? super T> proxySubscriber = new Scalar2FloodSubscriber<>(s);
@@ -59,7 +61,7 @@ public class Flood {
      *
      * @param <T> the subscribed item type
      */
-    public static interface Subscriber<T> {
+    public interface Subscriber<T> {
 
         /**
          * Method invoked with a Subscription's next item.  If this
@@ -68,7 +70,7 @@ public class Flood {
          *
          * @param item the item
          */
-        public void onNext(T item);
+        void onNext(T item);
 
         /**
          * Method invoked when it is known that no additional
@@ -78,7 +80,7 @@ public class Flood {
          * If this method throws an exception, resulting behavior is
          * undefined.
          */
-        public void onComplete();
+        void onComplete();
 
         /**
          * Invoked after calling {@link Scalar.Publisher#subscribe(Scalar.Subscriber)}.
@@ -108,7 +110,7 @@ public class Flood {
         private final Scalar.Subscriber<T> subscriber;
         private Disposable subscription;
 
-        public Scalar2FloodSubscriber(Scalar.Subscriber<T> subscriber) {
+        Scalar2FloodSubscriber(Scalar.Subscriber<T> subscriber) {
             this.subscriber = subscriber;
         }
 

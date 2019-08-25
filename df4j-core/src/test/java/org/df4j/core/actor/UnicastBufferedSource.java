@@ -1,6 +1,7 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.protocols.Flow;
+
+import java.util.concurrent.Flow;
 
 /**
  * emits totalNumber of Longs and closes the stream

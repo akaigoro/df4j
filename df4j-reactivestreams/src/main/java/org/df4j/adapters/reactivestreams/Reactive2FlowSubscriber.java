@@ -1,8 +1,9 @@
 package org.df4j.adapters.reactivestreams;
 
-import org.df4j.core.protocols.Flow;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import java.util.concurrent.Flow;
 
 /**
  *

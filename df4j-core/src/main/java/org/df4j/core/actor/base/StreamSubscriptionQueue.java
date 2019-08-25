@@ -1,9 +1,9 @@
 package org.df4j.core.actor.base;
 
-import org.df4j.core.protocols.Flow;
 import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkedQueue;
 
+import java.util.concurrent.Flow;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**

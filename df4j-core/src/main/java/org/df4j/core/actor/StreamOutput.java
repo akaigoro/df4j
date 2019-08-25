@@ -3,14 +3,10 @@ package org.df4j.core.actor;
 import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.actor.base.StreamSubscriptionQueue;
 import org.df4j.core.asyncproc.AsyncProc;
-import org.df4j.core.protocols.Flow;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 
 /**
@@ -93,7 +89,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Flow.
                 return res;
             }
             Condition cond = locker.newCondition();
-            MySubscriber<T> subscriber = new MySubscriber<>(cond);
+            MySubscriber subscriber = new MySubscriber(cond);
             subscribe(subscriber);
             cond.await();
             if (subscriber.thr != null) {
@@ -123,7 +119,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Flow.
                 return res;
             }
             Condition cond = locker.newCondition();
-            MySubscriber<T> subscriber = new MySubscriber<>(cond);
+            MySubscriber subscriber = new MySubscriber(cond);
             subscribe(subscriber);
             if (!cond.await(timeout, unit)) {
                 throw new TimeoutException();
@@ -138,7 +134,7 @@ public class StreamOutput<T> extends StreamSubscriptionQueue<T> implements Flow.
         }
     }
 
-    private class MySubscriber<T> implements Flow.Subscriber<T> {
+    private class MySubscriber implements Flow.Subscriber<T> {
         final Condition cond;
         T res;
         Throwable thr;

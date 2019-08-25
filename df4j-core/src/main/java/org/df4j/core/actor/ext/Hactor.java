@@ -10,7 +10,8 @@
 package org.df4j.core.actor.ext;
 
 import org.df4j.core.actor.StreamInput;
-import org.df4j.core.protocols.Flow;
+
+import java.util.concurrent.Flow;
 
 /**
  * A dataflow Actor with one predefined input stream port.
@@ -23,7 +24,7 @@ public abstract class Hactor<M> extends FancyActor implements Flow.Subscriber<M>
     protected final StreamInput<M> mainInput;
 
     public Hactor(int capacity) {
-        mainInput = new StreamInput<M>(this, capacity);
+        mainInput = new StreamInput<>(this, capacity);
     }
 
     public Hactor() {

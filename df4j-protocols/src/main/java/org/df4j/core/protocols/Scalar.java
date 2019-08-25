@@ -1,6 +1,7 @@
 package org.df4j.core.protocols;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
 import java.util.function.BiConsumer;
 
 public class Scalar {
@@ -193,11 +194,6 @@ public class Scalar {
         @Override
         public void cancel() {
             subscription.dispose();
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return subscription.isDisposed();
         }
     }
 }

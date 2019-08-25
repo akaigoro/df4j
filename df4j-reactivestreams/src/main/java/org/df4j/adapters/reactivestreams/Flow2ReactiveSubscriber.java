@@ -1,8 +1,9 @@
 package org.df4j.adapters.reactivestreams;
 
-import org.df4j.core.protocols.Flow;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import java.util.concurrent.Flow;
 
 /**
  *
@@ -49,10 +50,5 @@ public class Flow2ReactiveSubscriber<T> implements Subscriber<T>, Flow.Subscript
     public void cancel() {
         cancelled = true;
         subscription.cancel();
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancelled;
     }
 }

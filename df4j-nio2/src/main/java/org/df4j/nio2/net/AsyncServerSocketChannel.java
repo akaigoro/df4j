@@ -11,7 +11,6 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.actor.StreamOutput;
 import org.df4j.core.actor.ext.LazyActor;
-import org.df4j.core.protocols.Flow;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -20,6 +19,7 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Flow;
 
 /**
  * Accepts incoming connections, pushes them pu subscribers
@@ -102,6 +102,5 @@ AsyncServerSocketChannel
 
     @Override
     protected void runAction() throws Throwable {
-
     }
 }

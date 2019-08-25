@@ -1,12 +1,12 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.asyncproc.ScalarResult;
-import org.df4j.core.protocols.Flow;
 
+import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LoggingSink implements Flow.Subscriber<Long> {
-    private final ScalarResult<Long> asyncResult = new ScalarResult<Long>();
+    private final ScalarResult<Long> asyncResult = new ScalarResult<>();
     Logger parent;
     final String name;
     AtomicInteger received = new AtomicInteger(0);

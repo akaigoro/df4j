@@ -1,6 +1,6 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.protocols.Flow;
+import java.util.concurrent.Flow;
 
 import static org.df4j.core.util.Utils.sneakyThrow;
 

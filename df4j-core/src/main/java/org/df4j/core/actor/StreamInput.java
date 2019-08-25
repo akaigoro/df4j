@@ -4,10 +4,10 @@ import org.df4j.core.actor.base.StreamLock;
 import org.df4j.core.actor.base.StreamParameter;
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.asyncproc.base.ScalarLock;
-import org.df4j.core.protocols.Flow;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.Flow;
 
 /**
  * A Queue of tokens

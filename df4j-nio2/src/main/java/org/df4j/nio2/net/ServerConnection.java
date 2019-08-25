@@ -15,7 +15,6 @@ package org.df4j.nio2.net;
 import org.df4j.core.actor.ext.LazyActor;
 import org.df4j.core.actor.StreamInput;
 import org.df4j.core.actor.StreamOutput;
-import org.df4j.core.protocols.Flow;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -23,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -121,7 +121,7 @@ public class ServerConnection implements Flow.Subscriber<AsynchronousSocketChann
     {
         protected final Logger LOG = Logger.getLogger(getClass().getName());
 
-        public final StreamInput<ByteBuffer> input = new StreamInput<ByteBuffer>(this);
+        public final StreamInput<ByteBuffer> input = new StreamInput<>(this);
         public final StreamOutput<ByteBuffer> output = new StreamOutput<>(this);
 
         {

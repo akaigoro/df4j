@@ -1,7 +1,8 @@
 package org.df4j.core.actor.ext;
 
 import org.df4j.core.actor.StreamOutput;
-import org.df4j.core.protocols.Flow;
+
+import java.util.concurrent.Flow;
 
 public abstract class StreamProcessor<M, R> extends Hactor<M> implements Flow.Publisher<R> {
 	protected final StreamOutput<R> output = new StreamOutput<>(this);
@@ -18,7 +19,7 @@ public abstract class StreamProcessor<M, R> extends Hactor<M> implements Flow.Pu
     }
 
     @Override
-    protected void completion(Throwable completionException) throws Exception {
+    protected void completion(Throwable completionException) {
         output.completion(completionException);
     }
 

@@ -12,7 +12,7 @@
  *  - is backpressure supported. Backpressure has sense only for messages streams, because signals and scalars cannot cause memory exhausting.
  *
  *  {@link org.df4j.core.protocols.Flood} describes a unicast message stream without backpressure
- *  {@link org.df4j.core.protocols.Flow} describes a unicast message stream with backpressure.  It is copied fron JDK9.
+ *  {@link java.util.concurrent.Flow} describes a unicast message stream with backpressure.
  *  {@link org.df4j.core.protocols.SignalStream} describes a stream of signals. It can be unicast or multicast.
  *  {@link org.df4j.core.protocols.Scalar} describes a multicast scalar connection.
  *  It receives a single message, but then duplicates it for each subscriber.
