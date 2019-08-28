@@ -1,7 +1,6 @@
 package org.df4j.core.asyncproc;
 
 import org.df4j.core.asyncproc.base.ScalarLock;
-import org.df4j.core.asyncproc.ext.AsyncSupplier;
 import org.df4j.core.protocols.Disposable;
 import org.df4j.core.protocols.Scalar;
 

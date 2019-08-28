@@ -1,6 +1,6 @@
 package org.df4j.core.util.executor;
 
-import org.df4j.core.actor.ext.Hactor;
+import org.df4j.core.actor.Hactor;
 
 import java.util.concurrent.Executor;
 

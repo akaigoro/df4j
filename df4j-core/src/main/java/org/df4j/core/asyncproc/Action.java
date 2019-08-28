@@ -1,4 +1,4 @@
-package org.df4j.core.asyncproc.ext;
+package org.df4j.core.asyncproc;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

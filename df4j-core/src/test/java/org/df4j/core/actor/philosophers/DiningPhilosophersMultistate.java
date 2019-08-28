@@ -1,11 +1,11 @@
 package org.df4j.core.actor.philosophers;
 
-import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.asyncproc.ScalarInput;
 import org.df4j.core.actor.Semafor;
 import org.df4j.core.asyncproc.PickPoint;
-import org.df4j.core.asyncproc.ext.AsyncAction;
+import org.df4j.core.asyncproc.AsyncAction;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;

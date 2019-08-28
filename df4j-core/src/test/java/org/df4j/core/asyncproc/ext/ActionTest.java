@@ -1,7 +1,6 @@
 package org.df4j.core.asyncproc.ext;
 
-import org.df4j.core.asyncproc.ScalarInput;
-import org.df4j.core.asyncproc.ScalarResult;
+import org.df4j.core.asyncproc.*;
 import org.df4j.core.protocols.Scalar;
 import org.junit.Assert;
 import org.junit.Test;

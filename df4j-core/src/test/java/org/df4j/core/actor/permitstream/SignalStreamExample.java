@@ -1,11 +1,11 @@
 package org.df4j.core.actor.permitstream;
 
 import org.df4j.core.actor.StreamOutput;
-import org.df4j.core.actor.ext.Hactor;
+import org.df4j.core.actor.Hactor;
 import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.actor.Semafor;
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.ext.StreamProcessor;
+import org.df4j.core.actor.StreamProcessor;
 import org.df4j.core.asyncproc.ScalarResult;
 import org.junit.Test;
 

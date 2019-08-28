@@ -1,6 +1,5 @@
-package org.df4j.core.asyncproc.ext;
+package org.df4j.core.asyncproc;
 
-import org.df4j.core.asyncproc.ScalarInput;
 import org.df4j.core.util.invoker.BiConsumerInvoker;
 import org.df4j.core.util.invoker.BiFunctionInvoker;
 import org.df4j.core.util.invoker.BiRunnableInvoker;

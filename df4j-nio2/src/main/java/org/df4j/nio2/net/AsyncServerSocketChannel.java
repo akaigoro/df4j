@@ -10,7 +10,7 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.actor.StreamOutput;
-import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -52,7 +52,7 @@ AsyncServerSocketChannel
         }
         assc = AsynchronousServerSocketChannel.open();
         assc.bind(addr);
-        this.start(directExec);
+        this.start(syncExec);
         LOG.config("AsyncServerSocketChannel("+addr+") created");
     }
 

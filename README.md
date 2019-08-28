@@ -95,6 +95,9 @@ Also runs df4j against reactive streams tests (<https://github.com/reactive-stre
 
 Version history
 ---------------
+2019/08/26 
+Branch API-8 started: Java 9 used.
+
 2019/06/16
 tag 7.2 protocol interfaces are grouped in a separate module df4j-protocols.
 

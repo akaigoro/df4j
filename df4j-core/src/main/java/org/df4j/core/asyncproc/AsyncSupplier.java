@@ -1,4 +1,4 @@
-package org.df4j.core.asyncproc.ext;
+package org.df4j.core.asyncproc;
 
 import org.df4j.core.protocols.Scalar;
 import org.df4j.core.util.invoker.Invoker;
@@ -14,7 +14,6 @@ import java.util.function.Supplier;
 /**
  * Base class for scalar nodes
  * Has predefined unbound output connector to keep the result of computation.
- *
  * Even if the computation does not produce a resulting value,
  * that connector is useful to monitor the end of the computation.
  *

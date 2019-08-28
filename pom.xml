@@ -31,7 +31,7 @@
     <properties>
         <project.version>8.0</project.version>
         <maven.version>3.6.0</maven.version>
-        <java.version>11</java.version>
+        <java.version>9</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

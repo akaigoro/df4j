@@ -1,4 +1,4 @@
-package org.df4j.core.asyncproc.ext;
+package org.df4j.core.asyncproc;
 
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.util.ActionCaller;

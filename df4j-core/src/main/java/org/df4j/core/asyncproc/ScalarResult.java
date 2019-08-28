@@ -13,7 +13,7 @@ import java.util.concurrent.*;
  * interfaces on output end.
  *
  */
-public class ScalarResult<T> implements Scalar.Subscriber<T>, Scalar.Publisher<T>, Future<T> {
+public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
     protected AsyncProc<T> parent;
     protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
     protected volatile boolean done;

@@ -1,4 +1,4 @@
-package org.df4j.core.actor.ext;
+package org.df4j.core.actor;
 
 import org.df4j.core.actor.Actor;
 import org.df4j.core.util.ActionCaller;

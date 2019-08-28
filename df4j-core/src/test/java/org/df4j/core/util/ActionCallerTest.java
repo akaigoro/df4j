@@ -1,6 +1,6 @@
 package org.df4j.core.util;
 
-import org.df4j.core.asyncproc.ext.Action;
+import org.df4j.core.asyncproc.Action;
 import org.df4j.core.util.invoker.FunctionInvoker;
 import org.df4j.core.util.invoker.Invoker;
 import org.junit.Assert;

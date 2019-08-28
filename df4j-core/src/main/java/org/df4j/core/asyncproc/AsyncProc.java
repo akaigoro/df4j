@@ -29,9 +29,12 @@ import java.util.concurrent.ForkJoinWorkerThread;
  *  it can be used as a place for unexpected errors.
  */
 public abstract class AsyncProc<R> extends Transition {
-    public static final Executor directExec = (Runnable r)->r.run();
-    public static final org.df4j.core.util.executor.CurrentThreadExecutor currentThreadExec = new org.df4j.core.util.executor.CurrentThreadExecutor();
+    public static final Executor syncExec = (Runnable r)->r.run();
+
+    public static final ForkJoinPool asyncExec = ForkJoinPool.commonPool();
+
     public static final Executor newThreadExec = (Runnable r)->new Thread(r).start();
+
     private static InheritableThreadLocal<Executor> threadLocalExecutor = new InheritableThreadLocal<Executor>(){
         @Override
         protected Executor initialValue() {
@@ -39,7 +42,7 @@ public abstract class AsyncProc<R> extends Transition {
             if (currentThread instanceof ForkJoinWorkerThread) {
                 return ((ForkJoinWorkerThread) currentThread).getPool();
             } else {
-                return ForkJoinPool.commonPool();
+                return asyncExec;
             }
         }
     };
@@ -62,10 +65,12 @@ public abstract class AsyncProc<R> extends Transition {
     }
 
     private Executor executor;
+
     protected final ScalarResult<R> result = new ScalarResult<>(this);
 
-    public void setExecutor(Executor exec) {
+    public <A extends AsyncProc<R>> A setExecutor(Executor exec) {
         this.executor = exec;
+        return (A) this;
     }
 
     public ScalarResult<R> asyncResult() {

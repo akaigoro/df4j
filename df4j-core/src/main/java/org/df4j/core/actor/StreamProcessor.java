@@ -1,10 +1,10 @@
-package org.df4j.core.actor.ext;
+package org.df4j.core.actor;
 
 import org.df4j.core.actor.StreamOutput;
 
 import java.util.concurrent.Flow;
 
-public abstract class StreamProcessor<M, R> extends Hactor<M> implements Flow.Publisher<R> {
+public abstract class StreamProcessor<M, R> extends Hactor<M> implements Flow.Processor<M, R> {
 	protected final StreamOutput<R> output = new StreamOutput<>(this);
 
     @Override

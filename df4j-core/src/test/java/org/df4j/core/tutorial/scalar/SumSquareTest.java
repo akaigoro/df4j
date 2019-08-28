@@ -3,8 +3,8 @@ package org.df4j.core.tutorial.scalar;
 import org.df4j.core.asyncproc.AsyncProc;
 import org.df4j.core.asyncproc.ScalarResult;
 import org.df4j.core.asyncproc.ScalarInput;
-import org.df4j.core.asyncproc.ext.AsyncBiFunction;
-import org.df4j.core.asyncproc.ext.AsyncFunction;
+import org.df4j.core.asyncproc.AsyncBiFunction;
+import org.df4j.core.asyncproc.AsyncFunction;
 import org.junit.Assert;
 import org.junit.Test;
 

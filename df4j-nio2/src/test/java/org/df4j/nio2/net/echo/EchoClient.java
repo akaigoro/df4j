@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.actor.ext.Hactor;
+import org.df4j.core.actor.Hactor;
 import org.df4j.core.asyncproc.ScalarResult;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;

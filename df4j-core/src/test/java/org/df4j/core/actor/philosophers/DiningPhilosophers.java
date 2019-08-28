@@ -1,6 +1,6 @@
 package org.df4j.core.actor.philosophers;
 
-import org.df4j.core.actor.ext.LazyActor;
+import org.df4j.core.actor.LazyActor;
 import org.df4j.core.asyncproc.PickPoint;
 import org.df4j.core.asyncproc.AllOf;
 import org.df4j.core.util.TimeSignalPublisher;

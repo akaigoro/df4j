@@ -1,8 +1,8 @@
 package org.df4j.core.tutorial.actor;
 
 import org.df4j.core.actor.StreamInput;
-import org.df4j.core.actor.ext.FancyActor;
-import org.df4j.core.asyncproc.ext.Action;
+import org.df4j.core.actor.FancyActor;
+import org.df4j.core.asyncproc.Action;
 import org.junit.Test;
 
 public class HelloWorld {

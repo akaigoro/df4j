@@ -4,8 +4,8 @@ import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.StreamInput;
 import org.df4j.core.actor.StreamOutput;
 import org.df4j.core.asyncproc.ScalarResult;
-import org.df4j.core.asyncproc.ext.AsyncBiFunction;
-import org.df4j.core.asyncproc.ext.AsyncFunction;
+import org.df4j.core.asyncproc.AsyncBiFunction;
+import org.df4j.core.asyncproc.AsyncFunction;
 import org.junit.Assert;
 import org.junit.Test;
 

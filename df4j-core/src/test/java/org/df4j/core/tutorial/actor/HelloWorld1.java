@@ -1,6 +1,6 @@
 package org.df4j.core.tutorial.actor;
 
-import org.df4j.core.actor.ext.Hactor;
+import org.df4j.core.actor.Hactor;
 import org.junit.Test;
 
 public class HelloWorld1 {
