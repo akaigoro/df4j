@@ -17,6 +17,7 @@ public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
     protected AsyncProc<T> parent;
     protected ScalarSubscriptionQueue<T> subscriptions = new ScalarSubscriptionQueue<>();
     protected volatile boolean done;
+    protected volatile boolean cancelled;
     protected volatile T value;
     protected volatile Throwable completionException;
     /** in case this instance have subscribed to some other Publisher */
@@ -111,6 +112,9 @@ public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
         Disposable subscriptionLoc;
         synchronized(this) {
             subscriptionLoc = subscription;
+            subscription = null;
+            done = true;
+            cancelled = true;
             if (subscriptionLoc == null) {
                 return false;
             }
@@ -125,7 +129,7 @@ public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
      */
     @Override
     public synchronized boolean isCancelled() {
-        return subscription == null;
+        return cancelled;
     }
 
     @Override
@@ -137,6 +141,9 @@ public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
     public synchronized T get() throws InterruptedException, ExecutionException {
         while (!done) {
             wait();
+        }
+        if (cancelled) {
+            throw new CancellationException();
         }
         if (completionException == null) {
             return value;
@@ -150,7 +157,6 @@ public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
         long millis = unit.toMillis(timeout);
         long targetTime = System.currentTimeMillis()+ millis;
         while (!done) {
-            debug("get !done, wait");
             wait(millis);
             if (done) {
                 break;
@@ -159,6 +165,9 @@ public class ScalarResult<T> implements Scalar.Subscriber<T>, Promise<T> {
             if (millis <= 0) {
                 throw new TimeoutException();
             }
+        }
+        if (cancelled) {
+            throw new CancellationException();
         }
         if (completionException == null) {
             debug("get done, value");
