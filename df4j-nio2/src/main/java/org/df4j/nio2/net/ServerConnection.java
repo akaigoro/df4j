@@ -12,19 +12,9 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.actor.LazyActor;
-import org.df4j.core.actor.StreamInput;
-import org.df4j.core.actor.StreamOutput;
-import org.df4j.core.util.Logger;
+import org.df4j.core.communicator.AsyncSemaphore;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
-import java.util.concurrent.Flow;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
@@ -40,169 +30,11 @@ import java.util.function.Consumer;
  * IO requests can be posted immediately, but will be executed
  * only after connection completes.
  */
-public class ServerConnection implements Flow.Subscriber<AsynchronousSocketChannel> {
-    protected static final Logger LOG = Logger.getLogger(ServerConnection.class.getName());
+public class ServerConnection extends BaseConnection {
 
-    private final Consumer<ServerConnection> backPort;
-
-	/** read requests queue */
-	public final Reader reader;
-	/** write requests queue */
-	public final Writer writer;
-
-    protected volatile AsynchronousSocketChannel channel;
-
-    public String name;
-
-    public ServerConnection(String name, Consumer<ServerConnection> backPort) {
-        this.name = name;
-        this.backPort = backPort;
-        reader = new Reader();
-        writer = new Writer();
-        LOG.config(getClass().getName()+" "+name+" created");
+    public ServerConnection(AsynchronousSocketChannel channel, String name, AsyncSemaphore allowedConnections) {
+        super(name, allowedConnections);
+        setChannel(channel);
+        LOG.config("ServerConnection "+getClass().getName()+" "+name+" created");
     }
-
-    public ServerConnection(String name) {
-        this(name, null);
-    }
-
-    @Override
-    public void onSubscribe(Flow.Subscription s) {
-
-    }
-
-    public void onNext(AsynchronousSocketChannel channel) {
-        LOG.info("conn "+name+": init()");
-        this.channel=channel;
-        reader.start();
-        writer.start();
-    }
-
-    public void onError(Throwable ex) {
-        LOG.info("conn "+name+": postFailure()");
-    }
-
-    @Override
-    public void onComplete() {
-
-    }
-
-    /** disallows subsequent posts of requests; already posted requests
-     * would be processed.
-     */
-    public synchronized void close() {
-        AsynchronousSocketChannel locchannel;
-        synchronized (this) {
-            locchannel = channel;
-            channel=null;
-        }
-    	if (locchannel!=null) {
-            try {
-                locchannel.close();
-            } catch (IOException e) {
-            }
-    	}
-    	if (backPort != null) {
-            backPort.accept(this);
-        }
-    }
-
-    public synchronized boolean isClosed() {
-        return channel==null;
-    }
-
-    //===================== inner classes
-
-    /**
-     * an actor with delayed restart of the action
-     */
-    public abstract class BuffProcessor extends LazyActor
-            implements CompletionHandler<Integer, ByteBuffer>
-    {
-        protected final Logger LOG = Logger.getLogger(getClass().getName());
-
-        public final StreamInput<ByteBuffer> input = new StreamInput<>(this);
-        public final StreamOutput<ByteBuffer> output = new StreamOutput<>(this);
-
-        {
-            LOG.info(getClass().getName()+" "+name+" created");
-        }
-
-        long timeout=0;
-
-        //-------------------- dataflow backend
-
-        @Override
-        protected void runAction() {
-            ByteBuffer buffer = input.current();
-            if (input.isCompleted()) {
-                output.onComplete();
-                output.onError(new AsynchronousCloseException());
-                LOG.finest("conn "+ name+": input.isClosed()");
-                return;
-            }
-            doIO(buffer);
-        }
-
-        // ------------- CompletionHandler backend
-
-        // IO excange finished
-        public void completed(Integer result, ByteBuffer buffer) {
-            LOG.finest("conn "+ name+": read() completed "+result);
-            if (result==-1) {
-                output.onComplete();
-                close();
-            } else {
-                buffer.flip();
-                output.onNext(buffer);
-                // start next IO excange only after this reading is finished,
-                // to keep buffer ordering
-                this.start();
-            }
-        }
-
-        public void failed(Throwable exc, ByteBuffer attach) {
-            LOG.finest("conn "+ name+": read() failed "+exc);
-            if (exc instanceof AsynchronousCloseException) {
-                close();
-            } else {
-                this.start(); // let subsequent requests fail
-                output.onError(exc);
-            }
-        }
-
-        protected abstract void doIO(ByteBuffer buffer);
-
-    }
-
-    /**
-     * callback for connection completion
-     * works both in client-side and server-side modes
-     */
-    
-    public class Reader extends BuffProcessor {
-
-        protected void doIO(ByteBuffer buffer) {
-            LOG.info("conn "+name+": read() started");
-            if (timeout>0) {
-                channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
-            } else {
-                channel.read(buffer, buffer, this);
-            }
-        }
-
-    }
-    
-    public class Writer extends BuffProcessor {
-
-        protected void doIO(ByteBuffer buffer) {
-            LOG.finest("conn "+name+": write() started.");
-            if (timeout>0) {
-                channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
-            } else {
-                channel.write(buffer, buffer, this);
-            }
-        }
-    }
-
 }

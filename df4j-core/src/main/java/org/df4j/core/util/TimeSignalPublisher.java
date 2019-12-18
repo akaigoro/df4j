@@ -1,6 +1,7 @@
 package org.df4j.core.util;
 
-import org.df4j.core.protocols.SignalStream;
+import org.df4j.core.protocol.Completion;
+import org.df4j.core.protocol.SignalStream;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -16,11 +17,21 @@ public class TimeSignalPublisher {
         this(new Timer());
     }
 
-    public void subscribe(SignalStream.Subscriber sema, long delay) {
+    public void subscribe(Completion.CompletableObserver subscriber, long delay) {
         TimerTask task = new TimerTask(){
             @Override
             public void run() {
-                sema.release();
+                subscriber.onComplete();
+            }
+        };
+        timer.schedule(task, delay);
+    }
+
+    public void subscribe(SignalStream.Subscriber subscriber, long delay) {
+        TimerTask task = new TimerTask(){
+            @Override
+            public void run() {
+                subscriber.awake();
             }
         };
         timer.schedule(task, delay);

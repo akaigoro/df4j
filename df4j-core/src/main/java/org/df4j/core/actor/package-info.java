@@ -8,7 +8,7 @@
  *   After processing the first set of arguments, the actor purges them out of parameters and waits until next set of arguments is ready.
  *
  *  The actor realm in df4j is located at the package {@link org.df4j.core.actor}. The base node class is {@link org.df4j.core.actor.Actor}.
- *  It extends {@link org.df4j.core.asyncproc.AsyncProc} and so has the default result and can contain one-shot parameters (which can be set only once).
+ *  It extends {@link org.df4j.core.actor.AsyncProc} and so has the default result and can contain one-shot parameters (which can be set only once).
  *  But to be fully functional, Actors must declare parameters capable to pass multiple tokens. They are declared in the same package:
  *  - Semahore: this is an asynchronous semaphore. It contains counter of permits. It is considered ready when the counter is greater than zero.
  *  After each round or Actor's execution, the counter is automatically decreased by 1.

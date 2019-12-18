@@ -2,13 +2,13 @@ package org.df4j.adapters.rxjava2;
 
 import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
-import org.df4j.core.protocols.Scalar;
+import org.df4j.core.protocol.ScalarMessage;
 
-public class Scalar2SingleObserver<T> implements SingleObserver<T>, org.df4j.core.protocols.Disposable {
-    private final Scalar.Subscriber<T> scalar;
+public class Scalar2SingleObserver<T> implements SingleObserver<T>, org.df4j.core.protocol.Disposable {
+    private final ScalarMessage.Subscriber<T> scalar;
     private Disposable subscription;
 
-    public Scalar2SingleObserver(Scalar.Subscriber<T> scalar) {
+    public Scalar2SingleObserver(ScalarMessage.Subscriber<T> scalar) {
         this.scalar = scalar;
     }
 

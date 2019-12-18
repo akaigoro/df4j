@@ -1,7 +1,7 @@
 package org.df4j.adapters.reactivestreams;
 
-import org.df4j.core.actor.StreamOutput;
-import org.df4j.core.asyncproc.AllOf;
+import org.df4j.core.port.OutMessage;
+import org.df4j.core.fancy.AllOf;
 
 import java.io.PrintStream;
 import java.util.concurrent.Flow;
@@ -12,7 +12,7 @@ import static org.df4j.core.util.Utils.sneakyThrow;
  * emits totalNumber of Longs and closes the stream
  */
 public class UnicastBufferedSource extends org.df4j.core.actor.Actor implements Flow.Publisher<Long> {
-    public StreamOutput<Long> output = new StreamOutput<>(this);
+    public OutMessage<Long> output = new OutMessage<>(this);
     long val;
     Logger log;
 

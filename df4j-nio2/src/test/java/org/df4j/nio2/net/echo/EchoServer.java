@@ -1,18 +1,36 @@
 package org.df4j.nio2.net.echo;
 
+import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.ServerConnection;
 
-import java.util.function.Consumer;
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class EchoServer extends ServerConnection {
+/**
+ * generates {@link EchoServerConnection}s for incoming connections
+ *
+ */
+public class EchoServer extends AsyncServerSocketChannel {
+    AtomicInteger serialnum=new AtomicInteger(0);
 
-    public EchoServer(Consumer<ServerConnection> backport) {
-        super("EchoServerConnection", backport);
-        // returns each received ByteBuffer to the client
-        reader.output.subscribe(writer.input);
-        // directs all used buffers after writing to the reader
-        writer.output.subscribe(reader.input);
-        Utils.injectBuffers(2, 128, reader);
-        LOG.config(getClass().getName()+" created");
+    public EchoServer(SocketAddress addr, int connCount) throws IOException {
+        super(addr);
+        allowedConnections.release(connCount);
+    }
+
+    @Override
+    protected void onNext(AsynchronousSocketChannel asc) {
+        LOG.finest("AsynchronousServerSocketChannel: request accepted");
+        getExecutor().execute(()->{
+            ServerConnection conn = new EchoServerConnection(asc, allowedConnections);
+            conn.name = "EchoServerConnection"+(serialnum.getAndIncrement());
+        });
+    }
+
+    @Override
+    protected void onError(Throwable exc) {
+        LOG.finest("AsynchronousServerSocketChannel: request failed:"+exc);
     }
 }

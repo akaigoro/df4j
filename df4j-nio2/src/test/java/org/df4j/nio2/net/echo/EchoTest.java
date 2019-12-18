@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.asyncproc.ScalarResult;
+import org.df4j.core.communicator.ScalarResult;
 import org.junit.*;
 
 import java.io.IOException;
@@ -19,21 +19,21 @@ import java.util.concurrent.TimeoutException;
 public  class EchoTest {
     static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
 
-    static ConnectionManager connectionManager;
+    static EchoServer echoServer;
 
     @BeforeClass
     public static synchronized void init() throws IOException {
-        if (connectionManager==null) {
-            connectionManager = new ConnectionManager(local9990,2);
-            connectionManager.start();
+        if (echoServer ==null) {
+            echoServer = new EchoServer(local9990,2);
+            echoServer.awake();
         }
     }
 
     @AfterClass
     public static synchronized void close() {
-        if (connectionManager!=null) {
-            connectionManager.close();
-            connectionManager = null;
+        if (echoServer !=null) {
+            echoServer.close();
+            echoServer = null;
         }
     }
 
@@ -41,20 +41,19 @@ public  class EchoTest {
     public void ClientTest_1() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         EchoClient client = new EchoClient(local9990, 1);
         client.start();
-        ScalarResult<Void> result = client.result;
-        result.get(1, TimeUnit.SECONDS);
+        client.blockingAwait(1, TimeUnit.SECONDS);
     }
 
     @Test
     public void ClientTest_4x4() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         ArrayList<EchoClient> clients = new ArrayList<>();
         for (int k=0; k<4; k++)  {
-            EchoClient client = new EchoClient(local9990, 4);
+            EchoClient client = new EchoClient(local9990, k+1);
             client.start();
             clients.add(client);
         }
         for (EchoClient client: clients) {
-            client.result.get(2, TimeUnit.SECONDS);
+            client.blockingAwait(2, TimeUnit.SECONDS);
         }
     }
 

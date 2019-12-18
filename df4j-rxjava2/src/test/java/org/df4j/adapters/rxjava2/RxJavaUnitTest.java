@@ -4,8 +4,8 @@ import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.SingleSource;
 import io.reactivex.disposables.Disposable;
-import org.df4j.core.asyncproc.ScalarResult;
-import org.df4j.core.protocols.Scalar;
+import org.df4j.core.communicator.ScalarResult;
+import org.df4j.core.protocol.ScalarMessage;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
@@ -20,8 +20,8 @@ public class RxJavaUnitTest {
     /**
      *  * pass data from rxjava2 to df4j:
      *  *   {@link io.reactivex.SingleSource} source;
-     *  *   {@link Scalar.Subscriber} subscriber;
-     *  *   source.suscribe(subscriber.{@link Scalar.Subscriber#asSingleObserver()};
+     *  *   {@link ScalarMessage.Subscriber} subscriber;
+     *  *   source.suscribe(subscriber.{@link ScalarMessage.Subscriber#asSingleObserver()};
      * @throws InterruptedException
      * @throws ExecutionException
      * @throws TimeoutException
@@ -41,7 +41,7 @@ public class RxJavaUnitTest {
      * demonstrated interoperability with rxjava2 objects:
      *
      * pass data from df4j to rxjava2:
-     *   {@link Scalar.Publisher} source;
+     *   {@link ScalarMessage.Publisher} source;
      *   {@link io.reactivex.SingleObserver} sink;
      *   source.suscribe{sink);
      *
@@ -51,7 +51,7 @@ public class RxJavaUnitTest {
         final int val = 3;
         ScalarResult<Integer> scalarResult = new ScalarResult<>();
         CompletableObserver<Integer> rxJavaSink = new CompletableObserver<>();
-        Scalar.Subscriber<? super Integer> s = new Single2ScalarSubscriber<>((SingleObserver)rxJavaSink);
+        ScalarMessage.Subscriber<? super Integer> s = new Single2ScalarSubscriber<>((SingleObserver)rxJavaSink);
         scalarResult.subscribe(s);
         scalarResult.onSuccess(val);
         int res = rxJavaSink.get(200, TimeUnit.MILLISECONDS);
