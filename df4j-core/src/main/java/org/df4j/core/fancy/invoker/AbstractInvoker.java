@@ -1,4 +1,4 @@
-package org.df4j.core.util.invoker;
+package org.df4j.core.fancy.invoker;
 
 public abstract class AbstractInvoker<FT> implements Invoker {
     protected final FT function;
