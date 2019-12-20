@@ -31,7 +31,7 @@
     <properties>
         <project.version>9.0</project.version>
         <maven.version>3.6.0</maven.version>
-        <java.version>9</java.version>
+        <java.version>8</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -46,7 +46,6 @@
         <module>df4j-fancy</module>
         <module>df4j-nio2</module>
         <module>df4j-reactivestreams</module>
-        <module>df4j-rxjava2</module>
     </modules>
 
     <dependencies>

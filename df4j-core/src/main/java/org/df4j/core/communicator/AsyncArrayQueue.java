@@ -1,11 +1,11 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.ReverseFlow;
+import org.df4j.protocol.ReverseFlow;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 import java.util.concurrent.TimeUnit;
 
 /**

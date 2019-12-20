@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.Signal;
+import org.df4j.protocol.Signal;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletionException;

@@ -1,4 +1,4 @@
-package org.df4j.core.protocol;
+package org.df4j.protocol;
 
 /**
  * A {@link Signal} with completion exceptions

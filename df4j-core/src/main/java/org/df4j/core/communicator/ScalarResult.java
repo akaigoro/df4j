@@ -1,10 +1,8 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.ScalarMessage;
+import org.df4j.protocol.ScalarMessage;
 
-import java.util.LinkedList;
 import java.util.concurrent.*;
-import java.util.function.BiConsumer;
 
 /**
  * {@link ScalarResult} can be considered as a one-shot {@link AsyncArrayQueue}: once set,

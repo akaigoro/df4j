@@ -3,7 +3,7 @@ package org.df4j.adapters.reactivestreams;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 
 /**
  *

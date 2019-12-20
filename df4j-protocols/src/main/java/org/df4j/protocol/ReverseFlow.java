@@ -1,6 +1,4 @@
-package org.df4j.core.protocol;
-
-import java.util.concurrent.Flow;
+package org.df4j.protocol;
 
 /**
  * Describes flow of messages from Subscribers to Publishers

@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.SignalStream;
+import org.df4j.protocol.SignalStream;
 
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;

@@ -5,7 +5,7 @@ import org.df4j.core.actors.Subscriber;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 
 public class PubSubTest {
 

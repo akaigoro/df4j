@@ -1,7 +1,7 @@
 package org.df4j.core.util;
 
-import org.df4j.core.protocol.Completion;
-import org.df4j.core.protocol.SignalStream;
+import org.df4j.protocol.Completion;
+import org.df4j.protocol.SignalStream;
 
 import java.util.Timer;
 import java.util.TimerTask;

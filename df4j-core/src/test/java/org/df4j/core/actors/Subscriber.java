@@ -4,7 +4,7 @@ import org.df4j.core.actor.Actor;
 import org.df4j.core.port.InpMessage;
 import org.junit.Assert;
 
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 
 public class Subscriber extends Actor {
     Flow.Publisher<Integer> pub;

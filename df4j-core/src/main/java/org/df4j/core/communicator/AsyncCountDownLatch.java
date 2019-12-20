@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.Completion;
-import org.df4j.core.protocol.Signal;
+import org.df4j.protocol.Completion;
+import org.df4j.protocol.Signal;
 
 import java.util.concurrent.CountDownLatch;
 

@@ -1,7 +1,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.communicator.Completable;
-import org.df4j.core.protocol.Completion;
+import org.df4j.protocol.Completion;
 
 import java.util.concurrent.TimeUnit;
 

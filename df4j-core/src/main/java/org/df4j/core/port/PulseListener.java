@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.BasicBlock;
-import org.df4j.core.protocol.SignalStream;
+import org.df4j.protocol.SignalStream;
 
 public class PulseListener extends BasicBlock.Port implements SignalStream.Subscriber {
     protected SignalStream.Publisher publisher;

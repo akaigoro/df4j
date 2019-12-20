@@ -1,4 +1,4 @@
-package org.df4j.core.protocol;
+package org.df4j.protocol;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;

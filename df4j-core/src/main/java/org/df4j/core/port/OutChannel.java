@@ -1,9 +1,9 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.BasicBlock;
-import org.df4j.core.protocol.ReverseFlow;
+import org.df4j.protocol.ReverseFlow;
 
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 
 /**
  * An active output parameter

@@ -9,7 +9,7 @@
  */
 package org.df4j.core.actor;
 
-import org.df4j.core.protocol.SignalStream;
+import org.df4j.protocol.SignalStream;
 import org.df4j.core.util.Utils;
 
 import java.util.concurrent.Executor;

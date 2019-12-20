@@ -1,7 +1,5 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.Completion;
-
 import java.util.LinkedList;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;

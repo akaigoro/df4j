@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;

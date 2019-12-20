@@ -2,7 +2,7 @@ package org.df4j.core.port;
 
 import org.df4j.core.actor.BasicBlock;
 
-import java.util.concurrent.Flow;
+import org.df4j.protocol.Flow;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.

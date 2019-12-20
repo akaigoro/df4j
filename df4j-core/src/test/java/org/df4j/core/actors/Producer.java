@@ -2,7 +2,7 @@ package org.df4j.core.actors;
 
 import org.df4j.core.actor.Actor;
 import org.df4j.core.port.OutChannel;
-import org.df4j.core.protocol.ReverseFlow;
+import org.df4j.protocol.ReverseFlow;
 
 public class Producer extends Actor {
     final int delay;
