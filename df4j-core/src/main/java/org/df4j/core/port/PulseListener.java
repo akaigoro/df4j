@@ -24,10 +24,7 @@ public class PulseListener extends BasicBlock.Port implements SignalStream.Subsc
     }
 
     @Override
-    public void awake() {
-        synchronized(this) {
-            if (unblock()) return;
-        }
-        decBlocking();
+    public synchronized void awake() {
+        unblock();
     }
 }

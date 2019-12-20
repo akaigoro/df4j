@@ -40,14 +40,11 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
      * passes a control token to this {@link BasicBlock}.
      * This token is consumed when this block is submitted to an executor.
      */
-    public void awake() {
-        synchronized(controlport) {
-            if (dataflow.isCompleted()) {
-                return;
-            }
-            if (controlport.unblock()) return;
+    public synchronized void awake() {
+        if (dataflow.isCompleted()) {
+            return;
         }
-        controlport.decBlocking();
+        controlport.unblock();
     }
 
     /**
@@ -67,10 +64,6 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
 
     public void setExecutor(Executor exec) {
         this.executor = exec;
-    }
-
-    private void incBlocking() {
-        blockingPortCount++;
     }
 
     protected synchronized Executor getExecutor() {
@@ -132,6 +125,15 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
             return ready;
         }
 
+        private final void dbg(String s) {
+//            System.out.println(BasicBlock.this.getClass().getName()+"/"+getClass().getSimpleName()+ s +blockingPortCount);
+        }
+
+        private void incBlocking() {
+            blockingPortCount++;
+            dbg("#incBlocking: blockingPortCount set to ");
+        }
+
         /**
          * sets this port to a blocked state.
          */
@@ -143,37 +145,38 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
             incBlocking();
         }
 
-        protected void decBlocking() {
-            synchronized(BasicBlock.this) {
-                if (blockingPortCount == 0) {
-                    throw new IllegalStateException();
-                }
-                blockingPortCount--;
-                if (blockingPortCount > 0) {
-                    return;
-                }
-                if (executor == null) {
-                    executor = Utils.getThreadLocalExecutor();
-                }
-                controlport.block();
-            }
-            fire();
-        }
-
         /**
          * sets this port to unblocked state.
          * If all ports become unblocked,
          * this block is submitted to the executor.
+         *
+         * @return value of exptression {@link #blockingPortCount} > 0
          */
-        protected boolean unblock() {
+        protected void unblock() {
             if (ready) {
-                return true;
-            }
-            if (blockingPortCount == 0) {
-                throw new InternalError(getClass().getName()+": blockedPortCount==0 but blocked port exists ");
+                return;
             }
             ready = true;
-            return false;
+            synchronized(BasicBlock.this) {
+                if (blockingPortCount == 0) {
+                    throw new IllegalStateException("blocked port and blockingPortCount == 0");
+                }
+                blockingPortCount--;
+                dbg("#decBlocking: blockingPortCount set to ");
+                if (blockingPortCount > 0) {
+                    return;
+                }
+                controlport.block();
+                if (executor == null) {
+                    executor = Utils.getThreadLocalExecutor();
+                }
+            }
+            fire();
+        }
+
+        @Override
+        public String toString() {
+            return ready?"ready":"blocked";
         }
     }
 

@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.communicator.threads.ProducerT;
-import org.df4j.core.communicator.threads.ConsumerT;
+import org.df4j.core.threads.ProducerT;
+import org.df4j.core.threads.ConsumerT;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,7 +13,7 @@ public class AsyncArrayQueueThreadTest {
         ConsumerT subscriber = new ConsumerT(queue, delay2);
         producer.start();
         subscriber.start();
-        subscriber.join();
+//        subscriber.join();
         subscriber.join(1000);
         Assert.assertFalse(subscriber.isAlive());
     }
@@ -21,6 +21,11 @@ public class AsyncArrayQueueThreadTest {
     @Test
     public void testAsyncQueueComplete() throws InterruptedException {
         testAsyncQueue(0,0, 0);
+    }
+
+    @Test
+    public void testAsyncQueueSlowProdComplete() throws InterruptedException {
+        testAsyncQueue(0,50, 0);
     }
 
     @Test

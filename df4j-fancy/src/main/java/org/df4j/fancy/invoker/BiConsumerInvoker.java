@@ -1,0 +1,17 @@
+package main.java.org.df4j.fancy.invoker;
+
+import java.util.function.BiConsumer;
+
+public class BiConsumerInvoker<U,V> extends AbstractInvoker<BiConsumer<U,V>> {
+
+    public BiConsumerInvoker(BiConsumer<U, V> consumer) {
+        super(consumer);
+    }
+
+    public Void apply(Object... args) {
+        assert args.length == 2;
+        function.accept((U) args[0], (V) args[1]);
+        return null;
+    }
+
+}

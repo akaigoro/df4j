@@ -1,7 +1,8 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.communicator.ScalarResult;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

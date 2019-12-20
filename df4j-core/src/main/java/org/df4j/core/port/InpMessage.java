@@ -1,7 +1,8 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.BasicBlock;
-import org.df4j.core.protocol.MessageStream;
+
+import java.util.concurrent.Flow;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -9,15 +10,20 @@ import org.df4j.core.protocol.MessageStream;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpMessage<T> extends BasicBlock.Port implements MessageStream.Subscriber<T>, MessageProvider<T> {
-    MessageStream.Publisher<T> publisher;
+public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>, MessageProvider<T> {
     /** extracted token */
     protected T value;
     private Throwable completionException;
     protected volatile boolean completed;
+    Flow.Subscription subscription;
 
     public InpMessage(BasicBlock parent) {
         parent.super(false);
+    }
+
+    public InpMessage(BasicBlock parent, Flow.Publisher<T> publisher) {
+        this(parent);
+        publisher.subscribe(this);
     }
 
     public synchronized boolean isCompleted() {
@@ -36,7 +42,6 @@ public class InpMessage<T> extends BasicBlock.Port implements MessageStream.Subs
     }
 
     public  T remove() {
-        MessageStream.Publisher<T> pub;
         T res;
         synchronized(this) {
             if (!isReady() || value == null) {
@@ -45,40 +50,20 @@ public class InpMessage<T> extends BasicBlock.Port implements MessageStream.Subs
             res = value;
             value = null;
             block();
-            if (publisher == null) {
+            if (subscription == null) {
                 return res;
             }
-            pub =  publisher;
         }
-        pub.subscribe(this);
+        subscription.request(1);
         return res;
     }
 
-    public void unsubscribe() {
-        MessageStream.Publisher<T> pub = publisher;
-        synchronized (this) {
-            if (publisher == null) {
-                return;
-            }
-            pub = publisher;
-            publisher = null;
+    @Override
+    public void onSubscribe(Flow.Subscription subscription) {
+        this.subscription = subscription;
+        if (!isReady()) {
+            subscription.request(1);
         }
-        pub.unsubscribe(this);
-    }
-
-    /**
-     * subscribes in repeating mode:
-     * after each {@link #remove()}, subscribes again.
-     * This mode can be cancelled with call to {@link #unsubscribe()}.
-     * @param pub permanent publisher
-     */
-    public void subscribeTo(MessageStream.Publisher<T> pub) {
-        synchronized(this) {
-            value = null;
-            block();
-            publisher = pub;
-        }
-        pub.subscribe(this);
     }
 
     @Override
@@ -91,22 +76,34 @@ public class InpMessage<T> extends BasicBlock.Port implements MessageStream.Subs
                 return;
             }
             value = message;
-            if (unblock()) return;
+            unblock();
         }
-        decBlocking();
     }
 
     @Override
-    public void onError(Throwable throwable) {
-        synchronized(this) {
-            if (isCompleted()) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            publisher = null;
-            if (unblock()) return;
+    public synchronized void onError(Throwable throwable) {
+        if (isCompleted()) {
+            return;
         }
-        decBlocking();
+        this.completed = true;
+        this.completionException = throwable;
+        subscription = null;
+        unblock();
+    }
+
+    @Override
+    public void onComplete() {
+        onError(null);
+    }
+
+    public synchronized void unsubscribe() {
+        if (subscription != null) {
+            subscription.cancel();
+        }
+        subscription = null;
+        value = null;
+        completionException = null;
+        completed = false;
+        block();
     }
 }

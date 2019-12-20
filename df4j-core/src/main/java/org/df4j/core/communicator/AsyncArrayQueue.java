@@ -1,24 +1,27 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.protocol.MessageChannel;
-import org.df4j.core.protocol.MessageStream;
+import org.df4j.core.protocol.ReverseFlow;
 
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 
 /**
  *  An asynchronous analogue of ArrayBlockingQueue
  *
+ *  Flow of messages:
+ *  {@link ReverseFlow.Subscriber} => [ {@link AsyncArrayQueue} implements {@link ReverseFlow.Publisher),
+ *                                                     {@link Flow.Publisher}] => {@link Flow.Subscriber}
+ *
  * @param <T> the type of the values passed through this token container
  */
-public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueue<T>, MessageChannel.Consumer<T>, MessageStream.Publisher<T> {
+public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueue<T>, ReverseFlow.Publisher<T>, Flow.Publisher<T> {
     protected final int capacity;
     protected ArrayDeque<T> tokens;
-    protected Queue<MessageChannel.Producer<T>> producers = new LinkedList<>();
-    protected Queue<MessageStream.Subscriber<T>> subscribers = new LinkedList<>();
+    protected Queue<ProducerSubscription> producers = new LinkedList<ProducerSubscription>();
+    protected Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
     protected Throwable completionException;
     protected volatile boolean completed;
 
@@ -28,34 +31,13 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
     }
 
     @Override
-    public void offer(MessageChannel.Producer<T> p) {
-        if (completed) {
-            return;
-        }
-        T value = p.remove();
-        handleValue:
-        if (value != null) {
-            MessageStream.Subscriber<T> sub;
-            synchronized (this) {
-                if (!subscribers.isEmpty()) {
-                    sub = subscribers.remove();
-                } else if (tokens.size() < capacity) {
-                    super.add(value);
-                    break handleValue;
-                } else {
-                    producers.add(p);
-                    break handleValue;
-                }
-            }
-            sub.onNext(value);
-        }
-        if (p.isCompleted()) {
-            onError(p.getCompletionException());
-        }
+    public void subscribe(ReverseFlow.Subscriber<T> producer) {
+        ProducerSubscription subscription = new ProducerSubscription(producer);
+        producer.onSubscribe(subscription);
     }
-
+/*
     public void onError(Throwable completionException) {
-        Queue<MessageStream.Subscriber<T>> subs;
+        Queue<FlowSubscription> subs;
         synchronized(this) {
             if (completed) {
                 return;
@@ -70,7 +52,7 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
             subscribers = null;
         }
         for (;;) {
-            MessageStream.Subscriber<T> sub = subs.poll();
+            FlowSubscription sub = subs.poll();
             if (sub == null) {
                 break;
             }
@@ -81,46 +63,12 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
     public void onComplete() {
         onError(null);
     }
+*/
 
     @Override
-    public synchronized void cancel(MessageChannel.Producer<? super T> s) {
-        producers.remove(s);
-    }
-
-    @Override
-    public void subscribe(MessageStream.Subscriber<T> subscriber) {
-        T token;
-        synchronized (this) {
-            token = tokens.poll();
-            if (token == null) {
-                if (completed) {
-                    subscriber.onError(completionException);
-                } else {
-                    subscribers.add(subscriber);
-                }
-                return;
-            }
-            MessageChannel.Producer<T> producer = producers.poll();
-            if (producer == null) {
-                notifyAll();
-            } else {
-                if (producer.isCompleted()) {
-                    if (!completed) {
-                        completed = true;
-                        completionException = producer.getCompletionException();
-                    }
-                } else {
-                    T newT = producer.remove();
-                    tokens.addLast(newT);
-                }
-            }
-        }
-        subscriber.onNext(token);
-    }
-
-    @Override
-    public synchronized boolean unsubscribe(MessageStream.Subscriber<T> subscriber) {
-        return subscribers.remove(subscriber);
+    public void subscribe(Flow.Subscriber<? super T> subscriber) {
+        FlowSubscription subscription = new FlowSubscription(subscriber);
+        subscriber.onSubscribe(subscription);
     }
 
     /**
@@ -130,7 +78,7 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
      */
     @Override
     public boolean offer(T token) {
-        MessageStream.Subscriber<T> sub;
+        FlowSubscription sub;
         synchronized (this) {
             if (subscribers.isEmpty()) {
                 return tokens.offer(token);
@@ -168,8 +116,8 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
      */
     @Override
     public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
-        MessageStream.Subscriber<T> sub;
         long millis = unit.toMillis(timeout);
+        FlowSubscription sub;
         synchronized(this) {
             for (;;) {
                 if (completed) {
@@ -195,7 +143,7 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
 
     @Override
     public synchronized void put(T token) throws InterruptedException {
-        MessageStream.Subscriber<T> sub;
+        FlowSubscription sub;
         synchronized(this) {
             for (;;) {
                 if (completed) {
@@ -216,51 +164,36 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
 
     @Override
     public synchronized T take() throws InterruptedException {
-        synchronized(this) {
-            for (;;) {
-                T token = tokens.poll();
-                if (token != null) {
-                    MessageChannel.Producer<T> prod = producers.poll();
-                    if (prod != null) {
-                        offer(prod);
-                    } else {
-                        notifyAll();
-                    }
-                    return token;
-                } else if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                wait(100); //todo this is a workaround
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                return res;
             }
+            if (completed) {
+                throw new CompletionException(completionException);
+            }
+            wait();
         }
     }
 
     @Override
-    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        MessageChannel.Producer<T> prod;
+    public synchronized T poll(long timeout, TimeUnit unit) throws InterruptedException {
         long millis = unit.toMillis(timeout);
-        synchronized(this) {
-            for (;;) {
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                if (!producers.isEmpty()) {
-                    prod = producers.remove();
-                    break;
-                }
-                T token = tokens.poll();
-                if (token != null) {
-                    return token;
-                }
-                if (millis <= 0) {
-                    return null;
-                }
-                long targetTime = System.currentTimeMillis() + millis;
-                wait(millis);
-                millis = targetTime - System.currentTimeMillis();
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                return res;
             }
+            if (completed) {
+                throw new CompletionException(completionException);
+            }
+            if (millis <= 0) {
+                return null;
+            }
+            long targetTime = System.currentTimeMillis() + millis;
+            wait(millis);
+            millis = targetTime - System.currentTimeMillis();
         }
-        return prod.remove();
     }
 
     @Override
@@ -286,5 +219,178 @@ public class AsyncArrayQueue<T> extends AbstractQueue<T> implements BlockingQueu
     @Override
     public int size() {
         return 0;
+    }
+
+    public void onComplete() {
+        onError(null);
+    }
+
+    public synchronized void onError(Throwable cause) {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        completionException = cause;
+        notifyAll();
+        for (;;) {
+            FlowSubscription sub1 = subscribers.poll();
+            if (sub1 == null) {
+                break;
+            }
+            sub1.onError(cause);
+        }
+    }
+
+    class ProducerSubscription implements Flow.Subscription {
+        protected ReverseFlow.Subscriber<T> producer;
+        private long remainedRequests = 0;
+        private boolean cancelled = false;
+
+        public ProducerSubscription(ReverseFlow.Subscriber<T> producer) {
+            this.producer = producer;
+        }
+
+        /**
+         * @param n number of messages the producer is able to dekiver now
+         */
+        @Override
+        public synchronized void request(long n) {
+            if (n <= 0) {
+                throw new IllegalArgumentException();
+            }
+            synchronized (AsyncArrayQueue.this) {
+                if (cancelled) {
+                    return;
+                }
+                if (completed) {
+                    producer.cancel();
+                    return;
+                }
+                if (remainedRequests > 0) {
+                    remainedRequests += n;
+                    return;
+                }
+                if (!producers.isEmpty()) {
+                    producers.add(this);
+                    return;
+                }
+                if (producer.isCompleted()) {
+                    completed = true;
+                    completionException = producer.getCompletionException();
+                    AsyncArrayQueue.this.notifyAll();
+                    for (;;) {
+                        FlowSubscription sub = subscribers.poll();
+                        if (sub == null) {
+                            return;
+                        }
+                        sub.onError(completionException);
+                    }
+                }
+                FlowSubscription sub1 = null;
+                while (n > 0) {
+                    T value = producer.remove();
+                    if (sub1 == null) {
+                        sub1 = subscribers.poll();
+                    }
+                    if (sub1 != null) {
+                        if (!sub1.onNext(value)) {
+                            sub1 = null;
+                        }
+                    } else if (tokens.size() < capacity) {
+                        tokens.add(value);
+                    } else {
+                        remainedRequests = n;
+                        producers.add(this);
+                        break;
+                    }
+                    n--;
+                    AsyncArrayQueue.this.notifyAll();
+                }
+            }
+        }
+
+        @Override
+        public void cancel() {
+            synchronized (AsyncArrayQueue.this) {
+                producers.remove(this);
+                cancelled = true;
+            }
+        }
+    }
+
+    class FlowSubscription implements Flow.Subscription {
+        protected final Flow.Subscriber subscriber;
+        private long remainedRequests = 0;
+        private boolean cancelled = false;
+
+        FlowSubscription(Flow.Subscriber subscriber) {
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void request(long n) {
+            if (n <= 0) {
+                throw new IllegalArgumentException();
+            }
+            synchronized (AsyncArrayQueue.this) {
+                if (cancelled) {
+                    return;
+                }
+                if (remainedRequests > 0) {
+                    remainedRequests += n;
+                    return;
+                }
+                while (n > 0) {
+                    if (tokens.size() == 0) {
+                        if (completed) {
+                            if (completionException == null) {
+                                subscriber.onComplete();
+                            } else {
+                                subscriber.onError(completionException);
+                            }
+                        } else {
+                            remainedRequests = n;
+                            subscribers.add(this);
+                        }
+                        return;
+                    }
+                    T value = tokens.remove();
+                    subscriber.onNext(value);
+                    n--;
+                    AsyncArrayQueue.this.notifyAll();
+                }
+            }
+        }
+
+        @Override
+        public void cancel() {
+            synchronized (AsyncArrayQueue.this) {
+                subscribers.remove(this);
+                cancelled = true;
+            }
+        }
+
+        /**
+         *
+         * @param value token to pass
+         * @return true if can accept more tokens
+         */
+        public boolean onNext(T value) {
+            subscriber.onNext(value);
+            remainedRequests--;
+            return remainedRequests > 0;
+        }
+
+        public void onError(Throwable cause) {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            if (cause == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(cause);
+            }
+        }
     }
 }

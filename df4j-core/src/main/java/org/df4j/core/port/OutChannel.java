@@ -1,59 +1,50 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.BasicBlock;
-import org.df4j.core.protocol.MessageChannel;
+import org.df4j.core.protocol.ReverseFlow;
+
+import java.util.concurrent.Flow;
 
 /**
  * An active output parameter
  *
  * @param <T> type of accepted tokens.
  */
-public class OutChannel<T> extends BasicBlock.Port implements MessageChannel.Producer<T> {
-    protected MessageChannel.Consumer<T> defaultConsumer;
-    /** extracted token */
+public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscriber<T> {
+    protected boolean completed;
+    protected volatile Throwable completionException;
     private T value;
-    private Throwable completionException;
-    protected volatile boolean completed;
+    protected Flow.Subscription subscription;
 
     public OutChannel(BasicBlock parent) {
         parent.super(true);
     }
 
-    public OutChannel(BasicBlock parent, MessageChannel.Consumer<T> defaultConsumer) {
+    public OutChannel(BasicBlock parent, ReverseFlow.Publisher<T> consumer) {
         this(parent);
-        this.defaultConsumer = defaultConsumer;
+        consumer.subscribe(this);
     }
 
-    public Throwable getCompletionException() {
-        return completionException;
+    @Override
+    public void onSubscribe(Flow.Subscription subscription) {
+        this.subscription = subscription;
     }
 
-    public synchronized T current() {
-        return value;
-    }
-
-    public T remove() {
-        T res;
-        synchronized(this) {
-            res = value;
-            value = null;
-            if (unblock()) {
-                return res;
-            }
-        }
-        decBlocking();
-        return res;
-    }
-
+    @Override
     public synchronized boolean isCompleted() {
         return completed;
     }
 
-    public void onNext(T message, MessageChannel.Consumer<T> consumer) {
+    @Override
+    public Throwable getCompletionException() {
+        return completionException;
+    }
+
+    public void onNext(T message) {
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        if (consumer == null) {
+        if (subscription == null) {
             throw new IllegalArgumentException();
         }
         synchronized(this) {
@@ -66,29 +57,40 @@ public class OutChannel<T> extends BasicBlock.Port implements MessageChannel.Pro
             value = message;
             block();
         }
-        if (consumer != null) {
-            consumer.offer(this);
-        }
+        subscription.request(1);
     }
 
-    public void onNext(T message) {
-        onNext(message, defaultConsumer);
+    public void onError(Throwable cause) {
+        synchronized(this) {
+            if (isCompleted()) {
+                return;
+            }
+            this.completed = true;
+            this.completionException = cause;
+            if (subscription == null) return;
+        }
+        subscription.request(1);
     }
 
     public void onComplete() {
         onError(null);
     }
 
-    public void onError(Throwable throwable) {
-        synchronized(this) {
-            if (isCompleted()) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            defaultConsumer.offer(this);
-            if (unblock()) return;
+    @Override
+    public synchronized T remove() {
+        T res = value;
+        value = null;
+        unblock();
+        return res;
+    }
+
+    @Override
+    public synchronized void cancel() {
+        if (subscription == null) {
+            return;
         }
-        decBlocking();
+        subscription.cancel();
+        this.subscription = null;
+        unblock();
     }
 }

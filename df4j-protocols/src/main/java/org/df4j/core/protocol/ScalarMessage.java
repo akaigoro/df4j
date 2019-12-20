@@ -52,8 +52,7 @@ public class ScalarMessage {
     /**
      * @param <T>  type of tokens
      */
-    public interface Subscriber<T> extends Completion.CompletableObserver, BiConsumer<T, Throwable>
-    {
+    public interface Subscriber<T> extends Completion.CompletableObserver, BiConsumer<T, Throwable> {
 
         /**
          * Data notification sent by the {@link Publisher}
@@ -71,6 +70,12 @@ public class ScalarMessage {
          */
         default void onError(Throwable t) {}
 
+        /**
+         * allows to subscribe to {@link CompletableFuture}
+         *
+         * @param t
+         * @param throwable
+         */
         @Override
         default void accept(T t, Throwable throwable) {
             if (throwable == null) {

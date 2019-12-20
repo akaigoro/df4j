@@ -3,6 +3,8 @@ package org.df4j.core.port;
 import org.df4j.core.actor.BasicBlock;
 import org.df4j.core.protocol.ScalarMessage;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.
@@ -30,31 +32,27 @@ public class ScalarInput<T> extends BasicBlock.Port implements ScalarMessage.Sub
         return value;
     }
 
-    @Override
-    public void onSuccess(T message) {
-        synchronized (this) {
-            if (completed) {
-                return;
-            }
-            value = message;
-            completed = true;
-        }
-        synchronized(this) {
-            if (unblock()) return;
-        }
-        decBlocking();
+    public void subscribeTo(CompletableFuture<T> publisher) {
+        CompletableFuture<T> subscription = publisher.whenComplete(this);
     }
 
     @Override
-    public void onError(Throwable throwable) {
-        synchronized(this) {
-            if (isCompleted()) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            if (unblock()) return;
+    public synchronized void onSuccess(T message) {
+        if (completed) {
+            return;
         }
-        decBlocking();
+        value = message;
+        completed = true;
+        unblock();
+    }
+
+    @Override
+    public synchronized void onError(Throwable throwable) {
+        if (isCompleted()) {
+            return;
+        }
+        this.completed = true;
+        this.completionException = throwable;
+        unblock();
     }
 }

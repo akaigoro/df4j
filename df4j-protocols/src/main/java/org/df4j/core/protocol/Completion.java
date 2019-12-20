@@ -2,6 +2,7 @@ package org.df4j.core.protocol;
 
 /**
  * A {@link Signal} with completion exceptions
+ * Borrowed from RxJava project
  */
 public class Completion {
     private Completion() {}
