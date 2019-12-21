@@ -1,159 +1,143 @@
 package org.df4j.protocol;
 
+/************************************************************************
+ * Licensed under Public Domain (CC0)                                    *
+ *                                                                       *
+ * To the extent possible under law, the person who associated CC0 with  *
+ * this code has waived all copyright and related or neighboring         *
+ * rights to this code.                                                  *
+ *                                                                       *
+ * You should have received a copy of the CC0 legalcode along with this  *
+ * work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.*
+ ************************************************************************/
 /**
- * a copy of java.util.concurrent Flow from Java9
+ * interfaces copied from package org.reactivestreams
  */
 public final class Flow {
 
     private Flow() {} // uninstantiable
 
     /**
-     * A producer of items (and related control messages) received by
-     * Subscribers.  Each current {@link Flow.Subscriber} receives the same
-     * items (via method {@code onNext}) in the same order, unless
-     * drops or errors are encountered. If a Publisher encounters an
-     * error that does not allow items to be issued to a Subscriber,
-     * that Subscriber receives {@code onError}, and then receives no
-     * further messages.  Otherwise, when it is known that no further
-     * messages will be issued to it, a subscriber receives {@code
-     * onComplete}.  Publishers ensure that Subscriber method
-     * invocations for each subscription are strictly ordered in <a
-     * href="package-summary.html#MemoryVisibility"><i>happens-before</i></a>
-     * order.
+     * A {@link Publisher} is a provider of a potentially unbounded number of sequenced elements, publishing them according to
+     * the demand received from its {@link Subscriber}(s).
+     * <p>
+     * A {@link Publisher} can serve multiple {@link Subscriber}s subscribed {@link #subscribe(Subscriber)} dynamically
+     * at various points in time.
      *
-     * <p>Publishers may vary in policy about whether drops (failures
-     * to issue an item because of resource limitations) are treated
-     * as unrecoverable errors.  Publishers may also vary about
-     * whether Subscribers receive items that were produced or
-     * available before they subscribed.
-     *
-     * @param <T> the published item type
+     * @param <T> the type of element signaled.
      */
-    @FunctionalInterface
-    public static interface Publisher<T> {
+    public interface Publisher<T> {
+
         /**
-         * Adds the given Subscriber if possible.  If already
-         * subscribed, or the attempt to subscribe fails due to policy
-         * violations or errors, the Subscriber's {@code onError}
-         * method is invoked with an {@link IllegalStateException}.
-         * Otherwise, the Subscriber's {@code onSubscribe} method is
-         * invoked with a new {@link Flow.Subscription}.  Subscribers may
-         * enable receiving items by invoking the {@code request}
-         * method of this Subscription, and may unsubscribe by
-         * invoking its {@code cancel} method.
+         * Request {@link Publisher} to start streaming data.
+         * <p>
+         * This is a "factory method" and can be called multiple times, each time starting a new {@link Subscription}.
+         * <p>
+         * Each {@link Subscription} will work for only a single {@link Subscriber}.
+         * <p>
+         * A {@link Subscriber} should only subscribe once to a single {@link Publisher}.
+         * <p>
+         * If the {@link Publisher} rejects the subscription attempt or otherwise fails it will
+         * signal the error via {@link Subscriber#onError}.
          *
-         * @param subscriber the subscriber
-         * @throws NullPointerException if subscriber is null
+         * @param s the {@link Subscriber} that will consume signals from this {@link Publisher}
          */
-        public void subscribe(Flow.Subscriber<? super T> subscriber);
+        public void subscribe(Subscriber<? super T> s);
     }
 
     /**
-     * A receiver of messages.  The methods in this interface are
-     * invoked in strict sequential order for each {@link
-     * Flow.Subscription}.
+     * Will receive call to {@link #onSubscribe(Subscription)} once after passing an instance of {@link Subscriber} to {@link Publisher#subscribe(Subscriber)}.
+     * <p>
+     * No further notifications will be received until {@link Subscription#request(long)} is called.
+     * <p>
+     * After signaling demand:
+     * <ul>
+     * <li>One or more invocations of {@link #onNext(Object)} up to the maximum number defined by {@link Subscription#request(long)}</li>
+     * <li>Single invocation of {@link #onError(Throwable)} or {@link Subscriber#onComplete()} which signals a terminal state after which no further events will be sent.
+     * </ul>
+     * <p>
+     * Demand can be signaled via {@link Subscription#request(long)} whenever the {@link Subscriber} instance is capable of handling more.
      *
-     * @param <T> the subscribed item type
+     * @param <T> the type of element signaled.
      */
-    public static interface Subscriber<T> {
+    public interface Subscriber<T> {
         /**
-         * Method invoked prior to invoking any other Subscriber
-         * methods for the given Subscription. If this method throws
-         * an exception, resulting behavior is not guaranteed, but may
-         * cause the Subscription not to be established or to be cancelled.
+         * Invoked after calling {@link Publisher#subscribe(Subscriber)}.
+         * <p>
+         * No data will start flowing until {@link Subscription#request(long)} is invoked.
+         * <p>
+         * It is the responsibility of this {@link Subscriber} instance to call {@link Subscription#request(long)} whenever more data is wanted.
+         * <p>
+         * The {@link Publisher} will send notifications only in response to {@link Subscription#request(long)}.
          *
-         * <p>Typically, implementations of this method invoke {@code
-         * subscription.request} to enable receiving items.
-         *
-         * @param subscription a new subscription
+         * @param s
+         *            {@link Subscription} that allows requesting data via {@link Subscription#request(long)}
          */
-        public void onSubscribe(Flow.Subscription subscription);
+        public void onSubscribe(Subscription s);
 
         /**
-         * Method invoked with a Subscription's next item.  If this
-         * method throws an exception, resulting behavior is not
-         * guaranteed, but may cause the Subscription to be cancelled.
+         * Data notification sent by the {@link Publisher} in response to requests to {@link Subscription#request(long)}.
          *
-         * @param item the item
+         * @param t the element signaled
          */
-        public void onNext(T item);
+        public void onNext(T t);
 
         /**
-         * Method invoked upon an unrecoverable error encountered by a
-         * Publisher or Subscription, after which no other Subscriber
-         * methods are invoked by the Subscription.  If this method
-         * itself throws an exception, resulting behavior is
-         * undefined.
+         * Failed terminal state.
+         * <p>
+         * No further events will be sent even if {@link Subscription#request(long)} is invoked again.
          *
-         * @param throwable the exception
+         * @param t the throwable signaled
          */
-        public void onError(Throwable throwable);
+        public void onError(Throwable t);
 
         /**
-         * Method invoked when it is known that no additional
-         * Subscriber method invocations will occur for a Subscription
-         * that is not already terminated by error, after which no
-         * other Subscriber methods are invoked by the Subscription.
-         * If this method throws an exception, resulting behavior is
-         * undefined.
+         * Successful terminal state.
+         * <p>
+         * No further events will be sent even if {@link Subscription#request(long)} is invoked again.
          */
         public void onComplete();
     }
 
     /**
-     * Message control linking a {@link Flow.Publisher} and {@link
-     * Flow.Subscriber}.  Subscribers receive items only when requested,
-     * and may cancel at any time. The methods in this interface are
-     * intended to be invoked only by their Subscribers; usages in
-     * other contexts have undefined effects.
+     * A {@link Subscription} represents a one-to-one lifecycle of a {@link Subscriber} subscribing to a {@link Publisher}.
+     * <p>
+     * It can only be used once by a single {@link Subscriber}.
+     * <p>
+     * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
+     *
      */
-    public static interface Subscription {
+    public interface Subscription {
         /**
-         * Adds the given number {@code n} of items to the current
-         * unfulfilled demand for this subscription.  If {@code n} is
-         * less than or equal to zero, the Subscriber will receive an
-         * {@code onError} signal with an {@link
-         * IllegalArgumentException} argument.  Otherwise, the
-         * Subscriber will receive up to {@code n} additional {@code
-         * onNext} invocations (or fewer if terminated).
+         * No events will be sent by a {@link Publisher} until demand is signaled via this method.
+         * <p>
+         * It can be called however often and whenever needed—but the outstanding cumulative demand must never exceed Long.MAX_VALUE.
+         * An outstanding cumulative demand of Long.MAX_VALUE may be treated by the {@link Publisher} as "effectively unbounded".
+         * <p>
+         * Whatever has been requested can be sent by the {@link Publisher} so only signal demand for what can be safely handled.
+         * <p>
+         * A {@link Publisher} can send less than is requested if the stream ends but
+         * then must emit either {@link Subscriber#onError(Throwable)} or {@link Subscriber#onComplete()}.
          *
-         * @param n the increment of demand; a value of {@code
-         * Long.MAX_VALUE} may be considered as effectively unbounded
+         * @param n the strictly positive number of elements to requests to the upstream {@link Publisher}
          */
         public void request(long n);
 
         /**
-         * Causes the Subscriber to (eventually) stop receiving
-         * messages.  Implementation is best-effort -- additional
-         * messages may be received after invoking this method.
-         * A cancelled subscription need not ever receive an
-         * {@code onComplete} or {@code onError} signal.
+         * Request the {@link Publisher} to stop sending data and clean up resources.
+         * <p>
+         * Data may still be sent to meet previously signalled demand after calling cancel.
          */
         public void cancel();
     }
 
     /**
-     * A component that acts as both a Subscriber and Publisher.
+     * A Processor represents a processing stage—which is both a {@link Subscriber}
+     * and a {@link Publisher} and obeys the contracts of both.
      *
-     * @param <T> the subscribed item type
-     * @param <R> the published item type
+     * @param <T> the type of element signaled to the {@link Subscriber}
+     * @param <R> the type of element signaled by the {@link Publisher}
      */
-    public static interface Processor<T,R> extends Flow.Subscriber<T>, Flow.Publisher<R> {
+    public interface Processor<T, R> extends Subscriber<T>, Publisher<R> {
     }
-
-    static final int DEFAULT_BUFFER_SIZE = 256;
-
-    /**
-     * Returns a default value for Publisher or Subscriber buffering,
-     * that may be used in the absence of other constraints.
-     *
-     * @implNote
-     * The current value returned is 256.
-     *
-     * @return the buffer size value
-     */
-    public static int defaultBufferSize() {
-        return DEFAULT_BUFFER_SIZE;
-    }
-
 }

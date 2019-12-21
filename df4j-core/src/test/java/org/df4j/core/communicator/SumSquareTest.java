@@ -72,7 +72,7 @@ public class SumSquareTest {
      * @throws InterruptedException
      * @throws TimeoutException
      */
-    @Test @Ignore
+    @Test
     public void testCF() throws ExecutionException, InterruptedException, TimeoutException {
         Function<Integer, Integer> square = arg -> arg * arg;
         BiFunction<Integer, Integer, Integer> plus = (argX, argY) -> argX + argY;
@@ -88,5 +88,4 @@ public class SumSquareTest {
         int res = sum.get(1, TimeUnit.SECONDS);
         Assert.assertEquals(25, res);
     }
-
 }
