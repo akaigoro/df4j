@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
 
-public class AsyncArrayQueuePipelineTest {
+public class AsyncArrayBlockingQueuePipelineTest {
     static final int N=20;
     static final int n1=1, n2=3;
 
@@ -26,9 +26,9 @@ public class AsyncArrayQueuePipelineTest {
 
     public void test2steps(Creator create) throws InterruptedException {
         Activity[] activities = new Activity[n1+n2];
-        AsyncArrayQueue<Integer> queue1 = new AsyncArrayQueue<Integer>(N);
-        AsyncArrayQueue<Integer> queue2 = new AsyncArrayQueue<Integer>(N/4);
-        AsyncArrayQueue<Integer> queue3 = new AsyncArrayQueue<Integer>(N);
+        AsyncArrayBlockingQueue<Integer> queue1 = new AsyncArrayBlockingQueue<Integer>(N);
+        AsyncArrayBlockingQueue<Integer> queue2 = new AsyncArrayBlockingQueue<Integer>(N/4);
+        AsyncArrayBlockingQueue<Integer> queue3 = new AsyncArrayBlockingQueue<Integer>(N);
         for (int k = 0; k < n1; k++) {
             activities[k] = create.create(k, queue1, queue2);
         }
@@ -61,8 +61,8 @@ public class AsyncArrayQueuePipelineTest {
 
     public void test1steps(Creator create) throws InterruptedException {
         Activity[] activities = new Activity[n1];
-        AsyncArrayQueue<Integer> queue1 = new AsyncArrayQueue<Integer>(N);
-        AsyncArrayQueue<Integer> queue2 = new AsyncArrayQueue<Integer>(N/4);
+        AsyncArrayBlockingQueue<Integer> queue1 = new AsyncArrayBlockingQueue<Integer>(N);
+        AsyncArrayBlockingQueue<Integer> queue2 = new AsyncArrayBlockingQueue<Integer>(N/4);
         for (int k = 0; k < n1; k++) {
             activities[k] = create.create(k, queue1, queue2);
         }
@@ -95,31 +95,31 @@ public class AsyncArrayQueuePipelineTest {
 
     @Test
     public void testThread() throws InterruptedException {
-        test1steps((int k, AsyncArrayQueue<Integer> inp, AsyncArrayQueue<Integer> out)-> new ThreadProcessor(inp, out));
+        test1steps((int k, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out)-> new ThreadProcessor(inp, out));
     }
 
     @Test
     public void testAsync() throws InterruptedException {
-        test1steps((int k, AsyncArrayQueue<Integer> inp, AsyncArrayQueue<Integer> out) -> new AsyncProcessor(k, inp, out));
+        test1steps((int k, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) -> new AsyncProcessor(k, inp, out));
     }
 
     @Test
     public void testMix() throws InterruptedException {
-        test1steps((int k, AsyncArrayQueue<Integer> inp, AsyncArrayQueue<Integer> out) ->
+        test1steps((int k, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) ->
 //                k % 2 == 0 ? new ThreadProcessor(inp, out) : new AsyncProcessor(k, inp, out));
         k >= n1 ? new ThreadProcessor(inp, out) : new AsyncProcessor(k, inp, out));
     }
 
     @FunctionalInterface
     interface Creator {
-        Activity create(int k, AsyncArrayQueue<Integer> queue1, AsyncArrayQueue<Integer> queue2);
+        Activity create(int k, AsyncArrayBlockingQueue<Integer> queue1, AsyncArrayBlockingQueue<Integer> queue2);
     }
 
     class ThreadProcessor extends Thread implements ActivityThread {
-        AsyncArrayQueue<Integer> inp;
-        AsyncArrayQueue<Integer> out;
+        AsyncArrayBlockingQueue<Integer> inp;
+        AsyncArrayBlockingQueue<Integer> out;
 
-        public ThreadProcessor(AsyncArrayQueue<Integer> inp, AsyncArrayQueue<Integer> out) {
+        public ThreadProcessor(AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) {
             this.inp = inp;
             this.out = out;
         }
@@ -152,7 +152,7 @@ public class AsyncArrayQueuePipelineTest {
         OutChannel<Integer> out = new OutChannel<>(this);
         private final int n;
 
-        public AsyncProcessor(int n, AsyncArrayQueue<Integer> inp, AsyncArrayQueue<Integer> out) {
+        public AsyncProcessor(int n, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) {
             this.n = n;
             ((Flow.Publisher<Integer>) inp).subscribe(this.inp);
             out.subscribe(this.out);

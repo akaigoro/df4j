@@ -15,16 +15,31 @@ public class PulseListener extends BasicBlock.Port implements SignalStream.Subsc
         parent.super(false);
     }
 
-    protected synchronized void acquireFrom(SignalStream.Publisher publisher) {
-        publisher.subscribe(this);
+    protected  void acquireFrom(SignalStream.Publisher publisher) {
+        plock.lock();
+        try {
+            publisher.subscribe(this);
+        } finally {
+            plock.unlock();
+        }
     }
 
-    protected synchronized void acquire() {
-        publisher.subscribe(this);
+    protected  void acquire() {
+        plock.lock();
+        try {
+            publisher.subscribe(this);
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override
-    public synchronized void awake() {
-        unblock();
+    public  void awake() {
+        plock.lock();
+        try {
+            unblock();
+        } finally {
+            plock.unlock();
+        }
     }
 }

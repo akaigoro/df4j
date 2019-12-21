@@ -5,6 +5,9 @@ import org.df4j.protocol.ReverseFlow;
 
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.df4j.protocol.Flow;
 
 /**
@@ -20,8 +23,13 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         parent.super(false);
     }
 
-    public synchronized boolean isCompleted() {
-        return completed;
+    public boolean isCompleted() {
+        plock.lock();
+        try {
+            return completed;
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override
@@ -30,24 +38,34 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         producer.onSubscribe(subscription);
     }
 
-    public synchronized T remove() {
-        T res;
-        if (!isReady()) {
-            throw new IllegalStateException();
+    public T remove() {
+        plock.lock();
+        try {
+            T res;
+            if (!isReady()) {
+                throw new IllegalStateException();
+            }
+            res = value;
+            ProducerSubscription client = producers.poll();
+            if (client == null) {
+                value = null;
+                block();
+            } else {
+                client.remove();
+            }
+            return res;
+        } finally {
+            plock.unlock();
         }
-        res = value;
-        ProducerSubscription client = producers.poll();
-        if (client == null) {
-            value = null;
-            block();
-        } else {
-            client.remove();
-        }
-        return res;
     }
 
-    public synchronized T current() {
-        return value;
+    public T current() {
+        plock.lock();
+        try {
+            return value;
+        } finally {
+            plock.unlock();
+        }
     }
 
 
@@ -68,7 +86,8 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
             if (n <= 0) {
                 throw new IllegalArgumentException();
             }
-            synchronized (InpChannel.this) {
+            plock.lock();
+            try {
                 if (cancelled) {
                     return;
                 }
@@ -86,6 +105,8 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
                     return;
                 }
                 remove();
+            } finally {
+                plock.unlock();
             }
         }
 
@@ -105,9 +126,12 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
 
         @Override
         public void cancel() {
-            synchronized (InpChannel.this) {
+            plock.lock();
+            try {
                 producers.remove(this);
                 cancelled = true;
+            } finally {
+                plock.unlock();
             }
         }
     }

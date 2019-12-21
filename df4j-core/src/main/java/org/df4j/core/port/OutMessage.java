@@ -7,12 +7,16 @@ import java.util.Queue;
 import java.util.concurrent.CompletionException;
 import org.df4j.protocol.Flow;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A Publisher acting like a server
  * unblocked initially
  */
 public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> {
+    private final Condition hasItems = plock.newCondition();
     protected Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
     protected Throwable completionException;
     protected volatile boolean completed;
@@ -30,7 +34,8 @@ public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> 
 
     public void onNext(T t) {
         FlowSubscription s;
-        synchronized(this) {
+        plock.lock();
+        try {
             if (completed) { // this is how CompletableFuture#completeExceptionally works
                 return;
             }
@@ -41,16 +46,19 @@ public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> 
             if (s == null) {
                 value = t;
                 super.block();
-                notifyAll();
+                hasItems.signalAll();
                 return;
             }
+        } finally {
+            plock.unlock();
         }
         s.onNext(t);
     }
 
     public void onError(Throwable t) {
         Queue<FlowSubscription> subs;
-        synchronized(this) {
+        plock.lock();
+        try {
             if (completed) {
                 return;
             }
@@ -58,6 +66,8 @@ public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> 
             completionException = t;
             subs = subscribers;
             subscribers = null;
+        } finally {
+            plock.unlock();
         }
         for (;;) {
             FlowSubscription sub = subs.poll();
@@ -72,57 +82,73 @@ public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> 
         onError(null);
     }
 
-    public synchronized T take() throws InterruptedException {
-        T res;
-        for (;;) {
+    public  T take() throws InterruptedException {
+        plock.lock();
+        try {
+            T res;
+            for (;;) {
+                if (completed) {
+                    throw new CompletionException(completionException);
+                }
+                if (value != null) {
+                    res = value;
+                    value = null;
+                    break;
+                }
+                hasItems.await();
+            }
+            return res;
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public  T poll() {
+        plock.lock();
+        try {
             if (completed) {
                 throw new CompletionException(completionException);
             }
             if (value != null) {
-                res = value;
+                T res = value;
                 value = null;
-                break;
+                return res;
+            } else {
+                return null;
             }
-            wait();
-        }
-        return res;
-    }
-
-    public synchronized T poll() {
-        if (completed) {
-            throw new CompletionException(completionException);
-        }
-        if (value != null) {
-            T res = value;
-            value = null;
-            return res;
-        } else {
-            return null;
+        } finally {
+            plock.unlock();
         }
     }
 
-    public synchronized T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        if (value != null) {
-            return value;
-        }
-        long millis = unit.toMillis(timeout);
-        long targetTime = System.currentTimeMillis() + millis;
-        for (;;) {
-            if (completed) {
-                throw new CompletionException(completionException);
-            }
+    public  T poll(long timeout, TimeUnit unit) throws InterruptedException {
+        plock.lock();
+        try {
             if (value != null) {
                 return value;
             }
-            if (millis <= 0) {
-                return null;
+            long millis = unit.toMillis(timeout);
+            long targetTime = System.currentTimeMillis() + millis;
+            for (;;) {
+                if (completed) {
+                    throw new CompletionException(completionException);
+                }
+                if (value != null) {
+                    return value;
+                }
+                if (millis <= 0) {
+                    return null;
+                }
+                hasItems.await(millis, TimeUnit.MILLISECONDS);
+                millis = targetTime - System.currentTimeMillis();
             }
-            wait(millis);
-            millis = targetTime - System.currentTimeMillis();
+        } finally {
+            plock.unlock();
         }
     }
 
     class FlowSubscription implements Flow.Subscription {
+        private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
@@ -132,46 +158,54 @@ public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> 
         }
 
         @Override
-        public synchronized void request(long n) {
-            if (n <= 0) {
-                throw new IllegalArgumentException();
-            }
-            if (cancelled) {
-                return;
-            }
-            if (remainedRequests > 0) {
-                remainedRequests += n;
-                return;
-            }
-            if (value == null) {
-                if (completed) {
-                    if (completionException == null) {
-                        subscriber.onComplete();
+        public  void request(long n) {
+            slock.lock();
+            try {
+                if (n <= 0) {
+                    throw new IllegalArgumentException();
+                }
+                if (cancelled) {
+                    return;
+                }
+                if (remainedRequests > 0) {
+                    remainedRequests += n;
+                    return;
+                }
+                if (value == null) {
+                    if (completed) {
+                        if (completionException == null) {
+                            subscriber.onComplete();
+                        } else {
+                            subscriber.onError(completionException);
+                        }
                     } else {
-                        subscriber.onError(completionException);
+                        remainedRequests = n;
+                        subscribers.add(this);
                     }
                 } else {
+                    T res = value;
+                    value = null;
+                    subscriber.onNext(res);
+                    n--;
                     remainedRequests = n;
-                    subscribers.add(this);
+                    if (remainedRequests > 0) {
+                        subscribers.add(this);
+                    }
+                    unblock();
                 }
-            } else {
-                T res = value;
-                value = null;
-                subscriber.onNext(res);
-                n--;
-                remainedRequests = n;
-                if (remainedRequests > 0) {
-                    subscribers.add(this);
-                }
-                unblock();
+            } finally {
+                slock.unlock();
             }
         }
 
         @Override
         public void cancel() {
-            synchronized (OutMessage.this) {
+            plock.lock();
+            try {
                 subscribers.remove(this);
                 cancelled = true;
+            } finally {
+                plock.unlock();
             }
         }
 

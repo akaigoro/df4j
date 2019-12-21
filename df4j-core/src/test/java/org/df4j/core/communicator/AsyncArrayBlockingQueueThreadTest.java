@@ -5,10 +5,10 @@ import org.df4j.core.threads.ConsumerT;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AsyncArrayQueueThreadTest {
+public class AsyncArrayBlockingQueueThreadTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
-        AsyncArrayQueue queue = new AsyncArrayQueue<Integer>(3);
+        AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
         ProducerT producer = new ProducerT(cnt, queue, delay1);
         ConsumerT subscriber = new ConsumerT(queue, delay2);
         producer.start();

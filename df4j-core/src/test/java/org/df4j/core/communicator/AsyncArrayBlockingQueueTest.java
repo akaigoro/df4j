@@ -5,10 +5,10 @@ import org.df4j.core.actors.Subscriber;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AsyncArrayQueueTest {
+public class AsyncArrayBlockingQueueTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
-        AsyncArrayQueue queue = new AsyncArrayQueue<Integer>(3);
+        AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
         Producer producer = new Producer(cnt, queue, delay1);
         Subscriber subscriber = new Subscriber(queue, delay2);
         producer.start();
@@ -29,8 +29,28 @@ public class AsyncArrayQueueTest {
     }
 
     @Test
+    public void testAsyncQueueSlowConsComplete() throws InterruptedException {
+        testAsyncQueue(0,0, 100);
+    }
+
+    @Test
     public void testAsyncQueueSlowCons() throws InterruptedException {
-        testAsyncQueue(5,0, 100);
+        testAsyncQueue(3,0, 100);
+    }
+
+    @Test
+    public void testAsyncQueueCons() throws InterruptedException {
+        int cnt = 3;
+        AsyncArrayBlockingQueue<Integer> queue = new AsyncArrayBlockingQueue<Integer>(cnt);
+        for (int k = cnt; k>0; k--) {
+            queue.offer(k);
+        }
+        Subscriber subscriber = new Subscriber(queue, 0);
+        subscriber.start();
+        queue.onComplete();
+        //   producer.join();
+        boolean fin = subscriber.blockingAwait(1000);
+        Assert.assertTrue(fin);
     }
 }
 

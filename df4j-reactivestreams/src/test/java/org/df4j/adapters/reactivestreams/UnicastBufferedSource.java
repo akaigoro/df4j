@@ -1,10 +1,8 @@
 package org.df4j.adapters.reactivestreams;
 
 import org.df4j.core.port.OutMessage;
-import org.df4j.core.fancy.AllOf;
 
 import java.io.PrintStream;
-import java.util.concurrent.Flow;
 
 import static org.df4j.core.util.Utils.sneakyThrow;
 

@@ -18,35 +18,55 @@ public class ScalarInput<T> extends BasicBlock.Port implements ScalarMessage.Sub
         task.super(false);
     }
 
-    public synchronized boolean isCompleted() {
-        return completed;
+    public boolean isCompleted() {
+        plock.lock();
+        try {
+            return completed;
+        } finally {
+            plock.unlock();
+        }
     }
 
     public Throwable getCompletionException() {
         return completionException;
     }
 
-    public synchronized T current() {
-        return value;
+    public T current() {
+        plock.lock();
+        try {
+            return value;
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override
-    public synchronized void onSuccess(T message) {
-        if (completed) {
-            return;
+    public  void onSuccess(T message) {
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            this.completed = true;
+            this.value = message;
+            unblock();
+        } finally {
+            plock.unlock();
         }
-        this.completed = true;
-        this.value = message;
-        unblock();
     }
 
     @Override
-    public synchronized void onError(Throwable throwable) {
-        if (completed) {
-            return;
+    public  void onError(Throwable throwable) {
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            this.completed = true;
+            this.completionException = throwable;
+            unblock();
+        } finally {
+            plock.unlock();
         }
-        this.completed = true;
-        this.completionException = throwable;
-        unblock();
     }
 }

@@ -26,24 +26,35 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
         publisher.subscribe(this);
     }
 
-    public synchronized boolean isCompleted() {
-        return completed;
+    public boolean isCompleted() {
+        plock.lock();
+        try {
+            return completed;
+        } finally {
+            plock.unlock();
+        }
     }
 
     public Throwable getCompletionException() {
         return completionException;
     }
 
-    public synchronized T current() {
-        if (!isReady() || value == null) {
-            throw new IllegalStateException();
+    public T current() {
+        plock.lock();
+        try {
+            if (!isReady() || value == null) {
+                throw new IllegalStateException();
+            }
+            return value;
+        } finally {
+            plock.unlock();
         }
-        return value;
     }
 
     public  T remove() {
         T res;
-        synchronized(this) {
+        plock.lock();
+        try {
             if (!isReady() || value == null) {
                 throw new IllegalStateException();
             }
@@ -53,6 +64,8 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
             if (subscription == null) {
                 return res;
             }
+        } finally {
+            plock.unlock();
         }
         subscription.request(1);
         return res;
@@ -68,7 +81,8 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
 
     @Override
     public void onNext(T message) {
-        synchronized(this) {
+        plock.lock();
+        try {
             if (message == null) {
                 throw new IllegalArgumentException();
             }
@@ -77,18 +91,25 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
             }
             value = message;
             unblock();
+        } finally {
+            plock.unlock();
         }
     }
 
     @Override
-    public synchronized void onError(Throwable throwable) {
-        if (isCompleted()) {
-            return;
+    public void onError(Throwable throwable) {
+        plock.lock();
+        try {
+            if (isCompleted()) {
+                return;
+            }
+            this.completed = true;
+            this.completionException = throwable;
+            subscription = null;
+            unblock();
+        } finally {
+            plock.unlock();
         }
-        this.completed = true;
-        this.completionException = throwable;
-        subscription = null;
-        unblock();
     }
 
     @Override
@@ -96,7 +117,8 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
         onError(null);
     }
 
-    public synchronized void unsubscribe() {
+    public void unsubscribe() {
+        plock.lock();
         if (subscription != null) {
             subscription.cancel();
         }
@@ -105,5 +127,9 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
         completionException = null;
         completed = false;
         block();
+        try {
+        } finally {
+            plock.unlock();
+        }
     }
 }

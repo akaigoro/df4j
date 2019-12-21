@@ -3,9 +3,11 @@ package org.df4j.core.communicator;
 import org.df4j.protocol.ScalarMessage;
 
 import java.util.concurrent.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * {@link ScalarResult} can be considered as a one-shot {@link AsyncArrayQueue}: once set,
+ * {@link ScalarResult} can be considered as a one-shot {@link AsyncArrayBlockingQueue}: once set,
  * it always satisfies {@link ScalarResult#subscribe(ScalarMessage.Subscriber)}
  *
  * Universal standalone connector for scalar values.
@@ -13,6 +15,7 @@ import java.util.concurrent.*;
  * interfaces on output end.
  */
 public class ScalarResult<T> implements ScalarMessage.Subscriber<T>, ScalarMessage.Publisher<T>, Future<T> {
+    private final Lock bblock = new ReentrantLock();
     protected CompletableFuture<T> cf = new CompletableFuture<>();
     private CompletableFuture<T> subscription;
 
@@ -32,21 +35,31 @@ public class ScalarResult<T> implements ScalarMessage.Subscriber<T>, ScalarMessa
     }
 
     @Override
-    public synchronized void subscribe(ScalarMessage.Subscriber<? super T> s) {
-        if (subscription != null) {
-            subscription.cancel(true);
+    public void subscribe(ScalarMessage.Subscriber<? super T> s) {
+        bblock.lock();
+        try {
+            if (subscription != null) {
+                subscription.cancel(true);
+            }
+            subscription = cf.whenComplete(s);
+        } finally {
+            bblock.unlock();
         }
-        subscription = cf.whenComplete(s);
     }
 
     @Override
-    public synchronized boolean unsubscribe(ScalarMessage.Subscriber<T> s) {
-        if (subscription == null) {
-            return false;
+    public boolean unsubscribe(ScalarMessage.Subscriber<T> s) {
+        bblock.lock();
+        try {
+            if (subscription == null) {
+                return false;
+            }
+            CompletableFuture<T> sub = subscription;
+            subscription = null;
+            return sub.cancel(true);
+        } finally {
+            bblock.unlock();
         }
-        CompletableFuture<T> sub = subscription;
-        subscription = null;
-        return sub.cancel(true);
     }
 
     @Override

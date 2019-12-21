@@ -20,6 +20,7 @@ public class Subscriber extends Actor {
 
     @Override
     protected void runAction() throws Throwable {
+        Thread.sleep(delay);
         if (inp.isCompleted()) {
             Throwable completionException = inp.getCompletionException();
             System.out.println(" completed with: " + completionException);
@@ -32,6 +33,5 @@ public class Subscriber extends Actor {
             Assert.assertEquals(this.in.intValue() - 1, in.intValue());
         }
         this.in = in;
-        Thread.sleep(delay);
     }
 }

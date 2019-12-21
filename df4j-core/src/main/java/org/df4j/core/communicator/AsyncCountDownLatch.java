@@ -4,8 +4,11 @@ import org.df4j.protocol.Completion;
 import org.df4j.protocol.Signal;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class AsyncCountDownLatch extends CountDownLatch implements Signal.Publisher {
+    private final Lock bblock = new ReentrantLock();
     protected Trigger completionSignal = new Trigger();
 
     public AsyncCountDownLatch(int count) {
@@ -34,11 +37,14 @@ public class AsyncCountDownLatch extends CountDownLatch implements Signal.Publis
         if (getCount() == 0) {
             return;
         }
-        synchronized (this) {
+        bblock.lock();
+        try {
             super.countDown();
             if (getCount() > 0) {
                 return;
             }
+        } finally {
+            bblock.unlock();
         }
         completionSignal.onComplete();
     }

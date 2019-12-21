@@ -3,7 +3,7 @@ package org.df4j.core.dataflow;
 import org.df4j.core.actor.Activity;
 import org.df4j.core.actor.ActivityThread;
 import org.df4j.core.actor.Dataflow;
-import org.df4j.core.communicator.AsyncArrayQueue;
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.port.InpMessage;
 import org.df4j.core.port.OutChannel;
 import org.df4j.core.util.TimeSignalPublisher;
@@ -68,7 +68,7 @@ public class DiningPhilosophers extends Dataflow {
         abstractTest((Integer k)-> k%2==0? new PhilosopherDF(k): new PhilosopherThread(k));
     }
 
-    static class ForkPlace extends AsyncArrayQueue<String> {
+    static class ForkPlace extends AsyncArrayBlockingQueue<String> {
         int id;
         String label;
 

@@ -13,6 +13,8 @@ import org.df4j.protocol.SignalStream;
 import org.df4j.core.util.Utils;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link BasicBlock} is a component of {@link Dataflow} graph.
@@ -22,6 +24,7 @@ import java.util.concurrent.Executor;
  * Unlike basic blocks in traditional flow charts, {@link BasicBlock}s in the same {@link Dataflow} graph can run in parallel.
  */
 public abstract class BasicBlock implements SignalStream.Subscriber {
+    private final Lock bblock = new ReentrantLock();
     protected final Dataflow dataflow;
     /**
      * blocked initially, until {@link #awake} called.
@@ -40,9 +43,14 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
      * passes a control token to this {@link BasicBlock}.
      * This token is consumed when this block is submitted to an executor.
      */
-    public synchronized void awake() {
-        if (dataflow.isCompleted()) {
-            return;
+    public void awake() {
+        bblock.lock();
+        try {
+            if (dataflow.isCompleted()) {
+                return;
+            }
+        } finally {
+            bblock.unlock();
         }
         controlport.unblock();
     }
@@ -50,27 +58,47 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
     /**
      * finishes parent activity normally.
      */
-    public synchronized void stop() {
-        dataflow.leave();
+    public void stop() {
+        bblock.lock();
+        try {
+            dataflow.leave();
+        } finally {
+            bblock.unlock();
+        }
     }
 
     /**
      * finishes parent activity exceptionally.
      * @param ex the exception
      */
-    protected synchronized void stop(Throwable ex) {
-        dataflow.onError(ex);
+    protected void stop(Throwable ex) {
+        bblock.lock();
+        try {
+            dataflow.onError(ex);
+        } finally {
+            bblock.unlock();
+        }
     }
 
     public void setExecutor(Executor exec) {
-        this.executor = exec;
+        bblock.lock();
+        try {
+            this.executor = exec;
+        } finally {
+            bblock.unlock();
+        }
     }
 
-    protected synchronized Executor getExecutor() {
-        if (executor == null) {
-            executor = Utils.getThreadLocalExecutor();
+    protected Executor getExecutor() {
+        bblock.lock();
+        try {
+            if (executor == null) {
+                executor = Utils.getThreadLocalExecutor();
+            }
+            return executor;
+        } finally {
+            bblock.unlock();
         }
-        return executor;
     }
 
     /**
@@ -81,7 +109,7 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
-        executor.execute(this::run);
+        getExecutor().execute(this::run);
     }
 
     /**
@@ -109,40 +137,49 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
      * This resembles firing of a Petri Net transition.
      */
     public abstract class Port {
+        /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
+        protected final Lock plock = new ReentrantLock();
         private boolean ready;
         private Port next;
 
         public Port(boolean ready) {
             this.ready = ready;
             if (!ready) {
-                incBlocking();
+                blockingPortCount++;
+                dbg("#incBlocking: blockingPortCount set to ");
             }
             next = ports;
             ports = this;
         }
 
-        public synchronized boolean isReady() {
-            return ready;
+        public boolean isReady() {
+            plock.lock();
+            try {
+                return ready;
+            } finally {
+                plock.unlock();
+            }
         }
 
         private final void dbg(String s) {
 //            System.out.println(BasicBlock.this.getClass().getName()+"/"+getClass().getSimpleName()+ s +blockingPortCount);
         }
 
-        private void incBlocking() {
-            blockingPortCount++;
-            dbg("#incBlocking: blockingPortCount set to ");
-        }
-
         /**
          * sets this port to a blocked state.
          */
         public synchronized void block() {
-            if (!ready) {
-                return;
+            plock.lock();
+            try {
+                if (!ready) {
+                    return;
+                }
+                ready = false;
+                blockingPortCount++;
+                dbg("#incBlocking: blockingPortCount set to ");
+            } finally {
+                plock.unlock();
             }
-            ready = false;
-            incBlocking();
         }
 
         /**
@@ -153,24 +190,29 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
          * @return value of exptression {@link #blockingPortCount} > 0
          */
         protected void unblock() {
-            if (ready) {
-                return;
-            }
-            ready = true;
-            synchronized(BasicBlock.this) {
-                if (blockingPortCount == 0) {
-                    throw new IllegalStateException("blocked port and blockingPortCount == 0");
-                }
-                blockingPortCount--;
-                dbg("#decBlocking: blockingPortCount set to ");
-                if (blockingPortCount > 0) {
+            plock.lock();
+            try {
+                if (ready) {
                     return;
                 }
-                controlport.block();
-                if (executor == null) {
-                    executor = Utils.getThreadLocalExecutor();
+                ready = true;
+                bblock.lock();
+                try {
+                    if (blockingPortCount == 0) {
+                        throw new IllegalStateException("blocked port and blockingPortCount == 0");
+                    }
+                    blockingPortCount--;
+                    dbg("#decBlocking: blockingPortCount set to ");
+                    if (blockingPortCount > 0) {
+                        return;
+                    }
+                } finally {
+                    bblock.unlock();
                 }
+            } finally {
+                plock.unlock();
             }
+            controlport.block();
             fire();
         }
 

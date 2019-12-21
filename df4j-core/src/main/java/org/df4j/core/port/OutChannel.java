@@ -31,13 +31,23 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
     }
 
     @Override
-    public synchronized boolean isCompleted() {
-        return completed;
+    public boolean isCompleted() {
+        plock.lock();
+        try {
+            return completed;
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override
     public Throwable getCompletionException() {
-        return completionException;
+        plock.lock();
+        try {
+            return completionException;
+        } finally {
+            plock.unlock();
+        }
     }
 
     public void onNext(T message) {
@@ -47,7 +57,8 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
         if (subscription == null) {
             throw new IllegalArgumentException();
         }
-        synchronized(this) {
+        plock.lock();
+        try {
             if (isCompleted()) {
                 return;
             }
@@ -56,18 +67,23 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
             }
             value = message;
             block();
+        } finally {
+            plock.unlock();
         }
         subscription.request(1);
     }
 
     public void onError(Throwable cause) {
-        synchronized(this) {
+        plock.lock();
+        try {
             if (isCompleted()) {
                 return;
             }
             this.completed = true;
             this.completionException = cause;
             if (subscription == null) return;
+        } finally {
+            plock.unlock();
         }
         subscription.request(1);
     }
@@ -77,20 +93,30 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
     }
 
     @Override
-    public synchronized T remove() {
-        T res = value;
-        value = null;
-        unblock();
-        return res;
+    public T remove() {
+        plock.lock();
+        try {
+            T res = value;
+            value = null;
+            unblock();
+            return res;
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override
-    public synchronized void cancel() {
-        if (subscription == null) {
-            return;
+    public void cancel() {
+        plock.lock();
+        try {
+            if (subscription == null) {
+                return;
+            }
+            subscription.cancel();
+            this.subscription = null;
+            unblock();
+        } finally {
+            plock.unlock();
         }
-        subscription.cancel();
-        this.subscription = null;
-        unblock();
     }
 }

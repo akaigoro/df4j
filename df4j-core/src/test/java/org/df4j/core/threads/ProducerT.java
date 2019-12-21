@@ -1,14 +1,14 @@
 package org.df4j.core.threads;
 
-import org.df4j.core.communicator.AsyncArrayQueue;
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.util.Utils;
 
 public class ProducerT extends Thread {
     final int delay;
     int cnt;
-    AsyncArrayQueue<Integer> queue;
+    AsyncArrayBlockingQueue<Integer> queue;
 
-    public ProducerT(int cnt, AsyncArrayQueue<Integer> queue, int delay) {
+    public ProducerT(int cnt, AsyncArrayBlockingQueue<Integer> queue, int delay) {
         this.queue = queue;
         this.delay = delay;
         this.cnt = cnt;

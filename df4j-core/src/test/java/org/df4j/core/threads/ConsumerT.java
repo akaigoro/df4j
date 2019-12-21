@@ -1,16 +1,16 @@
 package org.df4j.core.threads;
 
-import org.df4j.core.communicator.AsyncArrayQueue;
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.junit.Assert;
 
 import java.util.concurrent.CompletionException;
 
 public class ConsumerT extends Thread {
-    AsyncArrayQueue<Integer> queue;
+    AsyncArrayBlockingQueue<Integer> queue;
     final int delay;
     Integer in = null;
 
-    public ConsumerT(AsyncArrayQueue<Integer> queue, int delay) {
+    public ConsumerT(AsyncArrayBlockingQueue<Integer> queue, int delay) {
         this.queue = queue;
         this.delay = delay;
     }
