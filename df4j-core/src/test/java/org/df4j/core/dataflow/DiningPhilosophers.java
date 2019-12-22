@@ -6,7 +6,6 @@ import org.df4j.core.actor.Dataflow;
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.port.InpMessage;
 import org.df4j.core.port.OutChannel;
-import org.df4j.core.util.TimeSignalPublisher;
 import org.junit.Test;
 
 import java.util.Random;
@@ -27,7 +26,6 @@ public class DiningPhilosophers extends Dataflow {
     Activity[] philosophers = new Activity[num];
     Dataflow asyncPhilosophers = new Dataflow();
     Random rand = new Random();
-    TimeSignalPublisher timer = new TimeSignalPublisher();
 
     private synchronized long getDelay() {
         return rand.nextInt(17);
@@ -223,7 +221,7 @@ public class DiningPhilosophers extends Dataflow {
 
             @Override
             protected void runAction() throws Throwable {
-                timer.subscribe(endThinking, getDelay());
+                endThinking.awake(getDelay());
             }
         }
         class EndThinking extends BasicBlock {
@@ -253,7 +251,7 @@ public class DiningPhilosophers extends Dataflow {
                 right = rightFork.current();
                 rightFork.unsubscribe();
                 println("got right "+right + " from "+ rightPlace.id);
-                timer.subscribe(endEating, getDelay());
+                endEating.awake(getDelay());
             }
         }
         class EndEating extends BasicBlock {

@@ -102,6 +102,10 @@ Assert.assertEquals(25, res);
 */
 public abstract class AsyncProc extends BasicBlock implements Completion.CompletableSource, Activity {
 
+    public AsyncProc(Dataflow parent) {
+        super(parent);
+    }
+
     public AsyncProc() {
         super(new Dataflow());
     }

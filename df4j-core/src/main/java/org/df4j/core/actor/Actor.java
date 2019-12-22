@@ -84,6 +84,14 @@ package org.df4j.core.actor;
  */
 public abstract class Actor extends AsyncProc {
 
+    public Actor(Dataflow parent) {
+        super(parent);
+    }
+
+    public Actor() {
+        super();
+    }
+
     @Override
     protected void run() {
         try {

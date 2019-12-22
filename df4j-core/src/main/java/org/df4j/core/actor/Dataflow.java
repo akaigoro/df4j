@@ -1,9 +1,13 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.communicator.Completable;
+import org.df4j.core.util.Utils;
 import org.df4j.protocol.Completion;
 
+import java.util.Timer;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A dataflow graph, consisting of 1 or more {@link BasicBlock}s and, probably, nested {@link Dataflow}s.
@@ -12,6 +16,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class Dataflow implements Activity, Completion.CompletableSource {
     protected Dataflow parent;
+    protected Executor executor;
+    protected Timer timer;
     protected Completable completionSignal = new Completable();
     protected int nodeCount = 0;
 
@@ -28,6 +34,35 @@ public class Dataflow implements Activity, Completion.CompletableSource {
     public Dataflow(Dataflow parent) {
         this.parent = parent;
         parent.enter();
+    }
+
+    public synchronized void setExecutor(Executor executor) {
+        this.executor = executor;
+    }
+
+    protected synchronized Executor getExecutor() {
+        if (executor != null) {
+            return executor;
+        } else if (parent != null) {
+            return parent.getExecutor();
+        } else {
+            return executor = Utils.getThreadLocalExecutor();
+        }
+    }
+
+    public synchronized void setTimer(Timer timer) {
+        this.timer = timer;
+    }
+
+    public synchronized Timer getTimer() {
+        if (timer != null) {
+            return timer;
+        } else if (parent != null) {
+            return timer = parent.getTimer();
+        } else {
+            timer = new Timer();
+            return timer;
+        }
     }
 
     /**

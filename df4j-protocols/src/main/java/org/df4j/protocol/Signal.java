@@ -1,5 +1,8 @@
 package org.df4j.protocol;
 
+/**
+ * one-time signal without errors
+ */
 public class Signal {
 
     private Signal() {}

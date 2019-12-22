@@ -12,6 +12,8 @@ package org.df4j.core.actor;
 import org.df4j.protocol.SignalStream;
 import org.df4j.core.util.Utils;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,6 +37,9 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
     private Port controlport = new ControlPort();
 
     protected BasicBlock(Dataflow dataflow) {
+        if (dataflow == null) {
+            throw new IllegalArgumentException();
+        }
         this.dataflow = dataflow;
         dataflow.enter();
     }
@@ -53,6 +58,24 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
             bblock.unlock();
         }
         controlport.unblock();
+    }
+
+    public void awake(long delay) {
+        bblock.lock();
+        try {
+            if (dataflow.isCompleted()) {
+                return;
+            }
+        } finally {
+            bblock.unlock();
+        }
+        TimerTask task = new TimerTask(){
+            @Override
+            public void run() {
+                awake();
+            }
+        };
+        dataflow.getTimer().schedule(task, delay);
     }
 
     /**
@@ -93,7 +116,7 @@ public abstract class BasicBlock implements SignalStream.Subscriber {
         bblock.lock();
         try {
             if (executor == null) {
-                executor = Utils.getThreadLocalExecutor();
+                executor = dataflow.getExecutor();
             }
             return executor;
         } finally {
