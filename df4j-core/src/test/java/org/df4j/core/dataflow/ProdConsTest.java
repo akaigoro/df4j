@@ -1,7 +1,7 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.actors.Consumer;
-import org.df4j.core.actors.Producer;
+import org.df4j.core.activities.Consumer;
+import org.df4j.core.activities.Producer;
 import org.junit.Assert;
 import org.junit.Test;
 

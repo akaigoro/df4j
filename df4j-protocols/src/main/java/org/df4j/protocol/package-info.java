@@ -23,7 +23,7 @@
  *   <tr>
  *     <td>Signal</td>
  *     <td>{@link org.df4j.protocol.Signal}</td>
- *     <td>{@link org.df4j.protocol.SignalStream}</td>
+ *     <td>{@link org.df4j.protocol.Pulse}</td>
  *   </tr>
  *   <tr>
  *     <td>Completion</td>
@@ -33,7 +33,7 @@
  *   <tr>
  *     <td>Message</td>
  *     <td>{@link org.df4j.protocol.ScalarMessage}</td>
- *     <td>{@link org.df4j.protocol.MessageStream}, {@link org.df4j.protocol.MessageChannel}</td>
+ *     <td>{@link org.df4j.protocol.Flow}, {@link org.df4j.protocol.ReverseFlow}</td>
  *   </tr>
  * </table>
  *

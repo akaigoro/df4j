@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.actor.BasicBlock;
+import org.df4j.core.dataflow.BasicBlock;
 
 import org.df4j.protocol.Flow;
 
@@ -42,21 +42,18 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
     public T current() {
         plock.lock();
         try {
-            if (!isReady() || value == null) {
-                throw new IllegalStateException();
-            }
             return value;
         } finally {
             plock.unlock();
         }
     }
 
-    public  T remove() {
+    public  T poll() {
         T res;
         plock.lock();
         try {
-            if (!isReady() || value == null) {
-                throw new IllegalStateException();
+            if (!isReady()) {
+                return null;
             }
             res = value;
             value = null;
@@ -69,6 +66,18 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
         }
         subscription.request(1);
         return res;
+    }
+
+    public T remove() {
+        plock.lock();
+        try {
+            if (!isReady()) {
+                throw new IllegalStateException();
+            }
+            return poll();
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override

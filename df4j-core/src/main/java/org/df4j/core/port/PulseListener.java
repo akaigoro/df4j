@@ -1,30 +1,15 @@
 package org.df4j.core.port;
 
-import org.df4j.core.actor.BasicBlock;
-import org.df4j.protocol.SignalStream;
+import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.protocol.Pulse;
 
-public class PulseListener extends BasicBlock.Port implements SignalStream.Subscriber {
-    protected SignalStream.Publisher publisher;
-
-    public PulseListener(BasicBlock parent, SignalStream.Publisher publisher) {
-        parent.super(true);
-        this.publisher = publisher;
-    }
+public class PulseListener extends BasicBlock.Port implements Pulse.Subscriber {
 
     public PulseListener(BasicBlock parent) {
-        parent.super(false);
+        parent.super(true);
     }
 
-    protected  void acquireFrom(SignalStream.Publisher publisher) {
-        plock.lock();
-        try {
-            publisher.subscribe(this);
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    protected  void acquire() {
+    protected  void acquireFrom(Pulse.Publisher publisher) {
         plock.lock();
         try {
             publisher.subscribe(this);

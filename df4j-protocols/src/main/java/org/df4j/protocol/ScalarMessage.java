@@ -73,8 +73,8 @@ public class ScalarMessage {
         /**
          * allows to subscribe to {@link CompletableFuture}
          *
-         * @param t
-         * @param throwable
+         * @param t token value, or null if exception
+         * @param throwable exception, if any
          */
         @Override
         default void accept(T t, Throwable throwable) {

@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.SignalStream;
+import org.df4j.protocol.Pulse;
 
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
@@ -8,12 +8,13 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * An asynchronous extention to {@link Semaphore}
- * This implementation is unfair: asynchronous clients are served first
+ *  A {@link Semaphore} extended asynchronous interface to aquire and release permissions.
+ *
+ * This implementation is unfair: asynchronous clients are served before synchronous (threads blocked in {@link Semaphore#acquire()} method}.
  */
-public class AsyncSemaphore extends Semaphore implements SignalStream.Publisher {
+public class AsyncSemaphore extends Semaphore implements Pulse.Publisher {
     private final Lock bblock = new ReentrantLock();
-    protected final LinkedList<SignalStream.Subscriber> subscribers = new LinkedList<>();
+    protected final LinkedList<Pulse.Subscriber> subscribers = new LinkedList<>();
 
     public AsyncSemaphore(int count) {
         super(count);
@@ -26,10 +27,10 @@ public class AsyncSemaphore extends Semaphore implements SignalStream.Publisher 
     /**
      *
      * @param subscriber
-     *      the {@link SignalStream.Subscriber} that will consume signals from this {@link SignalStream.Publisher}
+     *      the {@link Pulse.Subscriber} that will consume signals from this {@link Pulse.Publisher}
      */
     @Override
-    public void subscribe(SignalStream.Subscriber subscriber) {
+    public void subscribe(Pulse.Subscriber subscriber) {
         if (subscriber == null) {
             throw new NullPointerException();
         }
@@ -55,7 +56,7 @@ public class AsyncSemaphore extends Semaphore implements SignalStream.Publisher 
      * @throws NullPointerException if the argument is null
      */
    @Override
-    public boolean unsubscribe(SignalStream.Subscriber subscriber) {
+    public boolean unsubscribe(Pulse.Subscriber subscriber) {
        bblock.lock();
        try {
            if (subscriber == null) {
@@ -68,7 +69,7 @@ public class AsyncSemaphore extends Semaphore implements SignalStream.Publisher 
     }
 
     public void release() {
-        SignalStream.Subscriber subscriber;
+        Pulse.Subscriber subscriber;
         bblock.lock();
         try {
             if (subscribers.size() == 0) {
@@ -87,7 +88,7 @@ public class AsyncSemaphore extends Semaphore implements SignalStream.Publisher 
             throw new IllegalArgumentException();
         }
         for (;;) {
-            SignalStream.Subscriber subscriber;
+            Pulse.Subscriber subscriber;
             bblock.lock();
             try {
                 if (subscribers.size() == 0) {

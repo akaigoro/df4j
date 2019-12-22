@@ -1,6 +1,5 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.actor.Actor;
 import org.junit.Assert;
 import org.junit.Test;
 

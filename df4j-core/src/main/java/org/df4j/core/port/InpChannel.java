@@ -1,12 +1,10 @@
 package org.df4j.core.port;
 
-import org.df4j.core.actor.BasicBlock;
+import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.df4j.protocol.Flow;
 
@@ -38,12 +36,21 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         producer.onSubscribe(subscription);
     }
 
-    public T remove() {
+    public T current() {
+        plock.lock();
+        try {
+            return value;
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public T poll() {
         plock.lock();
         try {
             T res;
             if (!isReady()) {
-                throw new IllegalStateException();
+                return null;
             }
             res = value;
             ProducerSubscription client = producers.poll();
@@ -59,10 +66,13 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         }
     }
 
-    public T current() {
+    public T remove() {
         plock.lock();
         try {
-            return value;
+            if (!isReady()) {
+                throw new IllegalStateException();
+            }
+            return poll();
         } finally {
             plock.unlock();
         }

@@ -1,7 +1,7 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.actors.Publisher;
-import org.df4j.core.actors.Subscriber;
+import org.df4j.core.activities.Publisher;
+import org.df4j.core.activities.Subscriber;
 import org.junit.Assert;
 import org.junit.Test;
 

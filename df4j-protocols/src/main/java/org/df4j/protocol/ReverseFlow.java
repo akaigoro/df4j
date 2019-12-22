@@ -3,7 +3,7 @@ package org.df4j.protocol;
 /**
  * Describes flow of messages from Subscribers to Publishers
  * (as opposed to the flow of messages from Publishers to Subscribers in {{@link Flow}}).
- * Subribers here act as masters/clients, and Publishes as slaves/servers, just like in {{@link Flow}}).
+ * {@link ReverseFlow.Subscriber}s here still are active parties, and {@link ReverseFlow.Publisher}s are passive, just like in {{@link Flow}}).
  */
 public class ReverseFlow {
 

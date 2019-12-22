@@ -12,8 +12,8 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.actor.BasicBlock;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.communicator.AsyncSemaphore;
 import org.df4j.core.port.InpMessage;
 import org.df4j.core.port.OutMessage;

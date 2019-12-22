@@ -1,9 +1,8 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.actor.AsyncProc;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.ScalarInput;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.*;

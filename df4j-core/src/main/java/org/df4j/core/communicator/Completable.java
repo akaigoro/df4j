@@ -9,8 +9,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Completable implements Completion.CompletableObserver, Completion.CompletableSource {
-    private final Lock bblock = new ReentrantLock();
+public class Completable implements Completion.CompletableSource {
+    protected final Lock bblock = new ReentrantLock();
     private final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
     protected LinkedList<Completion.CompletableObserver> subscribers;
@@ -20,15 +20,22 @@ public class Completable implements Completion.CompletableObserver, Completion.C
         return completionException;
     }
 
-    public void setCompletionException(Throwable completionException) {
-        this.completionException = completionException;
+    public boolean isCompleted() {
+        bblock.lock();
+        try {
+            return completed;
+        } finally {
+            bblock.unlock();
+        }
     }
 
     public void subscribe(Completion.CompletableObserver co) {
         bblock.lock();
         try {
             if (!completed) {
-                LinkedList<Completion.CompletableObserver> subscribers = getSubscribers();
+                if (subscribers == null) {
+                    subscribers = new LinkedList<>();
+                }
                 subscribers.add(co);
                 return;
             }
@@ -43,6 +50,15 @@ public class Completable implements Completion.CompletableObserver, Completion.C
         }
     }
 
+    public boolean unsubscribe(Completion.CompletableObserver co) {
+        bblock.lock();
+        try {
+            return subscribers.remove(co);
+        } finally {
+            bblock.unlock();
+        }
+    }
+
     public void onError(Throwable e) {
         LinkedList<Completion.CompletableObserver> subs;
         bblock.lock();
@@ -51,7 +67,7 @@ public class Completable implements Completion.CompletableObserver, Completion.C
                 return;
             }
             completed = true;
-            setCompletionException(e);
+            this.completionException = e;
             completedCond.signalAll();
             if (subscribers == null) {
                 return;
@@ -66,11 +82,19 @@ public class Completable implements Completion.CompletableObserver, Completion.C
             if (sub == null) {
                 break;
             }
-            sub.onError(e);
+            if (e == null) {
+                sub.onError(e);
+            } else {
+                sub.onComplete();
+            }
         }
     }
 
-    public synchronized void blockingAwait() {
+    public void onComplete() {
+        onError(null);
+    }
+
+    public void blockingAwait() {
         bblock.lock();
         try {
             while (!completed) {
@@ -134,67 +158,6 @@ public class Completable implements Completion.CompletableObserver, Completion.C
             return true;
         } finally {
             bblock.unlock();
-        }
-    }
-
-    public boolean isCompleted() {
-        bblock.lock();
-        try {
-            return completed;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    protected LinkedList<Completion.CompletableObserver> getSubscribers() {
-        bblock.lock();
-        try {
-            if (subscribers == null) {
-                subscribers = new LinkedList<>();
-            }
-            return subscribers;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public boolean unsubscribe(Completion.CompletableObserver co) {
-        bblock.lock();
-        try {
-            return subscribers.remove(co);
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public void onComplete() {
-        LinkedList<Completion.CompletableObserver> subs;
-        bblock.lock();
-        try {
-        } finally {
-            bblock.unlock();
-        }
-        bblock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            completed = true;
-            completedCond.signalAll();
-            if (subscribers == null) {
-                return;
-            }
-            subs = subscribers;
-            subscribers = null;
-        } finally {
-            bblock.unlock();
-        }
-        for (;;) {
-            Completion.CompletableObserver sub = subs.poll();
-            if (sub == null) {
-                break;
-            }
-            sub.onComplete();
         }
     }
 

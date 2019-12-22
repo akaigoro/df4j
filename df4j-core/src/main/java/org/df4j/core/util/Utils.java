@@ -27,7 +27,7 @@ public class Utils {
      * <pre>
      *    setThreadLocalExecutor(AsyncProc.currentThreadExec);
      * </pre>
-     * before creating {@link Transition} instances.
+     * before creating {@link org.df4j.core.dataflow.BasicBlock} instances.
      *
      * @return an Executor local to current thread
      */

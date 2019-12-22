@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.actor.Actor;
+import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpMessage;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;

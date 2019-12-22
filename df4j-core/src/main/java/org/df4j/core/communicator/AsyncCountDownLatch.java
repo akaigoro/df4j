@@ -7,6 +7,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ *  A {@link CountDownLatch} extended asynchronous interface to publish the completion signal.
+ */
 public class AsyncCountDownLatch extends CountDownLatch implements Signal.Publisher {
     private final Lock bblock = new ReentrantLock();
     protected Trigger completionSignal = new Trigger();

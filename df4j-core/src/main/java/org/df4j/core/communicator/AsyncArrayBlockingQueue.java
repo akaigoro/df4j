@@ -12,15 +12,20 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- *  An asynchronous analogue of ArrayBlockingQueue
+ *  A {@link BlockingQueue} augmented with asynchronous interfaces to save and extract messages, and also interfaces to pass completion signal as required by  {@link Flow}.
  *
+ * <p>
  *  Flow of messages:
- *  {@link ReverseFlow.Subscriber} => [ {@link AsyncArrayBlockingQueue} implements {@link ReverseFlow.Publisher),
- *                                                     {@link Flow.Publisher}] => {@link Flow.Subscriber}
+ *  {@link ReverseFlow.Subscriber} =&gt; {@link AsyncArrayBlockingQueue}  =&gt; {@link Flow.Subscriber}
  *
  * @param <T> the type of the values passed through this token container
  */
-public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements BlockingQueue<T>, ReverseFlow.Publisher<T>, Flow.Publisher<T> {
+public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements BlockingQueue<T>,
+        /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
+        ReverseFlow.Publisher<T>,
+        /** asyncronous analogue of  {@link BlockingQueue#take()} */
+        Flow.Publisher<T>
+{
     private final Lock qlock = new ReentrantLock();
     private final Condition hasRoom = qlock.newCondition();
     private final Condition hasItems = qlock.newCondition();

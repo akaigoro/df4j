@@ -12,6 +12,7 @@ package org.df4j.protocol;
  ************************************************************************/
 /**
  * interfaces copied from package org.reactivestreams
+ * @see <a href="https://www.reactive-streams.org/">https://www.reactive-streams.org/</a>
  */
 public final class Flow {
 

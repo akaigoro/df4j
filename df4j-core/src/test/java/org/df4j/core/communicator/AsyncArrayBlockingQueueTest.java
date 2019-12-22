@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.actors.Producer;
-import org.df4j.core.actors.Subscriber;
+import org.df4j.core.activities.Producer;
+import org.df4j.core.activities.Subscriber;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.actor.BasicBlock;
+import org.df4j.core.dataflow.BasicBlock;
 
 import java.util.LinkedList;
 import java.util.Queue;
