@@ -1,20 +1,20 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
-import org.df4j.protocol.ScalarMessage;
+import org.df4j.protocol.Disposable;
+import org.df4j.protocol.Signal;
+import org.df4j.protocol.Subscription;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one token.
- *
- * @param <T> type of accepted tokens.
  */
-public class ScalarInput<T> extends BasicBlock.Port implements ScalarMessage.Subscriber<T> {
+public class InpScalarSignal<T> extends BasicBlock.Port implements Signal.Subscriber {
     protected T value;
     protected volatile boolean completed = false;
-    private Throwable completionException = null;
+    protected Subscription subscription;
 
-    public ScalarInput(BasicBlock task) {
+    public InpScalarSignal(BasicBlock task) {
         task.super(false);
     }
 
@@ -27,43 +27,38 @@ public class ScalarInput<T> extends BasicBlock.Port implements ScalarMessage.Sub
         }
     }
 
-    public Throwable getCompletionException() {
-        return completionException;
-    }
-
-    public T current() {
+    @Override
+    public void onSubscribe(Subscription subscription) {
         plock.lock();
         try {
-            return value;
+            this.subscription = subscription;
+            subscription.request(1);
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public void unsubscribe() {
+        plock.lock();
+        try {
+            if (subscription == null) {
+                return;
+            }
+            subscription.cancel();
+            subscription = null;
         } finally {
             plock.unlock();
         }
     }
 
     @Override
-    public  void onSuccess(T message) {
+    public void awake() {
         plock.lock();
         try {
             if (completed) {
                 return;
             }
             this.completed = true;
-            this.value = message;
-            unblock();
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    @Override
-    public  void onError(Throwable throwable) {
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
             unblock();
         } finally {
             plock.unlock();

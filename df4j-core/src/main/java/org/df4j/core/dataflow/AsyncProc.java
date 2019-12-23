@@ -9,7 +9,7 @@
  */
 package org.df4j.core.dataflow;
 
-import org.df4j.protocol.Completion;
+import org.df4j.protocol.Completable;
 
 import java.util.concurrent.Executor;
 
@@ -100,7 +100,7 @@ Assert.assertEquals(25, res);
 }</pre>
  All the nodes in this graph execute once and cannot be reused.
 */
-public abstract class AsyncProc extends BasicBlock implements Completion.CompletableSource, Activity {
+public abstract class AsyncProc extends BasicBlock implements Completable.Source, Activity {
 
     public AsyncProc(Dataflow parent) {
         super(parent);
@@ -121,13 +121,8 @@ public abstract class AsyncProc extends BasicBlock implements Completion.Complet
     }
 
     @Override
-    public void subscribe(Completion.CompletableObserver co) {
+    public void subscribe(Completable.Observer co) {
         dataflow.subscribe(co);
-    }
-
-    @Override
-    public boolean unsubscribe(Completion.CompletableObserver co) {
-        return dataflow.unsubscribe(co);
     }
 
     public boolean isCompleted() {

@@ -1,19 +1,26 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.Completion;
+import org.df4j.protocol.Completable;
+import org.df4j.protocol.Disposable;
+import org.df4j.protocol.Single;
 
 import java.util.LinkedList;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Completable implements Completion.CompletableSource {
+/**
+ * Completes successfully or with failure, without emitting any value.
+ * Similar to {@link CompletableFuture}<Void>
+ */
+public class Completion implements Completable.Source {
     protected final Lock bblock = new ReentrantLock();
     private final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
-    protected LinkedList<Completion.CompletableObserver> subscribers;
+    protected LinkedList<Subscription> subscriptions;
     protected boolean completed;
 
     public Throwable getCompletionException() {
@@ -29,14 +36,13 @@ public class Completable implements Completion.CompletableSource {
         }
     }
 
-    public void subscribe(Completion.CompletableObserver co) {
+    public void subscribe(Completable.Observer co) {
         bblock.lock();
         try {
             if (!completed) {
-                if (subscribers == null) {
-                    subscribers = new LinkedList<>();
-                }
-                subscribers.add(co);
+                Subscription subscription = new Subscription(co);
+                subscriptions.add(subscription);
+                co.onSubscribe(subscription);
                 return;
             }
         } finally {
@@ -50,17 +56,8 @@ public class Completable implements Completion.CompletableSource {
         }
     }
 
-    public boolean unsubscribe(Completion.CompletableObserver co) {
-        bblock.lock();
-        try {
-            return subscribers.remove(co);
-        } finally {
-            bblock.unlock();
-        }
-    }
-
     public void onError(Throwable e) {
-        LinkedList<Completion.CompletableObserver> subs;
+        LinkedList<Subscription> subs;
         bblock.lock();
         try {
             if (completed) {
@@ -69,16 +66,16 @@ public class Completable implements Completion.CompletableSource {
             completed = true;
             this.completionException = e;
             completedCond.signalAll();
-            if (subscribers == null) {
+            if (subscriptions == null) {
                 return;
             }
-            subs = subscribers;
-            subscribers = null;
+            subs = subscriptions;
+            subscriptions = null;
         } finally {
             bblock.unlock();
         }
         for (;;) {
-            Completion.CompletableObserver sub = subs.poll();
+            Subscription sub = subs.poll();
             if (sub == null) {
                 break;
             }
@@ -161,19 +158,10 @@ public class Completable implements Completion.CompletableSource {
         }
     }
 
-    public Completion.CompletableObserver poll() {
-        bblock.lock();
-        try {
-            return subscribers.poll();
-        } finally {
-            bblock.unlock();
-        }
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        LinkedList<Completion.CompletableObserver> subscribers = this.subscribers;
+        LinkedList<Subscription> subscribers = this.subscriptions;
         Throwable completionException = this.completionException;
         int size = 0;
         if (subscribers!=null) {
@@ -189,4 +177,47 @@ public class Completable implements Completion.CompletableSource {
         }
         return sb.toString();
     }
+
+
+    class Subscription implements Disposable {
+        final Completable.Observer subscriber;
+        private boolean disposed;
+
+        public Subscription(Completable.Observer subscriber) {
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void dispose() {
+            bblock.lock();
+            try {
+                if (disposed) {
+                    return;
+                }
+                disposed = true;
+                subscriptions.remove(this);
+            } finally {
+                bblock.unlock();
+            }
+        }
+
+        @Override
+        public boolean isDisposed() {
+            bblock.lock();
+            try {
+                return disposed;
+            } finally {
+                bblock.unlock();
+            }
+        }
+
+        public void onComplete() {
+            subscriber.onComplete();
+        }
+
+        public void onError(Throwable e) {
+            subscriber.onError(e);
+        }
+    }
+
 }

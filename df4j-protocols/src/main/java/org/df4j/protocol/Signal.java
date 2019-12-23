@@ -1,7 +1,7 @@
 package org.df4j.protocol;
 
 /**
- * one-time signal without errors
+ * repeatable signal stream without errors
  */
 public class Signal {
 
@@ -19,19 +19,19 @@ public class Signal {
          *      the {@link Subscriber} that will consume signals from this {@link Signal.Publisher}
          */
         void subscribe(Subscriber subscriber);
-
-        /**
-         *
-         * @param subscriber {@link Subscriber} which does not want to wait for data anymore
-         * @return true if subscriber was subscribed and is unsubscribed now
-         */
-        boolean unsubscribe(Subscriber subscriber);
     }
 
+    /**
+     *  inlet for permits.
+     *
+     */
     public interface Subscriber {
+        void onSubscribe(Subscription subscription);
+
         /**
          * asynchronous version of Semaphore.aquire()
          */
-        void onComplete();
+        void awake();
     }
+
 }

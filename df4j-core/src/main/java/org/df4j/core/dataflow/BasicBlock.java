@@ -9,7 +9,9 @@
  */
 package org.df4j.core.dataflow;
 
-import org.df4j.protocol.Pulse;
+import org.df4j.protocol.Disposable;
+import org.df4j.protocol.Signal;
+import org.df4j.protocol.Subscription;
 
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
@@ -29,7 +31,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * to exchange messages and signals with other {@link BasicBlock}s in consistent manner.
  * When all ports become ready, this  {@link BasicBlock} is submitted for execution to its executor.
  */
-public abstract class BasicBlock implements Pulse.Subscriber {
+public abstract class BasicBlock implements Signal.Subscriber {
     private final Lock bblock = new ReentrantLock();
     protected final Dataflow dataflow;
     /**
@@ -39,6 +41,7 @@ public abstract class BasicBlock implements Pulse.Subscriber {
     private int blockingPortCount = 0;
     private Executor executor;
     private Port controlport = new ControlPort();
+    private Subscription subscription;
 
     protected BasicBlock(Dataflow dataflow) {
         if (dataflow == null) {
@@ -48,10 +51,36 @@ public abstract class BasicBlock implements Pulse.Subscriber {
         dataflow.enter();
     }
 
-    /**
-     * passes a control token to this {@link BasicBlock}.
-     * This token is consumed when this block is submitted to an executor.
-     */
+    @Override
+    public void onSubscribe(Subscription subscription) {
+        bblock.lock();
+        try {
+            if (this.subscription != null) {
+                this.subscription.cancel();
+            }
+            this.subscription = subscription;
+            subscription.request(1);
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public void unsubscribe() {
+        bblock.lock();
+        try {
+            if (this.subscription == null) {
+                return;
+            }
+            this.subscription.cancel();
+            this.subscription = null;
+        } finally {
+            bblock.unlock();
+        }
+    }
+        /**
+         * passes a control token to this {@link BasicBlock}.
+         * This token is consumed when this block is submitted to an executor.
+         */
     public void awake() {
         bblock.lock();
         try {

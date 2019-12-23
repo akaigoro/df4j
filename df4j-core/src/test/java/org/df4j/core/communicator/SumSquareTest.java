@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.port.ScalarInput;
+import org.df4j.core.port.InpSingle;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -14,7 +14,7 @@ import static org.junit.Assert.fail;
 public class SumSquareTest {
 
     public static class Square extends AsyncProc {
-        final ScalarInput<Integer> param = new ScalarInput<>(this);
+        final InpSingle<Integer> param = new InpSingle<>(this);
         final ScalarResult<Integer> out = new ScalarResult<>();
         {awake();}
 
@@ -26,8 +26,8 @@ public class SumSquareTest {
     }
 
     public static class Sum extends AsyncProc {
-        final ScalarInput<Integer> paramX = new ScalarInput<>(this);
-        final ScalarInput<Integer> paramY = new ScalarInput<>(this);
+        final InpSingle<Integer> paramX = new InpSingle<>(this);
+        final InpSingle<Integer> paramY = new InpSingle<>(this);
         final ScalarResult<Integer> out = new ScalarResult<>();
         {awake();}
 

@@ -1,8 +1,8 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.Completable;
+import org.df4j.core.communicator.Completion;
 import org.df4j.core.util.Utils;
-import org.df4j.protocol.Completion;
+import org.df4j.protocol.Completable;
 
 import java.util.Timer;
 import java.util.concurrent.Executor;
@@ -12,7 +12,7 @@ import java.util.concurrent.Executor;
  * Completion signals (errors or success) propagate from the leaf nodes to the root node.
  * Component {@link BasicBlock}s plays the same role as basic blocks in a flow chart.
  */
-public class Dataflow extends Completable implements Activity, Completion.CompletableSource {
+public class Dataflow extends Completion implements Activity, Completable.Source {
     protected Dataflow parent;
     protected Executor executor;
     protected Timer timer;

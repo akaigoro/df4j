@@ -3,7 +3,7 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.ReverseFlow;
 
-import org.df4j.protocol.Flow;
+import org.df4j.protocol.Subscription;
 
 /**
  * An active output parameter
@@ -14,7 +14,7 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
     protected boolean completed;
     protected volatile Throwable completionException;
     private T value;
-    protected Flow.Subscription subscription;
+    protected Subscription subscription;
 
     public OutChannel(BasicBlock parent) {
         parent.super(true);
@@ -26,7 +26,7 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
     }
 
     @Override
-    public void onSubscribe(Flow.Subscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
     }
 

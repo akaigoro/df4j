@@ -4,13 +4,13 @@ package org.df4j.protocol;
  * A {@link Signal} with completion exceptions
  * Borrowed from RxJava project
  */
-public class Completion {
-    private Completion() {}
+public class Completable {
+    private Completable() {}
 
     /**
-     * consumable via an {@link CompletableObserver}.
+     * consumable via an {@link Observer}.
      */
-    public interface CompletableSource<S extends CompletableObserver> {
+    public interface Source<S extends Observer> {
 
         boolean isCompleted();
 
@@ -20,8 +20,6 @@ public class Completion {
          * @throws NullPointerException if {@code co} is null
          */
         void subscribe(S co);
-
-        boolean unsubscribe(S co);
     }
 
     /**
@@ -48,7 +46,9 @@ public class Completion {
      * <li>If there is a fatal error (such as {@code VirtualMachineError}).</li>
      * </ul>
      */
-    public interface CompletableObserver extends Signal.Subscriber {
+    public interface Observer {
+        void onSubscribe(Disposable subscription);
+
         /**
          * Called once if the deferred computation 'throws' an exception.
          * @param e the exception, not null.

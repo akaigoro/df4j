@@ -3,6 +3,7 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.BasicBlock;
 
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.Subscription;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -10,18 +11,18 @@ import org.df4j.protocol.Flow;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>, MessageProvider<T> {
+public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, MessageProvider<T> {
     /** extracted token */
     protected T value;
     private Throwable completionException;
     protected volatile boolean completed;
-    Flow.Subscription subscription;
+    Subscription subscription;
 
-    public InpMessage(BasicBlock parent) {
+    public InpFlow(BasicBlock parent) {
         parent.super(false);
     }
 
-    public InpMessage(BasicBlock parent, Flow.Publisher<T> publisher) {
+    public InpFlow(BasicBlock parent, Flow.Publisher<T> publisher) {
         this(parent);
         publisher.subscribe(this);
     }
@@ -81,7 +82,7 @@ public class InpMessage<T> extends BasicBlock.Port implements Flow.Subscriber<T>
     }
 
     @Override
-    public void onSubscribe(Flow.Subscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
         if (!isReady()) {
             subscription.request(1);

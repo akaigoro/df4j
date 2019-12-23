@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.Completion;
+import org.df4j.protocol.Completable;
 import org.df4j.protocol.Signal;
 
 import java.util.concurrent.CountDownLatch;
@@ -10,9 +10,9 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  *  A {@link CountDownLatch} extended asynchronous interface to publish the completion signal.
  */
-public class AsyncCountDownLatch extends CountDownLatch implements Signal.Publisher {
+public class AsyncCountDownLatch extends CountDownLatch implements Completable.Source {
     private final Lock bblock = new ReentrantLock();
-    protected Trigger completionSignal = new Trigger();
+    protected Completion completionSignal = new Completion();
 
     public AsyncCountDownLatch(int count) {
         super(count);
@@ -26,14 +26,8 @@ public class AsyncCountDownLatch extends CountDownLatch implements Signal.Publis
     }
 
     @Override
-    public void subscribe(Signal.Subscriber subscriber) {
+    public void subscribe(Completable.Observer subscriber) {
         completionSignal.subscribe(subscriber);
-    }
-
-    @Override
-    public boolean unsubscribe(Signal.Subscriber subscriber) {
-        completionSignal.unsubscribe(subscriber);
-        return false;
     }
 
     public void countDown() {
@@ -51,31 +45,4 @@ public class AsyncCountDownLatch extends CountDownLatch implements Signal.Publis
         }
         completionSignal.onComplete();
     }
-
-    public static AsyncCountDownLatch allOf(Signal.Publisher... sources) {
-        AsyncCountDownLatch latch = new AsyncCountDownLatch(sources.length);
-        for (int k = 0; k < sources.length; k++) {
-            sources[k].subscribe(latch::countDown);
-        }
-        return latch;
-    }
-
-    public static AsyncCountDownLatch allOf(Completion.CompletableSource... sources) {
-        AsyncCountDownLatch latch = new AsyncCountDownLatch(sources.length);
-        Completion.CompletableObserver completableObserver = new Completion.CompletableObserver() {
-            @Override
-            public void onError(Throwable e) {
-                latch.countDown();
-            }
-            @Override
-            public void onComplete() {
-                latch.countDown();
-            }
-        };
-        for (int k = 0; k < sources.length; k++) {
-            sources[k].subscribe(completableObserver);
-        }
-        return latch;
-    }
-
 }

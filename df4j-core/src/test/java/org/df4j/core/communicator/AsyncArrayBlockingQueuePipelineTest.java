@@ -3,7 +3,7 @@ package org.df4j.core.communicator;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.port.InpMessage;
+import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
 import org.junit.Assert;
 import org.junit.Test;
@@ -148,7 +148,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
         }
     }
     class AsyncProcessor extends Actor {
-        InpMessage<Integer> inp = new InpMessage<>(this);
+        InpFlow<Integer> inp = new InpFlow<>(this);
         OutChannel<Integer> out = new OutChannel<>(this);
         private final int n;
 

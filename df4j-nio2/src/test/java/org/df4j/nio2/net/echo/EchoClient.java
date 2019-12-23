@@ -1,7 +1,7 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.port.InpMessage;
+import org.df4j.core.port.InpFlow;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ClientConnection;
 import org.junit.Assert;
@@ -26,7 +26,7 @@ class EchoClient extends Actor {
         return new String(b.array(), charset);
     }
 
-    InpMessage<ByteBuffer> buffers = new InpMessage<>(this);
+    InpFlow<ByteBuffer> buffers = new InpFlow<>(this);
     String message;
     ClientConnection clientConn;
     int count;

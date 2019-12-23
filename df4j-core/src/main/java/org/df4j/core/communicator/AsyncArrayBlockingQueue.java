@@ -6,6 +6,8 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.Subscription;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -295,7 +297,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         return super.toString();
     }
 
-    class ProducerSubscription implements Flow.Subscription {
+    class ProducerSubscription implements Subscription {
         private final Lock slock = new ReentrantLock();
         protected ReverseFlow.Subscriber<T> producer;
         private long remainedRequests = 0;
@@ -392,7 +394,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         }
     }
 
-    class FlowSubscription implements Flow.Subscription {
+    class FlowSubscription implements Subscription {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;

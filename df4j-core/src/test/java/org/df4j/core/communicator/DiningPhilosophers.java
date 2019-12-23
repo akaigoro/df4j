@@ -3,7 +3,7 @@ package org.df4j.core.communicator;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpMessage;
+import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
 import org.junit.Test;
 
@@ -231,8 +231,8 @@ public class DiningPhilosophers extends Dataflow {
             }
         }
         class StartEating extends BasicBlock {
-            InpMessage<String> leftFork = new InpMessage(this);
-            InpMessage<String> rightFork = new InpMessage(this);
+            InpFlow<String> leftFork = new InpFlow(this);
+            InpFlow<String> rightFork = new InpFlow(this);
 
             void start() {
                 println("Request left (" + leftPlace.id + ")");

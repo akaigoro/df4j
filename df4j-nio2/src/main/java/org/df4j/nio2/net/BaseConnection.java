@@ -15,8 +15,8 @@ package org.df4j.nio2.net;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.communicator.AsyncSemaphore;
-import org.df4j.core.port.InpMessage;
-import org.df4j.core.port.OutMessage;
+import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -100,8 +100,8 @@ public class BaseConnection extends Dataflow {
     {
         protected final Logger LOG = Logger.getLogger(getClass().getName());
 
-        public final InpMessage<ByteBuffer> input = new InpMessage<>(this);
-        public final OutMessage<ByteBuffer> output = new OutMessage<>(this);
+        public final InpFlow<ByteBuffer> input = new InpFlow<>(this);
+        public final OutFlow<ByteBuffer> output = new OutFlow<>(this);
 
         {
             LOG.info("BuffProcessor "+getClass().getName()+" "+name+" created");

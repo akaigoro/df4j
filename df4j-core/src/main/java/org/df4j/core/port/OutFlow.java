@@ -6,6 +6,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.CompletionException;
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.Subscription;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -15,14 +17,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * A Publisher acting like a server
  * unblocked initially
  */
-public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> {
+public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
     private final Condition hasItems = plock.newCondition();
     protected Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
     protected Throwable completionException;
     protected volatile boolean completed;
     protected volatile T value;
 
-    public OutMessage(BasicBlock parent) {
+    public OutFlow(BasicBlock parent) {
         parent.super(true);
     }
 
@@ -147,7 +149,7 @@ public class OutMessage<T> extends BasicBlock.Port implements Flow.Publisher<T> 
         }
     }
 
-    class FlowSubscription implements Flow.Subscription {
+    class FlowSubscription implements Subscription {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;

@@ -23,16 +23,15 @@
  *   <tr>
  *     <td>Signal</td>
  *     <td>{@link org.df4j.protocol.Signal}</td>
- *     <td>{@link org.df4j.protocol.Pulse}</td>
  *   </tr>
  *   <tr>
  *     <td>Completion</td>
- *     <td>{@link org.df4j.protocol.Completion}</td>
+ *     <td>{@link org.df4j.protocol.Completable}</td>
  *     <td>N/A</td>
  *   </tr>
  *   <tr>
  *     <td>Message</td>
- *     <td>{@link org.df4j.protocol.ScalarMessage}</td>
+ *     <td>{@link org.df4j.protocol.Single}</td>
  *     <td>{@link org.df4j.protocol.Flow}, {@link org.df4j.protocol.ReverseFlow}</td>
  *   </tr>
  * </table>

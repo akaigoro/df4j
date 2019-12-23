@@ -2,6 +2,7 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.activities.Publisher;
 import org.df4j.core.activities.Subscriber;
+import org.df4j.protocol.Subscription;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,7 +14,7 @@ public class PubSubTest {
         volatile boolean completed = false;
 
         @Override
-        public void onSubscribe(Flow.Subscription subscription) {
+        public void onSubscribe(Subscription subscription) {
             subscription.request(Integer.MAX_VALUE);
         }
 

@@ -1,23 +1,23 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.ScalarMessage;
+import org.df4j.protocol.Disposable;
+import org.df4j.protocol.Single;
 
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * {@link ScalarResult} can be considered as a one-shot {@link AsyncArrayBlockingQueue}: once set,
- * it always satisfies {@link ScalarResult#subscribe(ScalarMessage.Subscriber)}
+ * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
+ *   once set, it always satisfies {@link ScalarResult#subscribe(Single.Observer)}
  *
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
  * interfaces on output end.
  */
-public class ScalarResult<T> implements ScalarMessage.Subscriber<T>, ScalarMessage.Publisher<T>, Future<T> {
+public class ScalarResult<T> implements Single.Source<T>, Future<T> {
     private final Lock bblock = new ReentrantLock();
-    protected CompletableFuture<T> cf = new CompletableFuture<>();
-    private CompletableFuture<T> subscription;
+    protected final CompletableFuture<T> cf = new CompletableFuture<>();
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
@@ -35,39 +35,22 @@ public class ScalarResult<T> implements ScalarMessage.Subscriber<T>, ScalarMessa
     }
 
     @Override
-    public void subscribe(ScalarMessage.Subscriber<? super T> s) {
+    public void subscribe(Single.Observer<? super T> subscriber) {
         bblock.lock();
         try {
-            if (subscription != null) {
-                subscription.cancel(true);
-            }
-            subscription = cf.whenComplete(s);
+            Subscription subscription = new Subscription(subscriber);
+            subscriber.onSubscribe(subscription);
         } finally {
             bblock.unlock();
         }
     }
 
-    @Override
-    public boolean unsubscribe(ScalarMessage.Subscriber<T> s) {
-        bblock.lock();
-        try {
-            if (subscription == null) {
-                return false;
-            }
-            CompletableFuture<T> sub = subscription;
-            subscription = null;
-            return sub.cancel(true);
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    @Override
+    //@Override
     public void onSuccess(T t) {
         cf.complete(t);
     }
 
-    @Override
+    //@Override
     public void onError(Throwable t) {
         cf.completeExceptionally(t);
     }
@@ -84,5 +67,23 @@ public class ScalarResult<T> implements ScalarMessage.Subscriber<T>, ScalarMessa
 
     public T join() {
         return cf.join();
+    }
+
+    class Subscription implements Disposable {
+        final CompletableFuture<T> whenComplete;
+
+        public Subscription(Single.Observer<? super T> subscriber) {
+            this.whenComplete = cf.whenComplete(subscriber);
+        }
+
+        @Override
+        public void dispose() {
+            whenComplete.cancel(true);
+        }
+
+        @Override
+        public boolean isDisposed() {
+            return whenComplete.isCancelled();
+        }
     }
 }

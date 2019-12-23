@@ -1,10 +1,10 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.port.OutMessage;
+import org.df4j.core.port.OutFlow;
 
 public class Publisher extends Actor {
-    public OutMessage<Integer> out = new OutMessage<>(this);
+    public OutFlow<Integer> out = new OutFlow<>(this);
     int cnt;
     final int delay;
 
