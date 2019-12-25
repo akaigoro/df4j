@@ -14,16 +14,21 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * A Publisher acting like a server
- * unblocked initially
+ * A passive source of messages (like a server).
+ * Unblocked initially.
+ * It has room for single message.
+ * Blocked when overflow.
  */
 public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
     private final Condition hasItems = plock.newCondition();
-    protected Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
+    protected FlowSubscriptionI<T> subscribers;
     protected Throwable completionException;
     protected volatile boolean completed;
     protected volatile T value;
 
+    /**
+     * @param parent {@link BasicBlock} to which this port belongs
+     */
     public OutFlow(BasicBlock parent) {
         parent.super(true);
     }
@@ -34,6 +39,10 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         subscriber.onSubscribe(subscription);
     }
 
+    /**
+     * sends the next message in this flow
+     * @param t
+     */
     public void onNext(T t) {
         FlowSubscription s;
         plock.lock();
@@ -44,7 +53,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
             if (!super.isReady()) {
                 throw new IllegalStateException();
             }
-            s = subscribers.poll();
+            s = subscribers==null?null:subscribers.poll();
             if (s == null) {
                 value = t;
                 super.block();
@@ -57,8 +66,12 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         s.onNext(t);
     }
 
+    /**
+     * completes this flow exceptionally
+     * @param t
+     */
     public void onError(Throwable t) {
-        Queue<FlowSubscription> subs;
+        FlowSubscriptionI subs;
         plock.lock();
         try {
             if (completed) {
@@ -67,23 +80,28 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
             completed = true;
             completionException = t;
             subs = subscribers;
+            if (subs == null) {
+                return;
+            }
             subscribers = null;
         } finally {
             plock.unlock();
         }
-        for (;;) {
-            FlowSubscription sub = subs.poll();
-            if (sub == null) {
-                break;
-            }
-            sub.onError(t);
-        }
+        subs.onError(t);
     }
 
+    /**
+     * completes this flow normally
+     */
     public void onComplete() {
         onError(null);
     }
 
+    /**
+     * synchronous interface to wait for next message
+     * @return next message when availble
+     * @throws InterruptedException if this thread was interrupted during waiting
+     */
     public  T take() throws InterruptedException {
         plock.lock();
         try {
@@ -105,6 +123,11 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         }
     }
 
+
+    /**
+     * synchronous interface to get for next message
+     * @return next message if available, null otherwise
+     */
     public  T poll() {
         plock.lock();
         try {
@@ -123,6 +146,15 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         }
     }
 
+    /**
+     * synchronous interface to get for next message
+     * if message is not available immediately, waits for the specified timeout
+     * @return next message if available, null otherwise
+     * @param timeout timeout in units
+     * @param unit timeout time unit
+     * @return next message when availble
+     * @throws InterruptedException if this thread was interrupted during waiting
+     */
     public  T poll(long timeout, TimeUnit unit) throws InterruptedException {
         plock.lock();
         try {
@@ -149,7 +181,56 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         }
     }
 
-    class FlowSubscription implements Subscription {
+    public void addSubscriber(FlowSubscription subscriber) {
+        if (subscribers == null) {
+            subscribers = subscriber;
+        } else {
+            subscribers.add(subscriber);
+        }
+    }
+
+    interface FlowSubscriptionI<T> {
+
+        OutFlow<T>.FlowSubscription poll();
+
+        void add(OutFlow<T>.FlowSubscription flowSubscription);
+
+        void remove(OutFlow<T>.FlowSubscription flowSubscription);
+
+        void onError(Throwable t);
+    }
+
+    class FlowSubscriptions implements FlowSubscriptionI<T> {
+        private  final Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
+
+        @Override
+        public FlowSubscription poll() {
+            return subscribers.poll();
+        }
+
+        @Override
+        public void add(FlowSubscription flowSubscription) {
+            add(flowSubscription);
+        }
+
+        @Override
+        public void remove(FlowSubscription flowSubscription) {
+            remove(flowSubscription);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            for (;;) {
+                FlowSubscription sub = poll();
+                if (sub == null) {
+                    break;
+                }
+                sub.onError(t);
+            }
+        }
+    }
+
+    class FlowSubscription implements Subscription, FlowSubscriptionI<T> {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;
@@ -182,7 +263,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
                         }
                     } else {
                         remainedRequests = n;
-                        subscribers.add(this);
+                        addSubscriber(this);
                     }
                 } else {
                     T res = value;
@@ -191,7 +272,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
                     n--;
                     remainedRequests = n;
                     if (remainedRequests > 0) {
-                        subscribers.add(this);
+                        addSubscriber(this);
                     }
                     unblock();
                 }
@@ -204,7 +285,9 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         public void cancel() {
             plock.lock();
             try {
-                subscribers.remove(this);
+                if (subscribers!=null) {
+                    subscribers.remove(this);
+                }
                 cancelled = true;
             } finally {
                 plock.unlock();
@@ -220,7 +303,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
             subscriber.onNext(value);
             remainedRequests--;
             if (remainedRequests > 0) {
-                subscribers.add(this);
+                addSubscriber(this);
             }
         }
 
@@ -234,6 +317,25 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
             } else {
                 subscriber.onError(cause);
             }
+        }
+
+        @Override
+        public FlowSubscription poll() {
+            FlowSubscription res = this;
+            subscribers = null;
+            return res;
+        }
+
+        @Override
+        public void add(FlowSubscription flowSubscription) {
+            subscribers = new FlowSubscriptions();
+            subscribers.add(this);
+            subscribers.add(flowSubscription);
+        }
+
+        @Override
+        public void remove(FlowSubscription flowSubscription) {
+            subscribers = null;
         }
     }
 

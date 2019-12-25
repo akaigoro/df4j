@@ -60,7 +60,7 @@ public class PubSubTest {
     }
 
     @Test
-    public void slowPubConnTest() throws InterruptedException {
+    public void slowPubConsTest() throws InterruptedException {
         pubSubTest(0, 100, 0);
     }
 

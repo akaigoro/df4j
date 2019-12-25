@@ -39,14 +39,14 @@ public  class EchoTest {
     }
 
     @Test
-    public void ClientTest_1() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    public void ClientTest_1() throws IOException, InterruptedException {
         EchoClient client = new EchoClient(local9990, 1);
         client.start();
         client.blockingAwait(1, TimeUnit.SECONDS);
     }
 
     @Test
-    public void ClientTest_4x4() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    public void ClientTest_4x4() throws IOException, InterruptedException {
         ArrayList<EchoClient> clients = new ArrayList<>();
         for (int k=0; k<4; k++)  {
             EchoClient client = new EchoClient(local9990, k+1);

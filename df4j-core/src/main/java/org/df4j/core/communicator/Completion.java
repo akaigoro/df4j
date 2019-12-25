@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Completes successfully or with failure, without emitting any value.
- * Similar to {@link CompletableFuture}<Void>
+ * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
 public class Completion implements Completable.Source {
     protected final Lock bblock = new ReentrantLock();
@@ -23,10 +23,23 @@ public class Completion implements Completable.Source {
     protected LinkedList<Subscription> subscriptions;
     protected boolean completed;
 
+    /**
+     * @return completion Exception, if this {@link Completable} was completed exceptionally;
+     *         null otherwise
+     */
     public Throwable getCompletionException() {
-        return completionException;
+        bblock.lock();
+        try {
+            return completionException;
+        } finally {
+            bblock.unlock();
+        }
     }
 
+    /**
+     * @return true if this {@link Completable} was completed normally or exceptionally;
+     *         false otherwise
+     */
     public boolean isCompleted() {
         bblock.lock();
         try {
@@ -56,6 +69,10 @@ public class Completion implements Completable.Source {
         }
     }
 
+    /**
+     * completes this {@link Completable} exceptionally
+     * @param e completion exception
+     */
     public void onError(Throwable e) {
         LinkedList<Subscription> subs;
         bblock.lock();
@@ -87,10 +104,16 @@ public class Completion implements Completable.Source {
         }
     }
 
+    /**
+     * completes this {@link Completable} normally
+     */
     public void onComplete() {
         onError(null);
     }
 
+    /**
+     * waits this {@link Completable} to complete
+     */
     public void blockingAwait() {
         bblock.lock();
         try {
@@ -109,6 +132,12 @@ public class Completion implements Completable.Source {
         }
     }
 
+    /**
+     * waits this {@link Completable} to complete until timeout
+     * @param timeout timeout in millisecomds
+     * @return true if completed;
+     *         false if timout reached
+     */
     public boolean blockingAwait(long timeout) {
         boolean result;
         bblock.lock();
@@ -142,6 +171,13 @@ public class Completion implements Completable.Source {
         return true;
     }
 
+    /**
+     * waits this {@link Completable} to complete until timeout
+     * @param timeout timeout in units
+     * @param unit time unit
+     * @return true if completed;
+     *         false if timout reached
+     */
     public boolean blockingAwait(long timeout, TimeUnit unit) {
         bblock.lock();
         try {

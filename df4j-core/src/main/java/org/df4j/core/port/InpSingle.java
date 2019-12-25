@@ -6,7 +6,8 @@ import org.df4j.protocol.Single;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
- * It has place for only one token.
+ * It has place for only one message.
+ * After the message is received, this port stays ready forever.
  *
  * @param <T> type of accepted tokens.
  */
@@ -15,8 +16,11 @@ public class InpSingle<T> extends BasicBlock.Port implements Single.Observer<T> 
     protected volatile boolean completed = false;
     private Throwable completionException = null;
 
-    public InpSingle(BasicBlock task) {
-        task.super(false);
+    /**
+     * @param parent {@link BasicBlock} to which this port belongs
+     */
+    public InpSingle(BasicBlock parent) {
+        parent.super(false);
     }
 
     public boolean isCompleted() {

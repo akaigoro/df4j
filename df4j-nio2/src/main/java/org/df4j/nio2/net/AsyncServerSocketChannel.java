@@ -12,7 +12,7 @@ package org.df4j.nio2.net;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.communicator.AsyncSemaphore;
-import org.df4j.core.port.InpSignalFlow;
+import org.df4j.core.port.InpSignal;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.nio.channels.CompletionHandler;
 public abstract class AsyncServerSocketChannel extends BasicBlock
         implements CompletionHandler<AsynchronousSocketChannel, Void>
 {
-    protected InpSignalFlow listener = new InpSignalFlow(this);
+    protected InpSignal listener = new InpSignal(this);
     protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
     protected volatile AsynchronousServerSocketChannel assc;
     protected AsyncSemaphore allowedConnections = new AsyncSemaphore();
@@ -75,7 +75,6 @@ public abstract class AsyncServerSocketChannel extends BasicBlock
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachement) {
         onNext(result);
-        allowedConnections.subscribe(listener);
         this.awake(); // allow  next assc.accpt()
     }
 

@@ -9,14 +9,18 @@ import java.util.Queue;
 import org.df4j.protocol.Subscription;
 
 /**
- * A passive input paramerter,
+ * A passive input parameter.
+ * Has room for single value.
  */
-public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publisher<T> {
+public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publisher<T>, InpMessagePort<T> {
     protected volatile boolean completed;
     protected volatile Throwable completionException;
     protected volatile T value;
     protected Queue<ProducerSubscription> producers = new LinkedList<ProducerSubscription>();
 
+    /**
+     * @param parent {@link BasicBlock} to which this port belongs
+     */
     public InpChannel(BasicBlock parent) {
         parent.super(false);
     }
@@ -36,6 +40,9 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         producer.onSubscribe(subscription);
     }
 
+    /**
+     * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
+     */
     public T current() {
         plock.lock();
         try {
@@ -45,6 +52,10 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         }
     }
 
+    /**
+     * removes and returns incoming value if it is present
+     * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
+     */
     public T poll() {
         plock.lock();
         try {
@@ -66,6 +77,11 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         }
     }
 
+    /**
+     *
+     * @return the value received from a subscriber
+     * @throws IllegalStateException if no value has been received yet or that value has been removed.
+     */
     public T remove() {
         plock.lock();
         try {

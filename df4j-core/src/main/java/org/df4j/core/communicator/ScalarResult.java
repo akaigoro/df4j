@@ -10,10 +10,13 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
  *   once set, it always satisfies {@link ScalarResult#subscribe(Single.Observer)}
- *
+ * <p>
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
  * interfaces on output end.
+ *  an equivalent to {@link CompletableFuture}&lt;{@link T}&gt;
+ *
+ * @param <T> the type of completion value
  */
 public class ScalarResult<T> implements Single.Source<T>, Future<T> {
     private final Lock bblock = new ReentrantLock();
@@ -45,14 +48,20 @@ public class ScalarResult<T> implements Single.Source<T>, Future<T> {
         }
     }
 
-    //@Override
-    public void onSuccess(T t) {
-        cf.complete(t);
+    /**
+     * completes this {@link ScalarResult} with value
+     * @param message completion value
+     */
+    public void onSuccess(T message) {
+        cf.complete(message);
     }
 
-    //@Override
-    public void onError(Throwable t) {
-        cf.completeExceptionally(t);
+    /**
+     * completes this {@link ScalarResult} exceptionally
+      * @param exception completion exception
+     */
+    public void onError(Throwable exception) {
+        cf.completeExceptionally(exception);
     }
 
     @Override
@@ -65,6 +74,13 @@ public class ScalarResult<T> implements Single.Source<T>, Future<T> {
         return cf.get(timeout, unit);
     }
 
+    /**
+     * Returns the result value when complete, or throws an
+     * (unchecked) exception if completed exceptionally.
+     *
+     * @return the result value
+     * @throws CompletionException if this  {@link ScalarResult} completed exceptionally
+     */
     public T join() {
         return cf.join();
     }

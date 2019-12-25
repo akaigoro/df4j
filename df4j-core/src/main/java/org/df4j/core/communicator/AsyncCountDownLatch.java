@@ -8,7 +8,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- *  A {@link CountDownLatch} extended asynchronous interface to publish the completion signal.
+ *  A {@link CountDownLatch} extended with asynchronous interface to publish the completion signal.
  */
 public class AsyncCountDownLatch extends CountDownLatch implements Completable.Source {
     private final Lock bblock = new ReentrantLock();
@@ -22,7 +22,7 @@ public class AsyncCountDownLatch extends CountDownLatch implements Completable.S
     }
 
     public boolean isCompleted() {
-        return completionSignal.isCompleted();
+        return getCount()==0;
     }
 
     @Override

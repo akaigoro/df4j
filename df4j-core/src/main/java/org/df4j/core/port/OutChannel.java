@@ -7,8 +7,9 @@ import org.df4j.protocol.Subscription;
 
 /**
  * An active output parameter
- *
- * @param <T> type of accepted tokens.
+ * Has room for single message.
+ * Must subscribe to a consumer of type {@link ReverseFlow.Publisher} to send message further and unblock this port.
+ * @param <T> type of accepted messages.
  */
 public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscriber<T> {
     protected boolean completed;
@@ -16,10 +17,19 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
     private T value;
     protected Subscription subscription;
 
+    /**
+     * creates {@link OutChannel} not connected to any consumer
+     * @param parent {@link BasicBlock} to which this port belongs
+     */
     public OutChannel(BasicBlock parent) {
         parent.super(true);
     }
 
+    /**
+     *
+     * @param parent {@link BasicBlock} to which this port belongs
+     * @param consumer (@link ReverseFlow.Publisher} to subscribe
+     */
     public OutChannel(BasicBlock parent, ReverseFlow.Publisher<T> consumer) {
         this(parent);
         consumer.subscribe(this);

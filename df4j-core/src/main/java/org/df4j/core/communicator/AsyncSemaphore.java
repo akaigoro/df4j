@@ -9,7 +9,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- *  A {@link Semaphore} extended asynchronous interface to aquire and release permissions.
+ *  A {@link Semaphore} extended with asynchronous interface to aquire and release permissions.
  *
  * This implementation is unfair: asynchronous clients are served before synchronous (threads blocked in {@link Semaphore#acquire()} method}.
  */
@@ -96,6 +96,7 @@ public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
 
         private SignalSubscription(Signal.Subscriber subscriber) {
             this.subscriber = subscriber;
+            subscriber.onSubscribe(this);
         }
 
         @Override

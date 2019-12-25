@@ -27,9 +27,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * so the method {@link BasicBlock#awake()} must be called again explicitly if next firings are required.
  * Unlike basic blocks in traditional flow charts, different {@link BasicBlock}s in the same {@link Dataflow} graph can run in parallel.
  *
- * The most important feature of {@link BasicBlock} is that it can contain imput and output {@link Port}s
- * to exchange messages and signals with other {@link BasicBlock}s in consistent manner.
- * When all ports become ready, this  {@link BasicBlock} is submitted for execution to its executor.
+ * {@link BasicBlock} can contain additional input and output ports
+ * to exchange messages and signals with ports of other {@link BasicBlock}s in consistent manner.
+ * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
 public abstract class BasicBlock implements Signal.Subscriber {
     private final Lock bblock = new ReentrantLock();
@@ -273,6 +273,10 @@ public abstract class BasicBlock implements Signal.Subscriber {
         @Override
         public String toString() {
             return ready?"ready":"blocked";
+        }
+
+        protected Dataflow getDataflow() {
+            return dataflow;
         }
     }
 
