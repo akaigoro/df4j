@@ -3,9 +3,9 @@ package org.df4j.protocol;
 /**
  * repeatable signal stream without errors
  */
-public class Signal {
+public class SignalFlow {
 
-    private Signal() {}
+    private SignalFlow() {}
 
     /**
      * A {@link Publisher} is a provider of a potentially unbounded number of permits
@@ -16,7 +16,7 @@ public class Signal {
          * asynchronous version of Semaphore.aquire()
          *
          * @param subscriber
-         *      the {@link Subscriber} that will consume signals from this {@link Signal.Publisher}
+         *      the {@link Subscriber} that will consume signals from this {@link SignalFlow.Publisher}
          */
         void subscribe(Subscriber subscriber);
     }

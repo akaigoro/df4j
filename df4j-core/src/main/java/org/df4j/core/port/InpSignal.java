@@ -3,14 +3,14 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.protocol.FlowSubscription;
-import org.df4j.protocol.Signal;
+import org.df4j.protocol.SignalFlow;
 
 import java.util.TimerTask;
 
 /**
- * asynchronous receiver of permit flow from a {@link Signal.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
+ * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
  */
-public class InpSignal extends BasicBlock.Port implements Signal.Subscriber {
+public class InpSignal extends BasicBlock.Port implements SignalFlow.Subscriber {
     private FlowSubscription subscription;
 
     /**
@@ -22,9 +22,9 @@ public class InpSignal extends BasicBlock.Port implements Signal.Subscriber {
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
-     * @param publisher a  {@link Signal.Publisher} to subscribe
+     * @param publisher a  {@link SignalFlow.Publisher} to subscribe
      */
-    public InpSignal(BasicBlock parent, Signal.Publisher publisher) {
+    public InpSignal(BasicBlock parent, SignalFlow.Publisher publisher) {
         parent.super(true);
         publisher.subscribe(this);
     }

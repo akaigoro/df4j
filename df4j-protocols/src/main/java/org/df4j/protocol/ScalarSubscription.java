@@ -1,5 +1,8 @@
 package org.df4j.protocol;
 
+/**
+ * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmittion.
+ */
 public interface ScalarSubscription {
     /**
      *  Dispose the resource, the operation should be idempotent.

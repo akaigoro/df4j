@@ -10,7 +10,7 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.protocol.FlowSubscription;
-import org.df4j.protocol.Signal;
+import org.df4j.protocol.SignalFlow;
 
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
@@ -30,7 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * to exchange messages and signals with ports of other {@link BasicBlock}s in consistent manner.
  * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
-public abstract class BasicBlock implements Signal.Subscriber {
+public abstract class BasicBlock implements SignalFlow.Subscriber {
     private final Lock bblock = new ReentrantLock();
     protected final Dataflow dataflow;
     /**

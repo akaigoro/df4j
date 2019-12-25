@@ -1,7 +1,7 @@
 package org.df4j.protocol;
 
 /**
- * A {@link Signal} with completion exceptions
+ * A {@link SignalFlow} with completion exceptions
  */
 public class Completable {
     private Completable() {}

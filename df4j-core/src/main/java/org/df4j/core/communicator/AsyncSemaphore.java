@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.Signal;
+import org.df4j.protocol.SignalFlow;
 import org.df4j.protocol.FlowSubscription;
 
 import java.util.LinkedList;
@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * This implementation is unfair: asynchronous clients are served before synchronous (threads blocked in {@link Semaphore#acquire()} method}.
  */
-public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
+public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
     private final Lock bblock = new ReentrantLock();
     protected final LinkedList<SignalSubscription> subscriptions = new LinkedList<>();
 
@@ -28,10 +28,10 @@ public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
     /**
      *
      * @param subscriber
-     *      the {@link Signal.Subscriber} that will consume signals from this {@link Signal.Publisher}
+     *      the {@link SignalFlow.Subscriber} that will consume signals from this {@link SignalFlow.Publisher}
      */
     @Override
-    public void subscribe(Signal.Subscriber subscriber) {
+    public void subscribe(SignalFlow.Subscriber subscriber) {
         if (subscriber == null) {
             throw new NullPointerException();
         }
@@ -52,7 +52,7 @@ public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
     }
 
     public void release() {
-        Signal.Subscriber subscriber;
+        SignalFlow.Subscriber subscriber;
         bblock.lock();
         try {
             if (subscriptions.size() == 0) {
@@ -91,10 +91,10 @@ public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
     }
 
     private class SignalSubscription implements FlowSubscription {
-        Signal.Subscriber subscriber;
+        SignalFlow.Subscriber subscriber;
         private long remainedRequests;
 
-        private SignalSubscription(Signal.Subscriber subscriber) {
+        private SignalSubscription(SignalFlow.Subscriber subscriber) {
             this.subscriber = subscriber;
             subscriber.onSubscribe(this);
         }

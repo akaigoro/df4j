@@ -25,7 +25,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     }
 
     /**
-     * creates a port which is subscribed to the {@link #publisher}
+     * creates a port which is subscribed to the {@code #publisher}
      * @param parent {@link BasicBlock} to wich this port belongs
      * @param publisher {@link org.df4j.protocol.Flow.Publisher} to subscribe
      */

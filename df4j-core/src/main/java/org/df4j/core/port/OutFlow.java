@@ -40,7 +40,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
 
     /**
      * sends the next message in this flow
-     * @param t
+     * @param t message to send
      */
     public void onNext(T t) {
         OutFlowSubscription s;
@@ -66,7 +66,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
 
     /**
      * completes this flow exceptionally
-     * @param t
+     * @param t message to send
      */
     public void onError(Throwable t) {
         OutFlowSubscriptionI subs;
@@ -147,10 +147,9 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
     /**
      * synchronous interface to get for next message
      * if message is not available immediately, waits for the specified timeout
-     * @return next message if available, null otherwise
      * @param timeout timeout in units
      * @param unit timeout time unit
-     * @return next message when availble
+     * @return next message if available, null otherwise
      * @throws InterruptedException if this thread was interrupted during waiting
      */
     public  T poll(long timeout, TimeUnit unit) throws InterruptedException {

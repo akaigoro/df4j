@@ -11,6 +11,8 @@ import org.df4j.protocol.Scalar;
  * It has place for only one message.
  * After the message is received, this port stays ready forever.
  *
+ * It can connect both to {@link Scalar.Source} and {@link Flow.Publisher}.
+ *
  * @param <T> type of accepted tokens.
  */
 public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>, Flow.Subscriber<T> {
@@ -38,6 +40,21 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
     @Override
     public void onSubscribe(ScalarSubscription subscription) {
         this.subscription = subscription;
+    }
+
+    public void unsubscribe() {
+        plock.lock();
+        ScalarSubscription sub;
+        try {
+            if (subscription == null) {
+                return;
+            }
+            sub = subscription;
+            subscription = null;
+        } finally {
+            plock.unlock();
+        }
+        sub.cancel();
     }
 
     public Throwable getCompletionException() {
@@ -83,6 +100,8 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
         }
     }
 
+    //// Flow protocol //////
+
     @Override
     public void onSubscribe(FlowSubscription subscription) {
         this.subscription = subscription;
@@ -98,20 +117,5 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
     public void onNext(T t) {
         onSuccess(t);
         unsubscribe();
-    }
-
-    private void unsubscribe() {
-        plock.lock();
-        ScalarSubscription sub;
-        try {
-            if (subscription == null) {
-                return;
-            }
-            sub = subscription;
-            subscription = null;
-        } finally {
-            plock.unlock();
-        }
-        sub.cancel();
     }
 }
