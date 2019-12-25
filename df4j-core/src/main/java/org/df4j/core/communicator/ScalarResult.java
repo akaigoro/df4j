@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.Disposable;
-import org.df4j.protocol.Single;
+import org.df4j.protocol.Scalar;
+import org.df4j.protocol.ScalarSubscription;
 
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
- *   once set, it always satisfies {@link ScalarResult#subscribe(Single.Observer)}
+ *   once set, it always satisfies {@link ScalarResult#subscribe(Scalar.Observer)}
  * <p>
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
@@ -18,7 +18,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <T> the type of completion value
  */
-public class ScalarResult<T> implements Single.Source<T>, Future<T> {
+public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
     private final Lock bblock = new ReentrantLock();
     protected final CompletableFuture<T> cf = new CompletableFuture<>();
 
@@ -38,7 +38,7 @@ public class ScalarResult<T> implements Single.Source<T>, Future<T> {
     }
 
     @Override
-    public void subscribe(Single.Observer<? super T> subscriber) {
+    public void subscribe(Scalar.Observer<? super T> subscriber) {
         bblock.lock();
         try {
             Subscription subscription = new Subscription(subscriber);
@@ -85,20 +85,20 @@ public class ScalarResult<T> implements Single.Source<T>, Future<T> {
         return cf.join();
     }
 
-    class Subscription implements Disposable {
+    class Subscription implements ScalarSubscription {
         final CompletableFuture<T> whenComplete;
 
-        public Subscription(Single.Observer<? super T> subscriber) {
+        public Subscription(Scalar.Observer<? super T> subscriber) {
             this.whenComplete = cf.whenComplete(subscriber);
         }
 
         @Override
-        public void dispose() {
+        public void cancel() {
             whenComplete.cancel(true);
         }
 
         @Override
-        public boolean isDisposed() {
+        public boolean isCancelled() {
             return whenComplete.isCancelled();
         }
     }

@@ -32,9 +32,9 @@ public final class Flow {
         /**
          * Request {@link Publisher} to start streaming data.
          * <p>
-         * This is a "factory method" and can be called multiple times, each time starting a new {@link Subscription}.
+         * This is a "factory method" and can be called multiple times, each time starting a new {@link FlowSubscription}.
          * <p>
-         * Each {@link Subscription} will work for only a single {@link Subscriber}.
+         * Each {@link FlowSubscription} will work for only a single {@link Subscriber}.
          * <p>
          * A {@link Subscriber} should only subscribe once to a single {@link Publisher}.
          * <p>
@@ -43,21 +43,21 @@ public final class Flow {
          *
          * @param s the {@link Subscriber} that will consume signals from this {@link Publisher}
          */
-        public void subscribe(Subscriber<? super T> s);
+        void subscribe(Subscriber<? super T> s);
     }
 
     /**
-     * Will receive call to {@link #onSubscribe(Subscription)} once after passing an instance of {@link Subscriber} to {@link Publisher#subscribe(Subscriber)}.
+     * Will receive call to {@link #onSubscribe(FlowSubscription)} once after passing an instance of {@link Subscriber} to {@link Publisher#subscribe(Subscriber)}.
      * <p>
-     * No further notifications will be received until {@link Subscription#request(long)} is called.
+     * No further notifications will be received until {@link FlowSubscription#request(long)} is called.
      * <p>
      * After signaling demand:
      * <ul>
-     * <li>One or more invocations of {@link #onNext(Object)} up to the maximum number defined by {@link Subscription#request(long)}</li>
+     * <li>One or more invocations of {@link #onNext(Object)} up to the maximum number defined by {@link FlowSubscription#request(long)}</li>
      * <li>Single invocation of {@link #onError(Throwable)} or {@link Subscriber#onComplete()} which signals a terminal state after which no further events will be sent.
      * </ul>
      * <p>
-     * Demand can be signaled via {@link Subscription#request(long)} whenever the {@link Subscriber} instance is capable of handling more.
+     * Demand can be signaled via {@link FlowSubscription#request(long)} whenever the {@link Subscriber} instance is capable of handling more.
      *
      * @param <T> the type of element signaled.
      */
@@ -65,19 +65,19 @@ public final class Flow {
         /**
          * Invoked after calling {@link Publisher#subscribe(Subscriber)}.
          * <p>
-         * No data will start flowing until {@link Subscription#request(long)} is invoked.
+         * No data will start flowing until {@link FlowSubscription#request(long)} is invoked.
          * <p>
-         * It is the responsibility of this {@link Subscriber} instance to call {@link Subscription#request(long)} whenever more data is wanted.
+         * It is the responsibility of this {@link Subscriber} instance to call {@link FlowSubscription#request(long)} whenever more data is wanted.
          * <p>
-         * The {@link Publisher} will send notifications only in response to {@link Subscription#request(long)}.
+         * The {@link Publisher} will send notifications only in response to {@link FlowSubscription#request(long)}.
          *
          * @param s
-         *            {@link Subscription} that allows requesting data via {@link Subscription#request(long)}
+         *            {@link FlowSubscription} that allows requesting data via {@link FlowSubscription#request(long)}
          */
-        public void onSubscribe(Subscription s);
+        public void onSubscribe(FlowSubscription s);
 
         /**
-         * Data notification sent by the {@link Publisher} in response to requests to {@link Subscription#request(long)}.
+         * Data notification sent by the {@link Publisher} in response to requests to {@link FlowSubscription#request(long)}.
          *
          * @param t the element signaled
          */
@@ -86,7 +86,7 @@ public final class Flow {
         /**
          * Failed terminal state.
          * <p>
-         * No further events will be sent even if {@link Subscription#request(long)} is invoked again.
+         * No further events will be sent even if {@link FlowSubscription#request(long)} is invoked again.
          *
          * @param t the throwable signaled
          */
@@ -95,7 +95,7 @@ public final class Flow {
         /**
          * Successful terminal state.
          * <p>
-         * No further events will be sent even if {@link Subscription#request(long)} is invoked again.
+         * No further events will be sent even if {@link FlowSubscription#request(long)} is invoked again.
          */
         public void onComplete();
     }

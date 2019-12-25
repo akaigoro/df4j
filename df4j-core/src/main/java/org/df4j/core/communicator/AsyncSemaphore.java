@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Signal;
-import org.df4j.protocol.Subscription;
+import org.df4j.protocol.FlowSubscription;
 
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
@@ -90,13 +90,23 @@ public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
         }
     }
 
-    private class SignalSubscription implements Subscription {
+    private class SignalSubscription implements FlowSubscription {
         Signal.Subscriber subscriber;
         private long remainedRequests;
 
         private SignalSubscription(Signal.Subscriber subscriber) {
             this.subscriber = subscriber;
             subscriber.onSubscribe(this);
+        }
+
+        @Override
+        public boolean isCancelled() {
+            bblock.lock();
+            try {
+                return subscriber == null;
+            } finally {
+                bblock.unlock();
+            }
         }
 
         @Override
@@ -149,7 +159,6 @@ public class AsyncSemaphore extends Semaphore implements Signal.Publisher {
             } finally {
                 bblock.unlock();
             }
-
         }
     }
 }

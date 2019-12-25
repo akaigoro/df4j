@@ -97,7 +97,7 @@ Version history
 ---------------
 2019/08/26 
 Branch API-8 started: protocols refactored; total simplification. 
-ReverseFlow and Async BlockingQueue introduced.
+ReverseFlow and AsyncBlockingQueue introduced.
 
 2019/06/16
 tag 7.2 protocol interfaces are grouped in a separate module df4j-protocols.

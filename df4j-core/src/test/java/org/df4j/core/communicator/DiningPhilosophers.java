@@ -3,7 +3,7 @@ package org.df4j.core.communicator;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.InpScalar;
 import org.df4j.core.port.OutChannel;
 import org.junit.Test;
 
@@ -198,7 +198,6 @@ public class DiningPhilosophers extends Dataflow {
             endThinking = new EndThinking();
             startEating = new StartEating();
             endEating = new EndEating();
-
         }
 
         @Override
@@ -216,6 +215,7 @@ public class DiningPhilosophers extends Dataflow {
                 super(PhilosopherDF.this);
             }
         }
+
         class StartThinking extends BasicBlock {
 
             @Override
@@ -223,6 +223,7 @@ public class DiningPhilosophers extends Dataflow {
                 endThinking.awake(getDelay());
             }
         }
+
         class EndThinking extends BasicBlock {
 
             @Override
@@ -230,9 +231,10 @@ public class DiningPhilosophers extends Dataflow {
                 startEating.start();
             }
         }
+
         class StartEating extends BasicBlock {
-            InpFlow<String> leftFork = new InpFlow(this);
-            InpFlow<String> rightFork = new InpFlow(this);
+            InpScalar<String> leftFork = new InpScalar<>(this);
+            InpScalar<String> rightFork = new InpScalar<>(this);
 
             void start() {
                 println("Request left (" + leftPlace.id + ")");
@@ -246,9 +248,7 @@ public class DiningPhilosophers extends Dataflow {
             protected void runAction() throws Throwable {
                 left = leftFork.current();
                 println("got left "+left + " from "+ leftPlace.id);
-                leftFork.unsubscribe();
                 right = rightFork.current();
-                rightFork.unsubscribe();
                 println("got right "+right + " from "+ rightPlace.id);
                 endEating.awake(getDelay());
             }

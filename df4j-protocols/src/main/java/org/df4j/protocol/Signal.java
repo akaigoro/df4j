@@ -26,7 +26,7 @@ public class Signal {
      *
      */
     public interface Subscriber {
-        void onSubscribe(Subscription subscription);
+        void onSubscribe(FlowSubscription subscription);
 
         /**
          * asynchronous version of Semaphore.aquire()

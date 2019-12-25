@@ -1,8 +1,10 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
-import org.df4j.protocol.Disposable;
-import org.df4j.protocol.Single;
+import org.df4j.protocol.Flow;
+import org.df4j.protocol.FlowSubscription;
+import org.df4j.protocol.ScalarSubscription;
+import org.df4j.protocol.Scalar;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -11,15 +13,16 @@ import org.df4j.protocol.Single;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpSingle<T> extends BasicBlock.Port implements Single.Observer<T> {
+public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>, Flow.Subscriber<T> {
     protected T value;
     protected volatile boolean completed = false;
     private Throwable completionException = null;
+    private ScalarSubscription subscription;
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
      */
-    public InpSingle(BasicBlock parent) {
+    public InpScalar(BasicBlock parent) {
         parent.super(false);
     }
 
@@ -33,8 +36,8 @@ public class InpSingle<T> extends BasicBlock.Port implements Single.Observer<T> 
     }
 
     @Override
-    public void onSubscribe(Disposable subscription) {
-
+    public void onSubscribe(ScalarSubscription subscription) {
+        this.subscription = subscription;
     }
 
     public Throwable getCompletionException() {
@@ -78,5 +81,37 @@ public class InpSingle<T> extends BasicBlock.Port implements Single.Observer<T> 
         } finally {
             plock.unlock();
         }
+    }
+
+    @Override
+    public void onSubscribe(FlowSubscription subscription) {
+        this.subscription = subscription;
+        subscription.request(1);
+    }
+
+    @Override
+    public void onComplete() {
+        onError(null);
+    }
+
+    @Override
+    public void onNext(T t) {
+        onSuccess(t);
+        unsubscribe();
+    }
+
+    private void unsubscribe() {
+        plock.lock();
+        ScalarSubscription sub;
+        try {
+            if (subscription == null) {
+                return;
+            }
+            sub = subscription;
+            subscription = null;
+        } finally {
+            plock.unlock();
+        }
+        sub.cancel();
     }
 }

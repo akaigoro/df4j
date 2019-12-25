@@ -57,7 +57,7 @@ public class ReverseFlow {
          *
          * @param subscription a new subscription
          */
-        void onSubscribe(Subscription subscription);
+        void onSubscribe(FlowSubscription subscription);
 
         /**
          * {@link Publisher} gets data from {@link Subscriber}

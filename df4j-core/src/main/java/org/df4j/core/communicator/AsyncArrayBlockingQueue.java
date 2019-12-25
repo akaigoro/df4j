@@ -1,13 +1,12 @@
 package org.df4j.core.communicator;
 
+import org.df4j.protocol.Flow;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
-import org.df4j.protocol.Flow;
-import org.df4j.protocol.Subscription;
-
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -34,7 +33,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
     protected final int capacity;
     protected ArrayDeque<T> tokens;
     protected Queue<ProducerSubscription> producers = new LinkedList<ProducerSubscription>();
-    protected Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
+    protected Queue<FlowSubscriptionImpl> subscribers = new LinkedList<FlowSubscriptionImpl>();
     protected Throwable completionException;
     protected volatile boolean completed;
 
@@ -51,7 +50,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
 
     @Override
     public void subscribe(Flow.Subscriber<? super T> subscriber) {
-        FlowSubscription subscription = new FlowSubscription(subscriber);
+        FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
         subscriber.onSubscribe(subscription);
     }
 
@@ -74,7 +73,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
      */
     @Override
     public boolean offer(T token) {
-        FlowSubscription sub;
+        FlowSubscriptionImpl sub;
         qlock.lock();
         try {
             if (subscribers.isEmpty()) {
@@ -110,7 +109,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
     @Override
     public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
         long millis = unit.toMillis(timeout);
-        FlowSubscription sub;
+        FlowSubscriptionImpl sub;
         qlock.lock();
         try {
             for (;;) {
@@ -140,7 +139,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
 
     @Override
     public void put(T token) throws InterruptedException {
-        FlowSubscription sub;
+        FlowSubscriptionImpl sub;
         qlock.lock();
         try {
             for (;;) {
@@ -277,7 +276,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
             completionException = cause;
             hasItems.signalAll();
             for (;;) {
-                FlowSubscription sub1 = subscribers.poll();
+                FlowSubscriptionImpl sub1 = subscribers.poll();
                 if (sub1 == null) {
                     break;
                 }
@@ -297,7 +296,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         return super.toString();
     }
 
-    class ProducerSubscription implements Subscription {
+    class ProducerSubscription implements org.df4j.protocol.FlowSubscription {
         private final Lock slock = new ReentrantLock();
         protected ReverseFlow.Subscriber<T> producer;
         private long remainedRequests = 0;
@@ -305,6 +304,16 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
 
         public ProducerSubscription(ReverseFlow.Subscriber<T> producer) {
             this.producer = producer;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            slock.lock();
+            try {
+                return cancelled;
+            } finally {
+                slock.unlock();
+            }
         }
 
         /**
@@ -339,14 +348,14 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
                         completionException = producer.getCompletionException();
                         hasItems.signalAll();
                         for (;;) {
-                            FlowSubscription sub = subscribers.poll();
+                            FlowSubscriptionImpl sub = subscribers.poll();
                             if (sub == null) {
                                 return;
                             }
                             sub.onError(completionException);
                         }
                     }
-                    FlowSubscription sub1 = null;
+                    FlowSubscriptionImpl sub1 = null;
                     while (n > 0) {
                         T value = producer.remove();
                         if (sub1 == null) {
@@ -394,14 +403,24 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         }
     }
 
-    class FlowSubscription implements Subscription {
+    class FlowSubscriptionImpl implements FlowSubscription {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        FlowSubscription(Flow.Subscriber subscriber) {
+        FlowSubscriptionImpl(Flow.Subscriber subscriber) {
             this.subscriber = subscriber;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            slock.lock();
+            try {
+                return cancelled;
+            } finally {
+                slock.unlock();
+            }
         }
 
         /**

@@ -1,8 +1,7 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Completable;
-import org.df4j.protocol.Disposable;
-import org.df4j.protocol.Single;
+import org.df4j.protocol.ScalarSubscription;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -215,22 +214,22 @@ public class Completion implements Completable.Source {
     }
 
 
-    class Subscription implements Disposable {
+    class Subscription implements ScalarSubscription {
         final Completable.Observer subscriber;
-        private boolean disposed;
+        private boolean cancelled;
 
         public Subscription(Completable.Observer subscriber) {
             this.subscriber = subscriber;
         }
 
         @Override
-        public void dispose() {
+        public void cancel() {
             bblock.lock();
             try {
-                if (disposed) {
+                if (cancelled) {
                     return;
                 }
-                disposed = true;
+                cancelled = true;
                 subscriptions.remove(this);
             } finally {
                 bblock.unlock();
@@ -238,10 +237,10 @@ public class Completion implements Completable.Source {
         }
 
         @Override
-        public boolean isDisposed() {
+        public boolean isCancelled() {
             bblock.lock();
             try {
-                return disposed;
+                return cancelled;
             } finally {
                 bblock.unlock();
             }

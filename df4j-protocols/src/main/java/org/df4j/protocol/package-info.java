@@ -31,7 +31,7 @@
  *   </tr>
  *   <tr>
  *     <td>Message</td>
- *     <td>{@link org.df4j.protocol.Single}</td>
+ *     <td>{@link org.df4j.protocol.Scalar}</td>
  *     <td>{@link org.df4j.protocol.Flow}, {@link org.df4j.protocol.ReverseFlow}</td>
  *   </tr>
  * </table>

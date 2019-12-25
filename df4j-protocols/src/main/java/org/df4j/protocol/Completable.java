@@ -2,7 +2,6 @@ package org.df4j.protocol;
 
 /**
  * A {@link Signal} with completion exceptions
- * Borrowed from RxJava project
  */
 public class Completable {
     private Completable() {}
@@ -47,7 +46,7 @@ public class Completable {
      * </ul>
      */
     public interface Observer {
-        void onSubscribe(Disposable subscription);
+        void onSubscribe(ScalarSubscription subscription);
 
         /**
          * Called once if the deferred computation 'throws' an exception.
@@ -58,9 +57,7 @@ public class Completable {
         /**
          * Called once the deferred computation completes normally.
          */
-        default void onComplete() {
-            onError(null);
-        }
+        void onComplete();
     }
 
 }

@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
-import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
+import org.df4j.core.dataflow.ActivityThread;
 import org.junit.Assert;
 
 import java.util.concurrent.CompletionException;

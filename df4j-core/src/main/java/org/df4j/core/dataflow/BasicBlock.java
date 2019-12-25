@@ -9,9 +9,8 @@
  */
 package org.df4j.core.dataflow;
 
-import org.df4j.protocol.Disposable;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.Signal;
-import org.df4j.protocol.Subscription;
 
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
@@ -41,7 +40,7 @@ public abstract class BasicBlock implements Signal.Subscriber {
     private int blockingPortCount = 0;
     private Executor executor;
     private Port controlport = new ControlPort();
-    private Subscription subscription;
+    private FlowSubscription subscription;
 
     protected BasicBlock(Dataflow dataflow) {
         if (dataflow == null) {
@@ -52,7 +51,7 @@ public abstract class BasicBlock implements Signal.Subscriber {
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
+    public void onSubscribe(FlowSubscription subscription) {
         bblock.lock();
         try {
             if (this.subscription != null) {

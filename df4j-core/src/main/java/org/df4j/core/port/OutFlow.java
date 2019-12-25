@@ -1,13 +1,12 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.protocol.Flow;
+import org.df4j.protocol.FlowSubscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.CompletionException;
-import org.df4j.protocol.Flow;
-import org.df4j.protocol.Subscription;
-
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -21,7 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
     private final Condition hasItems = plock.newCondition();
-    protected FlowSubscriptionI<T> subscribers;
+    protected OutFlowSubscriptionI subscribers;
     protected Throwable completionException;
     protected volatile boolean completed;
     protected volatile T value;
@@ -35,7 +34,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
 
     @Override
     public void subscribe(Flow.Subscriber<? super T> subscriber) {
-        FlowSubscription subscription = new FlowSubscription(subscriber);
+        OutFlowSubscription subscription = new OutFlowSubscription(subscriber);
         subscriber.onSubscribe(subscription);
     }
 
@@ -44,7 +43,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
      * @param t
      */
     public void onNext(T t) {
-        FlowSubscription s;
+        OutFlowSubscription s;
         plock.lock();
         try {
             if (completed) { // this is how CompletableFuture#completeExceptionally works
@@ -53,8 +52,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
             if (!super.isReady()) {
                 throw new IllegalStateException();
             }
-            s = subscribers==null?null:subscribers.poll();
-            if (s == null) {
+            if ((subscribers==null)||(s = subscribers.poll()) == null) {
                 value = t;
                 super.block();
                 hasItems.signalAll();
@@ -71,7 +69,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
      * @param t
      */
     public void onError(Throwable t) {
-        FlowSubscriptionI subs;
+        OutFlowSubscriptionI subs;
         plock.lock();
         try {
             if (completed) {
@@ -181,7 +179,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         }
     }
 
-    public void addSubscriber(FlowSubscription subscriber) {
+    public void addSubscriber(OutFlowSubscription subscriber) {
         if (subscribers == null) {
             subscribers = subscriber;
         } else {
@@ -189,55 +187,30 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         }
     }
 
-    interface FlowSubscriptionI<T> {
+    interface OutFlowSubscriptionI {
 
-        OutFlow<T>.FlowSubscription poll();
+        OutFlow.OutFlowSubscription poll();
 
-        void add(OutFlow<T>.FlowSubscription flowSubscription);
+        void add(OutFlow.OutFlowSubscription flowSubscription);
 
-        void remove(OutFlow<T>.FlowSubscription flowSubscription);
+        void remove(OutFlow.OutFlowSubscription flowSubscription);
 
         void onError(Throwable t);
     }
 
-    class FlowSubscriptions implements FlowSubscriptionI<T> {
-        private  final Queue<FlowSubscription> subscribers = new LinkedList<FlowSubscription>();
-
-        @Override
-        public FlowSubscription poll() {
-            return subscribers.poll();
-        }
-
-        @Override
-        public void add(FlowSubscription flowSubscription) {
-            add(flowSubscription);
-        }
-
-        @Override
-        public void remove(FlowSubscription flowSubscription) {
-            remove(flowSubscription);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            for (;;) {
-                FlowSubscription sub = poll();
-                if (sub == null) {
-                    break;
-                }
-                sub.onError(t);
-            }
-        }
-    }
-
-    class FlowSubscription implements Subscription, FlowSubscriptionI<T> {
+    class OutFlowSubscription implements FlowSubscription, OutFlowSubscriptionI {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        FlowSubscription(Flow.Subscriber subscriber) {
+        OutFlowSubscription(Flow.Subscriber subscriber) {
             this.subscriber = subscriber;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancelled;
         }
 
         @Override
@@ -294,11 +267,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
             }
         }
 
-        /**
-         *
-         * @param value token to pass
-         * @return true if can accept more tokens
-         */
+
         public void onNext(T value) {
             subscriber.onNext(value);
             remainedRequests--;
@@ -320,23 +289,52 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
         }
 
         @Override
-        public FlowSubscription poll() {
-            FlowSubscription res = this;
+        public OutFlowSubscription poll() {
+            OutFlowSubscription res = this;
             subscribers = null;
             return res;
         }
 
         @Override
-        public void add(FlowSubscription flowSubscription) {
-            subscribers = new FlowSubscriptions();
+        public void add(OutFlow.OutFlowSubscription flowSubscription) {
+            subscribers = new OutFlowSubscriptions();
             subscribers.add(this);
             subscribers.add(flowSubscription);
         }
 
         @Override
-        public void remove(FlowSubscription flowSubscription) {
+        public void remove(OutFlow.OutFlowSubscription flowSubscription) {
             subscribers = null;
         }
     }
 
+    class OutFlowSubscriptions implements OutFlowSubscriptionI {
+        private  final Queue<OutFlowSubscription> subscribers = new LinkedList<OutFlowSubscription>();
+
+        @Override
+        public OutFlowSubscription poll() {
+            return subscribers.poll();
+        }
+
+        @Override
+        public void add(OutFlow.OutFlowSubscription flowSubscription) {
+            subscribers.add(flowSubscription);
+        }
+
+        @Override
+        public void remove(OutFlow.OutFlowSubscription flowSubscription) {
+            subscribers.remove(flowSubscription);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            for (;;) {
+                OutFlowSubscription sub = poll();
+                if (sub == null) {
+                    break;
+                }
+                sub.onError(t);
+            }
+        }
+    }
 }

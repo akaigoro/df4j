@@ -2,9 +2,8 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.protocol.Disposable;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.Signal;
-import org.df4j.protocol.Subscription;
 
 import java.util.TimerTask;
 
@@ -12,7 +11,7 @@ import java.util.TimerTask;
  * asynchronous receiver of permit flow from a {@link Signal.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
  */
 public class InpSignal extends BasicBlock.Port implements Signal.Subscriber {
-    private Subscription subscription;
+    private FlowSubscription subscription;
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
@@ -31,7 +30,7 @@ public class InpSignal extends BasicBlock.Port implements Signal.Subscriber {
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
+    public void onSubscribe(FlowSubscription subscription) {
         plock.lock();
         try {
             this.subscription = subscription;

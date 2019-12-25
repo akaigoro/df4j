@@ -5,12 +5,12 @@ import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
+import org.df4j.protocol.Flow;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CompletionException;
-import org.df4j.protocol.Flow;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;

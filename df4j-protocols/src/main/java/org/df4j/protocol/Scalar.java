@@ -6,9 +6,9 @@ import java.util.function.BiConsumer;
 /**
  * One-shot multicast message protocol.
  */
-public class Single {
+public class Scalar {
 
-    private Single() {}
+    private Scalar() {}
 
     /**
      * A {@link Source} is a provider of a single element, publishing it to a {@link Observer}(s).
@@ -39,7 +39,7 @@ public class Single {
      * @param <T>  type of tokens
      */
     public interface Observer<T> extends Completable.Observer, BiConsumer<T, Throwable> {
-        void onSubscribe(Disposable subscription);
+        void onSubscribe(ScalarSubscription subscription);
 
         /**
          * Data notification sent by the {@link Source}

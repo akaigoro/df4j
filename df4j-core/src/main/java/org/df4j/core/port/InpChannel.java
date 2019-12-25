@@ -2,11 +2,10 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.ReverseFlow;
+import org.df4j.protocol.FlowSubscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
-
-import org.df4j.protocol.Subscription;
 
 /**
  * A passive input parameter.
@@ -95,13 +94,23 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
     }
 
 
-    class ProducerSubscription implements Subscription {
+    class ProducerSubscription implements FlowSubscription {
         protected ReverseFlow.Subscriber<T> producer;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
         public ProducerSubscription(ReverseFlow.Subscriber<T> producer) {
             this.producer = producer;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            plock.lock();
+            try {
+                return cancelled;
+            } finally {
+                plock.unlock();
+            }
         }
 
         /**

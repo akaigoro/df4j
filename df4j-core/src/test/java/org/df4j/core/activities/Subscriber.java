@@ -2,9 +2,8 @@ package org.df4j.core.activities;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
-import org.junit.Assert;
-
 import org.df4j.protocol.Flow;
+import org.junit.Assert;
 
 public class Subscriber extends Actor {
     Flow.Publisher<Integer> pub;

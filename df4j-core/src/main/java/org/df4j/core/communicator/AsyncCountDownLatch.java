@@ -1,7 +1,6 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Completable;
-import org.df4j.protocol.Signal;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.Lock;

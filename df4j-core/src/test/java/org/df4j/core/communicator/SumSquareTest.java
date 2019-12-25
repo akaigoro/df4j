@@ -1,11 +1,14 @@
 package org.df4j.core.communicator;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.port.InpSingle;
+import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -14,7 +17,7 @@ import static org.junit.Assert.fail;
 public class SumSquareTest {
 
     public static class Square extends AsyncProc {
-        final InpSingle<Integer> param = new InpSingle<>(this);
+        final InpScalar<Integer> param = new InpScalar<>(this);
         final ScalarResult<Integer> out = new ScalarResult<>();
         {awake();}
 
@@ -26,8 +29,8 @@ public class SumSquareTest {
     }
 
     public static class Sum extends AsyncProc {
-        final InpSingle<Integer> paramX = new InpSingle<>(this);
-        final InpSingle<Integer> paramY = new InpSingle<>(this);
+        final InpScalar<Integer> paramX = new InpScalar<>(this);
+        final InpScalar<Integer> paramY = new InpScalar<>(this);
         final ScalarResult<Integer> out = new ScalarResult<>();
         {awake();}
 

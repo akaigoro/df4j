@@ -11,8 +11,6 @@ package org.df4j.core.dataflow;
 
 import org.df4j.protocol.Completable;
 
-import java.util.concurrent.Executor;
-
 /**
  * {@link AsyncProc} is a {@link Dataflow} with single {@link BasicBlock} which is executed only once.
 */
