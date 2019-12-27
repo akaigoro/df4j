@@ -7,7 +7,6 @@ package org.df4j.core.dataflow;
  *  An Actor as designed by Carl Hewitt can be modelled as {@link Actor} with single port of type {@link org.df4j.core.port.InpFlow}.
  */
 public abstract class Actor extends AsyncProc {
-
     public Actor(Dataflow parent) {
         super(parent);
     }
@@ -20,7 +19,7 @@ public abstract class Actor extends AsyncProc {
     protected void run() {
         try {
             runAction();
-            if (isCompleted()) {
+            if (isStopped()) {
                 return;
             }
             this.awake(); // make loop

@@ -50,6 +50,10 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
         dataflow.enter();
     }
 
+    public Dataflow getDataflow() {
+        return dataflow;
+    }
+
     @Override
     public void onSubscribe(FlowSubscription subscription) {
         bblock.lock();
