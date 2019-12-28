@@ -3,11 +3,11 @@ package org.df4j.core.activities;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpChannel;
 
-public class Consumer extends Actor {
+public class ConsumerActor extends Actor {
     final int delay;
     public InpChannel<Integer> inp = new InpChannel<>(this);
 
-    public Consumer(int delay) {
+    public ConsumerActor(int delay) {
         this.delay = delay;
     }
 

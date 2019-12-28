@@ -18,6 +18,11 @@
             <artifactId>df4j-protocols</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.reactivestreams</groupId>
+            <artifactId>reactive-streams</artifactId>
+            <version>1.0.2</version>
+        </dependency>
     </dependencies>
 
     <build>

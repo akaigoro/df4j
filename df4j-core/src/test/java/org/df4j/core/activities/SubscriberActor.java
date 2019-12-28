@@ -1,17 +1,23 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.protocol.Flow;
 import org.junit.Assert;
 
-public class Subscriber extends Actor {
+public class SubscriberActor extends Actor {
     Flow.Publisher<Integer> pub;
     final int delay;
-    InpFlow<Integer> inp = new InpFlow<>(this);
+    public InpFlow<Integer> inp = new InpFlow<>(this);
     Integer in = null;
 
-    public Subscriber(Flow.Publisher<Integer> pub, int delay) {
+    public SubscriberActor(Dataflow parent, int delay) {
+        this.pub = pub;
+        this.delay = delay;
+    }
+
+    public SubscriberActor(Flow.Publisher<Integer> pub, int delay) {
         this.pub = pub;
         this.delay = delay;
         pub.subscribe(inp);

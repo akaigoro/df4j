@@ -1,7 +1,7 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.activities.Publisher;
-import org.df4j.core.activities.Subscriber;
+import org.df4j.core.activities.PublisherActor;
+import org.df4j.core.activities.SubscriberActor;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.FlowSubscription;
 import org.junit.Assert;
@@ -36,7 +36,7 @@ public class PubSubTest {
 
     @Test
     public void pubOnlyTest() throws InterruptedException {
-        Publisher pub = new Publisher(3, 0);
+        PublisherActor pub = new PublisherActor(3, 0);
         Observer sub = new Observer();
         pub.start();
         pub.out.subscribe(sub);
@@ -48,8 +48,8 @@ public class PubSubTest {
     }
 
     public void pubSubTest(int cnt, int delay1, int delay2) throws InterruptedException {
-        Publisher pub = new Publisher(cnt, delay1);
-        Subscriber sub = new Subscriber(pub.out, delay2);
+        PublisherActor pub = new PublisherActor(cnt, delay1);
+        SubscriberActor sub = new SubscriberActor(pub.out, delay2);
         pub.start();
         sub.start();
         sub.blockingAwait(1000);

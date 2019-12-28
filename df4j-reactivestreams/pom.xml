@@ -13,11 +13,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.reactivestreams</groupId>
-            <artifactId>reactive-streams</artifactId>
-            <version>1.0.2</version>
-        </dependency>
-        <dependency>
             <groupId>org.df4j</groupId>
             <artifactId>df4j-protocols</artifactId>
             <version>${project.version}</version>

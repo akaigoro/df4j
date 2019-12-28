@@ -4,12 +4,12 @@ import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.util.Utils;
 
-public class ProducerT extends Thread implements ActivityThread {
+public class ProducerThread extends Thread implements ActivityThread {
     final int delay;
     int cnt;
     AsyncArrayBlockingQueue<Integer> queue;
 
-    public ProducerT(int cnt, AsyncArrayBlockingQueue<Integer> queue, int delay) {
+    public ProducerThread(int cnt, AsyncArrayBlockingQueue<Integer> queue, int delay) {
         this.queue = queue;
         this.delay = delay;
         this.cnt = cnt;

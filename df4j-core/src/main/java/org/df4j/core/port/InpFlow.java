@@ -47,6 +47,10 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
         return completionException;
     }
 
+    public boolean isCompletedExceptionslly() {
+        return completionException != null;
+    }
+
     public T current() {
         plock.lock();
         try {

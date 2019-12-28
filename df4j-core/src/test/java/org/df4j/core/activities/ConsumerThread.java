@@ -6,12 +6,12 @@ import org.junit.Assert;
 
 import java.util.concurrent.CompletionException;
 
-public class ConsumerT extends Thread implements ActivityThread {
+public class ConsumerThread extends Thread implements ActivityThread {
     AsyncArrayBlockingQueue<Integer> queue;
     final int delay;
     Integer in = null;
 
-    public ConsumerT(AsyncArrayBlockingQueue<Integer> queue, int delay) {
+    public ConsumerThread(AsyncArrayBlockingQueue<Integer> queue, int delay) {
         this.queue = queue;
         this.delay = delay;
     }

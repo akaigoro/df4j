@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.activities.Producer;
-import org.df4j.core.activities.Subscriber;
+import org.df4j.core.activities.ProducerActor;
+import org.df4j.core.activities.SubscriberActor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -9,8 +9,8 @@ public class AsyncArrayBlockingQueueTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
         AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
-        Producer producer = new Producer(cnt, queue, delay1);
-        Subscriber subscriber = new Subscriber(queue, delay2);
+        ProducerActor producer = new ProducerActor(cnt, queue, delay1);
+        SubscriberActor subscriber = new SubscriberActor(queue, delay2);
         producer.start();
         subscriber.start();
      //   producer.join();
@@ -45,7 +45,7 @@ public class AsyncArrayBlockingQueueTest {
         for (int k = cnt; k>0; k--) {
             queue.offer(k);
         }
-        Subscriber subscriber = new Subscriber(queue, 0);
+        SubscriberActor subscriber = new SubscriberActor(queue, 0);
         subscriber.start();
         queue.onComplete();
         //   producer.join();

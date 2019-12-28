@@ -4,12 +4,12 @@ import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.OutChannel;
 import org.df4j.protocol.ReverseFlow;
 
-public class Producer extends Actor {
+public class ProducerActor extends Actor {
     final int delay;
     int cnt;
     OutChannel<Integer> out;
 
-    public Producer(int cnt, ReverseFlow.Publisher<Integer> inp, int delay) {
+    public ProducerActor(int cnt, ReverseFlow.Publisher<Integer> inp, int delay) {
         out = new OutChannel<>(this, inp);
         this.delay = delay;
         this.cnt = cnt;
