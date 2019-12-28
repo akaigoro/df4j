@@ -19,10 +19,6 @@ public class ReactivePublisher extends Actor implements Publisher<Long> {
     public ReactivePublisher(Dataflow parent, long totalNumber) {
         super(parent);
         this.val = totalNumber;
-        if (totalNumber == 0) {
-            output.onComplete();
-            stop();
-        }
     }
 
     public ReactivePublisher(long totalNumber) {

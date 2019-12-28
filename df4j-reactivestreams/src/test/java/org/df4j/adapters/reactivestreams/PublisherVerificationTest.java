@@ -30,9 +30,14 @@ public class PublisherVerificationTest  extends org.reactivestreams.tck.Publishe
             @Override
             protected void runAction() {
                 output.onError(new RuntimeException());
+                stop();
             }
         };
         publisher.start();
         return publisher.output;
+    }
+
+    public void failingtets() throws Throwable {
+        super.stochastic_spec103_mustSignalOnMethodsSequentially();
     }
 }

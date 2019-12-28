@@ -36,6 +36,21 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
     public void subscribe(Flow.Subscriber<? super T> subscriber) {
         OutFlowSubscription subscription = new OutFlowSubscription(subscriber);
         subscriber.onSubscribe(subscription);
+        plock.lock();
+        try {
+            if (!completed) {
+                return;
+            }
+        } finally {
+            plock.unlock();
+        }
+        if (completed) {
+            if (completionException == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(completionException);
+            }
+        }
     }
 
     /**
@@ -214,10 +229,14 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
 
         @Override
         public  void request(long n) {
+            Throwable exception = null;
+            T res = null;
             slock.lock();
+            getnext:
             try {
                 if (n <= 0) {
-                    throw new IllegalArgumentException();
+                    exception = new IllegalArgumentException("request may not be negative");
+                    break getnext;
                 }
                 if (cancelled) {
                     return;
@@ -226,31 +245,33 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
                     remainedRequests += n;
                     return;
                 }
-                if (value == null) {
-                    if (completed) {
-                        if (completionException == null) {
-                            subscriber.onComplete();
-                        } else {
-                            subscriber.onError(completionException);
-                        }
-                    } else {
-                        remainedRequests = n;
-                        addSubscriber(this);
-                    }
-                } else {
-                    T res = value;
+                if (value != null) {
+                    res = value;
                     value = null;
-                    subscriber.onNext(res);
                     n--;
                     remainedRequests = n;
                     if (remainedRequests > 0) {
                         addSubscriber(this);
                     }
                     unblock();
+                } else if (completed) {
+                    exception = completionException;
+                } else {
+                    remainedRequests = n;
+                    addSubscriber(this);
+                    return;
                 }
             } finally {
                 slock.unlock();
             }
+            if (res != null) {
+                subscriber.onNext(res);
+            } else if (exception == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(exception);
+            }
+
         }
 
         @Override
