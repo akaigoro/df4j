@@ -15,7 +15,6 @@ import org.df4j.protocol.Completable;
  * {@link AsyncProc} is a {@link Dataflow} with single {@link BasicBlock} which is executed only once.
 */
 public abstract class AsyncProc extends BasicBlock implements Activity {
-    private volatile boolean stopped = false;
 
     public AsyncProc(Dataflow parent) {
         super(parent);
@@ -25,43 +24,16 @@ public abstract class AsyncProc extends BasicBlock implements Activity {
         super(new Dataflow());
     }
 
-    public boolean isStopped() {
-        return stopped;
-    }
-
     @Override
     public void start() {
         super.awake();
     }
 
     @Override
-    public void stop() {
-        stopped = true;
-        super.stop();
-    }
-
-    @Override
-    public void stop(Throwable ex) {
-        stopped = true;
-        super.stop(ex);
-    }
-
-    @Override
     public boolean isAlive() {
-        return super.dataflow.isAlive();
+        return !isCompleted();
     }
 
-    public boolean isCompleted() {
-        return dataflow.isCompleted();
-    }
-
-    public void join() {
-        dataflow.join();
-    }
-
-    public boolean blockingAwait(long timeout) {
-        return dataflow.blockingAwait(timeout);
-    }
 
     protected void run() {
         try {

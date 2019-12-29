@@ -1,14 +1,12 @@
 package org.df4j.core.port;
 
+import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.util.Utils;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.FlowSubscription;
+import org.reactivestreams.Subscriber;
 
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -17,202 +15,98 @@ import java.util.concurrent.locks.ReentrantLock;
  * Unblocked initially.
  * It has room for single message.
  * Blocked when overflow.
+ *
+ * Because of complex logic, it is designaed as an Actor itself. However, it still controls firing of the parent actor.
  */
-public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
-    private final Condition hasItems = plock.newCondition();
-    protected OutFlowSubscriptionI subscribers;
-    protected Throwable completionException;
-    protected volatile boolean completed;
-    protected volatile T value;
+public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
+    private BasicBlock.Port outerLock;
+    private InpFlow<T> inp = new InpFlowExt();
+    private InpFlood<OutFlowSubscription> subscriptions = new InpFlood(this);
+    /** blocks when inp is full */
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
      */
     public OutFlow(BasicBlock parent) {
-        parent.super(true);
+        super(parent.getDataflow());
+        parent.getDataflow().leave(); // keep reference to parent dataflow only for error propagation
+        outerLock = new OuterLock(parent);
+        setExecutor(parent.getExecutor());
+        start();
+    }
+
+    public void subscribe(Flow.Subscriber subscriber) {
+        OutFlowSubscription sub = new OutFlowSubscription(subscriber);
+        subscriptions.onNext(sub);
+        subscriber.onSubscribe(sub);
+    }
+
+    public void onNext(T t) {
+        inp.onNext(t);
+    }
+
+    public void onComplete() {
+        inp.onComplete();
+    }
+
+    public void onError(Throwable t) {
+        inp.onError(t);
     }
 
     @Override
-    public void subscribe(Flow.Subscriber<? super T> subscriber) {
-        OutFlowSubscription subscription = new OutFlowSubscription(subscriber);
-        subscriber.onSubscribe(subscription);
-        plock.lock();
-        try {
-            if (!completed) {
-                return;
-            }
-        } finally {
-            plock.unlock();
-        }
-        if (completed) {
-            if (completionException == null) {
-                subscriber.onComplete();
+    protected void runAction() throws Throwable {
+        if (!inp.isCompleted()) {
+            T token = inp.remove();
+            OutFlowSubscription sub = subscriptions.current();
+            if (sub.remainedRequests == 1) {
+                sub.remainedRequests = 0;
+                subscriptions.remove();
             } else {
-                subscriber.onError(completionException);
+                sub.remainedRequests--;
             }
-        }
-    }
-
-    /**
-     * sends the next message in this flow
-     * @param t message to send
-     */
-    public void onNext(T t) {
-        OutFlowSubscription s;
-        plock.lock();
-        try {
-            if (completed) { // this is how CompletableFuture#completeExceptionally works
-                return;
-            }
-            if (!super.isReady()) {
-                throw new IllegalStateException();
-            }
-            if ((subscribers==null)||(s = subscribers.poll()) == null) {
-                value = t;
-                super.block();
-                hasItems.signalAll();
-                return;
-            }
-        } finally {
-            plock.unlock();
-        }
-        s.onNext(t);
-    }
-
-    /**
-     * completes this flow exceptionally
-     * @param t message to send
-     */
-    public void onError(Throwable t) {
-        OutFlowSubscriptionI subs;
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            completed = true;
-            completionException = t;
-            subs = subscribers;
-            if (subs == null) {
-                return;
-            }
-            subscribers = null;
-        } finally {
-            plock.unlock();
-        }
-        subs.onError(t);
-    }
-
-    /**
-     * completes this flow normally
-     */
-    public void onComplete() {
-        onError(null);
-    }
-
-    /**
-     * synchronous interface to wait for next message
-     * @return next message when availble
-     * @throws InterruptedException if this thread was interrupted during waiting
-     */
-    public  T take() throws InterruptedException {
-        plock.lock();
-        try {
-            T res;
+            sub.onNext(token);
+        } else{
             for (;;) {
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                if (value != null) {
-                    res = value;
-                    value = null;
+                OutFlow.OutFlowSubscription sub = subscriptions.poll();
+                if (sub == null) {
                     break;
                 }
-                hasItems.await();
+                sub.onError(inp.getCompletionException());
             }
-            return res;
-        } finally {
-            plock.unlock();
+            stop();
         }
     }
 
+    private static class OuterLock extends Port {
+        public OuterLock(BasicBlock parent) {
+            parent.super(true);
+        }
 
-    /**
-     * synchronous interface to get for next message
-     * @return next message if available, null otherwise
-     */
-    public  T poll() {
-        plock.lock();
-        try {
-            if (completed) {
-                throw new CompletionException(completionException);
-            }
-            if (value != null) {
-                T res = value;
-                value = null;
-                return res;
-            } else {
-                return null;
-            }
-        } finally {
-            plock.unlock();
+        @Override
+        public synchronized void block() {
+            super.block();
         }
     }
 
-    /**
-     * synchronous interface to get for next message
-     * if message is not available immediately, waits for the specified timeout
-     * @param timeout timeout in units
-     * @param unit timeout time unit
-     * @return next message if available, null otherwise
-     * @throws InterruptedException if this thread was interrupted during waiting
-     */
-    public  T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        plock.lock();
-        try {
-            if (value != null) {
-                return value;
-            }
-            long millis = unit.toMillis(timeout);
-            long targetTime = System.currentTimeMillis() + millis;
-            for (;;) {
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                if (value != null) {
-                    return value;
-                }
-                if (millis <= 0) {
-                    return null;
-                }
-                hasItems.await(millis, TimeUnit.MILLISECONDS);
-                millis = targetTime - System.currentTimeMillis();
-            }
-        } finally {
-            plock.unlock();
+    private class InpFlowExt extends InpFlow<T> {
+        public InpFlowExt() {
+            super(OutFlow.this);
+        }
+
+        @Override
+        public synchronized void block() {
+            super.block();
+            outerLock.unblock();
+        }
+
+        @Override
+        public void unblock() {
+            super.unblock();
+            outerLock.block();
         }
     }
 
-    public void addSubscriber(OutFlowSubscription subscriber) {
-        if (subscribers == null) {
-            subscribers = subscriber;
-        } else {
-            subscribers.add(subscriber);
-        }
-    }
-
-    interface OutFlowSubscriptionI {
-
-        OutFlow.OutFlowSubscription poll();
-
-        void add(OutFlow.OutFlowSubscription flowSubscription);
-
-        void remove(OutFlow.OutFlowSubscription flowSubscription);
-
-        void onError(Throwable t);
-    }
-
-    class OutFlowSubscription implements FlowSubscription, OutFlowSubscriptionI {
+    private class OutFlowSubscription implements FlowSubscription {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;
@@ -229,8 +123,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
 
         @Override
         public  void request(long n) {
-            Throwable exception = null;
-            T res = null;
+            Throwable exception;
             slock.lock();
             getnext:
             try {
@@ -241,32 +134,23 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
                 if (cancelled) {
                     return;
                 }
-                if (remainedRequests > 0) {
+                if (remainedRequests > 0) { //we are already waiting in the queue
                     remainedRequests += n;
                     return;
                 }
-                if (value != null) {
-                    res = value;
-                    value = null;
-                    n--;
-                    remainedRequests = n;
-                    if (remainedRequests > 0) {
-                        addSubscriber(this);
-                    }
-                    unblock();
-                } else if (completed) {
-                    exception = completionException;
+                if (inp.isReady()) {
+                    subscriptions.onNext(this);
+                    return;
+                }
+                if (inp.isCompleted()) {
+                    exception = inp.getCompletionException();
                 } else {
-                    remainedRequests = n;
-                    addSubscriber(this);
                     return;
                 }
             } finally {
                 slock.unlock();
             }
-            if (res != null) {
-                subscriber.onNext(res);
-            } else if (exception == null) {
+            if (exception == null) {
                 subscriber.onComplete();
             } else {
                 subscriber.onError(exception);
@@ -276,84 +160,29 @@ public class OutFlow<T> extends BasicBlock.Port implements Flow.Publisher<T> {
 
         @Override
         public void cancel() {
-            plock.lock();
+            slock.lock();
+            getnext:
             try {
-                if (subscribers!=null) {
-                    subscribers.remove(this);
+                if (cancelled) {
+                    return;
                 }
                 cancelled = true;
+                subscriptions.remove(this);
             } finally {
-                plock.unlock();
+                slock.unlock();
             }
+
         }
 
-
-        public void onNext(T value) {
-            subscriber.onNext(value);
-            remainedRequests--;
-            if (remainedRequests > 0) {
-                addSubscriber(this);
-            }
+        public void onNext(T token) {
+            subscriber.onNext(token);
         }
 
-        public void onError(Throwable cause) {
-            if (cancelled) {
-                return;
-            }
-            cancelled = true;
-            if (cause == null) {
+        public void onError(Throwable completionException) {
+            if (completionException == null) {
                 subscriber.onComplete();
             } else {
-                subscriber.onError(cause);
-            }
-        }
-
-        @Override
-        public OutFlowSubscription poll() {
-            OutFlowSubscription res = this;
-            subscribers = null;
-            return res;
-        }
-
-        @Override
-        public void add(OutFlow.OutFlowSubscription flowSubscription) {
-            subscribers = new OutFlowSubscriptions();
-            subscribers.add(this);
-            subscribers.add(flowSubscription);
-        }
-
-        @Override
-        public void remove(OutFlow.OutFlowSubscription flowSubscription) {
-            subscribers = null;
-        }
-    }
-
-    class OutFlowSubscriptions implements OutFlowSubscriptionI {
-        private  final Queue<OutFlowSubscription> subscribers = new LinkedList<OutFlowSubscription>();
-
-        @Override
-        public OutFlowSubscription poll() {
-            return subscribers.poll();
-        }
-
-        @Override
-        public void add(OutFlow.OutFlowSubscription flowSubscription) {
-            subscribers.add(flowSubscription);
-        }
-
-        @Override
-        public void remove(OutFlow.OutFlowSubscription flowSubscription) {
-            subscribers.remove(flowSubscription);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            for (;;) {
-                OutFlowSubscription sub = poll();
-                if (sub == null) {
-                    break;
-                }
-                sub.onError(t);
+                subscriber.onError(completionException);
             }
         }
     }

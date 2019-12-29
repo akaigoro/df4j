@@ -8,9 +8,11 @@ import org.junit.Test;
 public class AsyncArrayBlockingQueueTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
+        ProducerActor producer = new ProducerActor(cnt, delay1);
+        SubscriberActor subscriber = new SubscriberActor(delay2);
         AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
-        ProducerActor producer = new ProducerActor(cnt, queue, delay1);
-        SubscriberActor subscriber = new SubscriberActor(queue, delay2);
+        queue.subscribe(producer.out);
+        queue.subscribe(subscriber.inp);
         producer.start();
         subscriber.start();
      //   producer.join();
@@ -45,7 +47,8 @@ public class AsyncArrayBlockingQueueTest {
         for (int k = cnt; k>0; k--) {
             queue.offer(k);
         }
-        SubscriberActor subscriber = new SubscriberActor(queue, 0);
+        SubscriberActor subscriber = new SubscriberActor(0);
+        queue.subscribe(subscriber.inp);
         subscriber.start();
         queue.onComplete();
         //   producer.join();

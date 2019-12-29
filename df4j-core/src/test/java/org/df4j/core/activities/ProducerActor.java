@@ -1,18 +1,25 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.OutChannel;
-import org.df4j.protocol.ReverseFlow;
 
 public class ProducerActor extends Actor {
     final int delay;
     int cnt;
-    OutChannel<Integer> out;
+    public OutChannel<Integer> out;
 
-    public ProducerActor(int cnt, ReverseFlow.Publisher<Integer> inp, int delay) {
-        out = new OutChannel<>(this, inp);
-        this.delay = delay;
+    public ProducerActor(Dataflow parent, int cnt, int delay) {
+        super(parent);
+        out = new OutChannel<>(this);
         this.cnt = cnt;
+        this.delay = delay;
+    }
+
+    public ProducerActor(int cnt, int delay) {
+        out = new OutChannel<>(this);
+        this.cnt = cnt;
+        this.delay = delay;
     }
 
     @Override

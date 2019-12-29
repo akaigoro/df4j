@@ -24,16 +24,6 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Subscr
         parent.super(true);
     }
 
-    /**
-     *
-     * @param parent {@link BasicBlock} to which this port belongs
-     * @param consumer (@link ReverseFlow.Publisher} to subscribe
-     */
-    public OutChannel(BasicBlock parent, ReverseFlow.Publisher<T> consumer) {
-        this(parent);
-        consumer.subscribe(this);
-    }
-
     @Override
     public void onSubscribe(FlowSubscription subscription) {
         this.subscription = subscription;

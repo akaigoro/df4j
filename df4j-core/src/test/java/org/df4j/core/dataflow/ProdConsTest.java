@@ -8,10 +8,11 @@ import org.junit.Test;
 public class ProdConsTest {
 
     public void testProdCons(int cnt, int delay1, int delay2) throws InterruptedException {
+        ProducerActor prod = new ProducerActor(delay1, cnt);
         ConsumerActor cons = new ConsumerActor(delay2);
-        ProducerActor prod = new ProducerActor(cnt, cons.inp, delay1);
-        prod.awake();
-        cons.awake();
+        cons.inp.subscribe(prod.out);
+        prod.start();
+        cons.start();
         boolean fin = cons.blockingAwait(1000);
         Assert.assertTrue(fin);
     }

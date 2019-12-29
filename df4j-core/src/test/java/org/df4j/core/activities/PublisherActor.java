@@ -9,20 +9,20 @@ public class PublisherActor extends Actor {
     int cnt;
     final int delay;
 
-    public PublisherActor(int cnt, int delay) {
-        this.cnt = cnt;
-        this.delay = delay;
-    }
-
     public PublisherActor(Dataflow parent, int cnt, int delay) {
         super(parent);
         this.cnt = cnt;
         this.delay = delay;
     }
 
+    public PublisherActor(int cnt, int delay) {
+        this.cnt = cnt;
+        this.delay = delay;
+    }
+
     @Override
     protected void runAction() throws Throwable {
-        System.out.println("cnt: " + cnt);
+        System.out.println("PublisherActor: cnt = " + cnt);
         if (cnt == 0) {
             out.onComplete();
             stop();

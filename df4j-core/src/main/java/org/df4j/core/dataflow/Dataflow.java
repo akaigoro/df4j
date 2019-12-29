@@ -1,11 +1,12 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
-import org.df4j.core.util.Utils;
 import org.df4j.protocol.Completable;
 
 import java.util.Timer;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinWorkerThread;
 
 /**
  * A dataflow graph, consisting of 1 or more {@link BasicBlock}s and, probably, nested {@link Dataflow}s.
@@ -13,6 +14,29 @@ import java.util.concurrent.Executor;
  * Component {@link BasicBlock}s plays the same role as basic blocks in a flow chart.
  */
 public class Dataflow extends Completion implements Activity, Completable.Source {
+    private static InheritableThreadLocal<Dataflow> threadLocalDataflow = new InheritableThreadLocal<Dataflow>(){
+        @Override
+        protected Dataflow initialValue() {
+            return new Dataflow();
+        }
+    };
+
+    /**
+     * for debug purposes, call
+     * <pre>
+     *    setThreadLocalDataflow(AsyncProc.currentThreadExec);
+     * </pre>
+     * before creating {@link org.df4j.core.dataflow.BasicBlock} instances.
+     *
+     * @return an Executor local to current thread
+     */
+    public static Dataflow getThreadLocalDataflow() {
+        return threadLocalDataflow.get();
+    }
+
+    public static void setThreadLocalDataflow(Dataflow exec) {
+        threadLocalDataflow.set(exec);
+    }
     protected Dataflow parent;
     protected Executor executor;
     protected Timer timer;
@@ -45,13 +69,19 @@ public class Dataflow extends Completion implements Activity, Completable.Source
     protected Executor getExecutor() {
         bblock.lock();
         try {
-            if (executor != null) {
-                return executor;
-            } else if (parent != null) {
-                return parent.getExecutor();
-            } else {
-                return executor = Utils.getThreadLocalExecutor();
+            if (executor == null) {
+                if (parent != null) {
+                    executor = parent.getExecutor();
+                } else {
+                    Thread currentThread = Thread.currentThread();
+                    if (currentThread instanceof ForkJoinWorkerThread) {
+                        executor = ((ForkJoinWorkerThread) currentThread).getPool();
+                    } else {
+                        executor = ForkJoinPool.commonPool();
+                    }
+                }
             }
+            return executor;
         } finally {
             bblock.unlock();
         }
@@ -135,7 +165,17 @@ public class Dataflow extends Completion implements Activity, Completable.Source
     }
 
     @Override
-    public void join() {
-        super.blockingAwait();
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (!completed) {
+            sb.append("not completed");
+        } else if (this.completionException == null) {
+            sb.append("completed successfully");
+        } else {
+            sb.append("completed with exception: ");
+            sb.append(this.completionException.toString());
+        }
+        sb.append("; child node count: "+nodeCount);
+        return sb.toString();
     }
 }

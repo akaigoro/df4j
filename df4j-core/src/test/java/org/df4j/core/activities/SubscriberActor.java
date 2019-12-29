@@ -7,20 +7,17 @@ import org.df4j.protocol.Flow;
 import org.junit.Assert;
 
 public class SubscriberActor extends Actor {
-    Flow.Publisher<Integer> pub;
     final int delay;
     public InpFlow<Integer> inp = new InpFlow<>(this);
     Integer in = null;
 
     public SubscriberActor(Dataflow parent, int delay) {
-        this.pub = pub;
+        super(parent);
         this.delay = delay;
     }
 
-    public SubscriberActor(Flow.Publisher<Integer> pub, int delay) {
-        this.pub = pub;
+    public SubscriberActor(int delay) {
         this.delay = delay;
-        pub.subscribe(inp);
     }
 
     @Override
@@ -28,12 +25,12 @@ public class SubscriberActor extends Actor {
         Thread.sleep(delay);
         if (inp.isCompleted()) {
             Throwable completionException = inp.getCompletionException();
-            System.out.println(" completed with: " + completionException);
+            System.out.println(" SubscriberActor: completed with: " + completionException);
             stop(completionException);
             return;
         }
         Integer in = inp.remove();
-        System.out.println(" got: " + in);
+        System.out.println(" SubscriberActor: inp = " + in);
         if (this.in != null) {
             Assert.assertEquals(this.in.intValue() - 1, in.intValue());
         }

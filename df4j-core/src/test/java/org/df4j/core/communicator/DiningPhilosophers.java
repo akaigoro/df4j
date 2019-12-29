@@ -254,8 +254,12 @@ public class DiningPhilosophers extends Dataflow {
             }
         }
         class EndEating extends BasicBlock {
-            OutChannel<String> leftFork = new OutChannel<>(this, leftPlace);
-            OutChannel<String> rightFork = new OutChannel<>(this, rightPlace);
+            OutChannel<String> leftFork = new OutChannel<>(this);
+            OutChannel<String> rightFork = new OutChannel<>(this);
+            {
+                leftPlace.subscribe(leftFork);
+                rightPlace.subscribe(rightFork);
+            }
 
             @Override
             protected void runAction() throws Throwable {

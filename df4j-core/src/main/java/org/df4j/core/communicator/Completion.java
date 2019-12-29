@@ -72,7 +72,7 @@ public class Completion implements Completable.Source {
      * completes this {@link Completable} exceptionally
      * @param e completion exception
      */
-    public void onError(Throwable e) {
+    protected void onError(Throwable e) {
         LinkedList<Subscription> subs;
         bblock.lock();
         try {
@@ -113,7 +113,7 @@ public class Completion implements Completable.Source {
     /**
      * waits this {@link Completable} to complete
      */
-    public void blockingAwait() {
+    public void join() {
         bblock.lock();
         try {
             while (!completed) {

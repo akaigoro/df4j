@@ -60,33 +60,20 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
         }
     }
 
-    public  T poll() {
-        T res;
-        plock.lock();
-        try {
-            if (!isReady()) {
-                return null;
-            }
-            res = value;
-            value = null;
-            block();
-            if (subscription == null) {
-                return res;
-            }
-        } finally {
-            plock.unlock();
-        }
-        subscription.request(1);
-        return res;
-    }
-
     public T remove() {
         plock.lock();
         try {
             if (!isReady()) {
                 throw new IllegalStateException();
             }
-            return poll();
+            T res = value;
+            value = null;
+            block();
+            if (subscription == null) {
+                return res;
+            }
+            subscription.request(1);
+            return res;
         } finally {
             plock.unlock();
         }
@@ -136,21 +123,5 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     @Override
     public void onComplete() {
         onError(null);
-    }
-
-    public void unsubscribe() {
-        plock.lock();
-        if (subscription != null) {
-            subscription.cancel();
-        }
-        subscription = null;
-        value = null;
-        completionException = null;
-        completed = false;
-        block();
-        try {
-        } finally {
-            plock.unlock();
-        }
     }
 }

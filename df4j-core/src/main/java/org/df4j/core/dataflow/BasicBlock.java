@@ -9,6 +9,7 @@
  */
 package org.df4j.core.dataflow;
 
+import org.df4j.core.communicator.Completion;
 import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.SignalFlow;
 
@@ -30,9 +31,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * to exchange messages and signals with ports of other {@link BasicBlock}s in consistent manner.
  * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
-public abstract class BasicBlock implements SignalFlow.Subscriber {
+public abstract class BasicBlock extends Completion implements SignalFlow.Subscriber {
     private final Lock bblock = new ReentrantLock();
-    protected final Dataflow dataflow;
+    protected Dataflow dataflow;
     /**
      * blocked initially, until {@link #awake} called.
      */
@@ -48,6 +49,10 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
         }
         this.dataflow = dataflow;
         dataflow.enter();
+    }
+
+    protected BasicBlock() {
+        this(Dataflow.getThreadLocalDataflow());
     }
 
     public Dataflow getDataflow() {
@@ -80,6 +85,7 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
             bblock.unlock();
         }
     }
+
         /**
          * passes a control token to this {@link BasicBlock}.
          * This token is consumed when this block is submitted to an executor.
@@ -87,7 +93,7 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
     public void awake() {
         bblock.lock();
         try {
-            if (dataflow.isCompleted()) {
+            if (isCompleted()) {
                 return;
             }
         } finally {
@@ -99,7 +105,7 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
     public void awake(long delay) {
         bblock.lock();
         try {
-            if (dataflow.isCompleted()) {
+            if (isCompleted()) {
                 return;
             }
         } finally {
@@ -120,7 +126,13 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
     public void stop() {
         bblock.lock();
         try {
-            dataflow.leave();
+            if (isCompleted()) {
+                return;
+            }
+            super.onComplete();
+            if (dataflow != null) {
+                dataflow.leave();
+            }
         } finally {
             bblock.unlock();
         }
@@ -133,6 +145,10 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
     protected void stop(Throwable ex) {
         bblock.lock();
         try {
+            if (isCompleted()) {
+                return;
+            }
+            onError(ex);
             dataflow.onError(ex);
         } finally {
             bblock.unlock();
@@ -148,7 +164,7 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
         }
     }
 
-    protected Executor getExecutor() {
+    public Executor getExecutor() {
         bblock.lock();
         try {
             if (executor == null) {
@@ -246,7 +262,7 @@ public abstract class BasicBlock implements SignalFlow.Subscriber {
          * If all ports become unblocked,
          * this block is submitted to the executor.
          */
-        protected void unblock() {
+        public void unblock() {
             plock.lock();
             try {
                 if (ready) {
