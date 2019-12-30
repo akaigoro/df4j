@@ -2,7 +2,6 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -15,7 +14,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     protected T value;
     private Throwable completionException;
     protected volatile boolean completed;
-    FlowSubscription subscription;
+    Flow.Subscription subscription;
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
@@ -37,7 +36,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     public boolean isCompleted() {
         plock.lock();
         try {
-            return completed;
+            return completed && value==null;
         } finally {
             plock.unlock();
         }
@@ -80,7 +79,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     }
 
     @Override
-    public void onSubscribe(FlowSubscription subscription) {
+    public void onSubscribe(Flow.Subscription subscription) {
         this.subscription = subscription;
         if (!isReady()) {
             subscription.request(1);

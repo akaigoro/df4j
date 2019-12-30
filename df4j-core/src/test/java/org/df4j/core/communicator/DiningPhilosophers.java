@@ -23,7 +23,6 @@ public class DiningPhilosophers extends Dataflow {
     ForkPlace[] forkPlaces = new ForkPlace[num];
     CountDownLatch counter = new CountDownLatch(num);
     Activity[] philosophers = new Activity[num];
-    Dataflow asyncPhilosophers = new Dataflow();
     Random rand = new Random();
 
     private synchronized long getDelay() {

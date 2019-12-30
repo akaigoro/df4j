@@ -2,8 +2,6 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;
-import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,10 +13,9 @@ public class PubSubTest {
         pub.out.subscribe(sub.inp);
         pub.start();
         sub.start();
-        sub.blockingAwait(1000);
-        pub.blockingAwait(1000);
-        Assert.assertFalse(sub.isAlive());
-        Assert.assertFalse(pub.isAlive());
+        Dataflow df = Dataflow.getThreadLocalDataflow();
+        boolean res = df.blockingAwait(1000);
+        Assert.assertTrue(res);
     }
 
     @Test

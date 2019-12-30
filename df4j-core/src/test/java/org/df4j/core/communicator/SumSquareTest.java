@@ -42,7 +42,7 @@ public class SumSquareTest {
         }
     }
 
-    /**
+    /*
      * computes arithmetic expression sum = 3*3 + 4*4
      */
     @Test
@@ -67,12 +67,8 @@ public class SumSquareTest {
         Assert.assertEquals(25, res.intValue());
     }
 
-    /**
+    /*
      * the same algorithm as in {@link #testAP()} but implemented using {@link CompletableFuture}.
-     *
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @throws TimeoutException
      */
     @Test
     public void testCF() throws ExecutionException, InterruptedException, TimeoutException {

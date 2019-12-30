@@ -41,13 +41,9 @@ public class SumSquareTest {
         }
     }
 
-    /**
+    /*
      * computes arithmetic expression sum = 3*3 + 4*4 using {@link AsyncProc}edures
      * each node of dataflow graph is declared and created explicitely
-     *
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @throws TimeoutException
      */
     @Test
     public void testAcyncProc() throws ExecutionException, InterruptedException, TimeoutException {
@@ -66,13 +62,9 @@ public class SumSquareTest {
         Assert.assertEquals(25, res);
     }
 
-    /**
+    /*
      * the same computation made by {@link CompletableFuture}s
      * nodes of the dataflow graph are created implicitly
-     *
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @throws TimeoutException
      */
     @Test
     public void testCompletableFuture() throws ExecutionException, InterruptedException, TimeoutException {

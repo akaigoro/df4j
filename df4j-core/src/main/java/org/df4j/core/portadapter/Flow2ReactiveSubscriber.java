@@ -1,13 +1,11 @@
 package org.df4j.core.portadapter;
 
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
-public class Flow2ReactiveSubscriber<T> implements Subscriber<T>, FlowSubscription {
+public class Flow2ReactiveSubscriber<T> implements Subscriber<T>, Flow.Subscription {
     private final Flow.Subscriber<T> subscriber;
-    Subscription subscription;
+    org.reactivestreams.Subscription subscription;
     boolean cancelled;
 
     public Flow2ReactiveSubscriber(Flow.Subscriber<T> subscriber) {
@@ -15,7 +13,7 @@ public class Flow2ReactiveSubscriber<T> implements Subscriber<T>, FlowSubscripti
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
+    public void onSubscribe(org.reactivestreams.Subscription subscription) {
         this.subscription = subscription;
     }
 

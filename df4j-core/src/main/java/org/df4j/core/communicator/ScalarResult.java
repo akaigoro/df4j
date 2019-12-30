@@ -1,7 +1,6 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Scalar;
-import org.df4j.protocol.ScalarSubscription;
 
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
@@ -85,7 +84,7 @@ public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
         return cf.join();
     }
 
-    class Subscription implements ScalarSubscription {
+    class Subscription implements Scalar.Subscription {
         final CompletableFuture<T> whenComplete;
 
         public Subscription(Scalar.Observer<? super T> subscriber) {

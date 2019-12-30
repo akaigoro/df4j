@@ -46,7 +46,7 @@ public class Completable {
      * </ul>
      */
     public interface Observer {
-        void onSubscribe(ScalarSubscription subscription);
+        void onSubscribe(Scalar.Subscription subscription);
 
         /**
          * Called once if the deferred computation 'throws' an exception.

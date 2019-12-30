@@ -1,7 +1,6 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.*;
@@ -296,7 +295,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         return super.toString();
     }
 
-    class ProducerSubscription implements org.df4j.protocol.FlowSubscription {
+    class ProducerSubscription implements Flow.Subscription {
         private final Lock slock = new ReentrantLock();
         protected ReverseFlow.Subscriber<T> producer;
         private long remainedRequests = 0;
@@ -403,7 +402,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         }
     }
 
-    class FlowSubscriptionImpl implements FlowSubscription {
+    class FlowSubscriptionImpl implements Flow.Subscription {
         private final Lock slock = new ReentrantLock();
         protected final Flow.Subscriber subscriber;
         private long remainedRequests = 0;

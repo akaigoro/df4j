@@ -3,7 +3,6 @@ package org.df4j.core.activities;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
-import org.df4j.protocol.Flow;
 import org.junit.Assert;
 
 public class SubscriberActor extends Actor {

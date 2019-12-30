@@ -1,7 +1,6 @@
 package org.df4j.adapters.reactivestreams;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.portadapter.OutReact;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -14,15 +13,11 @@ import java.io.PrintStream;
 public class ReactivePublisher extends Actor implements Publisher<Long> {
     public OutReact<Long> output = new OutReact<>(this);
     long val;
-    Logger log = new Logger(false);
-
-    public ReactivePublisher(Dataflow parent, long totalNumber) {
-        super(parent);
-        this.val = totalNumber;
-    }
+//    Logger log = new Logger(false);
+    Logger log = new Logger(true);
 
     public ReactivePublisher(long totalNumber) {
-        this(new Dataflow(), totalNumber);
+        this.val = totalNumber;
     }
 
     @Override

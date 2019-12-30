@@ -3,8 +3,6 @@ package org.df4j.core.util;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinWorkerThread;
 
 public class Utils {
     public static final Executor directExec = (Runnable r)->r.run();

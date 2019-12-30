@@ -2,8 +2,6 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
-import org.df4j.protocol.ScalarSubscription;
 import org.df4j.protocol.Scalar;
 
 /**
@@ -19,7 +17,7 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
     protected T value;
     protected volatile boolean completed = false;
     private Throwable completionException = null;
-    private ScalarSubscription subscription;
+    private Scalar.Subscription subscription;
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
@@ -38,13 +36,13 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
     }
 
     @Override
-    public void onSubscribe(ScalarSubscription subscription) {
+    public void onSubscribe(Scalar.Subscription subscription) {
         this.subscription = subscription;
     }
 
     public void unsubscribe() {
         plock.lock();
-        ScalarSubscription sub;
+        Scalar.Subscription sub;
         try {
             if (subscription == null) {
                 return;
@@ -103,7 +101,7 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
     //// Flow protocol //////
 
     @Override
-    public void onSubscribe(FlowSubscription subscription) {
+    public void onSubscribe(Flow.Subscription subscription) {
         this.subscription = subscription;
         subscription.request(1);
     }

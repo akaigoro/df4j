@@ -1,6 +1,5 @@
 package org.df4j.adapters.reactivestreams;
 
-import org.junit.Ignore;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.TestEnvironment;
 

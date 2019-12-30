@@ -39,7 +39,7 @@ public class Scalar {
      * @param <T>  type of tokens
      */
     public interface Observer<T> extends Completable.Observer, BiConsumer<T, Throwable> {
-        void onSubscribe(ScalarSubscription subscription);
+        void onSubscribe(Subscription subscription);
 
         /**
          * Data notification sent by the {@link Source}
@@ -71,5 +71,24 @@ public class Scalar {
                 onError(throwable);
             }
         }
+    }
+
+    /**
+     * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmittion.
+     */
+    public static interface Subscription {
+        /**
+         *  Dispose the resource, the operation should be idempotent.
+         */
+        void cancel();
+
+
+        /**
+         * Request to stop sending data and clean up resources.
+         * <p>
+         * Data may still be sent to meet previously signalled demand after calling cancel.
+         * @return true if this resource has been disposed.
+         */
+        boolean	isCancelled();
     }
 }

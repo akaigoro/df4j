@@ -9,9 +9,8 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.dataflow.BasicBlock;
-import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.communicator.AsyncSemaphore;
+import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.port.InpSignal;
 import org.df4j.core.util.Logger;
 
@@ -40,7 +39,6 @@ public abstract class AsyncServerSocketChannel extends BasicBlock
     protected AsyncSemaphore allowedConnections = new AsyncSemaphore();
 
     public AsyncServerSocketChannel(SocketAddress addr) throws IOException {
-        super(new Dataflow());
         if (addr == null) {
             throw new NullPointerException();
         }

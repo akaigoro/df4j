@@ -12,7 +12,6 @@ public abstract class Actor extends AsyncProc {
     }
 
     public Actor() {
-        super();
     }
 
     @Override

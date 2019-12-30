@@ -9,8 +9,6 @@
  */
 package org.df4j.core.dataflow;
 
-import org.df4j.protocol.Completable;
-
 /**
  * {@link AsyncProc} is a {@link Dataflow} with single {@link BasicBlock} which is executed only once.
 */
@@ -21,7 +19,6 @@ public abstract class AsyncProc extends BasicBlock implements Activity {
     }
 
     public AsyncProc() {
-        super(new Dataflow());
     }
 
     @Override
