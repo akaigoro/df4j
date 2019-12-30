@@ -30,7 +30,7 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
     }
 
     private void debug(String s) {
-        System.out.println(s);
+ //       System.out.println(s);
     }
 
     public void subscribe(Flow.Subscriber subscriber) {
@@ -64,7 +64,7 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
             if (sub.remainedRequests <= 0) {
                 throw new IllegalArgumentException();
             }
-            debug(   " OutFlow: sub.remainedRequests = "+sub.remainedRequests+" sub.onNext: "+token);
+ //           debug(   " OutFlow: sub.remainedRequests = "+sub.remainedRequests+" sub.onNext: "+token);
             sub.onNext(token);
         } else{
             Throwable completionException = inp.getCompletionException();
@@ -73,7 +73,7 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
                 if (sub == null) {
                     break;
                 }
-                debug(" OutFlow: sub.onError "+completionException);
+//                debug(" OutFlow: sub.onError "+completionException);
                 sub.onError(completionException);
             }
             stop();
@@ -181,15 +181,15 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
                 getnext:
                 try {
                     if (n <= 0) {
-                        debug("  request: negative n");
+ //                       debug("  request: negative n");
                         exception = new IllegalArgumentException("request may not be negative");
                         break getnext;
                     }
                     if (cancelled) {
-                        debug("   request: cancelled");
+ //                       debug("   request: cancelled");
                         return;
                     }
-                    debug("  request: remainedRequests = "+remainedRequests+" n = "+n);
+  //                  debug("  request: remainedRequests = "+remainedRequests+" n = "+n);
                     remainedRequests += n;
                     subscriptions.onNext(this);
                     return;

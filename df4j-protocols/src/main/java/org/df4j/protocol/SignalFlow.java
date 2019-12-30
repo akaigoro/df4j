@@ -1,7 +1,7 @@
 package org.df4j.protocol;
 
 /**
- * repeatable signal stream without errors
+ * Flow of signals without errors
  */
 public class SignalFlow {
 

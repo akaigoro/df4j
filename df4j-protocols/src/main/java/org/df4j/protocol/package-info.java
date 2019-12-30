@@ -21,26 +21,31 @@
  *   Multicast flow protocols are possible, but not defined and implemented in this library.</li>
  * </ul>
  *<table style="width:100%">
- *   <caption>Protocol List</caption>
+ *   <caption><b>Protocol List</b></caption>
  *   <tr>
- *     <th>Token Type</th>
- *     <th>Scalar protocol name</th>
- *     <th>Flow protocol name</th>
+ *     <th> </th>
+ *     <th> </th>
+ *     <th> </th>
+ *   </tr>
+ *   <tr>
+ *     <td><b>Token Type</b></td>
+ *     <td><b>Scalar protocol name</b></td>
+ *     <td><b>Flow protocol name</b></td>
  *   </tr>
  *   <tr>
  *     <td>Signal</td>
- *     <td>not declared</td>
+ *     <td><i>not declared</i></td>
  *     <td>{@link org.df4j.protocol.SignalFlow}</td>
  *   </tr>
  *   <tr>
  *     <td>Completion</td>
  *     <td>{@link org.df4j.protocol.Completable}</td>
- *     <td>not declared</td>
+ *     <td><i>not declared</i></td>
  *   </tr>
  *   <tr>
  *     <td>Message</td>
  *     <td>{@link org.df4j.protocol.Scalar}</td>
- *     <td>{@link org.df4j.protocol.Flow}, {@link org.df4j.protocol.ReverseFlow}</td>
+ *     <td>{@link org.df4j.protocol.Flood}, {@link org.df4j.protocol.Flow}, {@link org.df4j.protocol.ReverseFlow}</td>
  *   </tr>
  * </table>
  *

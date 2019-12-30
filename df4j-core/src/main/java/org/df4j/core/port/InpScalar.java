@@ -116,4 +116,20 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>,
         onSuccess(t);
         unsubscribe();
     }
+
+    public void reset() {
+        plock.lock();
+        try {
+            if (subscription != null) {
+                subscription.cancel();
+            }
+            subscription = null;
+            completionException = null;
+            completed = false;
+            value = null;
+            block();
+        } finally {
+            plock.unlock();
+        }
+    }
 }

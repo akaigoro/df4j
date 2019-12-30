@@ -1,12 +1,3 @@
-	at org.testng.Assert.fail(Assert.java:96)
-	at org.reactivestreams.tck.TestEnvironment.flop(TestEnvironment.java:229)
-	at org.reactivestreams.tck.PublisherVerification$19$2.onNext(PublisherVerification.java:781)
-	at org.df4j.core.portadapter.Reactive2FlowSubscriber.onNext(Reactive2FlowSubscriber.java:24)
-	at org.df4j.core.port.OutFlow$OutFlowSubscription.request(OutFlow.java:268)
-	at org.df4j.core.portadapter.Reactive2FlowSubscriber.request(Reactive2FlowSubscriber.java:39)
-	at org.reactivestreams.tck.PublisherVerification$19$2.onNext(PublisherVerification.java:795)
-	at org.df4j.core.portadapter.Reactive2FlowSubscriber.onNext(Reactive2FlowSubscriber.java:24)
-	at org.df4j.core.port.OutFlow$OutFlowSubscription.request(OutFlow.java:268)
-	at org.df4j.core.portadapter.Reactive2FlowSubscriber.request(Reactive2FlowSubscriber.java:39)
-		at org.reactivestreams.tck.TestEnvironment$ManualSubscriber.request(TestEnvironment.java:439)
-    	at org.reactivestreams.tck.PublisherVerification$19.run(PublisherVerification.java:816)
+run reactivestreams TCK against DF4J.
+See [reactivestreams TCK on Github]
+(https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck)

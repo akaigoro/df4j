@@ -11,7 +11,9 @@ package org.df4j.protocol;
  * work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.*
  ************************************************************************/
 /**
- * interfaces copied from package org.reactivestreams
+ * Flow of messages with back-pressure
+ * <p>
+ * Interfaces are copied from package org.reactivestreams
  * @see <a href="https://www.reactive-streams.org/">https://www.reactive-streams.org/</a>
  */
 public final class Flow {

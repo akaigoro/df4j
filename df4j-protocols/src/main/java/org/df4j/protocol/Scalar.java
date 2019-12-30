@@ -36,9 +36,13 @@ public class Scalar {
     }
 
     /**
+     * Supposed to receive single message per subscription.
+     * To receive more messages, another subscription is required.
+     * Subscription to the same {@link Scalar.Source} is useless - the same result woould be received.
+     *
      * @param <T>  type of tokens
      */
-    public interface Observer<T> extends Completable.Observer, BiConsumer<T, Throwable> {
+    public interface Observer<T> extends BiConsumer<T, Throwable> {
         void onSubscribe(Subscription subscription);
 
         /**
@@ -71,12 +75,17 @@ public class Scalar {
                 onError(throwable);
             }
         }
+
+        /**
+         * Called once the deferred computation completes normally.
+         */
+        void onComplete();
     }
 
     /**
      * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmittion.
      */
-    public static interface Subscription {
+    public interface Subscription {
         /**
          *  Dispose the resource, the operation should be idempotent.
          */

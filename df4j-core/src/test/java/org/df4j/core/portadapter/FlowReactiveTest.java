@@ -5,7 +5,7 @@ import org.df4j.core.activities.SubscriberActor;
 import org.df4j.core.dataflow.Dataflow;
 import org.junit.Test;
 
-public class AdaptorsTest {
+public class FlowReactiveTest {
 
     @Test
     public void test1() {
@@ -25,7 +25,7 @@ public class AdaptorsTest {
     }
 
     public  static void  main(String[] args) {
-        new AdaptorsTest().test1();
+        new FlowReactiveTest().test1();
         System.out.println("passed");
     }
 }
