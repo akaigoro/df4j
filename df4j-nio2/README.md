@@ -1,4 +1,4 @@
-asyncronous network I/O library, based on java-nio2 and df4j-core.
+Asyncronous network I/O library, based on java-nio2 and df4j-core.
 
 3 basic classes:
 

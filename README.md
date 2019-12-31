@@ -10,68 +10,66 @@ For those interested in the history of dataflow programming, I recommend to star
 and then short introductory article "Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
 
 The primary goal of this library is to investigate the anatomy of asynchronous programming.
-So this project avoids highly optimized cryptic code usually found in such library. The main goal was to make readable code.
+So this project avoids highly optimized cryptic code usually found in such libraries. The main goal is to make readable code.
 
 The asynchronous programming always attracted Java programmers,
 and the absence of a complete asynchronous support in language and runtime only stimulated programmers to find their own solutions.
-Today some asynchronous libraries for Java are very popular, e.g. rx-java, vert.x, Akka.
+Today some asynchronous libraries for Java are very popular, e.g. RxJava, vert.x, Akka.
 However, all they imply steep learning curve and hides implementation details under the hood.
-df4j ia an attempt to discover the basic building elements of asynchronous computations,
+Df4j ia an attempt to discover the basic building elements of asynchronous computations,
 and allow developer to freely combine those elements, and add new ones.
 It resembles children's building kit: a set of small parts which can be connected together and be assembled in arbitrary complex constructs.
 
-The foundation principles are following:
+The design of Df4j is built on following foundation principles:
 
-1. Any parallel computation can be represented as a (dataflow) graph, which consists of 2 kinds of nodes: activities and connectors.
-Activities compute tokens (values and signals), connectors pass them between activities.
-2. Activities can be of two kinds: threads and asynchronous procedures (AP). Threads and APs are, to some extent, intercangeable,
-An activity, represented as a thread, can later be replaced with one or several APs, and vice versa. Connectors have to be replaced accordingly.
-To chose  which kind of activity to use in particular case, bear in mind that APs are more loght-weight and millions of then can be created,
-but 10000 threads usually are concidedred as a heavy load.
-Downside of using async procedures is increased complexity of programming.
-3. Connectors have two ends - input and output, Input ends are accessed by producer activities to store data, and output ends are used by consumer activities,
-Input ends can be (usually) used by both threads and APs, but access to output ends dramatically differs.
-Threads usually use blocking calls, which wait until data are available.
-Async procedures may not block, so they leave a request at the output end asking to put data to an input end of another connector, which is private to that procedure.
-asking to send data there when they become available. The output end usually is called Publisher, the input end - Subscriber, and reques is called Subscription.
-So interthread communication can be represented as producer thread - common communicator (BlockingQueue, Semaphore) - consumer thread,
-and communications between APs usually looks like producer AP - private Publisher - private Subscriber - consumer AP.
-The killer feature of this library is that communicators (Publishers and Subscribers) are not independent objects, but are parts of master nodes.
-This allows to construct nodes with arbitrary number of connectors. Connectors can be of various kinds, and user can create custom connectors.
-4. Asynchronous procedure consists of:
-  - asynchronous parameters (represented as connectors)
-  - user-defined synchronous procedure,
-  - reference to an Executor, and
-  - an object that glues all that components together. Below this object is referenced as a "node of dataflow graph", or just a "node".
-5. Connector has several important characteristics:
- - which protocol it implements
- - The execution of the node starts exactly after all parameters are filled with tokens.
- - can be used for input or output.
- - can connect asynchronous procedures and/or threads
+1. Any asynchronous computation can be represented as a (dataflow) graph, which consists of basic blocks and nested dataflow graphs.
+Such a tree structure allows exceptions propagate from leafs to the root graph, and to watch exceptions only at the root node.
 
-This library has implementations for following protocols:
-
-1. Scalar messages: this is the protocol used in CompletableFuture. At most one message or an error is sent.
-2. Permit stream. This is the protocol used in Semahores. This library expands it to asynchronous connectors.
-3. Unbound message streams, without backpressure. Backpressure can be added later using permit stream and can connect far standing nodes.
-4. Reactive message streams with backpressure, as defined in the package org.reactivestreams.
-
-Asynchronous procedure does not produce return value, as synchronous procedures usually do, so output connectors are necessary. 
-A node can have multiple input and multiple output connectors.
-Nodes are connected by their connectors: output connector of one node is connected to input connector of another node.
- - Connectors can implement different exchange protocols. Connected connectors must implement the same protocol.
+2. Basic block, in turn,  consists of:
+ - ports: asynchronous input and output parameters. Each port is a (relatively complex) object.
+ - user-defined computational procedure,
+ - reference to an Executor, and
+ - an object that glues all that components together, usually a descendant of class org.df4f.core.dataflow.BasicBlock  
  
-The main results of this work are:
+3. Each port has 2 states: ready and blocked. Input port is ready when it has received a token. 
+Output port is ready when it has room to store a new token.
+Output ports for signals are always ready, as storing signals requires only a counter. Similary, output ports for scalar messages are always ready. 
+The node is submitted to the attached executor when all its ports become ready. Then the user-defined computational procedure is executed.
 
-1. Differentiation between connectors and nodes. 
-This allows to develop connectors independently of nodes and make use of new protocols with already developed node types.
+4. Nodes are interconnected so that output port of one node is connected to an input port of another node. 
+Connected ports must support the same communication protocol. Some ports may support more than one protocol.
+
+Currently Df4j has ports for following protocols:
+
+1. Signal flow. This is the asynchronous variant of the protocol used by java.util.concurrent.Semaphore. 
+2. Scalar messages: this is the protocol similar to that used by java.util.concurrent.CompletableFuture. At most one message or an error is sent.
+3. Unbound message streams, without backpressure. Backpressure can be added later using permit stream and can connect far standing nodes.
+4. Reactive message flow with backpressure, similar to that defined in the package org.reactivestreams and/or class java.util.concurrent.Flow.
+4. Reversed reactive message flow with backpressure. It is similar to the reactive message stream described above, 
+but messages are sent not from Publisher to Subscribers, but from Subscribers to Publisher. 
+This protocol is employed at the asynchronous interface to an implementation of java.util.concurrent.BlockingQueue. 
+
+Input and output ports can be connected directly, or via connectors - special nodes which provide temporary memory for tokens.
+The most significant connector is AsyncArrayBlockingQueue. It provide bufferisation of messages and interoperability with threads. 
+ 
+## The main results of this work
+
+1. Differentiation between nodes and ports. Nodes define behaviour, ports define communications.
+This allows to develop ports independently of nodes and make use of new protocols with already developed node types.
 As a result, this library is very compact. 
 It does not contain fluent API and does not try to implement [all combinations of all capabilities](https://www.google.ru/search?q="all+combinations+of+all+capabilities),
 but allow developers to freely combine existing and newly developed capabilities.
 
-2. Actors (e.g. [Akka](https://akka.io/)) are no more than repeatable asynchronous procedures.
+2. Each communication protocol can be implemented in both synchronous and asynchronous forms. 
+Especially useful are nodes which support both synchronous and asynchronous versions.
+Thus, the class org.df4j.core.communicator.AsyncSemaphore extends java.util.concurrent.Semaphore with implementation of SignalFlow.Publisher.
+Class AsyncArrayBlockingQueue implements from scratch java.util.concurrent.BlockingQueue,
+ReverseFlow.Publisher, and Flow.Publisher. Such communicators can help when transforming muktithreading program to asynchronous.
 
-3. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
+3. Actors (e.g. [Akka](https://akka.io/)) are no more than repeatable basic block: after the next round of execution, 
+they sends awaking signal to the own control port.
+
+4. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
 
@@ -80,21 +78,23 @@ See examples and test directories for various custom-made dataflow objects and t
 If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
 
-Submodules:
+## Library structure:
 
 [df4j-protocols](/df4j-protocols/README.md) - Communication interfaces for df4j.
 
-[df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and connectors
+[df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and ports
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
-[df4j-reactivestreams](/df4j-reactivestreams) - Adapter classes to communicate with Reactive Streams Project.
-Also runs df4j against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
-
-[df4j-rxjava2](/df4j-rxjava2/README.md) - adapters to RxJava2.
+[df4j-reactivestreams](/df4j-reactivestreams) - runs df4j implementation against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
 
 Version history
 ---------------
+2019/12/30
+version 8.0.
+All the tests passed, including those from reactive TCK. 
+The branch API-8 becomes the default branch of the https://github.com/akaigoro/df4j project.
+
 2019/08/26 
 Branch API-8 started: protocols refactored; total simplification. 
 ReverseFlow and AsyncBlockingQueue introduced.
