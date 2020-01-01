@@ -23,13 +23,13 @@ public class PublisherActor extends Actor {
     @Override
     protected void runAction() throws Throwable {
         System.out.println("PublisherActor: cnt = " + cnt);
-        if (cnt == 0) {
-            out.onComplete();
-            stop();
-        } else {
+        if (cnt > 0) {
             out.onNext(cnt);
             cnt--;
             Thread.sleep(delay);
+        } else {
+            out.onComplete();
+            stop();
         }
     }
 }

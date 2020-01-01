@@ -1,6 +1,7 @@
 package org.df4j.core.portadapter;
 
 import org.df4j.core.activities.PublisherActor;
+import org.df4j.core.activities.ReactiveProcessor;
 import org.df4j.core.activities.SubscriberActor;
 import org.df4j.core.dataflow.Dataflow;
 import org.junit.Test;

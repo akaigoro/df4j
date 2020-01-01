@@ -279,6 +279,9 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
                     if (blockingPortCount > 0) {
                         return;
                     }
+                    if (isCompleted()) {
+                        throw new IllegalStateException("Zombie Apocalypse");
+                    }
                 } finally {
                     bblock.unlock();
                 }
@@ -302,6 +305,16 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
     private class ControlPort extends Port {
         public ControlPort() {
             super(false);
+        }
+
+        @Override
+        public synchronized void block() {
+            super.block();
+        }
+
+        @Override
+        public void unblock() {
+            super.unblock();
         }
     }
 }

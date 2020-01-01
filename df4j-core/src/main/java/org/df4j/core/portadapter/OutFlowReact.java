@@ -10,6 +10,13 @@ public class OutFlowReact<T> extends OutFlow<T> implements Publisher<T> {
     /**
      * @param parent {@link BasicBlock} to which this port belongs
      */
+    public OutFlowReact(BasicBlock parent, int bufferCapacity) {
+        super(parent,bufferCapacity);
+    }
+
+    /**
+     * @param parent {@link BasicBlock} to which this port belongs
+     */
     public OutFlowReact(BasicBlock parent) {
         super(parent);
     }

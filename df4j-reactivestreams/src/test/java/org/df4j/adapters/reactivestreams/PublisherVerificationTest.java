@@ -1,5 +1,6 @@
 package org.df4j.adapters.reactivestreams;
 
+import org.df4j.core.activities.ReactivePublisher;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.TestEnvironment;
 
@@ -20,7 +21,7 @@ public class PublisherVerificationTest  extends org.reactivestreams.tck.Publishe
     public Publisher<Long> createPublisher(long elements) {
         ReactivePublisher publisher = new ReactivePublisher(elements);
         publisher.start();
-        return publisher.output;
+        return publisher.out;
     }
 
     @Override
@@ -28,12 +29,12 @@ public class PublisherVerificationTest  extends org.reactivestreams.tck.Publishe
         ReactivePublisher publisher = new ReactivePublisher(0){
             @Override
             protected void runAction() {
-                output.onError(new RuntimeException());
+                out.onError(new RuntimeException());
                 stop();
             }
         };
         publisher.start();
-        return publisher.output;
+        return publisher.out;
     }
 
     public void failingtets() throws Throwable {

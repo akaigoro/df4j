@@ -1,23 +1,29 @@
 package org.df4j.nio2.net;
 
+import org.df4j.core.communicator.ScalarResult;
+import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.port.OutFlow;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-public class ClientConnection extends BaseConnection
+/**
+ * generates single AsynchronousSocketChannel for client side
+ * as a result of the client connection accepted by a server
+ */
+public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketChannel>
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
     /**
-     * Starts connection to a server. IO requests can be queued immediately,
-     * but will be executed only after connection completes.
+     * Starts connection to a server.
      *
-     * @param name name of the connection
      * @param addr address of the server to connect
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
-    public ClientConnection(String name, SocketAddress addr) throws IOException {
-        super(name, null);
+    public AsyncClientSocketChannel(SocketAddress addr) throws IOException {
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open();
         channel.connect(addr, channel, this);
     }
@@ -26,12 +32,11 @@ public class ClientConnection extends BaseConnection
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        super.setChannel(channel);
+        super.onSuccess(channel);
     }
 
     @Override
     public void failed(Throwable exc, AsynchronousSocketChannel channel) {
         super.onError(exc);
     }
-
 }

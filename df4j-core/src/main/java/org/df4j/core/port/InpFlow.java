@@ -3,13 +3,17 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.Flow;
 
+import java.util.ArrayDeque;
+
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
- * It has room for only one token.
  *
  * @param <T> type of accepted tokens.
  */
 public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, InpMessagePort<T> {
+    private int bufferCapacity;
+    protected boolean withBuffer;
+    private ArrayDeque<T> buff;
     /** extracted token */
     protected T value;
     private Throwable completionException;
@@ -17,20 +21,36 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     Flow.Subscription subscription;
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * creates a port which is subscribed to the {@code #publisher}
+     * @param parent {@link BasicBlock} to wich this port belongs
+     * @param capacity required capacity
      */
-    public InpFlow(BasicBlock parent) {
+    public InpFlow(BasicBlock parent, int capacity) {
         parent.super(false);
+        setCapacity(capacity);
     }
 
     /**
-     * creates a port which is subscribed to the {@code #publisher}
-     * @param parent {@link BasicBlock} to wich this port belongs
-     * @param publisher {@link org.df4j.protocol.Flow.Publisher} to subscribe
+     * @param parent {@link BasicBlock} to which this port belongs
      */
-    public InpFlow(BasicBlock parent, Flow.Publisher<T> publisher) {
-        this(parent);
-        publisher.subscribe(this);
+    public InpFlow(BasicBlock parent) {
+        this(parent, 1);
+    }
+
+    public void setCapacity(int capacity) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (capacity == this.bufferCapacity) {
+            return;
+        }
+        bufferCapacity = capacity;
+        withBuffer = capacity > 1;
+        if (withBuffer) {
+            buff = new ArrayDeque<T>(capacity - 1);
+        } else {
+            buff = null;
+        }
     }
 
     public boolean isCompleted() {
@@ -67,7 +87,12 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
             }
             T res = value;
             value = null;
-            block();
+            if (!withBuffer || buff.isEmpty()) {
+                block();
+            } else {
+                value = buff.poll();
+            }
+            roomAvailable();
             if (subscription == null) {
                 return res;
             }
@@ -96,11 +121,24 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
             if (isCompleted()) {
                 return;
             }
-            value = message;
-            unblock();
+            if (value == null) {
+                value = message;
+                unblock();
+            } else if (buffIsFull()) {
+                throw new IllegalStateException("buffer overflow");
+            } else {
+                buff.add(message);
+            }
+            if (buffIsFull()) {
+                roomExhausted();
+            }
         } finally {
             plock.unlock();
         }
+    }
+
+    private boolean buffIsFull() {
+        return !withBuffer || buff.size() == bufferCapacity;
     }
 
     @Override
@@ -123,4 +161,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
     public void onComplete() {
         onError(null);
     }
+
+    protected void roomExhausted(){}
+    protected void roomAvailable(){}
 }

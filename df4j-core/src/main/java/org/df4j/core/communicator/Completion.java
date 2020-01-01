@@ -196,6 +196,7 @@ public class Completion implements Completable.Source {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        sb.append(super.toString());sb.append(" ");
         LinkedList<Subscription> subscribers = this.subscriptions;
         Throwable completionException = this.completionException;
         int size = 0;

@@ -34,6 +34,20 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
     }
 
     @Override
+    public Throwable getCompletionException() {
+        plock.lock();
+        try {
+            if (isCompleted()) {
+                return completionException;
+            } else {
+                return null;
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    @Override
     public void subscribe(ReverseFlow.Subscriber<T> producer) {
         ProducerSubscription subscription = new ProducerSubscription(producer);
         producer.onSubscribe(subscription);
@@ -94,7 +108,7 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
     }
 
 
-    class ProducerSubscription implements Flow.Subscription {
+    class ProducerSubscription implements ReverseFlow.Subscription {
         protected ReverseFlow.Subscriber<T> producer;
         private long remainedRequests = 0;
         private boolean cancelled = false;

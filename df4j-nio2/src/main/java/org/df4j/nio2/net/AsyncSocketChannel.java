@@ -30,40 +30,43 @@ import java.util.concurrent.TimeUnit;
  * Wrapper over {@link AsynchronousSocketChannel}.
  * Simplifies input-output, handling queues of I/O requests.
  *
- * For server-side connections, instatntiate and send to {@link AsyncServerSocketChannel}.
- * For client-side connections, instantiate subclass {@link ClientConnection} and call connect(addr).
- *
- * Internally, manages 2 input queues: one for reading requests and one for writing requests.
+\ * Internally, manages 2 input queues: one for reading requests and one for writing requests.
  * After request is served, it is sent to the port denoted by <code>replyTo</code>
  * property in the request.
- *
- * IO requests can be posted immediately, but will be executed
- * only after connection completes.
  */
-public class BaseConnection extends Dataflow {
-    protected static final Logger LOG = Logger.getLogger(BaseConnection.class.getName());
+public class AsyncSocketChannel {
+    protected static final Logger LOG = Logger.getLogger(AsyncSocketChannel.class.getName());
+    private final Dataflow dataflow;
 
     private AsyncSemaphore backPort;
 
 	/** read requests queue */
-	public final Reader reader = new Reader();
+	public final Reader reader;
 	/** write requests queue */
-	public final Writer writer = new Writer();
+	public final Writer writer;
 
     protected volatile AsynchronousSocketChannel channel;
 
     public String name;
 
-    public BaseConnection(String name, AsyncSemaphore backPort) {
-        this.name = name;
-        this.backPort = backPort;
-    }
-
-    public void setChannel(AsynchronousSocketChannel channel) {
-        LOG.info("conn "+name+": init()");
+    public AsyncSocketChannel(Dataflow dataflow, AsynchronousSocketChannel channel) {
+        this.dataflow=dataflow;
         this.channel=channel;
+        reader = new Reader(dataflow);
+        writer = new Writer(dataflow);
         reader.awake();
         writer.awake();
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
+     * @param backPort signal port for feedback
+     */
+    public void setBackPort(AsyncSemaphore backPort) {
+        this.backPort = backPort;
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -95,43 +98,46 @@ public class BaseConnection extends Dataflow {
     /**
      * an actor with delayed restart of the action
      */
-    public abstract class BuffProcessor extends BasicBlock
-            implements CompletionHandler<Integer, ByteBuffer>
-    {
+    public abstract class IOExecutor extends BasicBlock implements CompletionHandler<Integer, ByteBuffer> {
         protected final Logger LOG = Logger.getLogger(getClass().getName());
 
+        final String io;
         public final InpFlow<ByteBuffer> input = new InpFlow<>(this);
         public final OutFlow<ByteBuffer> output = new OutFlow<>(this);
 
-        {
-            LOG.info("BuffProcessor "+getClass().getName()+" "+name+" created");
-        }
-
         long timeout=0;
 
-        protected BuffProcessor() {
-            super(BaseConnection.this);
+        public IOExecutor(Dataflow dataflow, String io) {
+            super(dataflow);
+            this.io = io;
         }
 
         //-------------------- dataflow backend
 
+        protected abstract void doIO(ByteBuffer buffer);
+
+        protected abstract void doIO(ByteBuffer buffer, long timeout);
+
         @Override
         protected void runAction() {
-            ByteBuffer buffer = input.current();
+  //          LOG.info("conn "+ name+ ": " + io + " started");
             if (input.isCompleted()) {
-                output.onComplete();
-                output.onError(new AsynchronousCloseException());
-                LOG.finest("conn "+ name+": input.isClosed()");
+                output.onError(input.getCompletionException());
                 return;
             }
-            doIO(buffer);
+            ByteBuffer buffer = input.remove();
+            if (timeout>0) {
+                doIO(buffer, timeout);
+            } else {
+                doIO(buffer);
+            }
         }
 
         // ------------- CompletionHandler backend
 
         // IO excange finished
         public void completed(Integer result, ByteBuffer buffer) {
-            LOG.finest("conn "+ name+": read() completed "+result);
+  //          LOG.info("conn "+ name+": "+io+" completed "+result);
             if (result==-1) {
                 output.onComplete();
                 close();
@@ -145,7 +151,7 @@ public class BaseConnection extends Dataflow {
         }
 
         public void failed(Throwable exc, ByteBuffer attach) {
-            LOG.finest("conn "+ name+": read() failed "+exc);
+ //           LOG.info("conn "+ name+": "+io+" failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
                 close();
             } else {
@@ -153,9 +159,6 @@ public class BaseConnection extends Dataflow {
                 output.onError(exc);
             }
         }
-
-        protected abstract void doIO(ByteBuffer buffer);
-
     }
 
     /**
@@ -163,28 +166,36 @@ public class BaseConnection extends Dataflow {
      * works both in client-side and server-side modes
      */
     
-    public class Reader extends BuffProcessor {
+    public class Reader extends IOExecutor {
+
+        public Reader(Dataflow dataflow) {
+            super(dataflow, "reader");
+        }
 
         protected void doIO(ByteBuffer buffer) {
-            LOG.info("conn "+name+": read() started");
-            if (timeout>0) {
-                channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
-            } else {
-                channel.read(buffer, buffer, this);
-            }
+            channel.read(buffer, buffer, this);
+        }
+
+        @Override
+        protected void doIO(ByteBuffer buffer, long timeout) {
+            channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
 
     }
     
-    public class Writer extends BuffProcessor {
+    public class Writer extends IOExecutor {
+
+        public Writer(Dataflow dataflow) {
+            super(dataflow, "writer");
+        }
 
         protected void doIO(ByteBuffer buffer) {
-            LOG.finest("conn "+name+": write() started.");
-            if (timeout>0) {
-                channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
-            } else {
-                channel.write(buffer, buffer, this);
-            }
+            channel.write(buffer, buffer, this);
+        }
+
+        @Override
+        protected void doIO(ByteBuffer buffer, long timeout) {
+            channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
     }
 

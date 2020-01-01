@@ -12,21 +12,30 @@ import org.df4j.protocol.Flow;
  *
  * Because of complex logic, it is designaed as an Actor itself. However, it still controls firing of the parent actor.
  */
-public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
+public class OutFlow<T> extends Actor implements Flow.Publisher<T>, OutMessagePort<T> {
+    /** blocked when there is no more room for input messages */
     private BasicBlock.Port outerLock;
-    private InpFlow<T> inp = new InpFlowExt();
+    private InpFlow<T> inp;
     private OutFlowSubscriptions subscriptions = new OutFlowSubscriptions();
     /** blocks when inp is full */
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
      */
-    public OutFlow(BasicBlock parent) {
+    public OutFlow(BasicBlock parent, int bufferCapacity) {
         super(parent.getDataflow());
+        if (bufferCapacity <= 0) {
+            throw new IllegalArgumentException();
+        }
+        inp = new InpFlowExt(bufferCapacity);
         parent.getDataflow().leave(); // keep reference to parent dataflow only for error propagation
         outerLock = new OuterLock(parent);
         setExecutor(parent.getExecutor());
         start();
+    }
+
+    public OutFlow(BasicBlock parent) {
+        this(parent, 1);
     }
 
     private void debug(String s) {
@@ -92,21 +101,18 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T> {
     }
 
     private class InpFlowExt extends InpFlow<T> {
-        public InpFlowExt() {
-            super(OutFlow.this);
+        public InpFlowExt(int buffCapacity) {
+            super(OutFlow.this, buffCapacity);
         }
 
         @Override
-        public synchronized void block() {
-            super.block();
-            outerLock.unblock();
-        }
-
-        @Override
-        public void unblock() {
-            // do block() first, to avoid concurrency
+        public synchronized void roomExhausted() {
             outerLock.block();
-            super.unblock();
+        }
+
+        @Override
+        public void roomAvailable() {
+            outerLock.unblock();
         }
     }
 

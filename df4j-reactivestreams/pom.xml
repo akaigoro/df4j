@@ -14,13 +14,15 @@
     <dependencies>
         <dependency>
             <groupId>org.df4j</groupId>
-            <artifactId>df4j-protocols</artifactId>
+            <artifactId>df4j-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.df4j</groupId>
             <artifactId>df4j-core</artifactId>
             <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.reactivestreams</groupId>

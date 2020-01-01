@@ -1,6 +1,8 @@
 package org.df4j.nio2.net.echo;
 
+import org.df4j.core.dataflow.Dataflow;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -10,11 +12,6 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
-/*
- * ConnectionManager => AsyncServerSocketChannel -> ServerConnection -|
- *     ^                                                             v
- *     |<------------------------------------------------------------|                                                             |
- */
 public  class EchoTest {
     static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
 
@@ -22,15 +19,15 @@ public  class EchoTest {
 
     @BeforeClass
     public static synchronized void init() throws IOException {
-        if (echoServer ==null) {
-            echoServer = new EchoServer(local9990,2);
-            echoServer.awake();
+        if (echoServer == null) {
+            echoServer = new EchoServer(local9990);
+            echoServer.start();
         }
     }
 
     @AfterClass
     public static synchronized void close() {
-        if (echoServer !=null) {
+        if (echoServer != null) {
             echoServer.close();
             echoServer = null;
         }
@@ -38,22 +35,24 @@ public  class EchoTest {
 
     @Test
     public void ClientTest_1() throws IOException, InterruptedException {
-        EchoClient client = new EchoClient(local9990, 1);
+        Dataflow dataflow = new Dataflow();
+        EchoClient client = new EchoClient(dataflow, local9990, 1);
         client.start();
-        client.blockingAwait(1, TimeUnit.SECONDS);
+        boolean finised = dataflow.blockingAwait(1, TimeUnit.SECONDS);
+        Assert.assertTrue(finised);
     }
 
     @Test
     public void ClientTest_4x4() throws IOException, InterruptedException {
+        Dataflow dataflow = new Dataflow();
         ArrayList<EchoClient> clients = new ArrayList<>();
         for (int k=0; k<4; k++)  {
-            EchoClient client = new EchoClient(local9990, k+1);
+            EchoClient client = new EchoClient(dataflow, local9990, k+1);
             client.start();
             clients.add(client);
         }
-        for (EchoClient client: clients) {
-            client.blockingAwait(2, TimeUnit.SECONDS);
-        }
+        boolean finised = dataflow.blockingAwait(1, TimeUnit.SECONDS);
+        Assert.assertTrue(finised);
     }
 
 }

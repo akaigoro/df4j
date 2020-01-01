@@ -57,9 +57,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
     public int remainingCapacity() {
         qlock.lock();
         try {
-            for (;;) {
-                return capacity - tokens.size();
-            }
+            return capacity - tokens.size();
         } finally {
             qlock.unlock();
         }
@@ -295,7 +293,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         return super.toString();
     }
 
-    class ProducerSubscription implements Flow.Subscription {
+    class ProducerSubscription implements ReverseFlow.Subscription {
         private final Lock slock = new ReentrantLock();
         protected ReverseFlow.Subscriber<T> producer;
         private long remainedRequests = 0;

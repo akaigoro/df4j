@@ -1,4 +1,4 @@
-package org.df4j.adapters.reactivestreams;
+package org.df4j.core.activities;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.portadapter.OutReact;
@@ -11,34 +11,42 @@ import java.io.PrintStream;
  * emits totalNumber of Longs and closes the stream
  */
 public class ReactivePublisher extends Actor implements Publisher<Long> {
-    public OutReact<Long> output = new OutReact<>(this);
+    private final int delay;
+    public OutReact<Long> out = new OutReact<>(this);
     long val;
 //    Logger log = new Logger(false);
     Logger log = new Logger(true);
 
-    public ReactivePublisher(long totalNumber) {
+    public ReactivePublisher(long totalNumber, int delay) {
         this.val = totalNumber;
+        this.delay = delay;
+    }
+
+    public ReactivePublisher(long totalNumber) {
+        this(totalNumber,0);
     }
 
     @Override
     public void subscribe(Subscriber<? super Long> s) {
-        output.subscribe(s);
+        out.subscribe(s);
     }
 
     @Override
-    protected void runAction() {
+    protected void runAction() throws InterruptedException {
         if (val > 0) {
-            println("ReactivePublisher:output.onNext("+val+")");
-            output.onNext(val);
+   //         println("out.onNext("+val+")");
+            out.onNext(val);
             val--;
+            if (delay>0) Thread.sleep(delay);
         } else {
-            println("ReactivePublisher:output.onComplete()");
-            output.onComplete();
+  //          println("out.onComplete() ");
             stop();
+            out.onComplete();
         }
     }
 
     protected void println(String s) {
+        s = this.toString()+" "+s;
         if (log != null) {
             log.println(s);
         } else {

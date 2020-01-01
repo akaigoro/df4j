@@ -66,10 +66,12 @@ Thus, the class org.df4j.core.communicator.AsyncSemaphore extends java.util.conc
 Class AsyncArrayBlockingQueue implements from scratch java.util.concurrent.BlockingQueue,
 ReverseFlow.Publisher, and Flow.Publisher. Such communicators can help when transforming muktithreading program to asynchronous.
 
-3. Actors (e.g. [Akka](https://akka.io/)) are no more than repeatable basic block: after the next round of execution, 
-they sends awaking signal to the own control port.
+3. Callback is no more than AsyncProc with single scalar input parameter.
 
-4. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
+4. Actor (e.g. [Akka](https://akka.io/)) is no more than repeatable basic block with one input message flow parameter.
+After the next round of execution, it sends awaking signal to the own control port. 
+
+5. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
 
