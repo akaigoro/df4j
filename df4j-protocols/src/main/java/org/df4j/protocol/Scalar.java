@@ -91,7 +91,6 @@ public class Scalar {
          */
         void cancel();
 
-
         /**
          * Request to stop sending data and clean up resources.
          * <p>

@@ -3,7 +3,7 @@ package org.df4j.core.communicator;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpScalar;
+import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
 import org.junit.Test;
 
@@ -216,7 +216,6 @@ public class DiningPhilosophers extends Dataflow {
         }
 
         class StartThinking extends BasicBlock {
-
             @Override
             protected void runAction() throws Throwable {
                 endThinking.awake(getDelay());
@@ -224,7 +223,6 @@ public class DiningPhilosophers extends Dataflow {
         }
 
         class EndThinking extends BasicBlock {
-
             @Override
             protected void runAction() throws Throwable {
                 startEating.start();
@@ -232,22 +230,28 @@ public class DiningPhilosophers extends Dataflow {
         }
 
         class StartEating extends BasicBlock {
-            InpScalar<String> leftFork = new InpScalar<>(this);
-            InpScalar<String> rightFork = new InpScalar<>(this);
+            InpFlow<String> leftFork = new InpFlow<>(this);
+            InpFlow<String> rightFork = new InpFlow<>(this);
+            {
+                leftFork.setLazy(true);
+                leftPlace.subscribe(leftFork);
+                rightFork.setLazy(true);
+                rightPlace.subscribe(rightFork);
+            }
 
             void start() {
                 println("Request left (" + leftPlace.id + ")");
-                leftPlace.subscribe(leftFork);
+                leftFork.request(1);
                 println("Request right (" + rightPlace.id + ")");
-                rightPlace.subscribe(rightFork);
+                rightFork.request(1);
                 awake();
             }
 
             @Override
             protected void runAction() throws Throwable {
-                left = leftFork.current();
+                left = leftFork.remove();
                 println("got left "+left + " from "+ leftPlace.id);
-                right = rightFork.current();
+                right = rightFork.remove();
                 println("got right "+right + " from "+ rightPlace.id);
                 endEating.awake(getDelay());
             }

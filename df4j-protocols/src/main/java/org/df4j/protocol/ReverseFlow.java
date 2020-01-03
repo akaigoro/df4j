@@ -76,26 +76,26 @@ public class ReverseFlow {
     }
 
     /**
-     * A {@link Subscription} represents a one-to-one lifecycle of a {@link Flow.Subscriber} subscribing to a {@link Flow.Publisher}.
+     * A {@link Subscription} represents a one-to-one lifecycle of a {@link Subscriber} subscribing to a {@link Publisher}.
      * <p>
-     * It can only be used once by a single {@link Flow.Subscriber}.
+     * It can only be used once by a single {@link Subscriber}.
      * <p>
      * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
      *
      */
     public static interface Subscription extends Scalar.Subscription {
         /**
-         * No events will be sent by a {@link Flow.Publisher} until demand is signaled via this method.
+         * No events will be sent by a {@link Publisher} until demand is signaled via this method.
          * <p>
          * It can be called however often and whenever needed—but the outstanding cumulative demand must never exceed Long.MAX_VALUE.
-         * An outstanding cumulative demand of Long.MAX_VALUE may be treated by the {@link Flow.Publisher} as "effectively unbounded".
+         * An outstanding cumulative demand of Long.MAX_VALUE may be treated by the {@link Publisher} as "effectively unbounded".
          * <p>
-         * Whatever has been requested can be sent by the {@link Flow.Publisher} so only signal demand for what can be safely handled.
+         * Whatever has been requested can be sent by the {@link Publisher} so only signal demand for what can be safely handled.
          * <p>
-         * A {@link Flow.Publisher} can send less than is requested if the stream ends but
-         * then must emit either {@link Flow.Subscriber#onError(Throwable)} or {@link Flow.Subscriber#onComplete()}.
+         * A {@link Publisher} can send less than is requested if the stream ends but
+         * then must emit either {@link Subscriber#onError(Throwable)} or {@link Subscriber#onComplete()}.
          *
-         * @param n the strictly positive number of elements to requests to the upstream {@link Flow.Publisher}
+         * @param n the strictly positive number of elements to requests to the upstream {@link Publisher}
          */
         public void request(long n);
     }

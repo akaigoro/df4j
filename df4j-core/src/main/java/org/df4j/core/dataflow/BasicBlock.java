@@ -10,7 +10,7 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
-import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 import org.df4j.protocol.SignalFlow;
 
 import java.util.TimerTask;
@@ -41,7 +41,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
     private int blockingPortCount = 0;
     private Executor executor;
     private Port controlport = new ControlPort();
-    private Flow.Subscription subscription;
+    private Subscription subscription;
 
     protected BasicBlock(Dataflow dataflow) {
         if (dataflow == null) {
@@ -60,7 +60,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
     }
 
     @Override
-    public void onSubscribe(Flow.Subscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         bblock.lock();
         try {
             if (this.subscription != null) {

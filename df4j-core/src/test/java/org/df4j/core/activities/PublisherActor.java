@@ -5,19 +5,23 @@ import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.OutFlow;
 
 public class PublisherActor extends Actor {
-    public OutFlow<Integer> out = new OutFlow<>(this);
-    int cnt;
+    public OutFlow<Long> out = new OutFlow<>(this);
+    long cnt;
     final int delay;
 
-    public PublisherActor(Dataflow parent, int cnt, int delay) {
+    public PublisherActor(Dataflow parent, long cnt, int delay) {
         super(parent);
         this.cnt = cnt;
         this.delay = delay;
     }
 
-    public PublisherActor(int cnt, int delay) {
+    public PublisherActor(long cnt, int delay) {
         this.cnt = cnt;
         this.delay = delay;
+    }
+
+    public PublisherActor(long cnt) {
+        this(cnt, 0);
     }
 
     @Override

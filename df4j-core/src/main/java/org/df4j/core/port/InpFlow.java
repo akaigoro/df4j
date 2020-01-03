@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
-import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 
 import java.util.ArrayDeque;
 
@@ -10,15 +10,16 @@ import java.util.ArrayDeque;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, InpMessagePort<T> {
+public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMessagePort<T> {
     private int bufferCapacity;
+    private boolean lazy = false;
     protected boolean withBuffer;
     private ArrayDeque<T> buff;
     /** extracted token */
     protected T value;
     private Throwable completionException;
     protected volatile boolean completed;
-    Flow.Subscription subscription;
+    protected Subscription subscription;
 
     /**
      * creates a port which is subscribed to the {@code #publisher}
@@ -41,7 +42,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
-        if (capacity == this.bufferCapacity) {
+        if (capacity == getBufferCapacity()) {
             return;
         }
         bufferCapacity = capacity;
@@ -51,6 +52,28 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
         } else {
             buff = null;
         }
+    }
+
+    private boolean buffIsFull() {
+        return !withBuffer || buff.size() == bufferCapacity;
+    }
+
+    private int remainingCapacity() {
+        int cap1 = value == null ? 1 : 0;
+        int cap2 = withBuffer? bufferCapacity-buff.size() : 0;
+        return cap1 + cap2;
+    }
+
+    private int getBufferCapacity() {
+        return !withBuffer? 0 : this.bufferCapacity;
+    }
+
+    public boolean isLazy() {
+        return lazy;
+    }
+
+    public void setLazy(boolean lazy) {
+        this.lazy = lazy;
     }
 
     public boolean isCompleted() {
@@ -79,36 +102,26 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
         }
     }
 
-    public T remove() {
-        plock.lock();
-        try {
-            if (!isReady()) {
-                throw new IllegalStateException();
-            }
-            T res = value;
-            value = null;
-            if (!withBuffer || buff.isEmpty()) {
-                block();
-            } else {
-                value = buff.poll();
-            }
-            roomAvailable();
-            if (subscription == null) {
-                return res;
-            }
-            subscription.request(1);
-            return res;
-        } finally {
-            plock.unlock();
+    @Override
+    public void onSubscribe(Subscription subscription) {
+        this.subscription = subscription;
+        if (!lazy) {
+            request();
         }
     }
 
-    @Override
-    public void onSubscribe(Flow.Subscription subscription) {
-        this.subscription = subscription;
-        if (!isReady()) {
-            subscription.request(1);
+    public void request() {
+        subscription.request(remainingCapacity());
+    }
+
+    public void request(long n) {
+        if (n <= 0) {
+            throw new IllegalArgumentException();
         }
+        if (n > remainingCapacity()) {
+            throw new IllegalArgumentException();
+        }
+        subscription.request(n);
     }
 
     @Override
@@ -137,8 +150,30 @@ public class InpFlow<T> extends BasicBlock.Port implements Flow.Subscriber<T>, I
         }
     }
 
-    private boolean buffIsFull() {
-        return !withBuffer || buff.size() == bufferCapacity;
+    public T remove() {
+        plock.lock();
+        try {
+            if (!isReady()) {
+                throw new IllegalStateException();
+            }
+            T res = value;
+            value = null;
+            if (!withBuffer || buff.isEmpty()) {
+                block();
+            } else {
+                value = buff.poll();
+            }
+            roomAvailable();
+            if (subscription == null) {
+                return res;
+            }
+            if (!lazy) {
+                request();
+            }
+            return res;
+        } finally {
+            plock.unlock();
+        }
     }
 
     @Override

@@ -1,6 +1,6 @@
 package org.df4j.adapters.reactivestreams;
 
-import org.df4j.core.activities.ReactivePublisher;
+import org.df4j.core.activities.PublisherActor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.TestEnvironment;
 
@@ -19,14 +19,14 @@ public class PublisherVerificationTest  extends org.reactivestreams.tck.Publishe
 
     @Override
     public Publisher<Long> createPublisher(long elements) {
-        ReactivePublisher publisher = new ReactivePublisher(elements);
+        PublisherActor publisher = new PublisherActor(elements);
         publisher.start();
         return publisher.out;
     }
 
     @Override
     public Publisher<Long> createFailedPublisher() {
-        ReactivePublisher publisher = new ReactivePublisher(0){
+        PublisherActor publisher = new PublisherActor(0){
             @Override
             protected void runAction() {
                 out.onError(new RuntimeException());

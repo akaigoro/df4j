@@ -1,22 +1,22 @@
 package org.df4j.core.port;
 
 import org.df4j.core.activities.PublisherActor;
-import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class OutFlowTest {
 
-    static class SimpleSubscriber implements Flow.Subscriber<Integer> {
+    static class SimpleSubscriber implements Subscriber<Long> {
         volatile boolean completed = false;
 
         @Override
-        public void onSubscribe(Flow.Subscription subscription) {
-            subscription.request(Integer.MAX_VALUE);
+        public void onSubscribe(Subscription subscription) {
+            subscription.request(Long.MAX_VALUE);
         }
 
         @Override
-        public void onNext(Integer in) {
+        public void onNext(Long in) {
             System.out.println(" got: " + in);
         }
 

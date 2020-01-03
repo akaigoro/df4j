@@ -1,6 +1,7 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 import org.df4j.protocol.SignalFlow;
 
 import java.util.LinkedList;

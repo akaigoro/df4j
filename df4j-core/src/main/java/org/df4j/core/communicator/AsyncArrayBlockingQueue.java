@@ -1,6 +1,7 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.*;
@@ -16,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * <p>
  *  Flow of messages:
- *  {@link ReverseFlow.Subscriber} =&gt; {@link AsyncArrayBlockingQueue}  =&gt; {@link Flow.Subscriber}
+ *  {@link ReverseFlow.Subscriber} =&gt; {@link AsyncArrayBlockingQueue}  =&gt; {@link Subscriber}
  *
  * @param <T> the type of the values passed through this token container
  */
@@ -24,7 +25,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
         ReverseFlow.Publisher<T>,
         /** asyncronous analogue of  {@link BlockingQueue#take()} */
-        Flow.Publisher<T>
+        Publisher<T>
 {
     private final Lock qlock = new ReentrantLock();
     private final Condition hasRoom = qlock.newCondition();
@@ -48,7 +49,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
     }
 
     @Override
-    public void subscribe(Flow.Subscriber<? super T> subscriber) {
+    public void subscribe(Subscriber<? super T> subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
         subscriber.onSubscribe(subscription);
     }
@@ -402,11 +403,11 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
 
     class FlowSubscriptionImpl implements Flow.Subscription {
         private final Lock slock = new ReentrantLock();
-        protected final Flow.Subscriber subscriber;
+        protected final Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        FlowSubscriptionImpl(Flow.Subscriber subscriber) {
+        FlowSubscriptionImpl(Subscriber subscriber) {
             this.subscriber = subscriber;
         }
 

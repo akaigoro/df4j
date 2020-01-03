@@ -1,24 +1,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.df4j</groupId>
-        <artifactId>df4j</artifactId>
-        <version>8.0</version>
-    </parent>
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.df4j</groupId>
+		<artifactId>df4j</artifactId>
+		<version>8.0</version>
+	</parent>
 
-    <artifactId>df4j-core</artifactId>
-    <name>df4j-core</name>
-    <packaging>jar</packaging>
+    <artifactId>df4j-rxjava</artifactId>
+    <name>df4j-rxjava</name>
+	<packaging>jar</packaging>
 
-    <dependencies>
+	<dependencies>
+        <dependency>
+            <groupId>io.reactivex.rxjava3</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>3.0.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>org.df4j</groupId>
-            <artifactId>df4j-protocols</artifactId>
+            <artifactId>df4j-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-    </dependencies>
+	</dependencies>
 
     <build>
         <plugins>
@@ -53,7 +58,6 @@
             </plugin>
         </plugins>
     </build>
-
     <distributionManagement>
         <snapshotRepository>
             <id>sonatype-nexus-snapshots</id>

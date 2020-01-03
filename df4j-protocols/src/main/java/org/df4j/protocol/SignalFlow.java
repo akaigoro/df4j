@@ -1,5 +1,7 @@
 package org.df4j.protocol;
 
+import org.reactivestreams.Subscription;
+
 /**
  * Flow of signals without errors
  */
@@ -26,7 +28,7 @@ public class SignalFlow {
      *
      */
     public interface Subscriber {
-        void onSubscribe(Flow.Subscription subscription);
+        void onSubscribe(Subscription subscription);
 
         /**
          * asynchronous version of Semaphore.aquire()

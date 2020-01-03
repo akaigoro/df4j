@@ -5,7 +5,7 @@ import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
-import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -154,7 +154,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
 
         public AsyncProcessor(int n, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) {
             this.n = n;
-            ((Flow.Publisher<Integer>) inp).subscribe(this.inp);
+            ((Publisher<Integer>) inp).subscribe(this.inp);
             out.subscribe(this.out);
         }
 

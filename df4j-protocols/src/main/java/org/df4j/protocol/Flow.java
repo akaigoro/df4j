@@ -13,7 +13,8 @@ package org.df4j.protocol;
 /**
  * Flow of messages with back-pressure
  * <p>
- * Interfaces are copied from package org.reactivestreams
+ *  This class declaration is for refernce only.
+ *  Actual declarations used are in package org.reactivestreams
  * @see <a href="https://www.reactive-streams.org/">https://www.reactive-streams.org/</a>
  */
 public final class Flow {
@@ -29,7 +30,7 @@ public final class Flow {
      *
      * @param <T> the type of element signaled.
      */
-    public interface Publisher<T> {
+    public interface Publisher<T> extends org.reactivestreams.Publisher<T> {
 
         /**
          * Request {@link Publisher} to start streaming data.
@@ -63,7 +64,7 @@ public final class Flow {
      *
      * @param <T> the type of element signaled.
      */
-    public interface Subscriber<T> {
+    public interface Subscriber<T> extends org.reactivestreams.Subscriber<T> {
         /**
          * Invoked after calling {@link Publisher#subscribe(Subscriber)}.
          * <p>
@@ -110,20 +111,14 @@ public final class Flow {
      * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
      *
      */
-    public static interface Subscription extends Scalar.Subscription {
+    public static interface Subscription extends org.reactivestreams.Subscription, Scalar.Subscription {
+
         /**
-         * No events will be sent by a {@link Publisher} until demand is signaled via this method.
+         * Request to stop sending data and clean up resources.
          * <p>
-         * It can be called however often and whenever needed—but the outstanding cumulative demand must never exceed Long.MAX_VALUE.
-         * An outstanding cumulative demand of Long.MAX_VALUE may be treated by the {@link Publisher} as "effectively unbounded".
-         * <p>
-         * Whatever has been requested can be sent by the {@link Publisher} so only signal demand for what can be safely handled.
-         * <p>
-         * A {@link Publisher} can send less than is requested if the stream ends but
-         * then must emit either {@link Subscriber#onError(Throwable)} or {@link Subscriber#onComplete()}.
-         *
-         * @param n the strictly positive number of elements to requests to the upstream {@link Publisher}
+         * Data may still be sent to meet previously signalled demand after calling cancel.
+         * @return true if this resource has been disposed.
          */
-        public void request(long n);
+        boolean	isCancelled();
     }
 }

@@ -38,7 +38,7 @@ public class Flood {
          * violations or errors, the Subscriber's {@code onError}
          * method is invoked with an {@link IllegalStateException}.
          * Otherwise, the Subscriber's {@code onSubscribe} method is
-         * invoked with a new {@link Flow.Subscription}.  Subscribers may
+         * invoked with a new {@link Subscription}.  Subscribers may
          * enable receiving items by invoking the {@code request}
          * method of this Subscription, and may unsubscribe by
          * invoking its {@code cancel} method.

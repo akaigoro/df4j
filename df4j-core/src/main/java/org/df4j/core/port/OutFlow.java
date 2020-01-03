@@ -3,6 +3,7 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 
 /**
  * A passive source of messages (like a server).
@@ -12,7 +13,7 @@ import org.df4j.protocol.Flow;
  *
  * Because of complex logic, it is designaed as an Actor itself. However, it still controls firing of the parent actor.
  */
-public class OutFlow<T> extends Actor implements Flow.Publisher<T>, OutMessagePort<T> {
+public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T> {
     /** blocked when there is no more room for input messages */
     private BasicBlock.Port outerLock;
     private InpFlow<T> inp;
@@ -42,7 +43,7 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T>, OutMessagePo
  //       System.out.println(s);
     }
 
-    public void subscribe(Flow.Subscriber subscriber) {
+    public void subscribe(Subscriber subscriber) {
         subscriptions.subscribe(subscriber);
         if (inp.isCompleted()) {
             if (inp.isCompletedExceptionslly()) {
@@ -121,7 +122,7 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T>, OutMessagePo
             super(OutFlow.this);
         }
 
-        public void subscribe(Flow.Subscriber subscriber) {
+        public void subscribe(Subscriber subscriber) {
             OutFlowSubscription sub = new OutFlowSubscription(subscriber);
             subscriber.onSubscribe(sub);
         }
@@ -167,11 +168,11 @@ public class OutFlow<T> extends Actor implements Flow.Publisher<T>, OutMessagePo
         private class OutFlowSubscription implements Flow.Subscription {
             // no own lock, use OutFlowSubscriptions.plock
             boolean enqueued = false;
-            protected final Flow.Subscriber subscriber;
+            protected final Subscriber subscriber;
             private long remainedRequests = 0;
             private boolean cancelled = false;
 
-            OutFlowSubscription(Flow.Subscriber subscriber) {
+            OutFlowSubscription(Subscriber subscriber) {
                 this.subscriber = subscriber;
             }
 

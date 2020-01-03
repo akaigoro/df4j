@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
-import org.df4j.protocol.Flow;
+import org.reactivestreams.*;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.LinkedList;

@@ -1,10 +1,8 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
-import org.df4j.core.port.OutChannel;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
