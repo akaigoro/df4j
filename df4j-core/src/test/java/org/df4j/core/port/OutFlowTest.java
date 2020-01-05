@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.activities.PublisherActor;
+import org.df4j.core.util.Logger;
 import org.reactivestreams.*;
 import org.junit.Assert;
 import org.junit.Test;
@@ -8,6 +9,7 @@ import org.junit.Test;
 public class OutFlowTest {
 
     static class SimpleSubscriber implements Subscriber<Long> {
+        protected final Logger logger = new Logger(this);
         volatile boolean completed = false;
 
         @Override
@@ -17,12 +19,12 @@ public class OutFlowTest {
 
         @Override
         public void onNext(Long in) {
-            System.out.println(" got: " + in);
+            logger.info(" got: " + in);
         }
 
         @Override
         public void onError(Throwable e) {
-            System.out.println(" completed with: " + e);
+            logger.info(" completed with: " + e);
             completed = true;
         }
 

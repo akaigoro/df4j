@@ -3,8 +3,10 @@ package org.df4j.core.activities;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.OutChannel;
+import org.df4j.core.util.Logger;
 
 public class ProducerActor extends Actor {
+    protected final Logger logger = new Logger(this);
     final int delay;
     int cnt;
     public OutChannel<Integer> out;
@@ -24,7 +26,7 @@ public class ProducerActor extends Actor {
 
     @Override
     protected void runAction() throws Throwable {
-        System.out.println("cnt: "+cnt);
+        logger.info("cnt: "+cnt);
         if (cnt == 0) {
             out.onComplete();
             stop();

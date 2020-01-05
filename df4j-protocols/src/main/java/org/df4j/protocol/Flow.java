@@ -13,8 +13,8 @@ package org.df4j.protocol;
 /**
  * Flow of messages with back-pressure
  * <p>
- *  This class declaration is for refernce only.
- *  Actual declarations used are in package org.reactivestreams
+ *  This class declaration is for reference only.
+ *  Actual declarations used are in package {@link org.reactivestreams}
  * @see <a href="https://www.reactive-streams.org/">https://www.reactive-streams.org/</a>
  */
 public final class Flow {
@@ -111,14 +111,6 @@ public final class Flow {
      * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
      *
      */
-    public static interface Subscription extends org.reactivestreams.Subscription, Scalar.Subscription {
-
-        /**
-         * Request to stop sending data and clean up resources.
-         * <p>
-         * Data may still be sent to meet previously signalled demand after calling cancel.
-         * @return true if this resource has been disposed.
-         */
-        boolean	isCancelled();
+    public interface Subscription extends org.reactivestreams.Subscription, SimpleSubscription {
     }
 }

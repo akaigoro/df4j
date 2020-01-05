@@ -1,7 +1,7 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Completable;
-import org.df4j.protocol.Scalar;
+import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -215,7 +215,7 @@ public class Completion implements Completable.Source {
     }
 
 
-    class Subscription implements Scalar.Subscription {
+    class Subscription implements SimpleSubscription {
         final Completable.Observer subscriber;
         private boolean cancelled;
 

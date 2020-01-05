@@ -83,7 +83,7 @@ public class ReverseFlow {
      * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
      *
      */
-    public static interface Subscription extends Scalar.Subscription {
+    public static interface Subscription extends SimpleSubscription {
         /**
          * No events will be sent by a {@link Publisher} until demand is signaled via this method.
          * <p>

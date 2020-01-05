@@ -110,6 +110,9 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
         }
     }
 
+    /**
+     * max request
+     */
     public void request() {
         subscription.request(remainingCapacity());
     }
@@ -167,9 +170,30 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
             if (subscription == null) {
                 return res;
             }
-            if (!lazy) {
-                request();
+            return res;
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public T removeAndRequest() {
+        plock.lock();
+        try {
+            if (!isReady()) {
+                throw new IllegalStateException();
             }
+            T res = value;
+            value = null;
+            if (!withBuffer || buff.isEmpty()) {
+                block();
+            } else {
+                value = buff.poll();
+            }
+            roomAvailable();
+            if (subscription == null) {
+                return res;
+            }
+            request();
             return res;
         } finally {
             plock.unlock();

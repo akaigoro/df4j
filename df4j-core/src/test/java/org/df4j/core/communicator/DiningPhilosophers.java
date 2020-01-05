@@ -4,7 +4,9 @@ import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.InpScalar;
 import org.df4j.core.port.OutChannel;
+import org.df4j.core.util.Logger;
 import org.junit.Test;
 
 import java.util.Random;
@@ -18,6 +20,7 @@ import static org.junit.Assert.assertTrue;
  * Synchronous implementation, for reference
  */
 public class DiningPhilosophers extends Dataflow {
+    protected final Logger logger = new Logger(this);
     static final int num = 2; // number of phylosophers
     static int N = 3; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];
@@ -93,6 +96,7 @@ public class DiningPhilosophers extends Dataflow {
     }
 
     class PhilosopherThread extends Thread implements ActivityThread {
+        protected final Logger logger = new Logger(this);
         int id;
         ForkPlace leftPlace, rightPlace;
         String left, right;
@@ -114,11 +118,11 @@ public class DiningPhilosophers extends Dataflow {
             sb.append(id).append(":");
             for (int k = 0; k < id; k++) sb.append("              ");
             indent = sb.toString();
-            System.out.println("Ph no. " + id + " (thread): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
+            logger.info("Ph no. " + id + " (thread): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
         }
 
         void println(String s) {
-            System.out.println(indent + s);
+            logger.info(indent + s);
         }
 
         void delay(long delay) {
@@ -191,7 +195,7 @@ public class DiningPhilosophers extends Dataflow {
             sb.append(id).append(":");
             for (int k = 0; k < id; k++) sb.append("              ");
             indent = sb.toString();
-            System.out.println("Ph no. " + id + " (dataflow): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
+            logger.info("Ph no. " + id + " (dataflow): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
 
             startThinking = new StartThinking();
             endThinking = new EndThinking();
@@ -205,7 +209,7 @@ public class DiningPhilosophers extends Dataflow {
         }
 
         void println(String s) {
-            System.out.println(indent + s);
+            logger.info(indent + s);
         }
 
         abstract class BasicBlock extends org.df4j.core.dataflow.BasicBlock {

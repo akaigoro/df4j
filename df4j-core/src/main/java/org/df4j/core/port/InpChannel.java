@@ -66,6 +66,20 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
     }
 
     /**
+     * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
+     */
+    public T remove() {
+        plock.lock();
+        try {
+            T value = this.value;
+            this.value = null;
+            return value;
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    /**
      * removes and returns incoming value if it is present
      * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
      */
@@ -95,7 +109,7 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
      * @return the value received from a subscriber
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
-    public T remove() {
+    public T removeAndRequest() {
         plock.lock();
         try {
             if (!isReady()) {

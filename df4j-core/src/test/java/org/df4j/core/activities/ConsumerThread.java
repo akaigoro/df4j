@@ -2,11 +2,13 @@ package org.df4j.core.activities;
 
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.ActivityThread;
+import org.df4j.core.util.Logger;
 import org.junit.Assert;
 
 import java.util.concurrent.CompletionException;
 
 public class ConsumerThread extends Thread implements ActivityThread {
+    protected final Logger logger = new Logger(this);
     AsyncArrayBlockingQueue<Integer> queue;
     final int delay;
     Integer in = null;
@@ -18,12 +20,12 @@ public class ConsumerThread extends Thread implements ActivityThread {
 
     @Override
     public void run() {
-        System.out.println(" SubscriberT started");
+        logger.info(" SubscriberT started");
         Throwable cause;
         for (;;) {
             try {
                 Integer in = queue.take();
-                System.out.println(" got: " + in);
+                logger.info(" got: " + in);
                 if (this.in != null) {
                     Assert.assertEquals(this.in.intValue() - 1, in.intValue());
                 }
@@ -37,6 +39,6 @@ public class ConsumerThread extends Thread implements ActivityThread {
                 break;
             }
         }
-        System.out.println(" completed with: " + cause);
+        logger.info(" completed with: " + cause);
     }
 }

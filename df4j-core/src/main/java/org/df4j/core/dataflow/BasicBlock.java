@@ -32,7 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
 public abstract class BasicBlock extends Completion implements SignalFlow.Subscriber {
-    private final Lock bblock = new ReentrantLock();
+    protected final Lock bblock = new ReentrantLock();
     protected Dataflow dataflow;
     /**
      * blocked initially, until {@link #awake} called.

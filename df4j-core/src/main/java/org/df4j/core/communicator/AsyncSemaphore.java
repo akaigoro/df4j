@@ -1,7 +1,6 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Flow;
-import org.reactivestreams.*;
 import org.df4j.protocol.SignalFlow;
 
 import java.util.LinkedList;
@@ -75,7 +74,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         try {
         for (;;) {
             if (subscriptions.size() == 0) {
-                release(permits);
+                super.release(permits);
                 return;
             }
             SignalSubscription subscription = subscriptions.remove();

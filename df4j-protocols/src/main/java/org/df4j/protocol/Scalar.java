@@ -43,7 +43,7 @@ public class Scalar {
      * @param <T>  type of tokens
      */
     public interface Observer<T> extends BiConsumer<T, Throwable> {
-        void onSubscribe(Subscription subscription);
+        void onSubscribe(SimpleSubscription subscription);
 
         /**
          * Data notification sent by the {@link Source}
@@ -51,6 +51,11 @@ public class Scalar {
          * @param t the element signaled
          */
         void onSuccess(T t);
+
+        /**
+         * Called once the deferred computation completes normally.
+         */
+        void onComplete();
 
         /**
          * Failed terminal state.
@@ -75,28 +80,6 @@ public class Scalar {
                 onError(throwable);
             }
         }
-
-        /**
-         * Called once the deferred computation completes normally.
-         */
-        void onComplete();
     }
 
-    /**
-     * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmittion.
-     */
-    public interface Subscription {
-        /**
-         *  Dispose the resource, the operation should be idempotent.
-         */
-        void cancel();
-
-        /**
-         * Request to stop sending data and clean up resources.
-         * <p>
-         * Data may still be sent to meet previously signalled demand after calling cancel.
-         * @return true if this resource has been disposed.
-         */
-        boolean	isCancelled();
-    }
 }

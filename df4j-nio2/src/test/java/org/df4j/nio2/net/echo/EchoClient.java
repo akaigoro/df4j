@@ -21,7 +21,7 @@ import java.nio.charset.Charset;
  * sends and receives limited number of messages
  */
 class EchoClient extends AsyncProc {
-    protected static final Logger LOG = Logger.getLogger(Speaker.class.getName());
+    protected final Logger LOG = new Logger(this);
     static final Charset charset = Charset.forName("UTF-16");
     private final int total;
 
@@ -97,8 +97,8 @@ class EchoClient extends AsyncProc {
         }
 
         public void runAction() {
-            String sent = sentMsgs.remove();
-            ByteBuffer received = readBuffers.remove();
+            String sent = sentMsgs.removeAndRequest();
+            ByteBuffer received = readBuffers.removeAndRequest();
             String m2 = fromByteBuf(received);
             LOG.info("Listener received message:"+m2);
             Assert.assertEquals(sent, m2);

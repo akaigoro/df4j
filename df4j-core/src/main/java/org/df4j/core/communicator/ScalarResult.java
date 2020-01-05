@@ -1,5 +1,6 @@
 package org.df4j.core.communicator;
 
+import org.df4j.protocol.SimpleSubscription;
 import org.df4j.protocol.Scalar;
 
 import java.util.concurrent.*;
@@ -84,7 +85,7 @@ public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
         return cf.join();
     }
 
-    class Subscription implements Scalar.Subscription {
+    class Subscription implements SimpleSubscription {
         final CompletableFuture<T> whenComplete;
 
         public Subscription(Scalar.Observer<? super T> subscriber) {

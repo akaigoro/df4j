@@ -3,8 +3,10 @@ package org.df4j.core.activities;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpChannel;
+import org.df4j.core.util.Logger;
 
 public class ConsumerActor extends Actor {
+    protected final Logger logger = new Logger(this);
     final int delay;
     public InpChannel<Integer> inp = new InpChannel<>(this);
 
@@ -21,11 +23,11 @@ public class ConsumerActor extends Actor {
     protected void runAction() throws Throwable {
         Thread.sleep(delay);
         if (inp.isCompleted()) {
-            System.out.println(" completed.");
+            logger.info(" completed.");
             stop();
         } else {
-            Integer in = inp.remove();
-            System.out.println(" got: "+in);
+            Integer in = inp.removeAndRequest();
+            logger.info(" got: "+in);
         }
     }
 }

@@ -1,5 +1,6 @@
 package org.df4j.nio2.net.echo;
 
+import org.df4j.core.communicator.AsyncSemaphore;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
@@ -12,21 +13,25 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * generates {@link EchoServerConnection}s for incoming connections
  *
  */
 public class EchoServer extends Actor {
-    protected static final Logger LOG = Logger.getLogger(EchoClient.Speaker.class.getName());
-
+    protected final Logger LOG = new Logger(this);
+    CompletableFuture s;
+    /** limits the munber of simultaneously existing connections */
+    protected AsyncSemaphore allowedConnections = new AsyncSemaphore();
     protected InpFlow<AsynchronousSocketChannel> inp = new InpFlow<>(this);
 
     public EchoServer(SocketAddress addr) throws IOException {
         super(new Dataflow());
         AsyncServerSocketChannel serverStarter = new AsyncServerSocketChannel(getDataflow(), addr);
+        serverStarter.start();
         serverStarter.out.subscribe(inp);
-        serverStarter.awake();
+        allowedConnections.release(2);
     }
 
     public void close() {
@@ -36,7 +41,7 @@ public class EchoServer extends Actor {
     @Override
     public void runAction() {
         LOG.info("EchoServer#runAction");
-        AsynchronousSocketChannel assc = inp.remove();
+        AsynchronousSocketChannel assc = inp.removeAndRequest();
         EchoProcessor processor = new EchoProcessor(assc);
         processor.start();
     }
@@ -51,6 +56,7 @@ public class EchoServer extends Actor {
             LOG.info("EchoProcessor#init");
             int capacity = 2;
             serverConn = new AsyncSocketChannel(getDataflow(), assc);
+            serverConn.setBackPort(allowedConnections);
             serverConn.setName("server");
             serverConn.reader.input.setCapacity(capacity);
             for (int k = 0; k<capacity; k++) {
@@ -64,7 +70,7 @@ public class EchoServer extends Actor {
 
         public void runAction() {
             LOG.info("EchoProcessor#runAction");
-            ByteBuffer b = readBuffers.remove();
+            ByteBuffer b = readBuffers.removeAndRequest();
             buffers2write.onNext(b);
         }
     }

@@ -5,6 +5,7 @@ import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
+import org.df4j.core.util.Logger;
 import org.reactivestreams.*;
 import org.junit.Assert;
 import org.junit.Test;
@@ -16,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.fail;
 
 public class AsyncArrayBlockingQueuePipelineTest {
+    protected final Logger logger = new Logger(this);
     static final int N=20;
     static final int n1=1, n2=3;
 
@@ -45,7 +47,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
         int failCount = 0;
         for (int k = 0; k < N; k++) {
             int res = queue3.take();
-            System.out.println("got "+res);
+            logger.info("got "+res);
             if (result[res]) {
                 failCount++;
             }
@@ -79,7 +81,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
             if (res==null) {
                 fail("timeout");
             }
-            System.out.println("got "+res);
+            logger.info("got "+res);
             if (result[res]) {
                 failCount++;
             }
@@ -162,8 +164,8 @@ public class AsyncArrayBlockingQueuePipelineTest {
         public void runAction() {
             Throwable cause;
             try {
-                Integer in = inp.remove();
-                System.out.println("AsyncProcessor "+n+": got "+in);
+                Integer in = inp.removeAndRequest();
+                logger.info("AsyncProcessor "+n+": got "+in);
                 Thread.sleep(getDelay());
                 out.onNext(in);
                 return;

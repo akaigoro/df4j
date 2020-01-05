@@ -2,7 +2,7 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.Flood;
-import org.df4j.protocol.Scalar;
+import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -19,7 +19,7 @@ public class InpFlood<T> extends BasicBlock.Port implements Flood.Subscriber<T>,
     private  final Queue<T> tokens = new LinkedList<T>();
     private Throwable completionException;
     protected volatile boolean completed;
-    Scalar.Subscription subscription;
+    protected SimpleSubscription subscription;
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
@@ -97,7 +97,7 @@ public class InpFlood<T> extends BasicBlock.Port implements Flood.Subscriber<T>,
     }
 
     @Override
-    public void onSubscribe(Scalar.Subscription subscription) {
+    public void onSubscribe(SimpleSubscription subscription) {
         this.subscription = subscription;
     }
 

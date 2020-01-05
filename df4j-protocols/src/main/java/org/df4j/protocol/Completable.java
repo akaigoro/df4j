@@ -1,7 +1,7 @@
 package org.df4j.protocol;
 
 /**
- * A {@link SignalFlow} with completion exceptions
+ * A one-shot signal with completion exceptions
  */
 public class Completable {
     private Completable() {}
@@ -46,7 +46,8 @@ public class Completable {
      * </ul>
      */
     public interface Observer {
-        void onSubscribe(Scalar.Subscription subscription);
+
+        void onSubscribe(SimpleSubscription subscription);
 
         /**
          * Called once if the deferred computation 'throws' an exception.

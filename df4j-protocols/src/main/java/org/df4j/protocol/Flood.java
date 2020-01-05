@@ -7,7 +7,6 @@ public class Flood {
 
     private Flood() {} // uninstantiable
 
-
     /**
      * A producer of items (and related control messages) received by
      * Subscribers.  Each current {@link Subscriber} receives the same
@@ -31,14 +30,14 @@ public class Flood {
      * @param <T> the published item type
      */
     @FunctionalInterface
-    public static interface Publisher<T> {
+    public interface Publisher<T> {
         /**
          * Adds the given Subscriber if possible.  If already
          * subscribed, or the attempt to subscribe fails due to policy
          * violations or errors, the Subscriber's {@code onError}
          * method is invoked with an {@link IllegalStateException}.
          * Otherwise, the Subscriber's {@code onSubscribe} method is
-         * invoked with a new {@link Subscription}.  Subscribers may
+         * invoked with a new {@link SimpleSubscription}.  Subscribers may
          * enable receiving items by invoking the {@code request}
          * method of this Subscription, and may unsubscribe by
          * invoking its {@code cancel} method.
@@ -51,11 +50,19 @@ public class Flood {
 
     /**
      * A receiver of messages.  The methods in this interface are
-     * invoked in strict sequential order for each {@link Scalar.Subscription}.
+     * invoked in strict sequential order for each {@link SimpleSubscription}.
      *
      * @param <T> the subscribed item type
      */
-    public static interface Subscriber<T> {
+    public interface Subscriber<T> {
+
+        /**
+         * Invoked after calling {@link Scalar.Source#subscribe(Scalar.Observer)}.
+         *
+         * @param s
+         *            {@link SimpleSubscription} that allows cancelling subscription via {@link SimpleSubscription#cancel()} ()} }
+         */
+        default void onSubscribe(SimpleSubscription s) {}
 
         /**
          * Method invoked with a Subscription's next item.  If this
@@ -75,14 +82,6 @@ public class Flood {
          * undefined.
          */
         public void onComplete();
-
-        /**
-         * Invoked after calling {@link Scalar.Source#subscribe(Scalar.Observer)}.
-         *
-         * @param s
-         *            {@link Scalar.Subscription} that allows cancelling subscription via {@link Scalar.Subscription#cancel()} ()} }
-         */
-        default void onSubscribe(Scalar.Subscription s) {}
 
         /**
          * Failed terminal state.

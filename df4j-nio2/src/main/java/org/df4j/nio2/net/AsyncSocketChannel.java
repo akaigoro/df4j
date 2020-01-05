@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  * property in the request.
  */
 public class AsyncSocketChannel {
-    protected static final Logger LOG = Logger.getLogger(AsyncSocketChannel.class.getName());
+    protected final Logger LOG = new Logger(this);
     private final Dataflow dataflow;
 
     private AsyncSemaphore backPort;
@@ -99,7 +99,7 @@ public class AsyncSocketChannel {
      * an actor with delayed restart of the action
      */
     public abstract class IOExecutor extends BasicBlock implements CompletionHandler<Integer, ByteBuffer> {
-        protected final Logger LOG = Logger.getLogger(getClass().getName());
+        protected final Logger LOG = new Logger(this);
 
         final String io;
         public final InpFlow<ByteBuffer> input = new InpFlow<>(this);
@@ -125,7 +125,7 @@ public class AsyncSocketChannel {
                 output.onError(input.getCompletionException());
                 return;
             }
-            ByteBuffer buffer = input.remove();
+            ByteBuffer buffer = input.removeAndRequest();
             if (timeout>0) {
                 doIO(buffer, timeout);
             } else {

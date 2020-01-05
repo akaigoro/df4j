@@ -34,7 +34,7 @@ import java.nio.channels.CompletionHandler;
  *
  */
 public class AsyncServerSocketChannel extends BasicBlock implements CompletionHandler<AsynchronousSocketChannel, Void> {
-    protected final Logger LOG = Logger.getLogger(AsyncServerSocketChannel.class.getName());
+    protected final Logger LOG = new Logger(this);
     protected volatile AsynchronousServerSocketChannel assc;
     public OutFlow<AsynchronousSocketChannel> out = new OutFlow<>(this);
 
@@ -48,17 +48,26 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
         LOG.info("AsyncServerSocketChannel("+addr+") created");
     }
 
+    public void start() {
+        awake();
+    }
+
     public synchronized void close() {
-        if (assc == null) {
-            return;
-        }
-        AsynchronousServerSocketChannel asscLock = assc;
-        assc = null;
+        bblock.lock();
         try {
-            asscLock.close();
-            stop();
-        } catch (IOException e) {
-            stop(e);
+            if (isCompleted()) {
+                return;
+            }
+            AsynchronousServerSocketChannel asscLock = assc;
+            assc = null;
+            try {
+                asscLock.close();
+                stop();
+            } catch (IOException e) {
+                stop(e);
+            }
+        } finally {
+            bblock.unlock();
         }
     }
 

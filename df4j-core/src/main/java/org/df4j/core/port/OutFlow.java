@@ -11,7 +11,7 @@ import org.reactivestreams.*;
  * It has room for single message.
  * Blocked when overflow.
  *
- * Because of complex logic, it is designaed as an Actor itself. However, it still controls firing of the parent actor.
+ * Because of complex logic, it is designed as an Actor itself. However, it still controls firing of the parent actor.
  */
 public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T> {
     /** blocked when there is no more room for input messages */
@@ -69,7 +69,7 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
     @Override
     protected void runAction() {
         if (!inp.isCompleted()) {
-            T token = inp.remove();
+            T token = inp.removeAndRequest();
             OutFlowSubscriptions.OutFlowSubscription sub = subscriptions.remove();
             if (sub.remainedRequests <= 0) {
                 throw new IllegalArgumentException();
@@ -141,7 +141,6 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
             }
         }
 
-        @Override
         public OutFlowSubscription remove() {
             plock.lock();
             try {
@@ -153,7 +152,6 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
             }
         }
 
-        @Override
         public boolean remove(OutFlowSubscription sub) {
             plock.lock();
             try {
