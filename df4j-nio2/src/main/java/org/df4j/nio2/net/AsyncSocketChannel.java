@@ -109,6 +109,7 @@ public class AsyncSocketChannel {
 
         public IOExecutor(Dataflow dataflow, String io) {
             super(dataflow);
+            setDaemon(true);
             this.io = io;
         }
 

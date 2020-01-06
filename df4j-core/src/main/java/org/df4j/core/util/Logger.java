@@ -11,8 +11,15 @@ public class Logger extends java.util.logging.Logger {
         super(name, null);
     }
 
-    public Logger(Object parent) {
-        super(parent.getClass().getName(), null);
+    public Logger(Object parentObject) {
+        super(parentObject.getClass().getName(), null);
+        setLevel(Level.OFF);
+        addHandler(new ConsoleHandler());
+    }
+
+    public Logger(Object parentObject, Level level) {
+        this(parentObject);
+        setLevel(level);
     }
 
     public static Logger getLogger(String name) {
@@ -23,7 +30,6 @@ public class Logger extends java.util.logging.Logger {
     public static Logger getLogger(String name, Level level) {
         Logger logger = new Logger(name);
         logger.setLevel(level);
-        logger.addHandler(new ConsoleHandler());
         return logger;
     }
 }

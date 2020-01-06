@@ -8,7 +8,7 @@ import org.df4j.core.util.Logger;
 public class ConsumerActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
-    public InpChannel<Integer> inp = new InpChannel<>(this);
+    public InpChannel<Long> inp = new InpChannel<>(this);
 
     public ConsumerActor(int delay, Dataflow parent) {
         super(parent);
@@ -26,7 +26,7 @@ public class ConsumerActor extends Actor {
             logger.info(" completed.");
             stop();
         } else {
-            Integer in = inp.removeAndRequest();
+            Long in = inp.removeAndRequest();
             logger.info(" got: "+in);
         }
     }

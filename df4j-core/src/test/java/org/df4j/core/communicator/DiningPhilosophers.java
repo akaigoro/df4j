@@ -13,16 +13,16 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.logging.Level;
 
 import static org.junit.Assert.assertTrue;
 
 /**
  * Synchronous implementation, for reference
  */
-public class DiningPhilosophers extends Dataflow {
-    protected final Logger logger = new Logger(this);
-    static final int num = 2; // number of phylosophers
-    static int N = 3; // number of rounds
+    public class DiningPhilosophers extends Dataflow {
+    static final int num = 5; // number of phylosophers
+    static int N = 4; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];
     CountDownLatch counter = new CountDownLatch(num);
     Activity[] philosophers = new Activity[num];
@@ -48,8 +48,9 @@ public class DiningPhilosophers extends Dataflow {
             philosophers[k].start();
         }
         boolean fin = counter.await(2, TimeUnit.SECONDS);
-        super.blockingAwait(0);
+        boolean fin2 = this.blockingAwait(50, TimeUnit.MILLISECONDS);
         assertTrue(fin);
+    //    assertTrue(fin2);
     }
 
     @Test
@@ -165,6 +166,7 @@ public class DiningPhilosophers extends Dataflow {
     }
 
     class PhilosopherDF extends Dataflow {
+        protected final Logger logger = new Logger(this, Level.INFO);
         int id;
         ForkPlace leftPlace, rightPlace;
         String left, right;
@@ -260,6 +262,7 @@ public class DiningPhilosophers extends Dataflow {
                 endEating.awake(getDelay());
             }
         }
+
         class EndEating extends BasicBlock {
             OutChannel<String> leftFork = new OutChannel<>(this);
             OutChannel<String> rightFork = new OutChannel<>(this);
@@ -282,6 +285,7 @@ public class DiningPhilosophers extends Dataflow {
                 } else {
                     println("Ph no. " + id + ": died at round " + rounds);
                     counter.countDown();
+                    DiningPhilosophers.this.leave();
                 }
             }
         }

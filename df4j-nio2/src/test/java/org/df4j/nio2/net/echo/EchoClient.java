@@ -16,14 +16,17 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.Charset;
+import java.util.logging.Level;
 
 /**
  * sends and receives limited number of messages
  */
 class EchoClient extends AsyncProc {
-    protected final Logger LOG = new Logger(this);
     static final Charset charset = Charset.forName("UTF-16");
-    private final int total;
+
+    protected final Logger LOG = new Logger(this, Level.INFO);
+    public final int total;
+    public int count;
 
     public static ByteBuffer toByteBuf(String message) {
         return ByteBuffer.wrap(message.getBytes(charset));
@@ -48,12 +51,10 @@ class EchoClient extends AsyncProc {
         AsynchronousSocketChannel assc = inp.current();
         Dataflow dataflow = getDataflow();
         clientConn = new AsyncSocketChannel(dataflow, assc);
-        dataflow.leave();
         clientConn.setName("client");
         Speaker speaker = new Speaker(this.dataflow);
         speaker.start();
         LOG.info("Speaker started");
-        this.dataflow.leave();
     }
 
     class Speaker extends Actor {
@@ -86,13 +87,11 @@ class EchoClient extends AsyncProc {
     }
 
     class Listener extends Actor {
-        private int count;
         InpFlow<String> sentMsgs = new InpFlow<>(this);
         InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
 
         public Listener(Dataflow dataflow) {
             super(dataflow);
-            this.count = total;
             clientConn.reader.output.subscribe(readBuffers);
         }
 
@@ -102,8 +101,8 @@ class EchoClient extends AsyncProc {
             String m2 = fromByteBuf(received);
             LOG.info("Listener received message:"+m2);
             Assert.assertEquals(sent, m2);
-            count--;
-            if (count == 0) {
+            count++;
+            if (count == total) {
                 LOG.info("Listener finished successfully");
                 stop();
             }

@@ -43,8 +43,8 @@ public class AsyncArrayBlockingQueueTest {
     @Test
     public void testAsyncQueueCons() throws InterruptedException {
         int cnt = 3;
-        AsyncArrayBlockingQueue<Integer> queue = new AsyncArrayBlockingQueue<Integer>(cnt);
-        for (int k = cnt; k>0; k--) {
+        AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<Long>(cnt);
+        for (long k = cnt; k>0; k--) {
             queue.offer(k);
         }
         SubscriberActor subscriber = new SubscriberActor(0);

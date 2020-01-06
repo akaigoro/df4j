@@ -8,10 +8,10 @@ import org.df4j.core.util.Utils;
 public class ProducerThread extends Thread implements ActivityThread {
     protected final Logger logger = new Logger(this);
     final int delay;
-    int cnt;
-    AsyncArrayBlockingQueue<Integer> queue;
+    long cnt;
+    AsyncArrayBlockingQueue<Long> queue;
 
-    public ProducerThread(int cnt, AsyncArrayBlockingQueue<Integer> queue, int delay) {
+    public ProducerThread(int cnt, AsyncArrayBlockingQueue<Long> queue, int delay) {
         this.queue = queue;
         this.delay = delay;
         this.cnt = cnt;

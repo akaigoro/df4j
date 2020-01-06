@@ -34,6 +34,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public abstract class BasicBlock extends Completion implements SignalFlow.Subscriber {
     protected final Lock bblock = new ReentrantLock();
     protected Dataflow dataflow;
+    /** is not encountered as a parent's child */
+    private boolean daemon;
     /**
      * blocked initially, until {@link #awake} called.
      */
@@ -51,12 +53,32 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
         dataflow.enter();
     }
 
-    protected BasicBlock() {
-        this(Dataflow.getThreadLocalDataflow());
-    }
-
     public Dataflow getDataflow() {
         return dataflow;
+    }
+
+    public void setDaemon(boolean daemon) {
+        bblock.lock();
+        try {
+            if (this.daemon) {
+                return;
+            }
+            this.daemon = daemon;
+            if (dataflow != null) {
+                dataflow.leave();
+            }
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public boolean isDaemon() {
+        bblock.lock();
+        try {
+            return daemon;
+        } finally {
+            bblock.unlock();
+        }
     }
 
     @Override

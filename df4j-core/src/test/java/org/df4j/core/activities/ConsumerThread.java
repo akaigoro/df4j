@@ -9,11 +9,11 @@ import java.util.concurrent.CompletionException;
 
 public class ConsumerThread extends Thread implements ActivityThread {
     protected final Logger logger = new Logger(this);
-    AsyncArrayBlockingQueue<Integer> queue;
+    AsyncArrayBlockingQueue<Long> queue;
     final int delay;
-    Integer in = null;
+    Long in = null;
 
-    public ConsumerThread(AsyncArrayBlockingQueue<Integer> queue, int delay) {
+    public ConsumerThread(AsyncArrayBlockingQueue<Long> queue, int delay) {
         this.queue = queue;
         this.delay = delay;
     }
@@ -24,7 +24,7 @@ public class ConsumerThread extends Thread implements ActivityThread {
         Throwable cause;
         for (;;) {
             try {
-                Integer in = queue.take();
+                Long in = queue.take();
                 logger.info(" got: " + in);
                 if (this.in != null) {
                     Assert.assertEquals(this.in.intValue() - 1, in.intValue());

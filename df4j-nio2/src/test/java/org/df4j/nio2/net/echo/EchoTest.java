@@ -40,6 +40,7 @@ public  class EchoTest {
         client.start();
         boolean finised = dataflow.blockingAwait(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
+        Assert.assertEquals(client.total, client.count);
     }
 
     @Test

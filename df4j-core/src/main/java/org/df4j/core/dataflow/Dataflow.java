@@ -14,29 +14,6 @@ import java.util.concurrent.ForkJoinWorkerThread;
  * Component {@link BasicBlock}s plays the same role as basic blocks in a flow chart.
  */
 public class Dataflow extends Completion implements Activity, Completable.Source {
-    private static InheritableThreadLocal<Dataflow> threadLocalDataflow = new InheritableThreadLocal<Dataflow>(){
-        @Override
-        protected Dataflow initialValue() {
-            return new Dataflow();
-        }
-    };
-
-    /**
-     * for debug purposes, call
-     * <pre>
-     *    setThreadLocalDataflow(AsyncProc.currentThreadExec);
-     * </pre>
-     * before creating {@link org.df4j.core.dataflow.BasicBlock} instances.
-     *
-     * @return an Executor local to current thread
-     */
-    public static Dataflow getThreadLocalDataflow() {
-        return threadLocalDataflow.get();
-    }
-
-    public static void setThreadLocalDataflow(Dataflow exec) {
-        threadLocalDataflow.set(exec);
-    }
     protected Dataflow parent;
     protected Executor executor;
     protected Timer timer;

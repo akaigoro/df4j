@@ -25,11 +25,11 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
      */
     public OutFlow(BasicBlock parent, int bufferCapacity) {
         super(parent.getDataflow());
+        setDaemon(true);
         if (bufferCapacity <= 0) {
             throw new IllegalArgumentException();
         }
         inp = new InpFlowExt(bufferCapacity);
-        parent.getDataflow().leave(); // keep reference to parent dataflow only for error propagation
         outerLock = new OuterLock(parent);
         setExecutor(parent.getExecutor());
         start();

@@ -8,8 +8,8 @@ import org.df4j.core.util.Logger;
 public class ProducerActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
-    int cnt;
-    public OutChannel<Integer> out;
+    long cnt;
+    public OutChannel<Long> out;
 
     public ProducerActor(Dataflow parent, int cnt, int delay) {
         super(parent);

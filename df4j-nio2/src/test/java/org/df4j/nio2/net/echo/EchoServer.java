@@ -14,14 +14,14 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 /**
  * generates {@link EchoServerConnection}s for incoming connections
  *
  */
 public class EchoServer extends Actor {
-    protected final Logger LOG = new Logger(this);
-    CompletableFuture s;
+    protected final Logger LOG = new Logger(this, Level.INFO);
     /** limits the munber of simultaneously existing connections */
     protected AsyncSemaphore allowedConnections = new AsyncSemaphore();
     protected InpFlow<AsynchronousSocketChannel> inp = new InpFlow<>(this);

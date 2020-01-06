@@ -9,8 +9,8 @@ import org.junit.Assert;
 public class SubscriberActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
-    public InpFlow<Integer> inp = new InpFlow<>(this);
-    Integer in = null;
+    public InpFlow<Long> inp = new InpFlow<>(this);
+    Long in = null;
 
     public SubscriberActor(Dataflow parent, int delay) {
         super(parent);
@@ -30,7 +30,7 @@ public class SubscriberActor extends Actor {
             stop(completionException);
             return;
         }
-        Integer in = inp.removeAndRequest();
+        Long in = inp.removeAndRequest();
         logger.info(" SubscriberActor: inp = " + in);
         if (this.in != null) {
             Assert.assertEquals(this.in.intValue() - 1, in.intValue());

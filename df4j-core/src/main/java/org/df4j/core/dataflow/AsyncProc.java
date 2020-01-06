@@ -19,7 +19,9 @@ public abstract class AsyncProc extends BasicBlock implements Activity {
     }
 
     public AsyncProc() {
+        super(new Dataflow());
     }
+
 
     @Override
     public void start() {
