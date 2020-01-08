@@ -214,8 +214,10 @@ import static org.junit.Assert.assertTrue;
             logger.info(indent + s);
         }
 
+        /**
+         * These basic blocks form a flowchart using control transfer method {@link BasicBlock#awake()}.
+         */
         abstract class BasicBlock extends org.df4j.core.dataflow.BasicBlock {
-
             protected BasicBlock() {
                 super(PhilosopherDF.this);
             }
@@ -264,19 +266,12 @@ import static org.junit.Assert.assertTrue;
         }
 
         class EndEating extends BasicBlock {
-            OutChannel<String> leftFork = new OutChannel<>(this);
-            OutChannel<String> rightFork = new OutChannel<>(this);
-            {
-                leftPlace.subscribe(leftFork);
-                rightPlace.subscribe(rightFork);
-            }
-
             @Override
             protected void runAction() throws Throwable {
                 println("Release left "+left +" to " + leftPlace.id);
-                leftFork.onNext(left);
+                leftPlace.put(left);
                 println("Release right " + right + " to " + rightPlace.id);
-                rightFork.onNext(right);
+                rightPlace.put(right);
                 // check end of life
                 rounds++;
                 if (rounds < N) {

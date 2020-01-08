@@ -242,8 +242,12 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
         public Port(boolean ready) {
             this.ready = ready;
             if (!ready) {
-                blockingPortCount++;
-                dbg("#incBlocking: blockingPortCount set to ");
+                bblock.lock();
+                try {
+                    blockingPortCount++;
+                } finally {
+                    bblock.unlock();
+                }
             }
             next = ports;
             ports = this;
@@ -272,8 +276,12 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
                     return;
                 }
                 ready = false;
-                blockingPortCount++;
-                dbg("#incBlocking: blockingPortCount set to ");
+                bblock.lock();
+                try {
+                    blockingPortCount++;
+                } finally {
+                    bblock.unlock();
+                }
             } finally {
                 plock.unlock();
             }
@@ -297,7 +305,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
                         throw new IllegalStateException("blocked port and blockingPortCount == 0");
                     }
                     blockingPortCount--;
-                    dbg("#decBlocking: blockingPortCount set to ");
+       //             dbg("#unblock: blockingPortCount = "+blockingPortCount);
                     if (blockingPortCount > 0) {
                         return;
                     }

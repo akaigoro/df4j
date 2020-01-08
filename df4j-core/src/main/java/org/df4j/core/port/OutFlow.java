@@ -125,6 +125,7 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
         public void subscribe(Subscriber subscriber) {
             OutFlowSubscription sub = new OutFlowSubscription(subscriber);
             subscriber.onSubscribe(sub);
+            sub.endInit();
         }
 
         @Override
@@ -165,6 +166,8 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
 
         private class OutFlowSubscription implements Flow.Subscription {
             // no own lock, use OutFlowSubscriptions.plock
+            boolean inInit = true;
+            boolean isReady = false;
             boolean enqueued = false;
             protected final Subscriber subscriber;
             private long remainedRequests = 0;
@@ -172,6 +175,23 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
 
             OutFlowSubscription(Subscriber subscriber) {
                 this.subscriber = subscriber;
+            }
+
+            void endInit() {
+                plock.lock();
+                try {
+                    if (!inInit) {
+                        return;
+                    }
+                    inInit = false;
+                    if (!isReady) {
+                        return;
+                    }
+                    isReady = false;
+                    subscriptions.onNext(this);
+                } finally {
+                    plock.unlock();
+                }
             }
 
             @Override
@@ -196,7 +216,11 @@ public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T>
                     }
   //                  debug("  request: remainedRequests = "+remainedRequests+" n = "+n);
                     remainedRequests += n;
-                    subscriptions.onNext(this);
+                    if (inInit) {
+                        isReady = true;
+                    } else {
+                        subscriptions.onNext(this);
+                    }
                     return;
                 } finally {
                     plock.unlock();
