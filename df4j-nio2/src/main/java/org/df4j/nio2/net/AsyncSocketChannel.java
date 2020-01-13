@@ -29,10 +29,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
  * Simplifies input-output, handling queues of I/O requests.
- *
-\ * Internally, manages 2 input queues: one for reading requests and one for writing requests.
- * After request is served, it is sent to the port denoted by <code>replyTo</code>
- * property in the request.
  */
 public class AsyncSocketChannel {
     protected final Logger LOG = new Logger(this);

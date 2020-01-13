@@ -152,7 +152,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
                 return;
             }
             super.onComplete();
-            if (dataflow != null) {
+            if (dataflow != null && !daemon) {
                 dataflow.leave();
             }
         } finally {
@@ -236,7 +236,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
     public abstract class Port {
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected final Lock plock = new ReentrantLock();
-        private boolean ready;
+        protected boolean ready;
         private Port next;
 
         public Port(boolean ready) {

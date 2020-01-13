@@ -138,36 +138,7 @@ public class Completion implements Completable.Source {
      *         false if timout reached
      */
     public boolean blockingAwait(long timeout) {
-        boolean result;
-        bblock.lock();
-        try {
-            long targetTime = System.currentTimeMillis()+ timeout;
-            for (;;) {
-                if (completed) {
-                    result = true;
-                    break;
-                }
-                if (timeout <= 0) {
-                    result = false;
-                    break;
-                }
-                try {
-                    completedCond.await(timeout, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    throw new CompletionException(e);
-                }
-                timeout = targetTime - System.currentTimeMillis();
-            }
-        } finally {
-            bblock.unlock();
-        }
-        if (!result) {
-            return false;
-        }
-        if (completionException != null) {
-            throw new CompletionException(completionException);
-        }
-        return true;
+       return blockingAwait(timeout, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -180,14 +151,16 @@ public class Completion implements Completable.Source {
     public boolean blockingAwait(long timeout, TimeUnit unit) {
         bblock.lock();
         try {
-            boolean result = blockingAwait(unit.toMillis(timeout));
-            if (!result) {
-                return false;
+            if (!isCompleted()) {
+                completedCond.await(timeout, unit);
             }
-            if (completionException != null) {
+            boolean completed = isCompleted();
+            if (completed && completionException != null) {
                 throw new CompletionException(completionException);
             }
-            return true;
+            return completed;
+        } catch (InterruptedException e) {
+            throw new CompletionException(e);
         } finally {
             bblock.unlock();
         }

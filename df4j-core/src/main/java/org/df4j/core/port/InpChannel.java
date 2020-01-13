@@ -87,7 +87,7 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Publis
         plock.lock();
         try {
             T res;
-            if (!isReady()) {
+            if (!ready) {
                 return null;
             }
             res = value;

@@ -179,7 +179,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
     public T removeAndRequest() {
         plock.lock();
         try {
-            if (!isReady()) {
+            if (!ready) {
                 throw new IllegalStateException();
             }
             T res = value;
