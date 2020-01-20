@@ -39,13 +39,8 @@ public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
 
     @Override
     public void subscribe(Scalar.Observer<? super T> subscriber) {
-        bblock.lock();
-        try {
-            Subscription subscription = new Subscription(subscriber);
-            subscriber.onSubscribe(subscription);
-        } finally {
-            bblock.unlock();
-        }
+        Subscription subscription = new Subscription(subscriber);
+        subscriber.onSubscribe(subscription);
     }
 
     /**

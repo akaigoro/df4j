@@ -12,7 +12,8 @@ package org.df4j.core.dataflow;
 /**
  * {@link AsyncProc} is a {@link Dataflow} with single {@link BasicBlock} which is executed only once.
 */
-public abstract class AsyncProc extends BasicBlock implements Activity {
+public abstract class
+AsyncProc extends BasicBlock implements Activity {
 
     public AsyncProc(Dataflow parent) {
         super(parent);

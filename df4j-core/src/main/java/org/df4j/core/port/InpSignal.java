@@ -60,8 +60,8 @@ public class InpSignal extends BasicBlock.Port implements SignalFlow.Subscriber 
      * @param delay time delay in milliseconds
      */
     public void awake(long delay) {
-        Dataflow dataflow = super.getDataflow();
-        if (dataflow.isCompleted()) {
+        BasicBlock parent = getParent();
+        if (parent.isCompleted()) {
             return;
         }
         TimerTask task = new TimerTask(){
@@ -70,6 +70,6 @@ public class InpSignal extends BasicBlock.Port implements SignalFlow.Subscriber 
                 awake();
             }
         };
-        dataflow.getTimer().schedule(task, delay);
+        parent.getTimer().schedule(task, delay);
     }
 }

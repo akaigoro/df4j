@@ -53,11 +53,6 @@ public class Scalar {
         void onSuccess(T t);
 
         /**
-         * Called once the deferred computation completes normally.
-         */
-        void onComplete();
-
-        /**
          * Failed terminal state.
          * <p>
          * No further events will be sent.

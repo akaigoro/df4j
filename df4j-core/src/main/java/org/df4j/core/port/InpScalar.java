@@ -105,9 +105,4 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> 
             plock.unlock();
         }
     }
-
-    @Override
-    public void onComplete() {
-        onError(null);
-    }
 }
