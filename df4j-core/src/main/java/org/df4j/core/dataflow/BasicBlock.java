@@ -13,6 +13,7 @@ import org.df4j.core.communicator.Completion;
 import org.reactivestreams.*;
 import org.df4j.protocol.SignalFlow;
 
+import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
@@ -31,7 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * to exchange messages and signals with ports of other {@link BasicBlock}s in consistent manner.
  * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
-public abstract class BasicBlock extends Completion implements SignalFlow.Subscriber {
+public abstract class BasicBlock extends Completion {//} implements SignalFlow.Subscriber {
     protected final Lock bblock = new ReentrantLock();
     protected Dataflow dataflow;
     /** is not encountered as a parent's child */
@@ -42,8 +43,8 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
     private Port ports = null;
     private int blockingPortCount = 0;
     private Executor executor;
+    private Timer timer;
     private Port controlport = new ControlPort();
-    private Subscription subscription;
 
     protected BasicBlock(Dataflow dataflow) {
         if (dataflow == null) {
@@ -55,6 +56,18 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
 
     public Dataflow getDataflow() {
         return dataflow;
+    }
+
+    public Timer getTimer() {
+        bblock.lock();
+        try {
+            if (timer == null) {
+                timer = dataflow.getTimer();
+            }
+            return timer;
+        } finally {
+            bblock.unlock();
+        }
     }
 
     public void setDaemon(boolean daemon) {
@@ -81,37 +94,10 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
         }
     }
 
-    @Override
-    public void onSubscribe(Subscription subscription) {
-        bblock.lock();
-        try {
-            if (this.subscription != null) {
-                this.subscription.cancel();
-            }
-            this.subscription = subscription;
-            subscription.request(1);
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public void unsubscribe() {
-        bblock.lock();
-        try {
-            if (this.subscription == null) {
-                return;
-            }
-            this.subscription.cancel();
-            this.subscription = null;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-        /**
-         * passes a control token to this {@link BasicBlock}.
-         * This token is consumed when this block is submitted to an executor.
-         */
+    /**
+     * passes a control token to this {@link BasicBlock}.
+     * This token is consumed when this block is submitted to an executor.
+     */
     public void awake() {
         bblock.lock();
         try {
@@ -139,7 +125,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
                 awake();
             }
         };
-        dataflow.getTimer().schedule(task, delay);
+        getTimer().schedule(task, delay);
     }
 
     /**
@@ -171,10 +157,10 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
                 return;
             }
             onError(ex);
-            dataflow.onError(ex);
         } finally {
             bblock.unlock();
         }
+        dataflow.onError(ex);
     }
 
     public void setExecutor(Executor exec) {
@@ -221,8 +207,7 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
         }
     }
 
-    /**
-     * User's action.
+    /**     * User's action.
      * @throws Throwable when thrown, this node is considered failed.
      */
     protected abstract void runAction() throws Throwable;
@@ -251,6 +236,10 @@ public abstract class BasicBlock extends Completion implements SignalFlow.Subscr
             }
             next = ports;
             ports = this;
+        }
+
+        protected BasicBlock getParent() {
+            return BasicBlock.this;
         }
 
         public boolean isReady() {

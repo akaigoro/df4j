@@ -39,7 +39,6 @@ public class OutMaybe<T> extends ScalarResult implements MaybeSource<T> {
             observer.onError(t);
         }
 
-        @Override
         public void onComplete() {
             observer.onComplete();
         }

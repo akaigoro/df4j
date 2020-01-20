@@ -22,6 +22,10 @@ public class InpMaybe<T> extends InpScalar<T> implements MaybeObserver<T> {
         super.onSubscribe(proxySub);
     }
 
+    public void onComplete() {
+        onError(null);
+    }
+
     static class ProxySub implements SimpleSubscription {
         private io.reactivex.rxjava3.disposables.Disposable d;
         private ReentrantLock sLock = new ReentrantLock();

@@ -6,15 +6,11 @@ import org.reactivestreams.tck.TestEnvironment;
 
 import java.lang.reflect.Field;
 
-public class PublisherVerificationTest  extends org.reactivestreams.tck.PublisherVerification<Long> {
-    static final  int defaultTimeout = 400;
-    protected final TestEnvironment env;
+public class PublisherVerificationTest extends org.reactivestreams.tck.PublisherVerification {
+    static final long defaultTimeout = 400;
 
-    public PublisherVerificationTest() throws NoSuchFieldException, IllegalAccessException {
+    public PublisherVerificationTest() {
         super(new TestEnvironment(defaultTimeout));
-        Field fenv = org.reactivestreams.tck.PublisherVerification.class.getDeclaredField("env");
-        fenv.setAccessible(true);
-        this.env = (TestEnvironment) fenv.get(this);
     }
 
     @Override
@@ -35,9 +31,5 @@ public class PublisherVerificationTest  extends org.reactivestreams.tck.Publishe
         };
         publisher.start();
         return publisher.out;
-    }
-
-    public void failingtets() throws Throwable {
-        super.stochastic_spec103_mustSignalOnMethodsSequentially();
     }
 }

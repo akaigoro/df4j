@@ -19,7 +19,7 @@ public class Completion implements Completable.Source {
     protected final Lock bblock = new ReentrantLock();
     private final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
-    protected LinkedList<Subscription> subscriptions;
+    protected LinkedList<Subscription> subscriptions = new LinkedList<>();
     protected boolean completed;
 
     /**
@@ -96,9 +96,9 @@ public class Completion implements Completable.Source {
                 break;
             }
             if (e == null) {
-                sub.onError(e);
-            } else {
                 sub.onComplete();
+            } else {
+                sub.onError(e);
             }
         }
     }
@@ -188,11 +188,14 @@ public class Completion implements Completable.Source {
     }
 
 
-    class Subscription implements SimpleSubscription {
-        final Completable.Observer subscriber;
+    protected class Subscription implements SimpleSubscription {
+        Completable.Observer subscriber;
         private boolean cancelled;
 
-        public Subscription(Completable.Observer subscriber) {
+        protected Subscription() {
+        }
+
+        protected Subscription(Completable.Observer subscriber) {
             this.subscriber = subscriber;
         }
 

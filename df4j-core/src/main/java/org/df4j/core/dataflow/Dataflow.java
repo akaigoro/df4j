@@ -2,6 +2,7 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
 import org.df4j.protocol.Completable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Timer;
 import java.util.concurrent.Executor;
@@ -81,8 +82,7 @@ public class Dataflow extends Completion implements Activity, Completable.Source
             } else if (parent != null) {
                 return timer = parent.getTimer();
             } else {
-                timer = new Timer();
-                return timer;
+                return timer = getSingletonTimer();
             }
         } finally {
             bblock.unlock();
@@ -155,4 +155,21 @@ public class Dataflow extends Completion implements Activity, Completable.Source
         sb.append("; child node count: "+nodeCount);
         return sb.toString();
     }
+
+    private static Timer singletonTimer;
+
+    @NotNull
+    public static Timer getSingletonTimer() {
+        Timer res = singletonTimer;
+        if (res == null) {
+            synchronized (Dataflow.class) {
+                res = singletonTimer;
+                if (res == null) {
+                    res = singletonTimer = new Timer();
+                }
+            }
+        }
+        return res;
+    }
+
 }
