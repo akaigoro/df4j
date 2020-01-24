@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.protocol.Flow;
 import org.df4j.protocol.SimpleSubscription;
 import org.reactivestreams.*;
 import org.df4j.protocol.Scalar;
@@ -20,11 +21,12 @@ import org.df4j.protocol.Scalar;
  *
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
-public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> {
+public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T>, Subscriber<T> {
     protected T value;
     protected volatile boolean completed = false;
     private Throwable completionException = null;
     private SimpleSubscription simpleSubscription;
+    private Subscription subscription;
 
     /**
      * @param parent {@link BasicBlock} to which this port belongs
@@ -45,6 +47,48 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
         this.simpleSubscription = subscription;
+    }
+
+    @Override
+    public void onSubscribe(Subscription subscription) {
+        plock.lock();
+        try {
+            unsubscribe();
+            this.subscription = subscription;
+            completed = false;
+            value = null;
+            completionException = null;
+            block();
+            subscription.request(1);;
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    @Override
+    public void onNext(T t) {
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            onSuccess(t);
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    @Override
+    public void onComplete() {
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            onError(null);
+        } finally {
+            plock.unlock();
+        }
     }
 
     public Throwable getCompletionException() {
@@ -70,9 +114,21 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> 
         try {
             T value = this.value;
             this.value = null;
+            block();
             return value;
         } finally {
             plock.unlock();
+        }
+    }
+
+    private void unsubscribe() {
+        if (subscription != null) {
+            subscription.cancel();
+            subscription = null;
+        }
+        if (simpleSubscription != null) {
+            simpleSubscription.cancel();
+            simpleSubscription = null;
         }
     }
 
@@ -85,6 +141,7 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> 
             }
             this.completed = true;
             this.value = message;
+            unsubscribe();
             unblock();
         } finally {
             plock.unlock();
@@ -100,6 +157,7 @@ public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> 
             }
             this.completed = true;
             this.completionException = throwable;
+            unsubscribe();
             unblock();
         } finally {
             plock.unlock();

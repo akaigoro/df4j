@@ -1,7 +1,7 @@
 package org.df4j.protocol;
 
 /**
- * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmittion.
+ * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmission.
  */
 public interface SimpleSubscription {
     /**
