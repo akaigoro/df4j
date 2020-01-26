@@ -1,24 +1,22 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.Completion;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Completable;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Timer;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.concurrent.*;
 
 /**
  * A dataflow graph, consisting of 1 or more {@link BasicBlock}s and, probably, nested {@link Dataflow}s.
  * Completion signals (errors or success) propagate from the leaf nodes to the root node.
  * Component {@link BasicBlock}s plays the same role as basic blocks in a flow chart.
  */
-public class Dataflow extends Completion implements Activity, Completable.Source {
-    protected Dataflow parent;
-    protected Executor executor;
+public class Dataflow extends Node<Dataflow> implements Activity {
+    protected ExecutorService executor;
     protected Timer timer;
-    protected int nodeCount = 0;
+    LinkedQueue<Completable.Source> children = new LinkedQueue<>();
 
     /**
      *  creates root {@link Dataflow} graph.
@@ -32,10 +30,10 @@ public class Dataflow extends Completion implements Activity, Completable.Source
      */
     public Dataflow(Dataflow parent) {
         this.parent = parent;
-        parent.enter();
+        parent.enter(this);
     }
 
-    public void setExecutor(Executor executor) {
+    public void setExecutor(ExecutorService executor) {
         bblock.lock();
         try {
             this.executor = executor;
@@ -44,7 +42,43 @@ public class Dataflow extends Completion implements Activity, Completable.Source
         }
     }
 
-    protected Executor getExecutor() {
+    public void setExecutor(Executor executor) {
+        ExecutorService service = new AbstractExecutorService(){
+            @Override
+            public void execute(@NotNull Runnable command) {
+                executor.execute(command);
+            }
+
+            @Override
+            public void shutdown() {
+
+            }
+
+            @NotNull
+            @Override
+            public List<Runnable> shutdownNow() {
+                return null;
+            }
+
+            @Override
+            public boolean isShutdown() {
+                return false;
+            }
+
+            @Override
+            public boolean isTerminated() {
+                return false;
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) throws InterruptedException {
+                return false;
+            }
+        };
+        setExecutor(service);
+    }
+
+    public ExecutorService getExecutor() {
         bblock.lock();
         try {
             if (executor == null) {
@@ -91,11 +125,12 @@ public class Dataflow extends Completion implements Activity, Completable.Source
 
     /**
      * indicates that a node has added to this graph.
+     * @param node
      */
-    public void enter() {
+    public void enter(Node node) {
         bblock.lock();
         try {
-            nodeCount++;
+            children.add(node);
         } finally {
             bblock.unlock();
         }
@@ -105,18 +140,16 @@ public class Dataflow extends Completion implements Activity, Completable.Source
      * indicates that a node has left this graph because of successful completion.
      * when all the nodes has left this graph, it is considered successfully completed itself
      * and leaves the pareng graph, if any.
+     * @param node
      */
-    public void leave() {
+    public void leave(Node node) {
         bblock.lock();
         try {
-            if (nodeCount==0) {
-                throw new IllegalStateException();
-            }
-            nodeCount--;
-            if (nodeCount==0) {
+            children.remove(node);
+            if (children.size() == 0) {
                 super.onComplete();
                 if (parent != null) {
-                    parent.leave();
+                    parent.leave(this);
                 }
             }
         } finally {
@@ -152,7 +185,7 @@ public class Dataflow extends Completion implements Activity, Completable.Source
             sb.append("completed with exception: ");
             sb.append(this.completionException.toString());
         }
-        sb.append("; child node count: "+nodeCount);
+        sb.append("; child node count: "+children.size());
         return sb.toString();
     }
 

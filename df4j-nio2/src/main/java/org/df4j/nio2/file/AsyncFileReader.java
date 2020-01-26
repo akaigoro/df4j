@@ -14,8 +14,11 @@ package org.df4j.nio2.file;
 
 import org.df4j.core.dataflow.Dataflow;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 /**
  * Sequential file reader.
@@ -28,6 +31,10 @@ public class AsyncFileReader extends AsyncFileChannel {
 
     public AsyncFileReader(AsynchronousFileChannel fileChannel, int capacity) {
         this(new Dataflow(), fileChannel, capacity);
+    }
+
+    public AsyncFileReader(Dataflow dataflow, Path path, int capacity) throws IOException {
+        this(dataflow, AsynchronousFileChannel.open(path, StandardOpenOption.READ), capacity);
     }
 
     @Override

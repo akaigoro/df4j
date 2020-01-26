@@ -41,19 +41,26 @@ class EchoClient extends AsyncProc {
     public EchoClient(Dataflow dataflow, SocketAddress addr, int total) throws IOException {
         super(dataflow);
         this.total = total;
-        AsyncClientSocketChannel clientStarter = new AsyncClientSocketChannel(addr);
+        AsyncClientSocketChannel clientStarter = new AsyncClientSocketChannel(dataflow.getExecutor(), addr);
         clientStarter.subscribe(inp);
     }
 
     AsyncSocketChannel clientConn;
+    Speaker speaker;
+    Listener listener;
 
     public void runAction() {
         AsynchronousSocketChannel assc = inp.current();
-        Dataflow dataflow = getDataflow();
-        clientConn = new AsyncSocketChannel(dataflow, assc);
+        clientConn = new AsyncSocketChannel(getDataflow(), assc);
         clientConn.setName("client");
-        Speaker speaker = new Speaker(this.dataflow);
+        speaker = new Speaker();
+        speaker.buffers2write.subscribe(clientConn.writer.input);
+        clientConn.writer.output.subscribe(clientConn.reader.input);
+        listener = new Listener();
+        speaker.sentMsgs.subscribe(listener.sentMsgs);
+        clientConn.reader.output.subscribe(listener.readBuffers);
         speaker.start();
+        listener.start();
         LOG.info("Speaker started");
     }
 
@@ -62,14 +69,9 @@ class EchoClient extends AsyncProc {
         OutFlow<ByteBuffer> buffers2write = new OutFlow<>(this);
         OutFlow<String> sentMsgs = new OutFlow<>(this, 10);
 
-        public Speaker(Dataflow dataflow) {
-            super(dataflow);
+        public Speaker() {
+            super(EchoClient.this.getDataflow());
             this.count = total;
-            buffers2write.subscribe(clientConn.writer.input);
-            clientConn.writer.output.subscribe(clientConn.reader.input);
-            Listener listener = new Listener(dataflow);
-            sentMsgs.subscribe(listener.sentMsgs);
-            listener.start();
         }
 
         public void runAction() {
@@ -81,6 +83,7 @@ class EchoClient extends AsyncProc {
             count--;
             if (count == 0) {
                 LOG.info("Speaker finished successfully");
+                sentMsgs.onComplete();
                 stop();
             }
         }
@@ -90,22 +93,21 @@ class EchoClient extends AsyncProc {
         InpFlow<String> sentMsgs = new InpFlow<>(this);
         InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
 
-        public Listener(Dataflow dataflow) {
-            super(dataflow);
-            clientConn.reader.output.subscribe(readBuffers);
+        public Listener() {
+            super(EchoClient.this.getDataflow());
         }
 
         public void runAction() {
+            if (sentMsgs.isCompleted()) {
+                LOG.info("Listener finished successfully");
+                stop();
+                return;
+            }
             String sent = sentMsgs.removeAndRequest();
             ByteBuffer received = readBuffers.removeAndRequest();
             String m2 = fromByteBuf(received);
             LOG.info("Listener received message:"+m2);
             Assert.assertEquals(sent, m2);
-            count++;
-            if (count == total) {
-                LOG.info("Listener finished successfully");
-                stop();
-            }
         }
 
     }

@@ -12,15 +12,12 @@ package org.df4j.nio2.net;
 import org.df4j.core.communicator.AsyncSemaphore;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.OutFlow;
+import org.df4j.core.port.OutScalars;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.AsynchronousServerSocketChannel;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
+import java.nio.channels.*;
 
 
 /**
@@ -28,22 +25,22 @@ import java.nio.channels.CompletionHandler;
  * as a result of client connections accepted by the server
  *
  * Though it extends BasicBlock, it is effectively an Actor, as it is restarted from CompletionHandler.
- *
- *  Total number of active connections is limited by {@link AsyncSemaphore} {@link AsyncServerSocketChannel#allowedConnections}.
- *  Subclasses must provide required number of permits.
+ * Its single port is {@link AsyncServerSocketChannel#demands} with subscriptions.
+ * The port is bounded, so incoming connections are accepted only when demands exist.
  *
  */
 public class AsyncServerSocketChannel extends BasicBlock implements CompletionHandler<AsynchronousSocketChannel, Void> {
     protected final Logger LOG = new Logger(this);
     protected volatile AsynchronousServerSocketChannel assc;
-    public OutFlow<AsynchronousSocketChannel> out = new OutFlow<>(this);
+    public OutScalars<AsynchronousSocketChannel> demands = new OutScalars<>(this);
 
     public AsyncServerSocketChannel(Dataflow dataflow, SocketAddress addr) throws IOException {
         super(dataflow);
         if (addr == null) {
             throw new NullPointerException();
         }
-        assc = AsynchronousServerSocketChannel.open();
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(dataflow.getExecutor());
+        assc = AsynchronousServerSocketChannel.open(group);
         assc.bind(addr);
         LOG.info("AsyncServerSocketChannel("+addr+") created");
     }
@@ -82,7 +79,7 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachement) {
         LOG.info("AsyncServerSocketChannel#completed");
-        out.onNext(result);
+        demands.onNext(result);
         this.awake(); // allow  next assc.accpt()
     }
 
@@ -93,12 +90,12 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
     @Override
     public void failed(Throwable exc, Void attachement) {
         LOG.info("AsyncServerSocketChannel#failed:"+exc);
-        out.onError(exc);
         if (exc instanceof AsynchronousCloseException) {
-            // channel closed.
-            close();
+            demands.onComplete();
+            stop();
         } else {
-            this.awake(); // TODO do we really want to allow next call to assc.accept() after failure?
+            demands.onError(exc);
+            stop(exc);
         }
     }
 }

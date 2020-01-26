@@ -207,7 +207,9 @@ public class Completion implements Completable.Source {
                     return;
                 }
                 cancelled = true;
-                subscriptions.remove(this);
+                if (subscriptions != null) {
+                    subscriptions.remove(this);
+                }
             } finally {
                 bblock.unlock();
             }

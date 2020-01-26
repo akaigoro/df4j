@@ -42,12 +42,13 @@
     </properties>
 
     <modules>
+        <module>df4j-protocols</module>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
-        <module>df4j-protocols</module>
+        <!--module>df4j-jdk9</module>
         <module>df4j-reactivestreams</module>
         <module>df4j-reactor</module>
-        <module>df4j-rxjava</module>
+        <module>df4j-rxjava</module-->
     </modules>
 
     <dependencies>
@@ -153,6 +154,14 @@
                         <arg>-Xuse-experimental=kotlin.BuilderInference</arg>
                     </args>
                     <jvmTarget>1.8</jvmTarget>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
                 </configuration>
             </plugin>
         </plugins>

@@ -9,10 +9,7 @@
  */
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.Completion;
-import org.reactivestreams.*;
-import org.df4j.protocol.SignalFlow;
-
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
@@ -32,15 +29,13 @@ import java.util.concurrent.locks.ReentrantLock;
  * to exchange messages and signals with ports of other {@link BasicBlock}s in consistent manner.
  * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
-public abstract class BasicBlock extends Completion {//} implements SignalFlow.Subscriber {
-    protected final Lock bblock = new ReentrantLock();
-    protected Dataflow dataflow;
+public abstract class BasicBlock extends Node<BasicBlock> {
     /** is not encountered as a parent's child */
     private boolean daemon;
     /**
      * blocked initially, until {@link #awake} called.
      */
-    private Port ports = null;
+    private ArrayList<Port> ports = new ArrayList<>();
     private int blockingPortCount = 0;
     private Executor executor;
     private Timer timer;
@@ -50,19 +45,19 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
         if (dataflow == null) {
             throw new IllegalArgumentException();
         }
-        this.dataflow = dataflow;
-        dataflow.enter();
+        this.parent = dataflow;
+        dataflow.enter(this);
     }
 
     public Dataflow getDataflow() {
-        return dataflow;
+        return parent;
     }
 
     public Timer getTimer() {
         bblock.lock();
         try {
             if (timer == null) {
-                timer = dataflow.getTimer();
+                timer = parent.getTimer();
             }
             return timer;
         } finally {
@@ -77,8 +72,8 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
                 return;
             }
             this.daemon = daemon;
-            if (dataflow != null) {
-                dataflow.leave();
+            if (parent != null) {
+                parent.leave(this);
             }
         } finally {
             bblock.unlock();
@@ -138,8 +133,8 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
                 return;
             }
             super.onComplete();
-            if (dataflow != null && !daemon) {
-                dataflow.leave();
+            if (parent != null && !daemon) {
+                parent.leave(this);
             }
         } finally {
             bblock.unlock();
@@ -160,7 +155,7 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
         } finally {
             bblock.unlock();
         }
-        dataflow.onError(ex);
+        parent.onError(ex);
     }
 
     public void setExecutor(Executor exec) {
@@ -176,7 +171,7 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
         bblock.lock();
         try {
             if (executor == null) {
-                executor = dataflow.getExecutor();
+                executor = parent.getExecutor();
             }
             return executor;
         } finally {
@@ -222,7 +217,6 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected final Lock plock = new ReentrantLock();
         protected boolean ready;
-        private Port next;
 
         public Port(boolean ready) {
             this.ready = ready;
@@ -234,8 +228,7 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
                     bblock.unlock();
                 }
             }
-            next = ports;
-            ports = this;
+            ports.add(this);
         }
 
         protected BasicBlock getParent() {
@@ -317,23 +310,13 @@ public abstract class BasicBlock extends Completion {//} implements SignalFlow.S
         }
 
         protected Dataflow getDataflow() {
-            return dataflow;
+            return parent;
         }
     }
 
     private class ControlPort extends Port {
         public ControlPort() {
             super(false);
-        }
-
-        @Override
-        public synchronized void block() {
-            super.block();
-        }
-
-        @Override
-        public void unblock() {
-            super.unblock();
         }
     }
 }

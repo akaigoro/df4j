@@ -34,8 +34,6 @@ public class AsyncSocketChannel {
     protected final Logger LOG = new Logger(this);
     private final Dataflow dataflow;
 
-    private AsyncSemaphore backPort;
-
 	/** read requests queue */
 	public final Reader reader;
 	/** write requests queue */
@@ -58,13 +56,6 @@ public class AsyncSocketChannel {
         this.name = name;
     }
 
-    /**
-     * @param backPort signal port for feedback
-     */
-    public void setBackPort(AsyncSemaphore backPort) {
-        this.backPort = backPort;
-    }
-
     /** disallows subsequent posts of requests; already posted requests
      * would be processed.
      */
@@ -80,9 +71,6 @@ public class AsyncSocketChannel {
             } catch (IOException e) {
             }
     	}
-    	if (backPort != null) {
-            backPort.release();
-        }
     }
 
     public synchronized boolean isClosed() {
@@ -177,7 +165,6 @@ public class AsyncSocketChannel {
         protected void doIO(ByteBuffer buffer, long timeout) {
             channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
-
     }
     
     public class Writer extends IOExecutor {

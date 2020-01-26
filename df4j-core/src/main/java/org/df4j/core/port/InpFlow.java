@@ -20,6 +20,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
     private Throwable completionException;
     protected volatile boolean completed;
     protected Subscription subscription;
+    private long requestedCapacity;
 
     /**
      * creates a port which is subscribed to the {@code #publisher}
@@ -58,10 +59,10 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
         return !withBuffer || buff.size() == bufferCapacity;
     }
 
-    private int remainingCapacity() {
+    private long remainingCapacity() {
         int cap1 = value == null ? 1 : 0;
         int cap2 = withBuffer? bufferCapacity-buff.size() : 0;
-        return cap1 + cap2;
+        return cap1 + cap2 - requestedCapacity;
     }
 
     private int getBufferCapacity() {
@@ -105,24 +106,32 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
-        if (!lazy) {
-            request();
+        if (lazy) {
+            return;
         }
-    }
-
-    /**
-     * max request
-     */
-    public void request() {
-        subscription.request(remainingCapacity());
+        long remainingCapacity;
+        plock.lock();
+        try {
+            remainingCapacity = remainingCapacity();
+            requestedCapacity = remainingCapacity;
+        } finally {
+            plock.unlock();
+        }
+        subscription.request(remainingCapacity);
     }
 
     public void request(long n) {
         if (n <= 0) {
             throw new IllegalArgumentException();
         }
-        if (n > remainingCapacity()) {
-            throw new IllegalArgumentException();
+        plock.lock();
+        try {
+            if (n > remainingCapacity()) {
+                throw new IllegalArgumentException();
+            }
+            requestedCapacity += n;
+        } finally {
+            plock.unlock();
         }
         subscription.request(n);
     }
@@ -137,6 +146,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
             if (isCompleted()) {
                 return;
             }
+            requestedCapacity--;
             if (value == null) {
                 value = message;
                 unblock();
@@ -184,16 +194,18 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
             }
             T res = value;
             value = null;
-            if (!withBuffer || buff.isEmpty()) {
-                block();
-            } else {
+            if (withBuffer && !buff.isEmpty()) {
                 value = buff.poll();
+            } else if (!completed) {
+                block();
             }
             roomAvailable();
             if (subscription == null) {
                 return res;
             }
-            request();
+            long n = remainingCapacity();
+            requestedCapacity += n;
+            subscription.request(n);
             return res;
         } finally {
             plock.unlock();

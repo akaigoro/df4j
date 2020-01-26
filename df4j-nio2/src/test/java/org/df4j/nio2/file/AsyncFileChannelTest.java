@@ -16,15 +16,14 @@ import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
+import org.df4j.core.util.Utils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 
 public class AsyncFileChannelTest {
@@ -32,34 +31,37 @@ public class AsyncFileChannelTest {
     static final long byteNunber = 2500;
 
     @Test
-    public void testWriteAndRead() throws IOException {
-        int capacity = 2;
+    public void testWriteAndRead() throws IOException, InterruptedException {
+        int capacity = 5;
         Path path = Files.createTempFile("tetstfile", ".tmp");
+        Dataflow dataflow = new Dataflow();
+        Utils.CurrentThreadExecutor executor = new Utils.CurrentThreadExecutor();
+  //      dataflow.setExecutor(executor); // for debug
 
         {
-            Dataflow dataflow = new Dataflow();
-            AsynchronousFileChannel fileChannel  = AsynchronousFileChannel.open(path, StandardOpenOption.WRITE);
             DataProducer producer = new DataProducer(dataflow, capacity, byteNunber);
-            producer.start();
-            AsyncFileWriter fileWriter = new AsyncFileWriter(dataflow, fileChannel, capacity);
-            fileWriter.start();
+            AsyncFileWriter fileWriter = new AsyncFileWriter(dataflow, path, capacity);
             producer.filledBuffers.subscribe(fileWriter.input);
             fileWriter.output.subscribe(producer.emptyBuffers);
-            boolean finished = dataflow.blockingAwait(5000, TimeUnit.MILLISECONDS);
+            producer.start();
+            fileWriter.start();
+            executor.executeAll(50);
+            boolean finished = dataflow.blockingAwait(10, TimeUnit.MILLISECONDS);
             Assert.assertTrue(finished);
         }
 
         {
-            Dataflow dataflow = new Dataflow();
-            AsynchronousFileChannel fileChannel  = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
-            AsyncFileReader fileReader = new AsyncFileReader(dataflow, fileChannel, capacity);
+            AsyncFileReader fileReader = new AsyncFileReader(dataflow, path, capacity);
             for (int k = 0; k< capacity; k++) {
                 fileReader.input.onNext(ByteBuffer.allocate(1024));
             }
             DataConsumer consumer = new DataConsumer(dataflow, capacity);
             fileReader.output.subscribe(consumer.filledBuffers);
             consumer.emptyBuffers.subscribe(fileReader.input);
-            boolean finished = dataflow.blockingAwait(500, TimeUnit.MILLISECONDS); // todo millis
+            fileReader.start();
+            consumer.start();
+            executor.executeAll(50);
+            boolean finished = dataflow.blockingAwait(100, TimeUnit.MILLISECONDS); // todo millis
             Assert.assertTrue(finished);
         }
     }
@@ -116,7 +118,6 @@ public class AsyncFileChannelTest {
         }
 
         byte nextByte() {
-            bt++;
             bt++;
             return bt;
         }

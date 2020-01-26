@@ -14,8 +14,14 @@ package org.df4j.nio2.file;
 
 import org.df4j.core.dataflow.Dataflow;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.HashSet;
 
 /**
  * Sequential file writer.
@@ -28,6 +34,12 @@ public class AsyncFileWriter extends AsyncFileChannel {
 
     public AsyncFileWriter(AsynchronousFileChannel fileChannel, int capacity) {
         this(new Dataflow(), fileChannel, capacity);
+    }
+
+    public AsyncFileWriter(Dataflow dataflow, Path path, int capacity) throws IOException {
+        this(dataflow,
+                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), dataflow.getExecutor()),
+                capacity);
     }
 
     @Override

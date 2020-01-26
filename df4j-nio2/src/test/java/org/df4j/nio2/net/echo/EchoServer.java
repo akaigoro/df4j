@@ -4,6 +4,7 @@ import org.df4j.core.communicator.AsyncSemaphore;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.InpScalar;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
@@ -13,7 +14,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 /**
@@ -24,13 +24,13 @@ public class EchoServer extends Actor {
     protected final Logger LOG = new Logger(this, Level.INFO);
     /** limits the munber of simultaneously existing connections */
     protected AsyncSemaphore allowedConnections = new AsyncSemaphore();
-    protected InpFlow<AsynchronousSocketChannel> inp = new InpFlow<>(this);
+    protected InpScalar<AsynchronousSocketChannel> inp = new InpScalar<>(this);
 
-    public EchoServer(SocketAddress addr) throws IOException {
-        super(new Dataflow());
-        AsyncServerSocketChannel serverStarter = new AsyncServerSocketChannel(getDataflow(), addr);
+    public EchoServer(Dataflow dataflow, SocketAddress addr) throws IOException {
+        super(dataflow);
+        AsyncServerSocketChannel serverStarter = new AsyncServerSocketChannel(dataflow, addr);
+        serverStarter.demands.subscribe(inp);
         serverStarter.start();
-        serverStarter.out.subscribe(inp);
         allowedConnections.release(2);
     }
 
@@ -41,7 +41,7 @@ public class EchoServer extends Actor {
     @Override
     public void runAction() {
         LOG.info("EchoServer#runAction");
-        AsynchronousSocketChannel assc = inp.removeAndRequest();
+        AsynchronousSocketChannel assc = inp.remove();
         EchoProcessor processor = new EchoProcessor(assc);
         processor.start();
     }
@@ -56,7 +56,6 @@ public class EchoServer extends Actor {
             LOG.info("EchoProcessor#init");
             int capacity = 2;
             serverConn = new AsyncSocketChannel(getDataflow(), assc);
-            serverConn.setBackPort(allowedConnections);
             serverConn.setName("server");
             serverConn.reader.input.setCapacity(capacity);
             for (int k = 0; k<capacity; k++) {
@@ -69,6 +68,12 @@ public class EchoServer extends Actor {
         }
 
         public void runAction() {
+            if (readBuffers.isCompleted()) {
+                serverConn.close();
+                allowedConnections.release(1);
+                stop();
+                return;
+            }
             LOG.info("EchoProcessor#runAction");
             ByteBuffer b = readBuffers.removeAndRequest();
             buffers2write.onNext(b);

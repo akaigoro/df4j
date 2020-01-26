@@ -81,24 +81,22 @@ public abstract class AsyncFileChannel extends BasicBlock implements CompletionH
     @Override
     protected void runAction() {
         if (!input.isCompleted()) {
-            System.out.println();
             ByteBuffer buffer = input.removeAndRequest();
             doIO(buffer);
         } else {
             try {
                 channel.close();
-                stop();
                 Throwable completionException = input.getCompletionException();
                 if (completionException == null) {
                     output.onComplete();
                 } else {
                     output.onError(completionException);
                 }
+                stop();
             } catch (IOException e) {
-                stop(e);
                 output.onError(e);
+                stop(e);
             }
-            return;
         }
     }
 

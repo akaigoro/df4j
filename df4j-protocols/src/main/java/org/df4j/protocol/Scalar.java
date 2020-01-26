@@ -8,6 +8,7 @@ import java.util.function.BiConsumer;
  */
 public class Scalar {
 
+
     private Scalar() {}
 
     /**
@@ -51,6 +52,10 @@ public class Scalar {
          * @param t the element signaled
          */
         void onSuccess(T t);
+
+        default void onComplete() {
+            onError(null);
+        }
 
         /**
          * Failed terminal state.

@@ -3,7 +3,6 @@ package org.df4j.core.communicator;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
 import org.junit.Test;
@@ -276,7 +275,7 @@ public class DiningPhilosophers extends Dataflow {
                 } else {
                     println("Ph no. " + id + ": died at round " + rounds);
                     counter.countDown();
-                    DiningPhilosophers.this.leave();
+                    DiningPhilosophers.this.leave(this);
                 }
             }
         }
