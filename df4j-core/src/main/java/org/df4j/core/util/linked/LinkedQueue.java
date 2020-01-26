@@ -3,12 +3,12 @@ package org.df4j.core.util.linked;
 import java.util.AbstractQueue;
 import java.util.Iterator;
 
-public class LinkedQueue<T> extends AbstractQueue<Link<T>> {
-    private Link<T> header = new LinkImpl<T>();
+public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
+    private Link<T> header = new HeaderLink();
     private int size = 0;
 
     @Override
-    public Iterator<Link<T>> iterator() {
+    public Iterator<T> iterator() {
         return new LinkIterator();
     }
 
@@ -18,28 +18,28 @@ public class LinkedQueue<T> extends AbstractQueue<Link<T>> {
     }
 
     @Override
-    public boolean offer(Link<T> item) {
+    public boolean offer(T item) {
         header.offer(item);
         size++;
         return true;
     }
 
     @Override
-    public Link<T> poll() {
+    public T poll() {
         if (size == 0) {
             return null;
         }
         size--;
-        return header.poll();
+        return header.poll().getItem();
     }
 
     @Override
-    public Link<T> peek() {
+    public T peek() {
         Link<T> next = header.getNext();
         if (next == header) {
             return null;
         } else {
-            return next;
+            return next.getItem();
         }
     }
 
@@ -53,7 +53,7 @@ public class LinkedQueue<T> extends AbstractQueue<Link<T>> {
         }
     }
 
-    private class LinkIterator implements Iterator<Link<T>> {
+    private class LinkIterator implements Iterator<T> {
         Link<T> current = header;
         boolean hasnext;
 
@@ -64,13 +64,13 @@ public class LinkedQueue<T> extends AbstractQueue<Link<T>> {
         }
 
         @Override
-        public Link<T> next() {
+        public T next() {
             if (!hasnext) {
                 throw new IllegalStateException();
             }
             hasnext = false;
             current = current.getNext();
-            return current;
+            return current.getItem();
         }
 
         @Override
@@ -79,6 +79,13 @@ public class LinkedQueue<T> extends AbstractQueue<Link<T>> {
             current = res.getNext();
             res.unlink();
             hasnext = false;
+        }
+    }
+
+    private class HeaderLink extends LinkImpl<T> {
+        @Override
+        public T getItem() {
+            return null;
         }
     }
 }

@@ -19,12 +19,12 @@ public class ReverseFlow {
      *
      * @param <T> the type of messages.
      */
-    public interface Publisher<T> {
+    public interface Consumer<T> {
 
         /**
          * @param producer the {@link Subscriber} which offers messages for this {@link Publisher}
          */
-        void subscribe(Subscriber<T> producer);
+        void offer(Producer<T> producer);
     }
 
     /**
@@ -34,7 +34,7 @@ public class ReverseFlow {
      * <p>
      * @param <T>  type of messages.
      */
-    public interface Subscriber<T> {
+    public interface Producer<T> {
 
         /**
          *

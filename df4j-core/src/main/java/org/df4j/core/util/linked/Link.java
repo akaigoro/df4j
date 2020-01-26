@@ -5,7 +5,7 @@ public interface Link<T> {
     void setNext(Link<T> next);
     Link<T> getPrev();
     void setPrev(Link<T> prev);
-    default T getItem(){return null;};
+    T getItem();
 
 
     default boolean isLinked() {

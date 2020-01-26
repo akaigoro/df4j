@@ -10,7 +10,7 @@ public class SubscriberActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
     public InpFlow<Long> inp = new InpFlow<>(this);
-    Long in = null;
+    Long cnt = null;
 
     public SubscriberActor(Dataflow parent, int delay) {
         super(parent);
@@ -32,9 +32,9 @@ public class SubscriberActor extends Actor {
         }
         Long in = inp.removeAndRequest();
         logger.info(" SubscriberActor: inp = " + in);
-        if (this.in != null) {
-            Assert.assertEquals(this.in.intValue() - 1, in.intValue());
+        if (this.cnt != null) {
+            Assert.assertEquals(this.cnt.intValue() - 1, in.intValue());
         }
-        this.in = in;
+        this.cnt = in;
     }
 }

@@ -15,10 +15,9 @@ import org.df4j.core.util.linked.Link;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Node<T> extends Completion implements Link<T> {
+public abstract class Node<T> extends Completion implements Link<T> {
     private Link<T> prev = this;
     private Link<T> next = this;
-    protected final Lock bblock = new ReentrantLock();
     protected Dataflow parent;
 
     @Override

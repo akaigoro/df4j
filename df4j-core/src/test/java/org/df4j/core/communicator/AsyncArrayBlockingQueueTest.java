@@ -11,7 +11,7 @@ public class AsyncArrayBlockingQueueTest {
         ProducerActor producer = new ProducerActor(cnt, delay1);
         SubscriberActor subscriber = new SubscriberActor(delay2);
         AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
-        queue.subscribe(producer.out);
+        queue.offer(producer.out);
         queue.subscribe(subscriber.inp);
         producer.start();
         subscriber.start();

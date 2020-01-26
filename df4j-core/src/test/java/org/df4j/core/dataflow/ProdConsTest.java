@@ -10,7 +10,7 @@ public class ProdConsTest {
     public void testProdCons(int cnt, int delay1, int delay2) throws InterruptedException {
         ProducerActor prod = new ProducerActor(delay1, cnt);
         ConsumerActor cons = new ConsumerActor(delay2);
-        cons.inp.subscribe(prod.out);
+        cons.inp.offer(prod.out);
         prod.start();
         cons.start();
         boolean fin = cons.blockingAwait(1000);

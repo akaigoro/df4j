@@ -30,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@link BasicBlock} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
 public abstract class BasicBlock extends Node<BasicBlock> {
+
     /** is not encountered as a parent's child */
     private boolean daemon;
     /**
@@ -177,6 +178,11 @@ public abstract class BasicBlock extends Node<BasicBlock> {
         } finally {
             bblock.unlock();
         }
+    }
+
+    @Override
+    public BasicBlock getItem() {
+        return this;
     }
 
     /**

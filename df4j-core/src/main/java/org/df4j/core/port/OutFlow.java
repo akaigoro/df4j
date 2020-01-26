@@ -1,9 +1,17 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.util.linked.LinkImpl;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
 import org.reactivestreams.*;
+
+import java.util.ArrayDeque;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A passive source of messages (like a server).
@@ -13,258 +21,302 @@ import org.reactivestreams.*;
  *
  * Because of complex logic, it is designed as an Actor itself. However, it still controls firing of the parent actor.
  */
-public class OutFlow<T> extends Actor implements Publisher<T>, OutMessagePort<T> {
-    /** blocked when there is no more room for input messages */
-    private BasicBlock.Port outerLock;
-    private InpFlow<T> inp;
-    private OutFlowSubscriptions subscriptions = new OutFlowSubscriptions();
-    /** blocks when inp is full */
 
-    /**
-     * @param parent {@link BasicBlock} to which this port belongs
-     */
+/**
+ * is ready when has room to store at least one toke
+ * @param <T>
+ */
+public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMessagePort<T> {
+    private final Condition hasRoom = plock.newCondition();
+    private final Condition hasItems = plock.newCondition();
+    protected final int capacity;
+    protected ArrayDeque<T> tokens;
+    protected LinkedQueue<FlowSubscriptionImpl> subscribers = new LinkedQueue<FlowSubscriptionImpl>();
+    protected Throwable completionException;
+    protected volatile boolean completed;
+
     public OutFlow(BasicBlock parent, int bufferCapacity) {
-        super(parent.getDataflow());
-        setDaemon(true);
-        if (bufferCapacity <= 0) {
-            throw new IllegalArgumentException();
-        }
-        inp = new InpFlowExt(bufferCapacity);
-        outerLock = new OuterLock(parent);
-        setExecutor(parent.getExecutor());
-        start();
+        parent.super(true);
+        this.capacity = bufferCapacity;
+        tokens = new ArrayDeque<>(capacity);
     }
-
     public OutFlow(BasicBlock parent) {
-        this(parent, 1);
-    }
-
-    private void debug(String s) {
- //       System.out.println(s);
-    }
-
-    public void subscribe(Subscriber subscriber) {
-        subscriptions.subscribe(subscriber);
-        if (inp.isCompleted()) {
-            if (inp.isCompletedExceptionslly()) {
-                subscriber.onError(inp.getCompletionException());
-            } else {
-                subscriber.onComplete();
-            }
-        }
-    }
-
-    public void onNext(T t) {
-        inp.onNext(t);
-    }
-
-    public void onComplete() {
-        inp.onComplete();
-    }
-
-    public void onError(Throwable t) {
-        inp.onError(t);
+        this(parent, 16);
     }
 
     @Override
-    protected void runAction() {
-        if (!inp.isCompleted()) {
-            T token = inp.removeAndRequest();
-            OutFlowSubscriptions.OutFlowSubscription sub = subscriptions.remove();
-            if (sub.remainedRequests <= 0) {
-                throw new IllegalArgumentException();
+    public void subscribe(Subscriber<? super T> subscriber) {
+        FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
+        subscriber.onSubscribe(subscription);
+    }
+
+    private int remainingCapacity() {
+        return capacity - tokens.size();
+    }
+
+    /**
+     *
+     * @param token token to insert
+     * @return true if token inserted
+     */
+    @Override
+    public void onNext(T token) {
+        FlowSubscriptionImpl sub;
+        plock.lock();
+        try {
+            sub = subscribers.poll();
+            if (sub == null) {
+                if (remainingCapacity() == 0) {
+                    throw new IllegalStateException("buffer overflow");
+                }
+                tokens.add(token);
+                if (remainingCapacity() == 0) {
+                    block();
+                }
+                hasItems.signalAll();
+                return;
             }
- //           debug(   " OutFlow: sub.remainedRequests = "+sub.remainedRequests+" sub.onNext: "+token);
-            sub.onNext(token);
-        } else{
-            Throwable completionException = inp.getCompletionException();
+        } finally {
+            plock.unlock();
+        }
+        sub.onNext(token);
+    }
+
+    public T poll() {
+        plock.lock();
+        try {
             for (;;) {
-                OutFlowSubscriptions.OutFlowSubscription sub = subscriptions.poll();
-                if (sub == null) {
+                T res = tokens.poll();
+                if (res != null) {
+                    unblock();
+                    hasRoom.signalAll();
+                    return res;
+                }
+                if (completed) {
+                    throw new CompletionException(completionException);
+                }
+                return null;
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public T peek() {
+        plock.lock();
+        try {
+            for (;;) {
+                T res = tokens.peek();
+                if (res != null) {
+                    return res;
+                }
+                if (completed) {
+                    throw new CompletionException(completionException);
+                }
+                return null;
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
+        plock.lock();
+        try {
+            long millis = unit.toMillis(timeout);
+            for (;;) {
+                T res = tokens.poll();
+                if (res != null) {
+                    unblock();
+                    hasRoom.signalAll();
+                    return res;
+                }
+                if (completed) {
+                    throw new CompletionException(completionException);
+                }
+                if (millis <= 0) {
+                    return null;
+                }
+                long targetTime = System.currentTimeMillis() + millis;
+                hasItems.await(millis, TimeUnit.MILLISECONDS);
+                millis = targetTime - System.currentTimeMillis();
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public T take() throws InterruptedException {
+        plock.lock();
+        try {
+            for (;;) {
+                T res = tokens.poll();
+                if (res != null) {
+                    unblock();
+                    hasRoom.signalAll();
+                    return res;
+                }
+                if (completed) {
+                    throw new CompletionException(completionException);
+                }
+                hasItems.await();
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public void onError(Throwable cause) {
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            completionException = cause;
+            hasItems.signalAll();
+            for (;;) {
+                FlowSubscriptionImpl sub1 = subscribers.poll();
+                if (sub1 == null) {
                     break;
                 }
-//                debug(" OutFlow: sub.onError "+completionException);
-                sub.onError(completionException);
+                sub1.onError(cause);
             }
-            stop();
+        } finally {
+            plock.unlock();
         }
     }
 
-    private static class OuterLock extends Port {
-        public OuterLock(BasicBlock parent) {
-            parent.super(true);
-        }
-
-        @Override
-        public synchronized void block() {
-            super.block();
-        }
+    public void onComplete() {
+        onError(null);
     }
 
-    private class InpFlowExt extends InpFlow<T> {
-        public InpFlowExt(int buffCapacity) {
-            super(OutFlow.this, buffCapacity);
-        }
-
-        @Override
-        public synchronized void roomExhausted() {
-            outerLock.block();
-        }
-
-        @Override
-        public void roomAvailable() {
-            outerLock.unblock();
-        }
+    @Override
+    public String toString() {
+        return super.toString();
     }
 
-    private class OutFlowSubscriptions extends InpFlood<OutFlowSubscriptions.OutFlowSubscription> {
-        public OutFlowSubscriptions() {
-            super(OutFlow.this);
-        }
+    class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements Flow.Subscription {
+        private final Lock slock = new ReentrantLock();
+        protected final Subscriber subscriber;
+        private long remainedRequests = 0;
+        private boolean cancelled = false;
 
-        public void subscribe(Subscriber subscriber) {
-            OutFlowSubscription sub = new OutFlowSubscription(subscriber);
-            subscriber.onSubscribe(sub);
-            sub.endInit();
+        FlowSubscriptionImpl(Subscriber subscriber) {
+            this.subscriber = subscriber;
         }
 
         @Override
-        public void onNext(OutFlowSubscription sub) {
-            plock.lock();
+        public boolean isCancelled() {
+            slock.lock();
             try {
-                if (sub.enqueued) {
-                    return;
-                }
-                sub.enqueued = true;
-                super.onNext(sub);
-            } finally {
-                plock.unlock();
-            }
-        }
-
-        public OutFlowSubscription remove() {
-            plock.lock();
-            try {
-                OutFlowSubscription sub = super.remove();
-                sub.enqueued = false;
-                return sub;
-            } finally {
-                plock.unlock();
-            }
-        }
-
-        public boolean remove(OutFlowSubscription sub) {
-            plock.lock();
-            try {
-                boolean res = super.remove(sub);
-                sub.enqueued = false;
-                return res;
-            } finally {
-                plock.unlock();
-            }
-        }
-
-        private class OutFlowSubscription implements Flow.Subscription {
-            // no own lock, use OutFlowSubscriptions.plock
-            boolean inInit = true;
-            boolean isReady = false;
-            boolean enqueued = false;
-            protected final Subscriber subscriber;
-            private long remainedRequests = 0;
-            private boolean cancelled = false;
-
-            OutFlowSubscription(Subscriber subscriber) {
-                this.subscriber = subscriber;
-            }
-
-            void endInit() {
-                plock.lock();
-                try {
-                    if (!inInit) {
-                        return;
-                    }
-                    inInit = false;
-                    if (!isReady) {
-                        return;
-                    }
-                    isReady = false;
-                    subscriptions.onNext(this);
-                } finally {
-                    plock.unlock();
-                }
-            }
-
-            @Override
-            public boolean isCancelled() {
                 return cancelled;
+            } finally {
+                slock.unlock();
             }
+        }
 
-            @Override
-            public  void request(long n) {
-                Throwable exception;
-                plock.lock();
-                getnext:
-                try {
-                    if (n <= 0) {
- //                       debug("  request: negative n");
-                        exception = new IllegalArgumentException("request may not be negative");
-                        break getnext;
-                    }
-                    if (cancelled) {
- //                       debug("   request: cancelled");
-                        return;
-                    }
-  //                  debug("  request: remainedRequests = "+remainedRequests+" n = "+n);
-                    remainedRequests += n;
-                    if (inInit) {
-                        isReady = true;
-                    } else {
-                        subscriptions.onNext(this);
-                    }
+        /**
+         *
+         * @param n the increment of demand
+         */
+        @Override
+        public void request(long n) {
+            if (n <= 0) {
+                subscriber.onError(new IllegalArgumentException());
+                return;
+            }
+            plock.lock();
+            try {
+                if (cancelled) {
                     return;
-                } finally {
-                    plock.unlock();
                 }
-                subscriber.onError(exception);
-            }
-
-            @Override
-            public void cancel() {
-                plock.lock();
-                try {
-                    if (cancelled) {
+                if (remainedRequests > 0) {
+                    remainedRequests += n;
+                    return;
+                }
+                while (n > 0) {
+                    if (tokens.size() == 0) {
+                        if (completed) {
+                            if (completionException == null) {
+                                subscriber.onComplete();
+                            } else {
+                                subscriber.onError(completionException);
+                            }
+                        } else {
+                            remainedRequests = n;
+                            subscribers.add(this);
+                        }
                         return;
                     }
-                    cancelled = true;
-                    subscriptions.remove(this);
-                } finally {
-                    plock.unlock();
+                    T value = tokens.remove();
+                    unblock();
+                    subscriber.onNext(value);
+                    hasRoom.signalAll();
+                    n--;
                 }
+            } finally {
+                plock.unlock();
             }
+        }
 
-            public void onNext(T token) {
+        @Override
+        public void cancel() {
+            slock.lock();
+            try {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
                 plock.lock();
                 try {
-                    if (remainedRequests <= 0) {
-                        throw new IllegalStateException();
-                    }
-                    remainedRequests--;
-                    if (remainedRequests > 0) {
-                        subscriptions.onNext(this);
-                    }
+                    subscribers.remove(this);
                 } finally {
                     plock.unlock();
                 }
-                subscriber.onNext(token);
+            } finally {
+                slock.unlock();
             }
+        }
 
-            public void onError(Throwable completionException) {
-                if (completionException == null) {
-                    subscriber.onComplete();
-                } else {
-                    subscriber.onError(completionException);
+        /**
+         *
+         * @param value token to pass
+         * @return true if can accept more tokens
+         */
+        private void onNext(T value) {
+            subscriber.onNext(value);
+            slock.lock();
+            try {
+                remainedRequests--;
+                if (remainedRequests > 0) {
+                    plock.lock();
+                    try {
+                        subscribers.add(this);
+                    } finally {
+                        plock.unlock();
+                    }
                 }
+            } finally {
+                slock.unlock();
             }
+        }
+
+        private void onError(Throwable cause) {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            if (cause == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(cause);
+            }
+        }
+
+        @Override
+        public FlowSubscriptionImpl getItem() {
+            return this;
         }
     }
 }

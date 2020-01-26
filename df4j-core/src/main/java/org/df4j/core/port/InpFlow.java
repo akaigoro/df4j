@@ -60,9 +60,16 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
     }
 
     private long remainingCapacity() {
+        if (requestedCapacity  < 0) {
+            throw new IllegalStateException();
+        }
         int cap1 = value == null ? 1 : 0;
         int cap2 = withBuffer? bufferCapacity-buff.size() : 0;
-        return cap1 + cap2 - requestedCapacity;
+        long res = cap1 + cap2 - requestedCapacity;
+        if (res < 0) {
+            throw new IllegalStateException();
+        }
+        return res;
     }
 
     private int getBufferCapacity() {
@@ -105,19 +112,18 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        this.subscription = subscription;
-        if (lazy) {
-            return;
-        }
-        long remainingCapacity;
         plock.lock();
         try {
-            remainingCapacity = remainingCapacity();
-            requestedCapacity = remainingCapacity;
+            this.subscription = subscription;
+            if (lazy) {
+                return;
+            }
+            requestedCapacity = remainingCapacity();
+            remainingCapacity(); // TODO remove
         } finally {
             plock.unlock();
         }
-        subscription.request(remainingCapacity);
+        subscription.request(requestedCapacity);
     }
 
     public void request(long n) {
@@ -130,12 +136,20 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
                 throw new IllegalArgumentException();
             }
             requestedCapacity += n;
+            remainingCapacity(); // TODO remove
         } finally {
             plock.unlock();
         }
         subscription.request(n);
     }
 
+    /**
+     * normally this method is called by Publisher.
+     * But before the port is subscribed, this method can be called directly.
+     * @throws IllegalArgumentException when argument is null
+     * @throws IllegalStateException if no room left to store argument
+     * @param message token to store
+     */
     @Override
     public void onNext(T message) {
         plock.lock();
@@ -146,7 +160,10 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
             if (isCompleted()) {
                 return;
             }
-            requestedCapacity--;
+            if (subscription != null) {
+                requestedCapacity--;
+                remainingCapacity(); // TODO remove
+            }
             if (value == null) {
                 value = message;
                 unblock();
@@ -205,6 +222,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
             }
             long n = remainingCapacity();
             requestedCapacity += n;
+            remainingCapacity(); // TODO remove
             subscription.request(n);
             return res;
         } finally {

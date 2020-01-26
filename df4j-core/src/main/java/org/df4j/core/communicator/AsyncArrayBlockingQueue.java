@@ -23,7 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements BlockingQueue<T>,
         /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
-        ReverseFlow.Publisher<T>,
+        ReverseFlow.Consumer<T>,
         /** asyncronous analogue of  {@link BlockingQueue#take()} */
         Publisher<T>
 {
@@ -43,7 +43,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
     }
 
     @Override
-    public void subscribe(ReverseFlow.Subscriber<T> producer) {
+    public void offer(ReverseFlow.Producer<T> producer) {
         ProducerSubscription subscription = new ProducerSubscription(producer);
         producer.onSubscribe(subscription);
     }
@@ -296,11 +296,11 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
 
     class ProducerSubscription implements ReverseFlow.Subscription {
         private final Lock slock = new ReentrantLock();
-        protected ReverseFlow.Subscriber<T> producer;
+        protected ReverseFlow.Producer<T> producer;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        public ProducerSubscription(ReverseFlow.Subscriber<T> producer) {
+        public ProducerSubscription(ReverseFlow.Producer<T> producer) {
             this.producer = producer;
         }
 

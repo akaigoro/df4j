@@ -1,7 +1,6 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.util.linked.LinkedQueue;
-import org.df4j.protocol.Completable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -16,12 +15,17 @@ import java.util.concurrent.*;
 public class Dataflow extends Node<Dataflow> implements Activity {
     protected ExecutorService executor;
     protected Timer timer;
-    LinkedQueue<Completable.Source> children = new LinkedQueue<>();
+    protected LinkedQueue<Node> children = new LinkedQueue<>();
 
     /**
      *  creates root {@link Dataflow} graph.
      */
     public Dataflow() {
+    }
+
+    @Override
+    public Dataflow getItem() {
+        return this;
     }
 
     /**

@@ -1,6 +1,6 @@
 package org.df4j.core.util.linked;
 
-class LinkImpl<T> implements Link<T> {
+public abstract class LinkImpl<T> implements Link<T> {
     private Link<T> prev = this;
     private Link<T> next = this;
 
