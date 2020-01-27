@@ -77,7 +77,15 @@ public class AsyncSocketChannel {
         return channel==null;
     }
 
-    //===================== inner classes
+    @Override
+    public String toString() {
+        if (name == null) {
+            return super.toString();
+        } else {
+            return name;
+        }
+    }
+//===================== inner classes
 
     /**
      * an actor with delayed restart of the action

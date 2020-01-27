@@ -167,6 +167,7 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
     }
 
     public void onError(Throwable cause) {
+        LinkedQueue<FlowSubscriptionImpl> subs;
         plock.lock();
         try {
             if (completed) {
@@ -175,15 +176,17 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
             completed = true;
             completionException = cause;
             hasItems.signalAll();
-            for (;;) {
-                FlowSubscriptionImpl sub1 = subscribers.poll();
-                if (sub1 == null) {
-                    break;
-                }
-                sub1.onError(cause);
-            }
+            subs = this.subscribers;
+            this.subscribers = null;
         } finally {
             plock.unlock();
+        }
+        for (;;) {
+            FlowSubscriptionImpl sub = subs.poll();
+            if (sub == null) {
+                break;
+            }
+            sub.onError(cause);
         }
     }
 
@@ -231,29 +234,29 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
                 if (cancelled) {
                     return;
                 }
-                if (remainedRequests > 0) {
-                    remainedRequests += n;
+                remainedRequests += n;
+                if (remainedRequests > n) {
                     return;
                 }
-                while (n > 0) {
-                    if (tokens.size() == 0) {
+                while (remainedRequests > 0) {
+                    T value = tokens.poll();
+                    if (value == null) {
                         if (completed) {
                             if (completionException == null) {
                                 subscriber.onComplete();
                             } else {
                                 subscriber.onError(completionException);
                             }
+                            cancelled = true;
                         } else {
-                            remainedRequests = n;
                             subscribers.add(this);
                         }
                         return;
                     }
-                    T value = tokens.remove();
-                    unblock();
                     subscriber.onNext(value);
+                    remainedRequests--;
+                    unblock();
                     hasRoom.signalAll();
-                    n--;
                 }
             } finally {
                 plock.unlock();
@@ -270,7 +273,9 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
                 cancelled = true;
                 plock.lock();
                 try {
-                    subscribers.remove(this);
+                    if (subscribers != null) {
+                        subscribers.remove(this);
+                    }
                 } finally {
                     plock.unlock();
                 }
@@ -303,14 +308,19 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
         }
 
         private void onError(Throwable cause) {
-            if (cancelled) {
-                return;
-            }
-            cancelled = true;
-            if (cause == null) {
-                subscriber.onComplete();
-            } else {
-                subscriber.onError(cause);
+            slock.lock();
+            try {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
+                if (cause == null) {
+                    subscriber.onComplete();
+                } else {
+                    subscriber.onError(cause);
+                }
+            } finally {
+                slock.unlock();
             }
         }
 

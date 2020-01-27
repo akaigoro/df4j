@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.Executor;
 
 public class Utils {
@@ -16,16 +15,16 @@ public class Utils {
     }
 
     public static class CurrentThreadExecutor implements Executor {
-        Queue<Runnable> queue = new ArrayDeque<>();
+        ArrayDeque<Runnable> stack = new ArrayDeque<>();
 
         @Override
         public synchronized void execute(@NotNull Runnable command) {
-            queue.add(command);
+            stack.addFirst(command);
         }
 
         @Nullable
         private synchronized Runnable poll() {
-            return queue.poll();
+            return stack.poll();
         }
 
         public void executeAll() {
@@ -43,7 +42,7 @@ public class Utils {
             do {
                 executeAll();
                 Thread.sleep(timeout);
-            } while (queue.size() > 0);
+            } while (stack.size() > 0);
         }
     }
 }

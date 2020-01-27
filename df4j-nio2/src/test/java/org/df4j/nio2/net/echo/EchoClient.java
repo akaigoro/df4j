@@ -61,7 +61,7 @@ class EchoClient extends AsyncProc {
         clientConn.reader.output.subscribe(listener.readBuffers);
         speaker.start();
         listener.start();
-        LOG.info("Speaker started");
+        LOG.info("Speaker and listener started");
     }
 
     class Speaker extends Actor {
@@ -78,14 +78,15 @@ class EchoClient extends AsyncProc {
             String message = "hi there "+count;
             ByteBuffer buf = toByteBuf(message);
             buffers2write.onNext(buf);
-            sentMsgs.onNext(message);
-            LOG.info("Speaker sent message: "+message);
-            count--;
-            if (count == 0) {
-                LOG.info("Speaker finished successfully");
+            if (count > 0) {
+                sentMsgs.onNext(message);
+                LOG.info("Speaker sent message: "+message);
+            } else {
                 sentMsgs.onComplete();
+                LOG.info("Speaker finished successfully");
                 stop();
             }
+            count--;
         }
     }
 
