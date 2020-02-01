@@ -1,5 +1,6 @@
 package org.df4j.core.util;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -7,9 +8,14 @@ import java.util.concurrent.Semaphore;
  */
 public class LongSemaphore {
     private long permits;
+    private boolean cancelled;
 
     public LongSemaphore(long n) {
         permits = n;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
     }
 
     /**
@@ -89,9 +95,21 @@ public class LongSemaphore {
         if (permits < 0) {
             throw new IllegalArgumentException();
         }
-        while (this.permits < permits) {
-            wait();
-        }
-        this.permits -= permits;
+        do {
+            while (this.permits <= 0 && !cancelled) {
+                wait();
+            }
+            if (cancelled) {
+                throw new CancellationException();
+            }
+            long delta = Math.min(permits, this.permits);
+            permits -= delta;
+            this.permits -= delta;
+        } while (permits > 0);
+    }
+
+    public synchronized void cancel() {
+        cancelled = true;
+        notifyAll();
     }
 }

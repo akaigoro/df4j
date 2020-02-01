@@ -1,10 +1,12 @@
 package org.df4j.core.activities;
 
+import org.df4j.core.util.Utils;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.df4j.core.util.LongSemaphore;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CancellationException;
 
 /**
  * A synchronous implementation of the {@link Publisher} that can
@@ -31,8 +33,9 @@ public class ThreadPublisher extends Thread implements Publisher<Long> {
             do {
                 elements--;
                 output.put(elements);
-            } while(elements > -1);
+            } while (elements >= 0);
         } catch (InterruptedException e) {
+            Utils.sneakyThrow(e);
         }
     }
 
@@ -66,17 +69,19 @@ public class ThreadPublisher extends Thread implements Publisher<Long> {
         @Override
         public void run() {
             try {
-                while (!cancelled) {
+                for (;;) {
+                    Long res = null;
                     permits.acquire(1);
-                    Long res = output.take();
+                    res = output.take();
                     if (res.intValue() == -1) {
-                        output.put(res); // for other subscribers
+                        output.put(-1L); // for other subscribers
                         subscriber.onComplete();
-                        return;
+                        break;
                     }
                     subscriber.onNext(res);
                 }
             } catch (InterruptedException e) {
+                // cancelled
             }
         }
     }

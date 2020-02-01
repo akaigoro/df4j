@@ -64,7 +64,7 @@ public abstract class AsyncFunc<R> extends AsyncProc  implements Scalar.Source<R
 
     protected abstract R callAction() throws Throwable;
 
-    class ValueSubscription extends Subscription implements Completable.Observer {
+    class ValueSubscription extends CompletionSubscription implements Completable.Observer {
         Scalar.Observer<? super R> subscriber;
 
         protected ValueSubscription(Scalar.Observer<? super R> subscriber) {

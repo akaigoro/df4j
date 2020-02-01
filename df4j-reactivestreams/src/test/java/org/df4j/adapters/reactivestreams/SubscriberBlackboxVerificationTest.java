@@ -1,6 +1,8 @@
 package org.df4j.adapters.reactivestreams;
 
+import org.df4j.core.activities.SubscriberActor;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class SubscriberBlackboxVerificationTest extends org.reactivestreams.tck.SubscriberBlackboxVerification {
@@ -12,11 +14,11 @@ public class SubscriberBlackboxVerificationTest extends org.reactivestreams.tck.
 
     @Override
     public Subscriber createSubscriber() {
-        return null;
+        return new SubscriberActor(0).inp;
     }
 
     @Override
     public Object createElement(int element) {
-        return null;
+        return element;
     }
 }

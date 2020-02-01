@@ -12,17 +12,25 @@ public class PublisherActor extends Actor {
     public OutFlow<Long> out = new OutFlow<>(this);
     long cnt;
     final int delay;
-    {logger.setLevel(Level.OFF);}
+    {
+        setLogLevel(Level.OFF);
+    }
+
+    public void setLogLevel(Level off) {
+        logger.setLevel(off);
+    }
 
     public PublisherActor(Dataflow parent, long cnt, int delay) {
         super(parent);
         this.cnt = cnt;
         this.delay = delay;
+        logger.info("PublisherActor: cnt = " + cnt);
     }
 
     public PublisherActor(long cnt, int delay) {
         this.cnt = cnt;
         this.delay = delay;
+        logger.info("PublisherActor: cnt = " + cnt);
     }
 
     public PublisherActor(long cnt) {
@@ -31,12 +39,13 @@ public class PublisherActor extends Actor {
 
     @Override
     protected void runAction() throws Throwable {
-        logger.info("PublisherActor: cnt = " + cnt);
         if (cnt > 0) {
+            logger.info("PublisherActor.onNext(" + cnt+")");
             out.onNext(cnt);
             cnt--;
             Thread.sleep(delay);
         } else {
+            logger.info("PublisherActor.onComplete");
             out.onComplete();
             stop();
         }

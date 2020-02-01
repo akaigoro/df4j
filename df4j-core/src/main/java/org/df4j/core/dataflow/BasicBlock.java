@@ -312,7 +312,7 @@ public abstract class BasicBlock extends Node<BasicBlock> {
 
         @Override
         public String toString() {
-            return ready?"ready":"blocked";
+            return super.toString() + (ready?": ready":": blocked");
         }
 
         protected Dataflow getDataflow() {

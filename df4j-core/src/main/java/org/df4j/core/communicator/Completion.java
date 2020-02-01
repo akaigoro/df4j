@@ -19,7 +19,7 @@ public class Completion implements Completable.Source {
     protected final Lock bblock = new ReentrantLock();
     private final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
-    protected LinkedList<Subscription> subscriptions = new LinkedList<>();
+    protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
     protected boolean completed;
 
     /**
@@ -52,7 +52,7 @@ public class Completion implements Completable.Source {
         bblock.lock();
         try {
             if (!completed) {
-                Subscription subscription = new Subscription(co);
+                CompletionSubscription subscription = new CompletionSubscription(co);
                 subscriptions.add(subscription);
                 co.onSubscribe(subscription);
                 return;
@@ -73,7 +73,7 @@ public class Completion implements Completable.Source {
      * @param e completion exception
      */
     protected void onError(Throwable e) {
-        LinkedList<Subscription> subs;
+        LinkedList<CompletionSubscription> subs;
         bblock.lock();
         try {
             if (completed) {
@@ -91,7 +91,7 @@ public class Completion implements Completable.Source {
             bblock.unlock();
         }
         for (;;) {
-            Subscription sub = subs.poll();
+            CompletionSubscription sub = subs.poll();
             if (sub == null) {
                 break;
             }
@@ -170,7 +170,7 @@ public class Completion implements Completable.Source {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(super.toString());sb.append(" ");
-        LinkedList<Subscription> subscribers = this.subscriptions;
+        LinkedList<CompletionSubscription> subscribers = this.subscriptions;
         Throwable completionException = this.completionException;
         int size = 0;
         if (subscribers!=null) {
@@ -188,14 +188,14 @@ public class Completion implements Completable.Source {
     }
 
 
-    protected class Subscription implements SimpleSubscription {
+    protected class CompletionSubscription implements SimpleSubscription {
         Completable.Observer subscriber;
         private boolean cancelled;
 
-        protected Subscription() {
+        protected CompletionSubscription() {
         }
 
-        protected Subscription(Completable.Observer subscriber) {
+        protected CompletionSubscription(Completable.Observer subscriber) {
             this.subscriber = subscriber;
         }
 

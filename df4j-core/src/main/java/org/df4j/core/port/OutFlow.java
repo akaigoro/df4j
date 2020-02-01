@@ -31,7 +31,8 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
     private final Condition hasItems = plock.newCondition();
     protected final int capacity;
     protected ArrayDeque<T> tokens;
-    protected LinkedQueue<FlowSubscriptionImpl> subscribers = new LinkedQueue<FlowSubscriptionImpl>();
+    protected LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<FlowSubscriptionImpl>();
+    protected LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<FlowSubscriptionImpl>();
     protected Throwable completionException;
     protected volatile boolean completed;
 
@@ -44,12 +45,41 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
         this(parent, 16);
     }
 
+    public boolean isCompleted() {
+        plock.lock();
+        try {
+            return completed && tokens.size() == 0;
+        } finally {
+            plock.unlock();
+        }
+    }
+
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
+        plock.lock();
+        try {
+            if (passiveSubscribtions != null) {
+                passiveSubscribtions.add(subscription);
+            }
+        } finally {
+            plock.unlock();
+        }
         subscriber.onSubscribe(subscription);
+        plock.lock();
+        try {
+            if (isCompleted()) {
+                subscription.onComplete(completionException);
+            }
+        } finally {
+            plock.unlock();
+        }
     }
 
+    /**
+     * how many tokens can be stored in the buffer
+     * @return 0 if buffer is full
+     */
     private int remainingCapacity() {
         return capacity - tokens.size();
     }
@@ -64,22 +94,120 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
         FlowSubscriptionImpl sub;
         plock.lock();
         try {
-            sub = subscribers.poll();
+            sub = activeSubscribtions.poll();
             if (sub == null) {
                 if (remainingCapacity() == 0) {
                     throw new IllegalStateException("buffer overflow");
                 }
                 tokens.add(token);
+                hasItems.signalAll();
                 if (remainingCapacity() == 0) {
                     block();
                 }
-                hasItems.signalAll();
                 return;
             }
         } finally {
             plock.unlock();
         }
-        sub.onNext(token);
+        transferTokens(token, sub);
+    }
+
+    public void transferTokens(T token, FlowSubscriptionImpl sub) {
+        LinkedQueue<FlowSubscriptionImpl> asubs;
+        LinkedQueue<FlowSubscriptionImpl> psubs;
+        for (;;) {
+            boolean subIsActive = sub.onNext(token);
+            plock.lock();
+            try {
+                if (!subIsActive) {
+                    if (passiveSubscribtions == null) {
+                        sub.onComplete(completionException);
+                    } else {
+                        passiveSubscribtions.add(sub);
+                    }
+                    sub = null;
+                }
+                if (tokens.size() == 0 || (sub == null && activeSubscribtions.size() == 0)) {
+                    if (!isCompleted()) {
+                        if (sub != null) {
+                            if (activeSubscribtions == null) {
+                                sub.onComplete(completionException);
+                            } else {
+                                activeSubscribtions.add(sub);
+                            }
+                        }
+                        return;
+                    }
+                    asubs = this.activeSubscribtions;
+                    this.activeSubscribtions = null;
+                    psubs = this.passiveSubscribtions;
+                    this.passiveSubscribtions = null;
+                    break;
+                }
+                token = tokens.poll();
+                if (remainingCapacity() == 1) {
+                    unblock();
+                }
+                if (sub == null) {
+                    sub = activeSubscribtions.poll();
+                }
+            } finally {
+                plock.unlock();
+            }
+        }
+        if (sub != null) {
+            sub.onComplete(completionException);
+        }
+        completAllSubscriptions(asubs, psubs);
+    }
+
+    public void completAllSubscriptions(LinkedQueue<FlowSubscriptionImpl> asubs, LinkedQueue<FlowSubscriptionImpl> psubs) {
+        if (asubs != null) {
+            for (;;) {
+                FlowSubscriptionImpl sub = asubs.poll();
+                if (sub == null) {
+                    break;
+                }
+                sub.onComplete(completionException);
+            }
+        }
+        if (psubs != null) {
+            for (;;) {
+                FlowSubscriptionImpl sub = psubs.poll();
+                if (sub == null) {
+                    break;
+                }
+                sub.onComplete(completionException);
+            }
+        }
+    }
+
+    public void onError(Throwable cause) {
+        LinkedQueue<FlowSubscriptionImpl> asubs;
+        LinkedQueue<FlowSubscriptionImpl> psubs;
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            completionException = cause;
+            hasItems.signalAll();
+            if (tokens.size() > 0) {
+                return;
+            }
+            asubs = this.activeSubscribtions;
+            this.activeSubscribtions = null;
+            psubs = this.passiveSubscribtions;
+            this.passiveSubscribtions = null;
+        } finally {
+            plock.unlock();
+        }
+        completAllSubscriptions(asubs, psubs);
+    }
+
+    public void onComplete() {
+        onError(null);
     }
 
     public T poll() {
@@ -166,39 +294,6 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
         }
     }
 
-    public void onError(Throwable cause) {
-        LinkedQueue<FlowSubscriptionImpl> subs;
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            completed = true;
-            completionException = cause;
-            hasItems.signalAll();
-            subs = this.subscribers;
-            this.subscribers = null;
-        } finally {
-            plock.unlock();
-        }
-        for (;;) {
-            FlowSubscriptionImpl sub = subs.poll();
-            if (sub == null) {
-                break;
-            }
-            sub.onError(cause);
-        }
-    }
-
-    public void onComplete() {
-        onError(null);
-    }
-
-    @Override
-    public String toString() {
-        return super.toString();
-    }
-
     class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements Flow.Subscription {
         private final Lock slock = new ReentrantLock();
         protected final Subscriber subscriber;
@@ -229,7 +324,8 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
-            plock.lock();
+            T token;
+            slock.lock();
             try {
                 if (cancelled) {
                     return;
@@ -238,29 +334,17 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
                 if (remainedRequests > n) {
                     return;
                 }
-                while (remainedRequests > 0) {
-                    T value = tokens.poll();
-                    if (value == null) {
-                        if (completed) {
-                            if (completionException == null) {
-                                subscriber.onComplete();
-                            } else {
-                                subscriber.onError(completionException);
-                            }
-                            cancelled = true;
-                        } else {
-                            subscribers.add(this);
-                        }
-                        return;
-                    }
-                    subscriber.onNext(value);
-                    remainedRequests--;
-                    unblock();
-                    hasRoom.signalAll();
+                // remainedRequests was 0, so this subscription was passive
+                passiveSubscribtions.remove(this);
+                token = tokens.poll();
+                if (token == null) {
+                    activeSubscribtions.add(this);
+                    return;
                 }
             } finally {
-                plock.unlock();
+                slock.unlock();
             }
+            transferTokens(token, this);
         }
 
         @Override
@@ -273,8 +357,14 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
                 cancelled = true;
                 plock.lock();
                 try {
-                    if (subscribers != null) {
-                        subscribers.remove(this);
+                    if (remainedRequests > 0) {
+                        if (activeSubscribtions != null) {
+                            activeSubscribtions.remove(this);
+                        }
+                    } else {
+                        if (passiveSubscribtions != null) {
+                            passiveSubscribtions.remove(this);
+                        }
                     }
                 } finally {
                     plock.unlock();
@@ -285,42 +375,39 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
         }
 
         /**
-         *
-         * @param value token to pass
-         * @return true if can accept more tokens
+         * must be unlinked
+         * @param token token to pass
+         * @return
          */
-        private void onNext(T value) {
-            subscriber.onNext(value);
+        private boolean onNext(T token) {
+            subscriber.onNext(token);
             slock.lock();
             try {
                 remainedRequests--;
-                if (remainedRequests > 0) {
-                    plock.lock();
-                    try {
-                        subscribers.add(this);
-                    } finally {
-                        plock.unlock();
-                    }
-                }
+                return remainedRequests > 0;
             } finally {
                 slock.unlock();
             }
         }
 
-        private void onError(Throwable cause) {
+        /**
+         * must be unlinked
+         * @param cause error
+         */
+        private void onComplete(Throwable cause) {
             slock.lock();
             try {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
-                if (cause == null) {
-                    subscriber.onComplete();
-                } else {
-                    subscriber.onError(cause);
-                }
             } finally {
                 slock.unlock();
+            }
+            if (cause == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(cause);
             }
         }
 

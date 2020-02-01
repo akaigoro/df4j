@@ -119,7 +119,7 @@ public class AsyncSocketChannel {
                 return;
             }
             ByteBuffer buffer = input.removeAndRequest();
-            if (timeout>0) {
+            if (timeout > 0) {
                 doIO(buffer, timeout);
             } else {
                 doIO(buffer);
