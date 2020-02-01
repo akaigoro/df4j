@@ -33,6 +33,10 @@ public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketCha
         channel.connect(addr, channel, this);
     }
 
+    public AsyncClientSocketChannel(Dataflow dataflow, SocketAddress addr) throws IOException {
+        this(dataflow.getExecutor(), addr);
+    }
+
     //=====================  CompletionHandler callbacks
 
     @Override

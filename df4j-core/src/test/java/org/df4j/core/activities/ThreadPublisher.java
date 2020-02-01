@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.util.Utils;
-import org.reactivestreams.Publisher;
+import org.df4j.protocol.Flow;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.df4j.core.util.LongSemaphore;
@@ -9,10 +9,10 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CancellationException;
 
 /**
- * A synchronous implementation of the {@link Publisher} that can
+ * A synchronous implementation of the {@link Flow.Publisher} that can
  * be subscribed to multiple times but each generated token will be received by exactly one subscriber.
  */
-public class ThreadPublisher extends Thread implements Publisher<Long> {
+public class ThreadPublisher extends Thread implements Flow.Publisher<Long> {
     ArrayBlockingQueue<Long> output = new ArrayBlockingQueue<Long>(16);
     long elements;
 

@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * is ready when has room to store at least one toke
  * @param <T>
  */
-public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMessagePort<T> {
+public class OutFlow<T> extends BasicBlock.Port implements OutMessagePort<T>, Flow.Publisher<T> {
     private final Condition hasRoom = plock.newCondition();
     private final Condition hasItems = plock.newCondition();
     protected final int capacity;
@@ -334,12 +334,20 @@ public class OutFlow<T> extends BasicBlock.Port implements Publisher<T>, OutMess
                 if (remainedRequests > n) {
                     return;
                 }
-                // remainedRequests was 0, so this subscription was passive
-                passiveSubscribtions.remove(this);
-                token = tokens.poll();
-                if (token == null) {
-                    activeSubscribtions.add(this);
-                    return;
+                plock.lock();
+                try {
+                    // remainedRequests was 0, so this subscription was passive
+                    if (passiveSubscribtions == null) {
+                        return; // port closed;
+                    }
+                    passiveSubscribtions.remove(this);
+                    token = tokens.poll();
+                    if (token == null) {
+                        activeSubscribtions.add(this);
+                        return;
+                    }
+                } finally {
+                    plock.unlock();
                 }
             } finally {
                 slock.unlock();

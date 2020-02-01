@@ -151,10 +151,9 @@ public class Completion implements Completable.Source {
     public boolean blockingAwait(long timeout, TimeUnit unit) {
         bblock.lock();
         try {
-            if (!isCompleted()) {
+            if (!completed) {
                 completedCond.await(timeout, unit);
             }
-            boolean completed = isCompleted();
             if (completed && completionException != null) {
                 throw new CompletionException(completionException);
             }

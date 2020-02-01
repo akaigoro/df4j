@@ -28,7 +28,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
     /**
      *
      * @param subscriber
-     *      the {@link SignalFlow.Subscriber} that will consume signals from this {@link SignalFlow.Publisher}
+     *      the {@link SignalFlow.Subscriber} that will consume signals from this {@link SignalFlow.Flow.Publisher}
      */
     @Override
     public void subscribe(SignalFlow.Subscriber subscriber) {
@@ -48,7 +48,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         } finally {
             bblock.unlock();
         }
-        subscriber.awake();
+        subscriber.release();
     }
 
     public void release() {
@@ -63,7 +63,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         } finally {
             bblock.unlock();
         }
-        subscriber.awake();
+        subscriber.release();
     }
 
     public void release(int permits) {
@@ -132,7 +132,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
                     }
                     n--;
                 }
-                subscriber.awake();
+                subscriber.release();
             } finally {
                 bblock.unlock();
             }
@@ -144,7 +144,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
                 subscriptions.add(this);
                 return;
             }
-            subscriber.awake();
+            subscriber.release();
         }
 
         @Override

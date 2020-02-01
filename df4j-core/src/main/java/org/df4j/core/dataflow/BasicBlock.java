@@ -133,7 +133,7 @@ public abstract class BasicBlock extends Node<BasicBlock> {
             if (isCompleted()) {
                 return;
             }
-            super.onComplete();
+            onComplete();
             if (parent != null && !daemon) {
                 parent.leave(this);
             }
@@ -283,6 +283,9 @@ public abstract class BasicBlock extends Node<BasicBlock> {
         public void unblock() {
             plock.lock();
             try {
+                if (isCompleted()) {
+                    return;
+                }
                 if (ready) {
                     return;
                 }
@@ -296,9 +299,6 @@ public abstract class BasicBlock extends Node<BasicBlock> {
        //             dbg("#unblock: blockingPortCount = "+blockingPortCount);
                     if (blockingPortCount > 0) {
                         return;
-                    }
-                    if (isCompleted()) {
-                        throw new IllegalStateException("Zombie Apocalypse");
                     }
                 } finally {
                     bblock.unlock();

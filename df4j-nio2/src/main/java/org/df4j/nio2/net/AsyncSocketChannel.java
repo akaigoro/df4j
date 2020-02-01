@@ -60,14 +60,14 @@ public class AsyncSocketChannel {
      * would be processed.
      */
     public synchronized void close() {
-        AsynchronousSocketChannel locchannel;
+        AsynchronousSocketChannel locChannel;
         synchronized (this) {
-            locchannel = channel;
+            locChannel = channel;
             channel=null;
         }
-    	if (locchannel!=null) {
+    	if (locChannel!=null) {
             try {
-                locchannel.close();
+                locChannel.close();
             } catch (IOException e) {
             }
     	}

@@ -1,10 +1,11 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.communicator.AsyncSemaphore;
 import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.InpScalar;
+import org.df4j.core.port.InpSignal;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
@@ -14,46 +15,74 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 
 /**
- * generates {@link EchoServerConnection}s for incoming connections
+ * generates {@link EchoProcessor}s for incoming connections
  *
  */
 public class EchoServer extends Actor {
     protected final Logger LOG = new Logger(this, Level.INFO);
     /** limits the munber of simultaneously existing connections */
-    protected AsyncSemaphore allowedConnections = new AsyncSemaphore();
-    protected InpScalar<AsynchronousSocketChannel> inp = new InpScalar<>(this);
+    protected InpSignal allowedConnections = new InpSignal(this);
+    Set<EchoProcessor> echoProcessors = new HashSet<>();
+    AsyncServerSocketChannel acceptor;
 
-    public EchoServer(Dataflow dataflow, SocketAddress addr) throws IOException {
+    public EchoServer(Dataflow dataflow, SocketAddress addr, int maxConnCount) throws IOException {
         super(dataflow);
-        AsyncServerSocketChannel serverStarter = new AsyncServerSocketChannel(dataflow, addr);
-        serverStarter.demands.subscribe(inp);
-        serverStarter.start();
-        allowedConnections.release(2);
+        acceptor = new AsyncServerSocketChannel(dataflow, addr);
+        acceptor.start();
+        allowedConnections.release(maxConnCount);
     }
 
     public void close() {
+        acceptor.close();
         stop();
+        join();
+        for (EchoProcessor processor: echoProcessors) {
+            processor.stop();
+        }
+        for (EchoProcessor processor: echoProcessors) {
+            processor.join();
+        }
     }
 
     @Override
     public void runAction() {
-        LOG.info("EchoServer#runAction");
-        AsynchronousSocketChannel assc = inp.remove();
-        EchoProcessor processor = new EchoProcessor(assc);
-        processor.start();
+        allowedConnections.acquire();
+        Starter starter = new Starter(getDataflow());
+        acceptor.demands.subscribe(starter.inp);
+        starter.start();
+    }
+
+    class Starter extends AsyncProc {
+        protected InpScalar<AsynchronousSocketChannel> inp = new InpScalar<>(this);
+
+        public Starter(Dataflow dataflow) {
+            super(dataflow);
+            setDaemon(true);
+        }
+
+        @Override
+        protected void runAction() {
+            AsynchronousSocketChannel assc = inp.remove();
+            EchoProcessor processor = new EchoProcessor(assc);
+            echoProcessors.add(processor);
+            processor.start();
+        }
     }
 
     class EchoProcessor extends Actor {
+        Starter starter;
         AsyncSocketChannel serverConn;
         InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
         OutFlow<ByteBuffer> buffers2write = new OutFlow<>(this);
+        private boolean connectionPermitReleased;
 
         public EchoProcessor(AsynchronousSocketChannel assc) {
             super(EchoServer.this.getDataflow());
-            LOG.info("EchoProcessor#init");
             int capacity = 2;
             serverConn = new AsyncSocketChannel(getDataflow(), assc);
             serverConn.setName("server");
@@ -67,16 +96,36 @@ public class EchoServer extends Actor {
             serverConn.writer.output.subscribe(serverConn.reader.input);
         }
 
-        public void runAction() {
-            if (readBuffers.isCompleted()) {
-                serverConn.close();
-                allowedConnections.release(1);
-                stop();
+        public synchronized void releaseConnectionPermit() {
+            if (connectionPermitReleased) {
                 return;
             }
-            LOG.info("EchoProcessor#runAction");
-            ByteBuffer b = readBuffers.removeAndRequest();
-            buffers2write.onNext(b);
+            connectionPermitReleased = true;
+            allowedConnections.release(1);
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+            releaseConnectionPermit();
+        }
+
+        @Override
+        protected void stop(Throwable ex) {
+            super.stop(ex);
+            releaseConnectionPermit();
+        }
+
+        public void runAction() {
+            if (!readBuffers.isCompleted()) {
+                ByteBuffer b = readBuffers.removeAndRequest();
+                buffers2write.onNext(b);
+                LOG.info("EchoProcessor replied");
+            } else {
+                serverConn.close();
+                stop();
+                LOG.info("EchoProcessor completed");
+            }
         }
     }
 }

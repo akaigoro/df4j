@@ -15,11 +15,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Output port for multiple scalar values.
- * Hos no internal memory for tokens. as become ready only when subscribers appear.
+ * Hos no internal memory for tokens. as becomes ready only when subscribers appear.
+ * For demand-driven actors.
  *
  * @param <T> the type of completion value
  */
-public class OutScalars<T> extends BasicBlock.Port implements Scalar.Source<T> {
+public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>, Scalar.Source<T> {
     private final Lock plock = new ReentrantLock();
     private  Queue<Subscription> subscriptions = new LinkedList<>();
     private Throwable completionException;
@@ -150,11 +151,7 @@ public class OutScalars<T> extends BasicBlock.Port implements Scalar.Source<T> {
             } finally {
                 slock.unlock();
             }
-            if (completionException == null) {
-                subs.onComplete();
-            } else {
-                subs.onError(completionException);
-            }
+            subs.onError(completionException);
         }
     }
 }

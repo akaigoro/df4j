@@ -1,8 +1,8 @@
 package org.df4j.core.communicator;
 
 import org.df4j.protocol.Flow;
-import org.reactivestreams.*;
 import org.df4j.protocol.ReverseFlow;
+import org.reactivestreams.Subscriber;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -25,7 +25,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
         /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
         ReverseFlow.Consumer<T>,
         /** asyncronous analogue of  {@link BlockingQueue#take()} */
-        Publisher<T>
+        Flow.Publisher<T>
 {
     private final Lock qlock = new ReentrantLock();
     private final Condition hasRoom = qlock.newCondition();
@@ -49,7 +49,7 @@ public class AsyncArrayBlockingQueue<T> extends AbstractQueue<T> implements Bloc
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
+    public void subscribe(Subscriber subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
         subscriber.onSubscribe(subscription);
     }

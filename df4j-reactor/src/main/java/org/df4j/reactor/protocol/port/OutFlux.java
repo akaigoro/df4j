@@ -1,11 +1,11 @@
 package org.df4j.reactor.protocol.port;
 
 import org.df4j.core.port.OutMessagePort;
-import org.reactivestreams.Publisher;
+import org.df4j.protocol.Flow;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 
-public class OutFlux<T> extends Flux<T> implements Publisher<T>, OutMessagePort<T> {
+public class OutFlux<T> extends Flux<T> implements Flow.Publisher<T>, OutMessagePort<T> {
     @Override
     public void subscribe(CoreSubscriber<? super T> actual) {
         

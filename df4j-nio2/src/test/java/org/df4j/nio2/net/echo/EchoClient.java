@@ -27,27 +27,18 @@ class EchoClient extends AsyncProc {
     protected final Logger LOG = new Logger(this, Level.INFO);
     public final int total;
     public int count;
-
-    public static ByteBuffer toByteBuf(String message) {
-        return ByteBuffer.wrap(message.getBytes(charset));
-    }
-
-    public static String fromByteBuf(ByteBuffer b) {
-        return new String(b.array(), charset);
-    }
-
     protected InpScalar<AsynchronousSocketChannel> inp = new InpScalar<>(this);
-
-    public EchoClient(Dataflow dataflow, SocketAddress addr, int total) throws IOException {
-        super(dataflow);
-        this.total = total;
-        AsyncClientSocketChannel clientStarter = new AsyncClientSocketChannel(dataflow.getExecutor(), addr);
-        clientStarter.subscribe(inp);
-    }
 
     AsyncSocketChannel clientConn;
     Speaker speaker;
     Listener listener;
+
+    public EchoClient(Dataflow dataflow, SocketAddress local9990, int total) throws IOException {
+        super(dataflow);
+        this.total = total;
+        AsyncClientSocketChannel clientStarter = new AsyncClientSocketChannel(dataflow, local9990);
+        clientStarter.subscribe(inp);
+    }
 
     public void runAction() {
         AsynchronousSocketChannel assc = inp.current();
@@ -62,6 +53,14 @@ class EchoClient extends AsyncProc {
         speaker.start();
         listener.start();
         LOG.info("Speaker and listener started");
+    }
+
+    public static ByteBuffer toByteBuf(String message) {
+        return ByteBuffer.wrap(message.getBytes(charset));
+    }
+
+    public static String fromByteBuf(ByteBuffer b) {
+        return new String(b.array(), charset);
     }
 
     class Speaker extends Actor {
@@ -98,17 +97,23 @@ class EchoClient extends AsyncProc {
             super(EchoClient.this.getDataflow());
         }
 
+        @Override
+        public void onComplete() {
+            super.onComplete();
+            clientConn.close();
+        }
+
         public void runAction() {
-            if (sentMsgs.isCompleted()) {
-                LOG.info("Listener finished successfully");
+            if (!sentMsgs.isCompleted()) {
+                String sent = sentMsgs.removeAndRequest();
+                ByteBuffer received = readBuffers.removeAndRequest();
+                String m2 = fromByteBuf(received);
+                LOG.info("Listener received message:"+m2);
+                Assert.assertEquals(sent, m2);
+            } else {
                 stop();
-                return;
+                LOG.info("Listener finished successfully");
             }
-            String sent = sentMsgs.removeAndRequest();
-            ByteBuffer received = readBuffers.removeAndRequest();
-            String m2 = fromByteBuf(received);
-            LOG.info("Listener received message:"+m2);
-            Assert.assertEquals(sent, m2);
         }
 
     }

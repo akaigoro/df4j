@@ -10,7 +10,7 @@ import java.util.ArrayDeque;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMessagePort<T> {
+public class InpFlow<T> extends BasicBlock.Port implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
     private boolean lazy = false;
     protected boolean withBuffer;
@@ -23,7 +23,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
     private long requestedCount;
 
     /**
-     * creates a port which is subscribed to the {@code #publisher}
+     * creates a port which is subscribed to the {@code #Flow.Publisher}
      * @param parent {@link BasicBlock} to wich this port belongs
      * @param capacity required capacity
      */
@@ -146,7 +146,7 @@ public class InpFlow<T> extends BasicBlock.Port implements Subscriber<T>, InpMes
     }
 
     /**
-     * normally this method is called by Publisher.
+     * normally this method is called by Flow.Publisher.
      * But before the port is subscribed, this method can be called directly.
      * @throws IllegalArgumentException when argument is null
      * @throws IllegalStateException if no room left to store argument

@@ -4,6 +4,7 @@ import org.reactivestreams.Subscription;
 
 /**
  * Flow of signals without errors
+ * It operates excactly as {@link Flow} but without message information.
  */
 public class SignalFlow {
 
@@ -31,9 +32,15 @@ public class SignalFlow {
         void onSubscribe(Subscription subscription);
 
         /**
-         * asynchronous version of Semaphore.aquire()
+         * analogue of {@link Flow.Subscriber#onNext()}
          */
-        void awake();
+        void release();
+
+        default void release(long n) {
+            for (long k=0; k<n; k++) {
+                release();
+            }
+        }
     }
 
 }

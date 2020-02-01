@@ -44,7 +44,7 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
 
         public LoggingPublisherActor(long elements) {
             super(elements);
-           setLogLevel(Level.ALL);
+            setLogLevel(Level.OFF);
         }
 
         @Override

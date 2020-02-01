@@ -70,7 +70,6 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
 
     @Override
     protected final void runAction() throws Throwable {
-        LOG.info("AsyncServerSocketChannel#runAction");
         assc.accept(null, this);
     }
 
@@ -78,7 +77,7 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
 
     @Override
     public void completed(AsynchronousSocketChannel result, Void attachement) {
-        LOG.info("AsyncServerSocketChannel#completed");
+        LOG.info("AsyncServerSocketChannel: client accepted");
         demands.onNext(result);
         this.awake(); // allow  next assc.accpt()
     }
@@ -89,7 +88,7 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
      */
     @Override
     public void failed(Throwable exc, Void attachement) {
-        LOG.info("AsyncServerSocketChannel#failed:"+exc);
+        LOG.info("AsyncServerSocketChannel: client rejected:"+exc);
         if (exc instanceof AsynchronousCloseException) {
             demands.onComplete();
             stop();

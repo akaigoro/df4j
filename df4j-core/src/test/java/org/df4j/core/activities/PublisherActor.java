@@ -10,7 +10,7 @@ import java.util.logging.Level;
 public class PublisherActor extends Actor {
     protected final Logger logger = new Logger(this);
     public OutFlow<Long> out = new OutFlow<>(this);
-    long cnt;
+    public long cnt;
     final int delay;
     {
         setLogLevel(Level.OFF);

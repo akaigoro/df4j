@@ -6,14 +6,13 @@ import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.port.InpScalar;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
-import org.reactivestreams.Publisher;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one message.
  * After the message is received, this port stays ready forever.
  *
- * It can connect both to {@link Scalar.Source} and {@link Publisher}.
+ * It can connect both to {@link Scalar.Source} and {@link Flow.Publisher}.
  *
  * @param <T> type of accepted tokens.
  */
