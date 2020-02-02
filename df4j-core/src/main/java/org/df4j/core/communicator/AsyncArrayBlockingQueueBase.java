@@ -209,7 +209,7 @@ public abstract class AsyncArrayBlockingQueueBase<T> extends AbstractQueue<T> im
         @Override
         public void request(long n) {
             if (n <= 0) {
-                throw new IllegalArgumentException();
+                subscriber.onError(new IllegalArgumentException());
             }
             qlock.lock();
             try {
