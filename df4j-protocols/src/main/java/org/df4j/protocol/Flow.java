@@ -11,9 +11,6 @@ package org.df4j.protocol;
  * work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.*
  ************************************************************************/
 
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscription;
-
 /**
  * Flow of messages with back-pressure
  * <p>
@@ -76,14 +73,8 @@ public final class Flow {
         }
     }
 
-    /**
-     * A {@link Subscription} represents a one-to-one lifecycle of a {@link Subscriber} subscribing to a {@link Flow.Publisher}.
-     * <p>
-     * It can only be used once by a single {@link Subscriber}.
-     * <p>
-     * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
-     *
-     */
-    public interface Subscription extends org.reactivestreams.Subscription, SimpleSubscription {
+    public interface Subscriber<T> extends org.reactivestreams.Subscriber<T> {
+
     }
+
 }

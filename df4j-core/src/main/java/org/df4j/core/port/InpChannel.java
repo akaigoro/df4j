@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.LinkedList;
@@ -121,7 +122,7 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Consum
     }
 
 
-    class ProducerSubscription implements ReverseFlow.Subscription {
+    class ProducerSubscription implements FlowSubscription {
         protected ReverseFlow.Producer<T> producer;
         private long remainedRequests = 0;
         private boolean cancelled = false;

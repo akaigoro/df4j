@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.Flow;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.SignalFlow;
 
 import java.util.LinkedList;
@@ -90,7 +90,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         }
     }
 
-    private class SignalSubscription implements Flow.Subscription {
+    private class SignalSubscription implements FlowSubscription {
         SignalFlow.Subscriber subscriber;
         private long remainedRequests;
 

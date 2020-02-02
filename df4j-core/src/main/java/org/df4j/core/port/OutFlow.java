@@ -4,6 +4,7 @@ import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.FlowSubscription;
 import org.reactivestreams.*;
 
 import java.util.ArrayDeque;
@@ -294,7 +295,7 @@ public class OutFlow<T> extends BasicBlock.Port implements OutMessagePort<T>, Fl
         }
     }
 
-    class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements Flow.Subscription {
+    class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements FlowSubscription {
         private final Lock slock = new ReentrantLock();
         protected final Subscriber subscriber;
         private long remainedRequests = 0;

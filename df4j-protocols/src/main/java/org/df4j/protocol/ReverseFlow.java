@@ -59,7 +59,7 @@ public class ReverseFlow {
          *
          * @param subscription a new subscription
          */
-        void onSubscribe(Subscription subscription);
+        void onSubscribe(FlowSubscription subscription);
 
         /**
          * {@link Publisher} gets data from {@link Subscriber}
@@ -73,30 +73,5 @@ public class ReverseFlow {
          *
          */
         void cancel();
-    }
-
-    /**
-     * A {@link Subscription} represents a one-to-one lifecycle of a {@link Subscriber} subscribing to a {@link Publisher}.
-     * <p>
-     * It can only be used once by a single {@link Subscriber}.
-     * <p>
-     * It is used to both signal desire for data and cancel demand (and allow resource cleanup).
-     *
-     */
-    public static interface Subscription extends SimpleSubscription {
-        /**
-         * No events will be sent by a {@link Publisher} until demand is signaled via this method.
-         * <p>
-         * It can be called however often and whenever needed—but the outstanding cumulative demand must never exceed Long.MAX_VALUE.
-         * An outstanding cumulative demand of Long.MAX_VALUE may be treated by the {@link Publisher} as "effectively unbounded".
-         * <p>
-         * Whatever has been requested can be sent by the {@link Publisher} so only signal demand for what can be safely handled.
-         * <p>
-         * A {@link Publisher} can send less than is requested if the stream ends but
-         * then must emit either {@link Subscriber#onError(Throwable)} or {@link Subscriber#onComplete()}.
-         *
-         * @param n the strictly positive number of elements to requests to the upstream {@link Publisher}
-         */
-        public void request(long n);
     }
 }

@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
 /**
@@ -13,7 +14,7 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Produc
     protected boolean completed;
     protected volatile Throwable completionException;
     private T value;
-    protected ReverseFlow.Subscription subscription;
+    protected FlowSubscription subscription;
 
     /**
      * creates {@link OutChannel} not connected to any consumer
@@ -24,7 +25,7 @@ public class OutChannel<T> extends BasicBlock.Port implements ReverseFlow.Produc
     }
 
     @Override
-    public void onSubscribe(ReverseFlow.Subscription subscription) {
+    public void onSubscribe(FlowSubscription subscription) {
         this.subscription = subscription;
     }
 

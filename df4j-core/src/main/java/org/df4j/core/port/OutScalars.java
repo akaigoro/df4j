@@ -1,15 +1,11 @@
 package org.df4j.core.port;
 
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -22,7 +18,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>, Scalar.Source<T> {
     private final Lock plock = new ReentrantLock();
-    private  Queue<Subscription> subscriptions = new LinkedList<>();
+    private  Queue<ScalarSubscription> subscriptions = new LinkedList<>();
     private Throwable completionException;
     protected volatile boolean completed;
 
@@ -32,7 +28,7 @@ public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>,
 
     @Override
     public void subscribe(Scalar.Observer<? super T> subscriber) {
-        Subscription subscription = new Subscription(subscriber);
+        ScalarSubscription subscription = new ScalarSubscription(subscriber);
         subscriber.onSubscribe(subscription);
         if (completed) {
             subscription.onError(completionException);
@@ -48,7 +44,7 @@ public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>,
     }
 
     public void onNext(T message) {
-        Subscription subscription;
+        ScalarSubscription subscription;
         plock.lock();
         try {
             subscription = subscriptions.remove();
@@ -62,7 +58,7 @@ public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>,
     }
 
     public void onError(Throwable t) {
-        Queue<Subscription> subscriptions;
+        Queue<ScalarSubscription> subscriptions;
         plock.lock();
         try {
             if (completed) {
@@ -76,7 +72,7 @@ public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>,
             plock.unlock();
         }
         for (;;) {
-            Subscription subscription = subscriptions.poll();
+            ScalarSubscription subscription = subscriptions.poll();
             if (subscription == null) {
                 break;
             }
@@ -88,12 +84,12 @@ public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>,
         onError(null);
     }
 
-    class Subscription implements SimpleSubscription {
+    class ScalarSubscription implements SimpleSubscription {
         private final Lock slock = new ReentrantLock();
         private Scalar.Observer<? super T> subscriber;
         private boolean cancelled;
 
-        public Subscription(Scalar.Observer<? super T> subscriber) {
+        public ScalarSubscription(Scalar.Observer<? super T> subscriber) {
             this.subscriber = subscriber;
         }
 
