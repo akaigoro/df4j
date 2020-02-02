@@ -209,6 +209,8 @@ public abstract class BasicBlock extends Node<BasicBlock> {
     }
 
     /**     * User's action.
+     * User is adviswd top override this method, but overriding {@link #fire()} alse is possible
+     *
      * @throws Throwable when thrown, this node is considered failed.
      */
     protected abstract void runAction() throws Throwable;

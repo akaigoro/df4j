@@ -6,6 +6,7 @@ import org.df4j.protocol.Flow;
 import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 
 /**
  * A passive source of messages (like a server).
@@ -25,8 +26,14 @@ public class OutFlow<T> extends BasicBlock.Port implements OutMessagePort<T>, Fl
 
     public OutFlow(BasicBlock parent, int capacity) {
         parent.super(true);
-        base = new MyOutFlowBase(capacity);
+        base = new MyOutFlowBase(plock, capacity);
     }
+
+    public OutFlow(BasicBlock parent, int capacity, OutFlowBase<T> base) {
+        parent.super(true);
+        this.base = base;
+    }
+
     public OutFlow(BasicBlock parent) {
         this(parent, 16);
     }
@@ -73,7 +80,7 @@ public class OutFlow<T> extends BasicBlock.Port implements OutMessagePort<T>, Fl
     }
 
     private class MyOutFlowBase extends OutFlowBase<T> {
-        public MyOutFlowBase(int capacityP) {
+        public MyOutFlowBase(Lock plock, int capacityP) {
             super(plock, capacityP);
         }
 

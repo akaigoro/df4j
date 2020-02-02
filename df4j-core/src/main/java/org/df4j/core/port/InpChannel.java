@@ -121,6 +121,15 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Consum
         }
     }
 
+    public void extractTo(OutMessagePort<T> out) {
+        if (!isCompleted()) {
+            out.onNext(removeAndRequest());
+        } else if (completionException == null) {
+            out.onComplete();
+        } else {
+            out.onError(completionException);
+        }
+    }
 
     class ProducerSubscription implements FlowSubscription {
         protected ReverseFlow.Producer<T> producer;

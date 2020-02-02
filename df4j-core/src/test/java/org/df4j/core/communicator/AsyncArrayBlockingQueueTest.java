@@ -15,7 +15,6 @@ public class AsyncArrayBlockingQueueTest {
         queue.subscribe(subscriber.inp);
         producer.start();
         subscriber.start();
-     //   producer.join();
         boolean fin = subscriber.blockingAwait(1000);
         Assert.assertTrue(fin);
     }

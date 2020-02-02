@@ -1,17 +1,19 @@
 package org.df4j.core.communicator;
 
+import org.df4j.core.base.OutFlowBase;
+import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.port.InpChannel;
+import org.df4j.core.port.OutFlow;
+import org.df4j.core.port.OutMessagePort;
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 import org.reactivestreams.Subscriber;
 
 import java.util.Collection;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -19,37 +21,32 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * <p>
  *  Flow of messages:
- *  {@link ReverseFlow.Subscriber} =&gt; {@link AsyncArrayBlockingQueue}  =&gt; {@link Subscriber}
+ *  {@link ReverseFlow.Producer} =&gt; {@link AsyncArrayBlockingQueue}  =&gt; {@link Subscriber}
  *
  * @param <T> the type of the values passed through this token container
  */
-public class AsyncArrayBlockingQueue<T> extends AsyncArrayBlockingQueueBase<T> implements BlockingQueue<T>,
+public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements BlockingQueue<T>,
         /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
         ReverseFlow.Consumer<T>,
         /** asyncronous analogue of  {@link BlockingQueue#take()} */
-        Flow.Publisher<T>
-{
-    private final Condition hasRoom = qlock.newCondition();
-    protected Queue<ProducerSubscription> producers = new LinkedList<ProducerSubscription>();
+        Flow.Publisher<T>, OutMessagePort<T> {
+    protected final Actor actor;
+    public InpChannel<T> inp;
+    protected final OutFlow<T> out;
+    private final Condition hasRoom;
 
     public AsyncArrayBlockingQueue(int capacity) {
-        super(capacity);
+        super(new ReentrantLock(), capacity);
+        actor = new MyActor();
+        actor.start();
+        inp = new InpChannel<>(actor);
+        out = new OutFlow<>(actor, capacity);
+        hasRoom = qlock.newCondition();
     }
 
     @Override
     public void offer(ReverseFlow.Producer<T> producer) {
-        ProducerSubscription subscription = new ProducerSubscription(producer);
-        producer.onSubscribe(subscription);
-    }
-
-    @Override
-    public int remainingCapacity() {
-        qlock.lock();
-        try {
-            return capacity - tokens.size();
-        } finally {
-            qlock.unlock();
-        }
+        inp.offer(producer);
     }
 
     /**
@@ -68,6 +65,7 @@ public class AsyncArrayBlockingQueue<T> extends AsyncArrayBlockingQueueBase<T> i
      * @throws InterruptedException if interrupted while waiting
      */
     @Override
+
     public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
         long millis = unit.toMillis(timeout);
         FlowSubscriptionImpl sub;
@@ -77,11 +75,7 @@ public class AsyncArrayBlockingQueue<T> extends AsyncArrayBlockingQueueBase<T> i
                 if (completed) {
                     return false;
                 }
-                if (!subscribers.isEmpty()) {
-                    sub = subscribers.remove();
-                    break;
-                } else if (tokens.offer(token)) {
-                    hasItems.signalAll();
+                if (offer(token)) {
                     return true;
                 }
                 if (millis <= 0) {
@@ -94,36 +88,33 @@ public class AsyncArrayBlockingQueue<T> extends AsyncArrayBlockingQueueBase<T> i
         } finally {
             qlock.unlock();
         }
-        sub.onNext(token);
-        return true;
+    }
+
+    @Override
+    public int remainingCapacity() {
+        qlock.lock();
+        try {
+            return capacity - tokens.size();
+        } finally {
+            qlock.unlock();
+        }
     }
 
     @Override
     public void put(T token) throws InterruptedException {
-        FlowSubscriptionImpl sub;
         qlock.lock();
         try {
             for (;;) {
                 if (completed) {
+                    throw new IllegalStateException();
+                }
+                if (offer(token, 1, TimeUnit.DAYS)) {
                     return;
                 }
-                if (!subscribers.isEmpty()) {
-                    sub = subscribers.remove();
-                    break;
-                } else if (tokens.offer(token)) {
-                    hasItems.signalAll();
-                    return;
-                }
-                hasRoom.await();
             }
         } finally {
             qlock.unlock();
         }
-        sub.onNext(token);
-    }
-
-    public void hasRoomEvent() {
-        hasRoom.signalAll();
     }
 
     @Override
@@ -136,110 +127,42 @@ public class AsyncArrayBlockingQueue<T> extends AsyncArrayBlockingQueueBase<T> i
         throw new UnsupportedOperationException();
     }
 
-    protected class ProducerSubscription implements FlowSubscription {
-        private final Lock slock = new ReentrantLock();
-        protected ReverseFlow.Producer<T> producer;
-        private long remainedRequests = 0;
-        private boolean cancelled = false;
+    @Override
+    protected void hasRoomEvent() {
+        out.unblock();
+        hasRoom.signalAll();
+    }
 
-        public ProducerSubscription(ReverseFlow.Producer<T> producer) {
-            this.producer = producer;
-        }
+    @Override
+    protected void noRoomEvent() {
+        out.block();
+    }
 
-        @Override
-        public boolean isCancelled() {
-            slock.lock();
-            try {
-                return cancelled;
-            } finally {
-                slock.unlock();
-            }
-        }
-
-        /**
-         * @param n number of messages the producer is able to deliver now
-         */
-        @Override
-        public void request(long n) {
-            slock.lock();
-            try {
-                if (n <= 0) {
-                    throw new IllegalArgumentException();
-                }
-                qlock.lock();
-                try {
-                    if (cancelled) {
-                        return;
-                    }
-                    if (completed) {
-                        producer.cancel();
-                        return;
-                    }
-                    if (remainedRequests > 0) {
-                        remainedRequests += n;
-                        return;
-                    }
-                    if (!producers.isEmpty()) {
-                        producers.add(this);
-                        return;
-                    }
-                    if (producer.isCompleted()) {
-                        completed = true;
-                        completionException = producer.getCompletionException();
-                        hasItems.signalAll();
-                        for (;;) {
-                            FlowSubscriptionImpl sub = subscribers.poll();
-                            if (sub == null) {
-                                return;
-                            }
-                            sub.onError(completionException);
-                        }
-                    }
-                    FlowSubscriptionImpl sub1 = null;
-                    while (n > 0) {
-                        T value = producer.remove();
-                        if (sub1 == null) {
-                            sub1 = subscribers.poll();
-                        }
-                        if (sub1 != null) {
-                            if (!sub1.onNext(value)) {
-                                sub1 = null;
-                            }
-                        } else if (tokens.size() < capacity) {
-                            tokens.add(value);
-                        } else {
-                            remainedRequests = n;
-                            producers.add(this);
-                            break;
-                        }
-                        n--;
-                        hasItems.signalAll();
-                    }
-                } finally {
-                    qlock.unlock();
-                }
-            } finally {
-                slock.unlock();
-            }
-        }
-
-        @Override
-        public void cancel() {
-            slock.lock();
-            try {
-                if (cancelled) {
-                    return;
-                }
-                cancelled = true;
-                qlock.lock();
-                try {
-                    producers.remove(this);
-                } finally {
-                    qlock.unlock();
-                }
-            } finally {
-                slock.unlock();
-            }
+    @Override
+    public void onNext(T message) {
+        if (!offer(message)) {
+            throw new IllegalStateException("buffer overflow");
         }
     }
+
+    private class MyActor extends Actor {
+
+        @Override
+        protected void fire() {
+            run();
+        }
+
+        @Override
+        protected void runAction() throws Throwable {
+            inp.extractTo(AsyncArrayBlockingQueue.this);
+        }
+    }
+
+    class MyOutFlow<T> extends BasicBlock.Port {
+
+        public MyOutFlow(BasicBlock parent) {
+            parent.super(true);
+        }
+    }
+
 }

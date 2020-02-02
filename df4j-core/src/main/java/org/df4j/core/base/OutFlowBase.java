@@ -15,8 +15,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T> {
-    private final Lock plock;
+public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T> {
+    protected final Lock qlock;
     private final Condition hasItems;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
@@ -25,19 +25,19 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
     protected Throwable completionException;
     protected volatile boolean completed;
 
-    public OutFlowBase(Lock plock, int bufferCapacity) {
-        this.plock = plock;
-        hasItems = plock.newCondition();
+    public OutFlowBase(Lock qlock, int bufferCapacity) {
+        this.qlock = qlock;
+        hasItems = qlock.newCondition();
         this.capacity = bufferCapacity;
         tokens = new ArrayDeque<>(capacity);
     }
 
     public boolean isCompleted() {
-        plock.lock();
+        qlock.lock();
         try {
             return completed && tokens.size() == 0;
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
     }
 
@@ -49,22 +49,22 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
-        plock.lock();
+        qlock.lock();
         try {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
         subscriber.onSubscribe(subscription);
-        plock.lock();
+        qlock.lock();
         try {
             if (isCompleted()) {
                 subscription.onComplete(completionException);
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
     }
 
@@ -84,8 +84,11 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
     @Override
     public boolean offer(T token) {
         FlowSubscriptionImpl sub;
-        plock.lock();
+        qlock.lock();
         try {
+            if (completed) {
+                return false;
+            }
             sub = activeSubscribtions.poll();
             if (sub == null) {
                 if (remainingCapacity() == 0) {
@@ -99,7 +102,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                 return true;
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
         transferTokens(token, sub);
         return true;
@@ -114,7 +117,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
         LinkedQueue<FlowSubscriptionImpl> psubs;
         for (;;) {
             boolean subIsActive = sub.onNext(token);
-            plock.lock();
+            qlock.lock();
             try {
                 if (!subIsActive) {
                     if (passiveSubscribtions == null) {
@@ -149,7 +152,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                     sub = activeSubscribtions.poll();
                 }
             } finally {
-                plock.unlock();
+                qlock.unlock();
             }
         }
         if (sub != null) {
@@ -182,7 +185,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
     public void onError(Throwable cause) {
         LinkedQueue<FlowSubscriptionImpl> asubs;
         LinkedQueue<FlowSubscriptionImpl> psubs;
-        plock.lock();
+        qlock.lock();
         try {
             if (completed) {
                 return;
@@ -198,7 +201,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
             psubs = this.passiveSubscribtions;
             this.passiveSubscribtions = null;
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
         completAllSubscriptions(asubs, psubs);
     }
@@ -209,7 +212,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
 
     @Override
     public T poll() {
-        plock.lock();
+        qlock.lock();
         try {
             for (;;) {
                 T res = tokens.poll();
@@ -224,13 +227,13 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                 return null;
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
     }
 
     @Override
     public T peek() {
-        plock.lock();
+        qlock.lock();
         try {
             for (;;) {
                 T res = tokens.peek();
@@ -243,12 +246,12 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                 return null;
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
     }
 
     public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        plock.lock();
+        qlock.lock();
         try {
             long millis = unit.toMillis(timeout);
             for (;;) {
@@ -269,12 +272,12 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                 millis = targetTime - System.currentTimeMillis();
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
     }
 
     public T take() throws InterruptedException {
-        plock.lock();
+        qlock.lock();
         try {
             for (;;) {
                 T res = tokens.poll();
@@ -289,7 +292,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                 hasItems.await();
             }
         } finally {
-            plock.unlock();
+            qlock.unlock();
         }
     }
 
@@ -298,7 +301,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
         return tokens.iterator();
     }
 
-    class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements FlowSubscription {
+    protected class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements FlowSubscription {
         private final Lock slock = new ReentrantLock();
         protected final Subscriber subscriber;
         private long remainedRequests = 0;
@@ -338,7 +341,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                 if (remainedRequests > n) {
                     return;
                 }
-                plock.lock();
+                qlock.lock();
                 try {
                     // remainedRequests was 0, so this subscription was passive
                     if (passiveSubscribtions == null) {
@@ -351,7 +354,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                         return;
                     }
                 } finally {
-                    plock.unlock();
+                    qlock.unlock();
                 }
             } finally {
                 slock.unlock();
@@ -367,7 +370,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                     return;
                 }
                 cancelled = true;
-                plock.lock();
+                qlock.lock();
                 try {
                     if (remainedRequests > 0) {
                         if (activeSubscribtions != null) {
@@ -379,7 +382,7 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
                         }
                     }
                 } finally {
-                    plock.unlock();
+                    qlock.unlock();
                 }
             } finally {
                 slock.unlock();
@@ -429,7 +432,9 @@ public abstract class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Pu
         }
     }
     
-    protected abstract void hasRoomEvent();
+    protected void hasRoomEvent() {
+    }
 
-    protected abstract void noRoomEvent();
+    protected void noRoomEvent() {
+    }
 }
