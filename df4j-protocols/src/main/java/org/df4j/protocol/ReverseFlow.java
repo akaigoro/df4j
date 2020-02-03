@@ -24,7 +24,7 @@ public class ReverseFlow {
         /**
          * @param producer the {@link Subscriber} which offers messages for this {@link Publisher}
          */
-        void offer(Producer<T> producer);
+        void suck(Producer<T> producer);
     }
 
     /**

@@ -1,17 +1,18 @@
-package org.df4j.core.communicator;
+package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.activities.ProducerActor;
 import org.df4j.core.activities.SubscriberActor;
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AsyncArrayBlockingQueueTest {
+public class AsyncArrayBlockingQueuePubSubTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
         ProducerActor producer = new ProducerActor(cnt, delay1);
         SubscriberActor subscriber = new SubscriberActor(delay2);
-        AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
-        queue.offer(producer.out);
+        AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
+        queue.suck(producer.out);
         queue.subscribe(subscriber.inp);
         producer.start();
         subscriber.start();

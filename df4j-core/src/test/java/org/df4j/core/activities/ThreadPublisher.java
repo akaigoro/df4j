@@ -4,21 +4,25 @@ import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.util.Utils;
 import org.df4j.protocol.Flow;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-import org.df4j.core.util.LongSemaphore;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CancellationException;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * A synchronous implementation of the {@link Flow.Publisher} that can
  * be subscribed to multiple times but each generated token will be received by exactly one subscriber.
  */
 public class ThreadPublisher extends Thread implements Flow.Publisher<Long> {
+    private final long delay;
     AsyncArrayBlockingQueue<Long> output = new AsyncArrayBlockingQueue<Long>(16);
     long elements;
 
-    public ThreadPublisher(long elements) {
+    public ThreadPublisher(long elements, long delay) {
         this.elements = elements;
+        this.delay = delay;
+    }
+
+    public ThreadPublisher(long elements) {
+        this(elements, 0);
     }
 
     @Override
@@ -29,12 +33,17 @@ public class ThreadPublisher extends Thread implements Flow.Publisher<Long> {
     @Override
     public void run() {
         try {
-            do {
-                elements--;
-                output.put(elements);
-            } while (elements >= 0);
+            for (long k=0; k<elements; k++) {
+                Thread.sleep(delay);
+                boolean succsess = output.offer(k, 500, TimeUnit.MILLISECONDS);
+                if (!succsess) {
+                    break;
+                }
+            }
         } catch (InterruptedException e) {
             Utils.sneakyThrow(e);
+        } finally {
+            output.onComplete();
         }
     }
 }

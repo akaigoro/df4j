@@ -1,5 +1,6 @@
-package org.df4j.core.communicator;
+package org.df4j.core.asyncarrayblockingqueue;
 
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Dataflow;
@@ -15,8 +16,8 @@ import java.util.logging.Level;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Synchronous implementation, for reference
+/** using AsyncArrayBlockingQueue to connect threads and actors
+ *
  */
 public class DiningPhilosophers extends Dataflow {
     static final int num = 5; // number of phylosophers
@@ -94,6 +95,9 @@ public class DiningPhilosophers extends Dataflow {
         }
     }
 
+    /**
+     * Synchronous implementation, for reference
+     */
     class PhilosopherThread extends Thread implements ActivityThread {
         protected final Logger logger = new Logger(this);
         int id;

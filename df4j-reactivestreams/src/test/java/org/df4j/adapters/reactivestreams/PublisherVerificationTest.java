@@ -8,7 +8,7 @@ import org.reactivestreams.tck.TestEnvironment;
 
 import java.util.logging.Level;
 
-public class PublisherVerificationTest extends org.reactivestreams.tck.PublisherVerification {
+public class PublisherVerificationTest extends org.reactivestreams.tck.PublisherVerification<Long> {
     static final long defaultTimeout = 400;
 
     public PublisherVerificationTest() {

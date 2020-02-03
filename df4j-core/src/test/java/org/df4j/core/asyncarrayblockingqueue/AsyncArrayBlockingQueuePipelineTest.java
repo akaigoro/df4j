@@ -1,12 +1,12 @@
-package org.df4j.core.communicator;
+package org.df4j.core.asyncarrayblockingqueue;
 
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
 import org.df4j.core.util.Logger;
-import org.reactivestreams.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -157,7 +157,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
         public AsyncProcessor(int n, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) {
             this.n = n;
             inp.subscribe(this.inp);
-            out.offer(this.out);
+            out.suck(this.out);
         }
 
         @Override

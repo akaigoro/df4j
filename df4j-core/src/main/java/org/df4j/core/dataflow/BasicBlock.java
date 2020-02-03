@@ -221,7 +221,7 @@ public abstract class BasicBlock extends Node<BasicBlock> {
      * When all ports become unblocked, method {@link BasicBlock#fire()} is called.
      * This resembles firing of a Petri Net transition.
      */
-    public abstract class Port {
+    public class Port {
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected final Lock plock = new ReentrantLock();
         protected boolean ready;

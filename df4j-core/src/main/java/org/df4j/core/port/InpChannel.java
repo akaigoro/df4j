@@ -48,7 +48,7 @@ public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Consum
     }
 
     @Override
-    public void offer(ReverseFlow.Producer<T> producer) {
+    public void suck(ReverseFlow.Producer<T> producer) {
         ProducerSubscription subscription = new ProducerSubscription(producer);
         producer.onSubscribe(subscription);
     }

@@ -4,7 +4,6 @@ import org.df4j.core.base.OutFlowBase;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.BasicBlock;
 import org.df4j.core.port.InpChannel;
-import org.df4j.core.port.OutFlow;
 import org.df4j.core.port.OutMessagePort;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.ReverseFlow;
@@ -32,7 +31,7 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
         Flow.Publisher<T>, OutMessagePort<T> {
     protected final Actor actor;
     public InpChannel<T> inp;
-    protected final OutFlow<T> out;
+    protected final BasicBlock.Port out;
     private final Condition hasRoom;
 
     public AsyncArrayBlockingQueue(int capacity) {
@@ -40,13 +39,13 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
         actor = new MyActor();
         actor.start();
         inp = new InpChannel<>(actor);
-        out = new OutFlow<>(actor, capacity);
+        out = actor.new Port(true);
         hasRoom = qlock.newCondition();
     }
 
     @Override
-    public void offer(ReverseFlow.Producer<T> producer) {
-        inp.offer(producer);
+    public void suck(ReverseFlow.Producer<T> producer) {
+        inp.suck(producer);
     }
 
     /**
@@ -65,7 +64,6 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
      * @throws InterruptedException if interrupted while waiting
      */
     @Override
-
     public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
         long millis = unit.toMillis(timeout);
         FlowSubscriptionImpl sub;
@@ -157,12 +155,4 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
             inp.extractTo(AsyncArrayBlockingQueue.this);
         }
     }
-
-    class MyOutFlow<T> extends BasicBlock.Port {
-
-        public MyOutFlow(BasicBlock parent) {
-            parent.super(true);
-        }
-    }
-
 }

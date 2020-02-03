@@ -30,7 +30,12 @@ public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
             return null;
         }
         size--;
-        return header.poll().getItem();
+        Link<T> first = header.poll();
+        if (first == null) {
+            return  null;
+        }else {
+            return first.getItem();
+        }
     }
 
     @Override
