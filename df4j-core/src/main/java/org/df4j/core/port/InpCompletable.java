@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Completable;
 import org.df4j.protocol.SimpleSubscription;
 
@@ -8,15 +8,15 @@ import org.df4j.protocol.SimpleSubscription;
  * One-shot token storage for a {@link Completion} token (signal+error)
  * After the token is received, this port stays ready forever.
  */
-public class InpCompletable extends BasicBlock.Port implements Completable.Observer {
+public class InpCompletable extends AsyncProc.Port implements Completable.Observer {
     protected volatile boolean completed = false;
     private Throwable completionException = null;
     private SimpleSubscription subscription;
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpCompletable(BasicBlock parent) {
+    public InpCompletable(AsyncProc parent) {
         parent.super(false);
     }
 

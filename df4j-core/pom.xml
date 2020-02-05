@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.df4j</groupId>
         <artifactId>df4j</artifactId>
-        <version>8.1</version>
+        <version>8.2</version>
     </parent>
 
     <artifactId>df4j-core</artifactId>

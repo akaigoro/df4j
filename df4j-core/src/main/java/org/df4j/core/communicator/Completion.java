@@ -113,15 +113,11 @@ public class Completion implements Completable.Source {
     /**
      * waits this {@link Completable} to complete
      */
-    public void join() {
+    public void join()  throws InterruptedException  {
         bblock.lock();
         try {
             while (!completed) {
-                try {
-                    completedCond.await();
-                } catch (InterruptedException e) {
-                    throw new CompletionException(e);
-                }
+                completedCond.await();
             }
         } finally {
             bblock.unlock();

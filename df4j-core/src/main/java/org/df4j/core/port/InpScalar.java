@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
@@ -21,16 +21,16 @@ import org.reactivestreams.Subscriber;
  *
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
-public class InpScalar<T> extends BasicBlock.Port implements Scalar.Observer<T> {
+public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
     protected T value;
     protected volatile boolean completed = false;
     private Throwable completionException = null;
     private SimpleSubscription simpleSubscription;
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpScalar(BasicBlock parent) {
+    public InpScalar(AsyncProc parent) {
         parent.super(false);
     }
 

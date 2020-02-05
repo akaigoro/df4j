@@ -28,7 +28,7 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
             @Override
             protected void runAction() {
                 out.onError(new RuntimeException());
-                stop();
+                onComplete();
             }
         };
         publisher.start();

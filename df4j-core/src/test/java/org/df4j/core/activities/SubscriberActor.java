@@ -27,7 +27,7 @@ public class SubscriberActor extends Actor {
         if (inp.isCompleted()) {
             Throwable completionException = inp.getCompletionException();
             logger.info(" SubscriberActor: completed with: " + completionException);
-            stop(completionException);
+            onError(completionException);
             return;
         }
         Long in = inp.removeAndRequest();

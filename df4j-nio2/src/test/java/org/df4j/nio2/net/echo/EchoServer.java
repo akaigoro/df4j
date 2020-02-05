@@ -37,12 +37,12 @@ public class EchoServer extends Actor {
         allowedConnections.release(maxConnCount);
     }
 
-    public void close() {
+    public void close() throws InterruptedException {
         acceptor.close();
-        stop();
+        onComplete();
         join();
         for (EchoProcessor processor: echoProcessors) {
-            processor.stop();
+            processor.onComplete();
         }
         for (EchoProcessor processor: echoProcessors) {
             processor.join();
@@ -105,14 +105,14 @@ public class EchoServer extends Actor {
         }
 
         @Override
-        public void stop() {
-            super.stop();
+        public void onComplete() {
+            super.onComplete();
             releaseConnectionPermit();
         }
 
         @Override
-        protected void stop(Throwable ex) {
-            super.stop(ex);
+        protected void onError(Throwable ex) {
+            super.onError(ex);
             releaseConnectionPermit();
         }
 
@@ -123,7 +123,7 @@ public class EchoServer extends Actor {
                 LOG.info("EchoProcessor replied");
             } else {
                 serverConn.close();
-                stop();
+                onComplete();
                 LOG.info("EchoProcessor completed");
             }
         }

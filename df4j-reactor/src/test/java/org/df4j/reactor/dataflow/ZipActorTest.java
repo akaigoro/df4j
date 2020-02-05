@@ -20,7 +20,7 @@ public  class ZipActorTest {
         @Override
         protected void runAction() throws Throwable {
             if (inpFlow.isCompleted()) {
-                stop();
+                onComplete();
                 return;
             }
             T1 element1 = inpFlow.removeAndRequest();
@@ -32,7 +32,7 @@ public  class ZipActorTest {
     }
 
     @Test
-    public void ZipActorTest() {
+    public void ZipActorTest() throws InterruptedException {
         Flux<Integer> flux = Flux.just(1,2,3);
         Mono<Integer> mono = Mono.just(5);
         ZipActor<Integer, Integer> actor = new ZipActor<Integer, Integer>(flux, mono){

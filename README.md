@@ -92,6 +92,14 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 Version history
 ---------------
+2020/02/05
+version 8.2.
+BasickBlock eliminated. AsyncProc became the root async node. 
+Methods awake() and awake(long delay) eliminated. 
+Functionality of BasicBlock is modelled with Actor and new stop() method.
+Old stop methods renamed to onComplete and onError.
+Actor has new methods nextAction(ThrowingRunnable) and delay(millis).
+
 2019/12/30
 version 8.0.
 All the tests passed, including those from reactive TCK. 

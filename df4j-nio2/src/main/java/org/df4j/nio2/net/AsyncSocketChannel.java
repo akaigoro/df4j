@@ -12,8 +12,7 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.communicator.AsyncSemaphore;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
@@ -48,8 +47,8 @@ public class AsyncSocketChannel {
         this.channel=channel;
         reader = new Reader(dataflow);
         writer = new Writer(dataflow);
-        reader.awake();
-        writer.awake();
+        reader.start();
+        writer.start();
     }
 
     public void setName(String name) {
@@ -90,7 +89,7 @@ public class AsyncSocketChannel {
     /**
      * an actor with delayed restart of the action
      */
-    public abstract class IOExecutor extends BasicBlock implements CompletionHandler<Integer, ByteBuffer> {
+    public abstract class IOExecutor extends AsyncProc implements CompletionHandler<Integer, ByteBuffer> {
         protected final Logger LOG = new Logger(this);
 
         final String io;
@@ -139,7 +138,7 @@ public class AsyncSocketChannel {
                 output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
-                this.awake();
+                this.start();
             }
         }
 
@@ -148,7 +147,7 @@ public class AsyncSocketChannel {
             if (exc instanceof AsynchronousCloseException) {
                 close();
             } else {
-                this.awake(); // let subsequent requests fail
+                this.start(); // let subsequent requests fail
                 output.onError(exc);
             }
         }

@@ -8,9 +8,9 @@ import java.util.Timer;
 import java.util.concurrent.*;
 
 /**
- * A dataflow graph, consisting of 1 or more {@link BasicBlock}s and, probably, nested {@link Dataflow}s.
+ * A dataflow graph, consisting of 1 or more {@link AsyncProc}s and, probably, nested {@link Dataflow}s.
  * Completion signals (errors or success) propagate from the leaf nodes to the root node.
- * Component {@link BasicBlock}s plays the same role as basic blocks in a flow chart.
+ * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
 public class Dataflow extends Node<Dataflow> implements Activity {
     protected ExecutorService executor;

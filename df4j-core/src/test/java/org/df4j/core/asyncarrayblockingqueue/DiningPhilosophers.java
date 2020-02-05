@@ -3,6 +3,7 @@ package org.df4j.core.asyncarrayblockingqueue;
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
+import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
@@ -167,21 +168,14 @@ public class DiningPhilosophers extends Dataflow {
         }
     }
 
-    class PhilosopherDF extends Dataflow {
+    class PhilosopherDF extends Actor {
         protected final Logger logger = new Logger(this, Level.INFO);
+        InpScalar<String> fork = new InpScalar<>(this);
         int id;
         ForkPlace leftPlace, rightPlace;
         String left, right;
         String indent;
         int rounds = 0;
-
-        StartThinking startThinking;
-        // thinking takes time
-        EndThinking endThinking;
-        // to start eating, philosopher need forks
-        StartEating startEating;
-        // eating takes time
-        EndEating endEating;
 
         public PhilosopherDF(int id) {
             super(DiningPhilosophers.this);
@@ -200,87 +194,57 @@ public class DiningPhilosophers extends Dataflow {
             for (int k = 0; k < id; k++) sb.append("              ");
             indent = sb.toString();
             logger.info("Ph no. " + id + " (dataflow): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
-
-            startThinking = new StartThinking();
-            endThinking = new EndThinking();
-            startEating = new StartEating();
-            endEating = new EndEating();
-        }
-
-        @Override
-        public void start() {
-            startThinking.awake();
         }
 
         void println(String s) {
             logger.info(indent + s);
         }
 
-        /**
-         * These basic blocks form a flowchart using control transfer method {@link BasicBlock#awake()}.
-         */
-        abstract class BasicBlock extends org.df4j.core.dataflow.BasicBlock {
-            protected BasicBlock() {
-                super(PhilosopherDF.this);
+        @Override
+        protected void runAction() {
+            nextAction(this::startThinking);
+        }
+
+        void startThinking() {
+            delay(getDelay());
+            nextAction(this::endThinking);
+        }
+
+        void endThinking()  {
+            println("Request left (" + leftPlace.id + ")");
+            leftPlace.subscribe(fork);
+            nextAction(this::startEating);
+        }
+
+        void startEating() {
+            if (left == null) {
+                left = fork.remove();
+                println("got left "+left + " from "+ leftPlace.id);
+                println("Request right (" + rightPlace.id + ")");
+                rightPlace.subscribe(fork);
+            } else {
+                right = fork.remove();
+                println("got right "+right + " from "+ rightPlace.id);
+                nextAction(this::endEating);
+                delay(getDelay());
             }
         }
 
-        class StartThinking extends BasicBlock {
-            @Override
-            protected void runAction() throws Throwable {
-                endThinking.awake(getDelay());
-            }
-        }
-
-        class EndThinking extends BasicBlock {
-            @Override
-            protected void runAction() throws Throwable {
-                startEating.start();
-            }
-        }
-
-        class StartEating extends BasicBlock {
-            InpScalar<String> fork = new InpScalar<>(this);
-
-            void start() {
-                println("Request left (" + leftPlace.id + ")");
-                leftPlace.subscribe(fork);
-                awake();
-            }
-
-            @Override
-            protected void runAction() throws Throwable {
-                if (left == null) {
-                    left = fork.remove();
-                    println("got left "+left + " from "+ leftPlace.id);
-                    println("Request right (" + rightPlace.id + ")");
-                    rightPlace.subscribe(fork);
-                    awake();
-                } else {
-                    right = fork.remove();
-                    println("got right "+right + " from "+ rightPlace.id);
-                    endEating.awake(getDelay());
-                }
-            }
-        }
-
-        class EndEating extends BasicBlock {
-            @Override
-            protected void runAction() throws Throwable {
-                println("Release left "+left +" to " + leftPlace.id);
-                leftPlace.put(left);
-                println("Release right " + right + " to " + rightPlace.id);
-                rightPlace.put(right);
-                // check end of life
-                rounds++;
-                if (rounds < N) {
-                    println("Ph no. " + id + ": continues round " + rounds);
-                    startThinking.awake();
-                } else {
-                    println("Ph no. " + id + ": died at round " + rounds);
-                    counter.countDown();
-                    DiningPhilosophers.this.leave(this);
-                }
+        void endEating() {
+            println("Release left "+left +" to " + leftPlace.id);
+            leftPlace.put(left);
+            println("Release right " + right + " to " + rightPlace.id);
+            rightPlace.put(right);
+            // check end of life
+            rounds++;
+            if (rounds < N) {
+                println("Ph no. " + id + ": continues round " + rounds);
+                nextAction(this::startThinking);
+            } else {
+                println("Ph no. " + id + ": died at round " + rounds);
+                counter.countDown();
+                DiningPhilosophers.this.leave(this);
+                onComplete();
             }
         }
     }

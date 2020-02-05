@@ -1,7 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.dataflow.AsyncProc;
 import org.reactivestreams.*;
 import org.df4j.protocol.SignalFlow;
 
@@ -12,23 +11,23 @@ import java.util.TimerTask;
  *
  * it is lazy, so implicit invocation of {@link InpSignal#request()} required
  */
-public class InpSignal extends BasicBlock.Port implements SignalFlow.Subscriber {
+public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
     private Subscription subscription;
     /** the port is blocked if permits <= 0 */
     protected long permits;
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpSignal(BasicBlock parent) {
+    public InpSignal(AsyncProc parent) {
         parent.super(false);
     }
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      * @param permits initial number of permits; can be negative
      */
-    public InpSignal(BasicBlock parent, long permits) {
+    public InpSignal(AsyncProc parent, long permits) {
         parent.super(permits > 0);
         this.permits = permits;
     }
@@ -123,7 +122,7 @@ public class InpSignal extends BasicBlock.Port implements SignalFlow.Subscriber 
      * @param delay time delay in milliseconds
      */
     public void delayedAwake(long delay) {
-        BasicBlock parent = getParent();
+        AsyncProc parent = getParent();
         if (parent.isCompleted()) {
             return;
         }

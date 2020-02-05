@@ -2,7 +2,7 @@ package org.df4j.core.communicator;
 
 import org.df4j.core.base.OutFlowBase;
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpChannel;
 import org.df4j.core.port.OutMessagePort;
 import org.df4j.protocol.Flow;
@@ -31,7 +31,7 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
         Flow.Publisher<T>, OutMessagePort<T> {
     protected final Actor actor;
     public InpChannel<T> inp;
-    protected final BasicBlock.Port out;
+    protected final AsyncProc.Port out;
     private final Condition hasRoom;
 
     public AsyncArrayBlockingQueue(int capacity) {

@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.base.OutFlowBase;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Flow;
 import org.reactivestreams.Subscriber;
 
@@ -21,20 +21,20 @@ import java.util.concurrent.locks.Lock;
  * is ready when has room to store at least one toke
  * @param <T>
  */
-public class OutFlow<T> extends BasicBlock.Port implements OutMessagePort<T>, Flow.Publisher<T> {
+public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flow.Publisher<T> {
     final private OutFlowBase<T> base;
 
-    public OutFlow(BasicBlock parent, int capacity) {
+    public OutFlow(AsyncProc parent, int capacity) {
         parent.super(true);
         base = new MyOutFlowBase(plock, capacity);
     }
 
-    public OutFlow(BasicBlock parent, int capacity, OutFlowBase<T> base) {
+    public OutFlow(AsyncProc parent, int capacity, OutFlowBase<T> base) {
         parent.super(true);
         this.base = base;
     }
 
-    public OutFlow(BasicBlock parent) {
+    public OutFlow(AsyncProc parent) {
         this(parent, 16);
     }
 

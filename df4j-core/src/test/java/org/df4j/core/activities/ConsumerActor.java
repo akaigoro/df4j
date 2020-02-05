@@ -24,7 +24,7 @@ public class ConsumerActor extends Actor {
         Thread.sleep(delay);
         if (inp.isCompleted()) {
             logger.info(" completed.");
-            stop();
+            onComplete();
         } else {
             Long in = inp.removeAndRequest();
             logger.info(" got: "+in);

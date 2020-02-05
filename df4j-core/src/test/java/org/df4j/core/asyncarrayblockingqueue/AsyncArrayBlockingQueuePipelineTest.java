@@ -175,7 +175,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
                 cause = e.getCause();
             }
             out.onError(cause);
-            stop(cause);
+            onError(cause);
         }
     }
 }

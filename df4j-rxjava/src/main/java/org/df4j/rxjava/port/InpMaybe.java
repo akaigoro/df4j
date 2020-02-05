@@ -2,7 +2,7 @@ package org.df4j.rxjava.port;
 
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.MaybeObserver;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.df4j.protocol.SimpleSubscription;
 
@@ -10,9 +10,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class InpMaybe<T> extends InpScalar<T> implements MaybeObserver<T> {
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpMaybe(BasicBlock parent) {
+    public InpMaybe(AsyncProc parent) {
         super(parent);
     }
 

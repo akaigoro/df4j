@@ -13,7 +13,7 @@
 package org.df4j.nio2.file;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
@@ -30,7 +30,7 @@ import java.util.logging.Level;
  * Wrapper over {@link AsynchronousFileChannel}.
  * Simplifies input-output, handling queues of {@link ByteBuffer}s.
  */
-public abstract class AsyncFileChannel extends BasicBlock implements CompletionHandler<Integer, ByteBuffer> {
+public abstract class AsyncFileChannel extends Actor implements CompletionHandler<Integer, ByteBuffer> {
     protected final Logger LOG = new Logger(this, Level.INFO);
     protected volatile AsynchronousFileChannel channel;
     /** input queue of empty buffers */
@@ -44,14 +44,6 @@ public abstract class AsyncFileChannel extends BasicBlock implements CompletionH
         this.channel=channel;
         input = new InpFlow<>(this, capacity);
         output = new OutFlow<>(this, capacity);
-    }
-
-    public void start() {
-        super.awake();
-    }
-
-    public synchronized boolean isClosed() {
-        return channel==null;
     }
 
     /** disallows subsequent posts of requests; already posted requests
@@ -83,6 +75,7 @@ public abstract class AsyncFileChannel extends BasicBlock implements CompletionH
         if (!input.isCompleted()) {
             ByteBuffer buffer = input.removeAndRequest();
             doIO(buffer);
+            stop();
         } else {
             try {
                 channel.close();
@@ -92,10 +85,10 @@ public abstract class AsyncFileChannel extends BasicBlock implements CompletionH
                 } else {
                     output.onError(completionException);
                 }
-                stop();
+                onComplete();
             } catch (IOException e) {
                 output.onError(e);
-                stop(e);
+                onError(e);
             }
         }
     }
@@ -114,7 +107,7 @@ public abstract class AsyncFileChannel extends BasicBlock implements CompletionH
             output.onNext(buffer);
             // start next IO excange only after this reading is finished,
             // to keep buffer ordering
-            this.awake();
+            this.start();
         }
     }
 
@@ -123,7 +116,7 @@ public abstract class AsyncFileChannel extends BasicBlock implements CompletionH
         if (exc instanceof AsynchronousCloseException) {
             close();
         } else {
-            this.awake(); // let subsequent requests fail
+            this.start(); // let subsequent requests fail
             output.onError(exc);
         }
     }

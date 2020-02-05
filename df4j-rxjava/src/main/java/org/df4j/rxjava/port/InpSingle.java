@@ -2,7 +2,7 @@ package org.df4j.rxjava.port;
 
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.SingleObserver;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
@@ -19,9 +19,9 @@ import org.df4j.protocol.SimpleSubscription;
 public class InpSingle<T> extends InpScalar<T> implements SingleObserver<T> {
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpSingle(BasicBlock parent) {
+    public InpSingle(AsyncProc parent) {
         super(parent);
     }
 

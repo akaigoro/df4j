@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
@@ -11,17 +11,21 @@ import java.util.Queue;
  * A passive input parameter.
  * Has room for single value.
  */
-public class InpChannel<T> extends BasicBlock.Port implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
+public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
     protected volatile boolean completed;
     protected volatile Throwable completionException;
     protected volatile T value;
     protected Queue<ProducerSubscription> producers = new LinkedList<ProducerSubscription>();
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpChannel(BasicBlock parent) {
+    public InpChannel(AsyncProc parent) {
         parent.super(false);
+    }
+
+    public InpChannel(AsyncProc parent, int i) {
+        this(parent);
     }
 
     public boolean isCompleted() {

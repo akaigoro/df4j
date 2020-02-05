@@ -2,10 +2,8 @@ package org.df4j.core.activities;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
-import org.junit.Assert;
 
 import java.util.logging.Level;
 
@@ -44,7 +42,7 @@ public class ScalarSubscriberActor extends Actor {
             cnt--;
             nextSubscribe();
         } else {
-            stop();
+            onComplete();
         }
     }
 }

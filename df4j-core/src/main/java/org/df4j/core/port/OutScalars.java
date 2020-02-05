@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
 
@@ -16,13 +16,13 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <T> the type of completion value
  */
-public class OutScalars<T> extends BasicBlock.Port implements OutMessagePort<T>, Scalar.Source<T> {
+public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, Scalar.Source<T> {
     private final Lock plock = new ReentrantLock();
     private  Queue<ScalarSubscription> subscriptions = new LinkedList<>();
     private Throwable completionException;
     protected volatile boolean completed;
 
-    public OutScalars(BasicBlock parent) {
+    public OutScalars(AsyncProc parent) {
         parent.super(false);
     }
 

@@ -18,7 +18,8 @@ public class SumSquareTest1 {
 
     public static class Square extends AsyncFunc<Integer> {
         final InpScalar<Integer> param = new InpScalar<>(this);
-        {awake();}
+        {
+            this.start();}
 
         protected Integer callAction() {
             Integer arg = param.current();
@@ -30,7 +31,8 @@ public class SumSquareTest1 {
     public static class Sum extends AsyncFunc<Integer> {
         final InpScalar<Integer> paramX = new InpScalar<>(this);
         final InpScalar<Integer> paramY = new InpScalar<>(this);
-        {awake();}
+        {
+            this.start();}
 
         protected Integer callAction() {
             Integer argX = paramX.current();

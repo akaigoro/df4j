@@ -47,7 +47,7 @@ public class PublisherActor extends Actor {
         } else {
             logger.info("PublisherActor.onComplete");
             out.onComplete();
-            stop();
+            onComplete();
         }
     }
 }

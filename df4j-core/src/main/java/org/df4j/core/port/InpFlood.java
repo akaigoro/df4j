@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Flood;
 import org.df4j.protocol.SimpleSubscription;
 
@@ -14,7 +14,7 @@ import java.util.Queue;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlood<T> extends BasicBlock.Port implements Flood.Subscriber<T>, InpMessagePort<T> {
+public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, InpMessagePort<T> {
     /** TODO optimize for single token */
     private  final Queue<T> tokens = new LinkedList<T>();
     private Throwable completionException;
@@ -22,9 +22,9 @@ public class InpFlood<T> extends BasicBlock.Port implements Flood.Subscriber<T>,
     protected SimpleSubscription subscription;
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpFlood(BasicBlock parent) {
+    public InpFlood(AsyncProc parent) {
         parent.super(false);
     }
 

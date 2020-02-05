@@ -5,12 +5,11 @@ import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public abstract class AsyncFunc<R> extends AsyncProc  implements Scalar.Source<R>, Future<R> {
+public abstract class AsyncFunc<R> extends AsyncProc implements Scalar.Source<R>, Future<R> {
     private R result;
 
     public AsyncFunc(Dataflow parent) {
@@ -48,8 +47,8 @@ public abstract class AsyncFunc<R> extends AsyncProc  implements Scalar.Source<R
     }
 
     @Override
-    public R get() throws InterruptedException, ExecutionException {
-        super.join();
+    public R get() throws InterruptedException {
+        join();
         return result;
     }
 

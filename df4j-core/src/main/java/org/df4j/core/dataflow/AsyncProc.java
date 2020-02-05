@@ -9,23 +9,187 @@
  */
 package org.df4j.core.dataflow;
 
-/**
- * {@link AsyncProc} is a {@link Dataflow} with single {@link BasicBlock} which is executed only once.
-*/
-public abstract class AsyncProc extends BasicBlock implements Activity {
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Executor;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-    public AsyncProc(Dataflow parent) {
-        super(parent);
+/**
+ * {@link AsyncProc} is the most primitive component of {@link Dataflow} graph.
+ *  It plays the same role as basic blocks in a flow chart
+ *  (see <a href="https://en.wikipedia.org/wiki/Flowchart">https://en.wikipedia.org/wiki/Flowchart</a>).
+ * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.
+ * This embedded port is implicitly switched off when this {@link AsyncProc} is fired,
+ * so the method {@link AsyncProc#start()} must be called again explicitly if next firings are required.
+ * Unlike basic blocks in traditional flow charts, different {@link AsyncProc}s in the same {@link Dataflow} graph can run in parallel.
+ *
+ * {@link AsyncProc} can contain additional input and output ports
+ * to exchange messages and signals with ports of other {@link AsyncProc}s in consistent manner.
+ * {@link AsyncProc} is submitted for execution to its executor when all ports become ready, including the embedded control port.
+ */
+public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
+
+    /** is not encountered as a parent's child */
+    private boolean daemon;
+    /**
+     * blocked initially, until {@link #start} called.
+     */
+    private ArrayList<Port> ports = new ArrayList<>();
+    private int blockingPortCount = 0;
+    private Executor executor;
+    private Timer timer;
+    private Port controlport = new ControlPort();
+
+    protected AsyncProc(Dataflow dataflow) {
+        if (dataflow == null) {
+            throw new IllegalArgumentException();
+        }
+        this.parent = dataflow;
+        dataflow.enter(this);
     }
 
     public AsyncProc() {
-        super(new Dataflow());
+        this(new Dataflow());
     }
 
+    public Dataflow getDataflow() {
+        return parent;
+    }
+
+    public Timer getTimer() {
+        bblock.lock();
+        try {
+            if (timer == null) {
+                timer = parent.getTimer();
+            }
+            return timer;
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public void setDaemon(boolean daemon) {
+        bblock.lock();
+        try {
+            if (this.daemon) {
+                return;
+            }
+            this.daemon = daemon;
+            if (parent != null) {
+                parent.leave(this);
+            }
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public boolean isDaemon() {
+        bblock.lock();
+        try {
+            return daemon;
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    /**
+     * passes a control token to this {@link AsyncProc}.
+     * This token is consumed when this block is submitted to an executor.
+     */
+    public void start() {
+        controlport.unblock();
+    }
+
+    public void start(long delay) {
+        bblock.lock();
+        try {
+            if (isCompleted()) {
+                return;
+            }
+        } finally {
+            bblock.unlock();
+        }
+        TimerTask task = new TimerTask(){
+            @Override
+            public void run() {
+                start();
+            }
+        };
+        getTimer().schedule(task, delay);
+    }
+
+    /**
+     * finishes parent activity normally.
+     */
+    public void onComplete() {
+        bblock.lock();
+        try {
+            if (isCompleted()) {
+                return;
+            }
+            super.onComplete();
+            if (parent != null && !daemon) {
+                parent.leave(this);
+            }
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    /**
+     * finishes parent activity exceptionally.
+     * @param ex the exception
+     */
+    protected void onError(Throwable ex) {
+        bblock.lock();
+        try {
+            if (isCompleted()) {
+                return;
+            }
+            super.onError(ex);
+        } finally {
+            bblock.unlock();
+        }
+        parent.onError(ex);
+    }
+
+    public void setExecutor(Executor exec) {
+        bblock.lock();
+        try {
+            this.executor = exec;
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public Executor getExecutor() {
+        bblock.lock();
+        try {
+            if (executor == null) {
+                executor = parent.getExecutor();
+            }
+            return executor;
+        } finally {
+            bblock.unlock();
+        }
+    }
 
     @Override
-    public void start() {
-        super.awake();
+    public AsyncProc getItem() {
+        return this;
+    }
+
+    /**
+     * invoked when all asyncTask asyncTask are ready,
+     * and method run() is to be invoked.
+     * Safe way is to submit this instance as a Runnable to an Executor.
+     * Fast way is to invoke it directly, but make sure the chain of
+     * direct invocations is short to avoid stack overflow.
+     */
+    protected void fire() {
+        getExecutor().execute(this::run);
     }
 
     @Override
@@ -33,14 +197,136 @@ public abstract class AsyncProc extends BasicBlock implements Activity {
         return !isCompleted();
     }
 
-
+    /**
+     * the main entry point.
+     * Overwrite only to declare different kind of node.
+     */
     protected void run() {
         try {
             runAction();
-            stop();
+            onComplete();
         } catch (Throwable e) {
-            stop(e);
+            onError(e);
         }
     }
 
+    /**     * User's action.
+     * User is adviswd top override this method, but overriding {@link #fire()} alse is possible
+     *
+     * @throws Throwable when thrown, this node is considered failed.
+     */
+    protected abstract void runAction() throws Throwable;
+
+    /**
+     * Basic class for all ports (places for tokens).
+     * Has 2 states: ready or blocked.
+     * When all ports become unblocked, method {@link AsyncProc#fire()} is called.
+     * This resembles firing of a Petri Net transition.
+     */
+    public class Port {
+        /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
+        protected final Lock plock = new ReentrantLock();
+        protected boolean ready;
+
+        public Port(boolean ready) {
+            this.ready = ready;
+            if (!ready) {
+                bblock.lock();
+                try {
+                    blockingPortCount++;
+                } finally {
+                    bblock.unlock();
+                }
+            }
+            ports.add(this);
+        }
+
+        protected AsyncProc getParent() {
+            return AsyncProc.this;
+        }
+
+        public boolean isReady() {
+            plock.lock();
+            try {
+                return ready;
+            } finally {
+                plock.unlock();
+            }
+        }
+
+        private final void dbg(String s) {
+//            System.out.println(BasicBlock.this.getClass().getName()+"/"+getClass().getSimpleName()+ s +blockingPortCount);
+        }
+
+        /**
+         * sets this port to a blocked state.
+         */
+        public synchronized void block() {
+            plock.lock();
+            try {
+                if (!ready) {
+                    return;
+                }
+                ready = false;
+                bblock.lock();
+                try {
+                    blockingPortCount++;
+                } finally {
+                    bblock.unlock();
+                }
+            } finally {
+                plock.unlock();
+            }
+        }
+
+        /**
+         * sets this port to unblocked state.
+         * If all ports become unblocked,
+         * this block is submitted to the executor.
+         */
+        public void unblock() {
+            plock.lock();
+            try {
+                if (ready) {
+                    return;
+                }
+                ready = true;
+                bblock.lock();
+                try {
+                    if (completed) {
+                        return;
+                    }
+                    if (blockingPortCount == 0) {
+                        throw new IllegalStateException("blocked port and blockingPortCount == 0");
+                    }
+                    blockingPortCount--;
+       //             dbg("#unblock: blockingPortCount = "+blockingPortCount);
+                    if (blockingPortCount > 0) {
+                        return;
+                    }
+                } finally {
+                    bblock.unlock();
+                }
+            } finally {
+                plock.unlock();
+            }
+            controlport.block();
+            fire();
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + (ready?": ready":": blocked");
+        }
+
+        protected Dataflow getDataflow() {
+            return parent;
+        }
+    }
+
+    private class ControlPort extends Port {
+        public ControlPort() {
+            super(false);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.reactivestreams.*;
 
 import java.util.ArrayDeque;
@@ -10,7 +10,7 @@ import java.util.ArrayDeque;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlow<T> extends BasicBlock.Port implements InpMessagePort<T>, Subscriber<T> {
+public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
     private boolean lazy = false;
     protected boolean withBuffer;
@@ -24,18 +24,18 @@ public class InpFlow<T> extends BasicBlock.Port implements InpMessagePort<T>, Su
 
     /**
      * creates a port which is subscribed to the {@code #Flow.Publisher}
-     * @param parent {@link BasicBlock} to wich this port belongs
+     * @param parent {@link AsyncProc} to wich this port belongs
      * @param capacity required capacity
      */
-    public InpFlow(BasicBlock parent, int capacity) {
+    public InpFlow(AsyncProc parent, int capacity) {
         parent.super(false);
         setCapacity(capacity);
     }
 
     /**
-     * @param parent {@link BasicBlock} to which this port belongs
+     * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpFlow(BasicBlock parent) {
+    public InpFlow(AsyncProc parent) {
         this(parent, 1);
     }
 

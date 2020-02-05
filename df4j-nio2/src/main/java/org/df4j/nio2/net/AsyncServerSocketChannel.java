@@ -9,8 +9,7 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.communicator.AsyncSemaphore;
-import org.df4j.core.dataflow.BasicBlock;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.OutScalars;
 import org.df4j.core.util.Logger;
@@ -29,7 +28,7 @@ import java.nio.channels.*;
  * The port is bounded, so incoming connections are accepted only when demands exist.
  *
  */
-public class AsyncServerSocketChannel extends BasicBlock implements CompletionHandler<AsynchronousSocketChannel, Void> {
+public class AsyncServerSocketChannel extends AsyncProc implements CompletionHandler<AsynchronousSocketChannel, Void> {
     protected final Logger LOG = new Logger(this);
     protected volatile AsynchronousServerSocketChannel assc;
     public OutScalars<AsynchronousSocketChannel> demands = new OutScalars<>(this);
@@ -46,7 +45,7 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
     }
 
     public void start() {
-        awake();
+        this.start();
     }
 
     public synchronized void close() {
@@ -59,9 +58,9 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
             assc = null;
             try {
                 asscLock.close();
-                stop();
+                onComplete();
             } catch (IOException e) {
-                stop(e);
+                onError(e);
             }
         } finally {
             bblock.unlock();
@@ -79,7 +78,7 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
     public void completed(AsynchronousSocketChannel result, Void attachement) {
         LOG.info("AsyncServerSocketChannel: client accepted");
         demands.onNext(result);
-        this.awake(); // allow  next assc.accpt()
+        this.start(); // allow  next assc.accpt()
     }
 
     /**
@@ -91,10 +90,10 @@ public class AsyncServerSocketChannel extends BasicBlock implements CompletionHa
         LOG.info("AsyncServerSocketChannel: client rejected:"+exc);
         if (exc instanceof AsynchronousCloseException) {
             demands.onComplete();
-            stop();
+            onComplete();
         } else {
             demands.onError(exc);
-            stop(exc);
+            onError(exc);
         }
     }
 }

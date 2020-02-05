@@ -83,7 +83,7 @@ class EchoClient extends AsyncProc {
             } else {
                 sentMsgs.onComplete();
                 LOG.info("Speaker finished successfully");
-                stop();
+                onComplete();
             }
             count--;
         }
@@ -111,7 +111,7 @@ class EchoClient extends AsyncProc {
                 LOG.info("Listener received message:"+m2);
                 Assert.assertEquals(sent, m2);
             } else {
-                stop();
+                this.onComplete();
                 LOG.info("Listener finished successfully");
             }
         }
