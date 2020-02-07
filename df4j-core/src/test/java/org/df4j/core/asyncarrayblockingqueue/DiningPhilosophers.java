@@ -202,18 +202,18 @@ public class DiningPhilosophers extends Dataflow {
 
         @Override
         protected void runAction() {
-            nextAction(this::startThinking);
+            setNextAction(this::startThinking);
         }
 
         void startThinking() {
             delay(getDelay());
-            nextAction(this::endThinking);
+            setNextAction(this::endThinking);
         }
 
         void endThinking()  {
             println("Request left (" + leftPlace.id + ")");
             leftPlace.subscribe(fork);
-            nextAction(this::startEating);
+            setNextAction(this::startEating);
         }
 
         void startEating() {
@@ -225,7 +225,7 @@ public class DiningPhilosophers extends Dataflow {
             } else {
                 right = fork.remove();
                 println("got right "+right + " from "+ rightPlace.id);
-                nextAction(this::endEating);
+                setNextAction(this::endEating);
                 delay(getDelay());
             }
         }
@@ -239,7 +239,7 @@ public class DiningPhilosophers extends Dataflow {
             rounds++;
             if (rounds < N) {
                 println("Ph no. " + id + ": continues round " + rounds);
-                nextAction(this::startThinking);
+                setNextAction(this::startThinking);
             } else {
                 println("Ph no. " + id + ": died at round " + rounds);
                 counter.countDown();

@@ -181,7 +181,7 @@ public class Dataflow extends Node<Dataflow> implements Activity {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (!completed) {
+        if (!isCompleted()) {
             sb.append("not completed");
         } else if (this.completionException == null) {
             sb.append("completed successfully");

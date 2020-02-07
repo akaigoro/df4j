@@ -12,7 +12,7 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
@@ -89,7 +89,7 @@ public class AsyncSocketChannel {
     /**
      * an actor with delayed restart of the action
      */
-    public abstract class IOExecutor extends AsyncProc implements CompletionHandler<Integer, ByteBuffer> {
+    public abstract class IOExecutor extends Actor implements CompletionHandler<Integer, ByteBuffer> {
         protected final Logger LOG = new Logger(this);
 
         final String io;
@@ -123,6 +123,7 @@ public class AsyncSocketChannel {
             } else {
                 doIO(buffer);
             }
+            suspend(); // wait CompletionHandler to invoke resume()
         }
 
         // ------------- CompletionHandler backend
@@ -138,7 +139,7 @@ public class AsyncSocketChannel {
                 output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
-                this.start();
+                this.resume();
             }
         }
 
@@ -146,8 +147,8 @@ public class AsyncSocketChannel {
  //           LOG.info("conn "+ name+": "+io+" failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
                 close();
+                this.onComplete();
             } else {
-                this.start(); // let subsequent requests fail
                 output.onError(exc);
             }
         }

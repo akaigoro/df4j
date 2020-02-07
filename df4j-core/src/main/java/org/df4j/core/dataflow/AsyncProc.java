@@ -11,7 +11,6 @@ package org.df4j.core.dataflow;
 
 import java.util.ArrayList;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -30,17 +29,18 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@link AsyncProc} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
 public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
+    protected ActorState state = ActorState.Created;
 
     /** is not encountered as a parent's child */
     private boolean daemon;
     /**
      * blocked initially, until {@link #start} called.
      */
-    private ArrayList<Port> ports = new ArrayList<>();
+    private ArrayList<ControlPort> ports = new ArrayList<>();
     private int blockingPortCount = 0;
     private Executor executor;
     private Timer timer;
-    private Port controlport = new ControlPort();
+    protected ControlPort controlport = new ControlPort();
 
     protected AsyncProc(Dataflow dataflow) {
         if (dataflow == null) {
@@ -56,6 +56,10 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
 
     public Dataflow getDataflow() {
         return parent;
+    }
+
+    public ActorState getState() {
+        return state;
     }
 
     public Timer getTimer() {
@@ -99,25 +103,28 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
      * This token is consumed when this block is submitted to an executor.
      */
     public void start() {
-        controlport.unblock();
-    }
-
-    public void start(long delay) {
         bblock.lock();
         try {
-            if (isCompleted()) {
+            if (state != ActorState.Created) {
+                return;
+            }
+            if (_controlportUnblock()) {
                 return;
             }
         } finally {
             bblock.unlock();
         }
-        TimerTask task = new TimerTask(){
-            @Override
-            public void run() {
-                start();
-            }
-        };
-        getTimer().schedule(task, delay);
+        fire();
+    }
+
+    protected boolean _controlportUnblock() {
+        if (controlport._unblock()) {
+            state = ActorState.Waiting;
+            return true;
+        } else {
+            state = ActorState.Running;
+            return false;
+        }
     }
 
     /**
@@ -129,6 +136,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             if (isCompleted()) {
                 return;
             }
+            state = ActorState.Completed;
             super.onComplete();
             if (parent != null && !daemon) {
                 parent.leave(this);
@@ -148,6 +156,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             if (isCompleted()) {
                 return;
             }
+            state = ActorState.Completed;
             super.onError(ex);
         } finally {
             bblock.unlock();
@@ -217,28 +226,68 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
      */
     protected abstract void runAction() throws Throwable;
 
+    private class ControlPort {
+        protected boolean ready;
+
+        public ControlPort(boolean ready) {
+            this.ready = ready;
+            bblock.lock();
+            try {
+                ports.add(this);
+                if (!ready) {
+                    blockingPortCount++;
+                }
+            } finally {
+                bblock.unlock();
+            }
+        }
+
+        public ControlPort() {
+            this(false);
+        }
+
+        /**
+         * must be invoked with locked {@link bblock}
+         */
+        protected synchronized void _block() {
+            if (ready) {
+                ready = false;
+                blockingPortCount++;
+            }
+        }
+
+        /**
+         * must be invoked with locked {@link #bblock}
+         *
+         * @return true if become (or was) unblocked (ready)
+         */
+        protected boolean _unblock() {
+            if (ready) {
+                return true;
+            }
+            if (blockingPortCount == 0) {
+                throw new IllegalStateException("blocked port and blockingPortCount == 0");
+            } else if (blockingPortCount == 1) {
+                return false; //      do      fire();
+            }
+            blockingPortCount--;
+            ready = true;
+            return true;
+        }
+    }
+
     /**
      * Basic class for all ports (places for tokens).
      * Has 2 states: ready or blocked.
      * When all ports become unblocked, method {@link AsyncProc#fire()} is called.
      * This resembles firing of a Petri Net transition.
      */
-    public class Port {
+    public class Port extends ControlPort {
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected final Lock plock = new ReentrantLock();
-        protected boolean ready;
 
         public Port(boolean ready) {
-            this.ready = ready;
-            if (!ready) {
-                bblock.lock();
-                try {
-                    blockingPortCount++;
-                } finally {
-                    bblock.unlock();
-                }
-            }
-            ports.add(this);
+            super(ready);
         }
 
         protected AsyncProc getParent() {
@@ -293,7 +342,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 ready = true;
                 bblock.lock();
                 try {
-                    if (completed) {
+                    if (isCompleted()) {
                         return;
                     }
                     if (blockingPortCount == 0) {
@@ -304,13 +353,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                     if (blockingPortCount > 0) {
                         return;
                     }
+                    controlport._block();
+                    state = ActorState.Running;
                 } finally {
                     bblock.unlock();
                 }
             } finally {
                 plock.unlock();
             }
-            controlport.block();
             fire();
         }
 
@@ -321,12 +371,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
 
         protected Dataflow getDataflow() {
             return parent;
-        }
-    }
-
-    private class ControlPort extends Port {
-        public ControlPort() {
-            super(false);
         }
     }
 }

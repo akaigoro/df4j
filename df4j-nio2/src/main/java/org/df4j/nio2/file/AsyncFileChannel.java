@@ -13,7 +13,6 @@
 package org.df4j.nio2.file;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
@@ -75,7 +74,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
         if (!input.isCompleted()) {
             ByteBuffer buffer = input.removeAndRequest();
             doIO(buffer);
-            stop();
+            suspend();
         } else {
             try {
                 channel.close();

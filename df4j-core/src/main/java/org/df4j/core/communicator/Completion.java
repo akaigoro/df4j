@@ -20,7 +20,7 @@ public class Completion implements Completable.Source {
     private final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
     protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
-    protected boolean completed;
+    private boolean completed;
 
     /**
      * @return completion Exception, if this {@link Completable} was completed exceptionally;

@@ -9,7 +9,7 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.OutScalars;
 import org.df4j.core.util.Logger;
@@ -28,7 +28,7 @@ import java.nio.channels.*;
  * The port is bounded, so incoming connections are accepted only when demands exist.
  *
  */
-public class AsyncServerSocketChannel extends AsyncProc implements CompletionHandler<AsynchronousSocketChannel, Void> {
+public class AsyncServerSocketChannel extends Actor implements CompletionHandler<AsynchronousSocketChannel, Void> {
     protected final Logger LOG = new Logger(this);
     protected volatile AsynchronousServerSocketChannel assc;
     public OutScalars<AsynchronousSocketChannel> demands = new OutScalars<>(this);
@@ -42,10 +42,6 @@ public class AsyncServerSocketChannel extends AsyncProc implements CompletionHan
         assc = AsynchronousServerSocketChannel.open(group);
         assc.bind(addr);
         LOG.info("AsyncServerSocketChannel("+addr+") created");
-    }
-
-    public void start() {
-        this.start();
     }
 
     public synchronized void close() {
@@ -70,6 +66,7 @@ public class AsyncServerSocketChannel extends AsyncProc implements CompletionHan
     @Override
     protected final void runAction() throws Throwable {
         assc.accept(null, this);
+        suspend(); // wait CompletionHandler
     }
 
     //====================== CompletionHandler's backend
@@ -78,7 +75,7 @@ public class AsyncServerSocketChannel extends AsyncProc implements CompletionHan
     public void completed(AsynchronousSocketChannel result, Void attachement) {
         LOG.info("AsyncServerSocketChannel: client accepted");
         demands.onNext(result);
-        this.start(); // allow  next assc.accpt()
+        this.resume(); // allow  next assc.accpt()
     }
 
     /**
