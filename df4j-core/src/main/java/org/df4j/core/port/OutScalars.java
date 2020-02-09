@@ -23,7 +23,7 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
     protected volatile boolean completed;
 
     public OutScalars(AsyncProc parent) {
-        parent.super(false);
+        parent.super(true);
     }
 
     @Override

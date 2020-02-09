@@ -1,6 +1,6 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.port.InpScalar;
+import org.df4j.core.util.CurrentThreadExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -17,7 +17,7 @@ public class ErrPropagationTest {
         }
 
         @Override
-        protected Integer callAction() throws Throwable {
+        protected Integer callAction() {
             return Integer.valueOf(argumnet); // can throw NumberFormatException
         }
     }
@@ -26,8 +26,10 @@ public class ErrPropagationTest {
     public void test1() throws InterruptedException {
         Dataflow upper = new Dataflow();
         Dataflow nested = new Dataflow(upper);
-        new StringToInt(nested, "10").start();
-        new StringToInt(nested, "not an integer").start();
+        StringToInt nodeOK = new StringToInt(nested, "10");
+        StringToInt nodeBad = new StringToInt(nested, "not an integer");
+        nodeBad.start();
+        nodeOK.start();
         try {
             upper.blockingAwait(100);
             Assert.fail("exception expected");

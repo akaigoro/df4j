@@ -2,8 +2,7 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.ScalarSubscriberActor;
-import org.df4j.core.activities.SubscriberActor;
-import org.df4j.core.util.Utils;
+import org.df4j.core.util.CurrentThreadExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,7 +10,7 @@ public class PubScalarSubTest {
 
     public void pubSubTest(int cnt, int delay1, int delay2) throws InterruptedException {
         Dataflow df = new Dataflow();
-        Utils.CurrentThreadExecutor executor = new Utils.CurrentThreadExecutor();
+        CurrentThreadExecutor executor = new CurrentThreadExecutor();
         df.setExecutor(executor);
         PublisherActor pub = new PublisherActor(df, cnt, delay1);
         pub.start();

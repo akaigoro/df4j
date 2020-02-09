@@ -15,7 +15,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         sub.logger.setLevel(Level.ALL);
         queue.subscribe(sub);
         for (long k=0; k<cnt; k++) {
-            queue.onNext(k);
+            queue.add(k);
         }
         queue.onComplete();
         Assert.assertEquals(cnt, sub.cnt);
@@ -45,7 +45,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         LoggingSubscriber sub = new LoggingSubscriber();
         sub.logger.setLevel(Level.ALL);
         queue.subscribe(sub);
-        queue.onNext(0L);
+        queue.add(0L);
         Assert.assertEquals(1, sub.cnt);
         Assert.assertFalse(sub.completed);
         Assert.assertNull(sub.completionException);

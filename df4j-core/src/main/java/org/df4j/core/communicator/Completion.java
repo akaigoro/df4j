@@ -68,11 +68,7 @@ public class Completion implements Completable.Source {
         }
     }
 
-    /**
-     * completes this {@link Completable} exceptionally
-     * @param e completion exception
-     */
-    protected void onError(Throwable e) {
+    private void _onComplete(Throwable e) {
         LinkedList<CompletionSubscription> subs;
         bblock.lock();
         try {
@@ -107,7 +103,15 @@ public class Completion implements Completable.Source {
      * completes this {@link Completable} normally
      */
     public void onComplete() {
-        onError(null);
+        _onComplete(null);
+    }
+
+    /**
+     * completes this {@link Completable} exceptionally
+     * @param e completion exception
+     */
+    protected void onError(Throwable e) {
+        _onComplete(e);
     }
 
     /**

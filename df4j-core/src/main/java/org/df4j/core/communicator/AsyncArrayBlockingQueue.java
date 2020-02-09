@@ -1,11 +1,11 @@
 package org.df4j.core.communicator;
 
 import org.df4j.core.base.OutFlowBase;
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.port.InpChannel;
-import org.df4j.core.port.OutMessagePort;
+import org.df4j.core.util.linked.Link;
+import org.df4j.core.util.linked.LinkImpl;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 import org.reactivestreams.Subscriber;
 
@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -28,24 +29,28 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
         /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
         ReverseFlow.Consumer<T>,
         /** asyncronous analogue of  {@link BlockingQueue#take()} */
-        Flow.Publisher<T>, OutMessagePort<T> {
-    protected final Actor actor;
-    public InpChannel<T> inp;
-    protected final AsyncProc.Port out;
+        Flow.Publisher<T>
+//        OutMessagePort<T>
+{
+    private LinkedQueue<ReverseFlowSubscriptionImpl> activeProducers = new LinkedQueue<>();
+    private LinkedQueue<ReverseFlowSubscriptionImpl> passiveProducers = new LinkedQueue<>();
     private final Condition hasRoom;
 
     public AsyncArrayBlockingQueue(int capacity) {
         super(new ReentrantLock(), capacity);
-        actor = new MyActor();
-        actor.start();
-        inp = new InpChannel<>(actor);
-        out = actor.new Port(true);
         hasRoom = qlock.newCondition();
     }
 
     @Override
-    public void suck(ReverseFlow.Producer<T> producer) {
-        inp.suck(producer);
+    public void subscribe(ReverseFlow.Producer<T> producer) {
+        qlock.lock();
+        try {
+            ReverseFlowSubscriptionImpl reverseSubscription = new ReverseFlowSubscriptionImpl(producer);
+            passiveProducers.add(reverseSubscription);
+            producer.onSubscribe(reverseSubscription);
+        } finally {
+            qlock.unlock();
+        }
     }
 
     /**
@@ -65,6 +70,9 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
      */
     @Override
     public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
+        if (token == null) {
+            throw new NullPointerException();
+        }
         long millis = unit.toMillis(timeout);
         FlowSubscriptionImpl sub;
         qlock.lock();
@@ -89,17 +97,10 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
     }
 
     @Override
-    public int remainingCapacity() {
-        qlock.lock();
-        try {
-            return capacity - tokens.size();
-        } finally {
-            qlock.unlock();
-        }
-    }
-
-    @Override
     public void put(T token) throws InterruptedException {
+        if (token == null) {
+            throw new NullPointerException();
+        }
         qlock.lock();
         try {
             for (;;) {
@@ -126,33 +127,142 @@ public class AsyncArrayBlockingQueue<T> extends OutFlowBase<T> implements Blocki
     }
 
     @Override
-    protected void hasRoomEvent() {
-        out.unblock();
+    protected void _hasRoomEvent() {
+        while (hasRoom()) {
+            ReverseFlowSubscriptionImpl producer = activeProducers.poll();
+            if (producer == null) {
+                break;
+            }
+            producer.giveTokens();
+        }
+
         hasRoom.signalAll();
     }
 
-    @Override
-    protected void noRoomEvent() {
-        out.block();
-    }
+    protected class ReverseFlowSubscriptionImpl extends LinkImpl<ReverseFlowSubscriptionImpl> implements ReverseFlow.ReverseFlowSubscription {
+        private final Lock slock = new ReentrantLock();
+        protected final ReverseFlow.Producer<T> subscriber;
+        private long remainedRequests = 0;
+        private boolean cancelled = false;
 
-    @Override
-    public void onNext(T message) {
-        if (!offer(message)) {
-            throw new IllegalStateException("buffer overflow");
-        }
-    }
-
-    private class MyActor extends Actor {
-
-        @Override
-        protected void fire() {
-            run();
+        ReverseFlowSubscriptionImpl(ReverseFlow.Producer subscriber) {
+            this.subscriber = subscriber;
         }
 
         @Override
-        protected void runAction() throws Throwable {
-            inp.extractTo(AsyncArrayBlockingQueue.this);
+        public ReverseFlowSubscriptionImpl getItem() {
+            return this;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            slock.lock();
+            try {
+                return cancelled;
+            } finally {
+                slock.unlock();
+            }
+        }
+
+        /**
+         *
+         * @param n the increment of demand
+         */
+        @Override
+        public void request(long n) {
+            if (n <= 0) {
+                new IllegalArgumentException();
+            }
+            slock.lock();
+            try {
+                if (cancelled) {
+                    return;
+                }
+                remainedRequests += n;
+                if (remainedRequests > n) {
+                    return;
+                }
+                qlock.lock();
+                try {
+                    // remainedRequests was 0, so this subscription was passive
+                    if (passiveProducers == null) {
+                        return; // port closed;
+                    }
+                    passiveProducers.remove(this);
+                    giveTokens();
+                } finally {
+                    qlock.unlock();
+                }
+            } finally {
+                slock.unlock();
+            }
+        }
+
+        public void giveTokens() {
+            while (remainedRequests > 0 && hasRoom()) {
+                T remove = subscriber.remove();
+                add(remove);
+                remainedRequests--;
+            }
+            if (remainedRequests== 0) {
+                passiveProducers.add(this);
+            } else {
+                activeProducers.add(this);
+            }
+        }
+
+        public Link<ReverseFlowSubscriptionImpl> getNext() {
+            return super.getNext();
+        }
+
+        private void _onComplete(Throwable throwable) {
+            slock.lock();
+            try {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
+                AsyncArrayBlockingQueue.this._onComplete(throwable);
+            } finally {
+                slock.unlock();
+            }
+        }
+
+        @Override
+        public void onComplete() {
+            _onComplete(null);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            _onComplete(throwable);
+        }
+
+        @Override
+        public void cancel() {
+            slock.lock();
+            try {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
+                qlock.lock();
+                try {
+                    if (remainedRequests > 0) {
+                        if (activeProducers != null) {
+                            activeProducers.remove(this);
+                        }
+                    } else {
+                        if (passiveProducers != null) {
+                            passiveProducers.remove(this);
+                        }
+                    }
+                } finally {
+                    qlock.unlock();
+                }
+            } finally {
+                slock.unlock();
+            }
         }
     }
 }

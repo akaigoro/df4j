@@ -12,41 +12,13 @@ public class ReverseFlow {
     private ReverseFlow() {}
 
     /**
-     * Consumes messages.
-     *
-     * A {@link Publisher} can serve multiple {@link Subscriber}s subscribed dynamically
-     * at various points in time.
-     *
-     * @param <T> the type of messages.
-     */
-    public interface Consumer<T> {
-
-        /**
-         * @param producer the {@link Subscriber} which offers messages for this {@link Publisher}
-         */
-        void suck(Producer<T> producer);
-    }
-
-    /**
      * Produces messages.
      *
-     * A {@link Subscriber} is a provider of a series of tokens, transmitting them to a {@link Publisher}(s).
+     * A {@link Producer} is a provider of a series of tokens, transmitting them to a {@link Consumer}(s).
      * <p>
      * @param <T>  type of messages.
      */
     public interface Producer<T> {
-
-        /**
-         *
-         * @return true if producer has completed the flow of items
-         */
-        default boolean isCompleted() {
-            return false;
-        }
-
-        default Throwable getCompletionException()  {
-            return null;
-        }
 
         /**
          * Method invoked prior to invoking any other Subscriber
@@ -59,7 +31,7 @@ public class ReverseFlow {
          *
          * @param subscription a new subscription
          */
-        void onSubscribe(FlowSubscription subscription);
+        void onSubscribe(ReverseFlowSubscription subscription);
 
         /**
          * {@link Publisher} gets data from {@link Subscriber}
@@ -69,9 +41,38 @@ public class ReverseFlow {
         T remove();
 
         /**
-         * called by {@link Publisher} when it is completed and asks to not disturb.
          *
+         * @return true if producer has completed the flow of items
          */
-        void cancel();
+        default boolean isCompleted() {
+            return false;
+        }
+
+        default Throwable getCompletionException()  {
+            return null;
+        }
+    }
+
+    /**
+     * Consumes messages.
+     *
+     * A {@link Consumer} can serve multiple {@link Producer}s subscribed dynamically
+     * at various points in time.
+     *
+     * @param <T> the type of messages.
+     */
+    public interface Consumer<T> {
+
+        /**
+         * @param producer the {@link Subscriber} which offers messages for this {@link Publisher}
+         */
+        void subscribe(Producer<T> producer);
+    }
+
+    public interface ReverseFlowSubscription extends FlowSubscription {
+        void onComplete();
+
+        void onError(Throwable e);
+
     }
 }

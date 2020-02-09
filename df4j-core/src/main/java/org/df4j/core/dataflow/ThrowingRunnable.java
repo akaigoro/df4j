@@ -1,4 +1,4 @@
-package function;
+package org.df4j.core.dataflow;
 
 @FunctionalInterface
 public interface ThrowingRunnable {

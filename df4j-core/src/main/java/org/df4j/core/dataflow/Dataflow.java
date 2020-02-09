@@ -13,8 +13,6 @@ import java.util.concurrent.*;
  * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
 public class Dataflow extends Node<Dataflow> implements Activity {
-    protected ExecutorService executor;
-    protected Timer timer;
     protected LinkedQueue<Node> children = new LinkedQueue<>();
 
     /**
@@ -23,108 +21,17 @@ public class Dataflow extends Node<Dataflow> implements Activity {
     public Dataflow() {
     }
 
-    @Override
-    public Dataflow getItem() {
-        return this;
-    }
-
     /**
      *  creates nested {@link Dataflow} graph.
      * @param parent the parent {@link Dataflow}
      */
     public Dataflow(Dataflow parent) {
-        this.parent = parent;
-        parent.enter(this);
+        super(parent);
     }
 
-    public void setExecutor(ExecutorService executor) {
-        bblock.lock();
-        try {
-            this.executor = executor;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public void setExecutor(Executor executor) {
-        ExecutorService service = new AbstractExecutorService(){
-            @Override
-            public void execute(@NotNull Runnable command) {
-                executor.execute(command);
-            }
-
-            @Override
-            public void shutdown() {
-
-            }
-
-            @NotNull
-            @Override
-            public List<Runnable> shutdownNow() {
-                return null;
-            }
-
-            @Override
-            public boolean isShutdown() {
-                return false;
-            }
-
-            @Override
-            public boolean isTerminated() {
-                return false;
-            }
-
-            @Override
-            public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) throws InterruptedException {
-                return false;
-            }
-        };
-        setExecutor(service);
-    }
-
-    public ExecutorService getExecutor() {
-        bblock.lock();
-        try {
-            if (executor == null) {
-                if (parent != null) {
-                    executor = parent.getExecutor();
-                } else {
-                    Thread currentThread = Thread.currentThread();
-                    if (currentThread instanceof ForkJoinWorkerThread) {
-                        executor = ((ForkJoinWorkerThread) currentThread).getPool();
-                    } else {
-                        executor = ForkJoinPool.commonPool();
-                    }
-                }
-            }
-            return executor;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public void setTimer(Timer timer) {
-        bblock.lock();
-        try {
-            this.timer = timer;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public Timer getTimer() {
-        bblock.lock();
-        try {
-            if (timer != null) {
-                return timer;
-            } else if (parent != null) {
-                return timer = parent.getTimer();
-            } else {
-                return timer = getSingletonTimer();
-            }
-        } finally {
-            bblock.unlock();
-        }
+    @Override
+    public Dataflow getItem() {
+        return this;
     }
 
     /**
@@ -152,9 +59,6 @@ public class Dataflow extends Node<Dataflow> implements Activity {
             children.remove(node);
             if (children.size() == 0) {
                 super.onComplete();
-                if (parent != null) {
-                    parent.leave(this);
-                }
             }
         } finally {
             bblock.unlock();
@@ -171,13 +75,6 @@ public class Dataflow extends Node<Dataflow> implements Activity {
         return !super.isCompleted();
     }
 
-    public void onError(Throwable t) {
-        super.onError(t);
-        if (parent != null) {
-            parent.onError(t);
-        }
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -192,21 +89,4 @@ public class Dataflow extends Node<Dataflow> implements Activity {
         sb.append("; child node count: "+children.size());
         return sb.toString();
     }
-
-    private static Timer singletonTimer;
-
-    @NotNull
-    public static Timer getSingletonTimer() {
-        Timer res = singletonTimer;
-        if (res == null) {
-            synchronized (Dataflow.class) {
-                res = singletonTimer;
-                if (res == null) {
-                    res = singletonTimer = new Timer();
-                }
-            }
-        }
-        return res;
-    }
-
 }

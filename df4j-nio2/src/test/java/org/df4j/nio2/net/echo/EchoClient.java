@@ -42,7 +42,7 @@ class EchoClient extends AsyncProc {
 
     public void runAction() {
         AsynchronousSocketChannel assc = inp.current();
-        clientConn = new AsyncSocketChannel(getDataflow(), assc);
+        clientConn = new AsyncSocketChannel(getParent(), assc);
         clientConn.setName("client");
         speaker = new Speaker();
         speaker.buffers2write.subscribe(clientConn.writer.input);
@@ -69,7 +69,7 @@ class EchoClient extends AsyncProc {
         OutFlow<String> sentMsgs = new OutFlow<>(this, 10);
 
         public Speaker() {
-            super(EchoClient.this.getDataflow());
+            super(EchoClient.this.getParent());
             this.count = total;
         }
 
@@ -94,7 +94,7 @@ class EchoClient extends AsyncProc {
         InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
 
         public Listener() {
-            super(EchoClient.this.getDataflow());
+            super(EchoClient.this.getParent());
         }
 
         @Override

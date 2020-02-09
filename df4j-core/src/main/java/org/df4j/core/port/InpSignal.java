@@ -14,7 +14,7 @@ import java.util.TimerTask;
 public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
     private Subscription subscription;
     /** the port is blocked if permits <= 0 */
-    protected long permits;
+    protected long permits = 0;
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs

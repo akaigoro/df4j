@@ -1,7 +1,6 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
 /**
@@ -14,7 +13,7 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
     protected boolean completed;
     protected volatile Throwable completionException;
     private T value;
-    protected FlowSubscription subscription;
+    protected ReverseFlow.ReverseFlowSubscription subscription;
 
     /**
      * creates {@link OutChannel} not connected to any consumer
@@ -25,7 +24,7 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
     }
 
     @Override
-    public void onSubscribe(FlowSubscription subscription) {
+    public void onSubscribe(ReverseFlow.ReverseFlowSubscription subscription) {
         this.subscription = subscription;
     }
 
@@ -72,23 +71,29 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
         subscription.request(1);
     }
 
-    public void onError(Throwable cause) {
+    public boolean _onComplete(Throwable throwable) {
         plock.lock();
         try {
             if (isCompleted()) {
-                return;
+                return true;
             }
             this.completed = true;
-            this.completionException = cause;
-            if (subscription == null) return;
+            this.completionException = throwable;
+            if (subscription == null) return true;
         } finally {
             plock.unlock();
         }
-        subscription.request(1);
+        return false;
     }
 
     public void onComplete() {
-        onError(null);
+        if (_onComplete(null)) return;
+        subscription.onComplete();
+    }
+
+    public void onError(Throwable throwable) {
+        if (_onComplete(throwable)) return;
+        subscription.onError(throwable);
     }
 
     @Override
@@ -104,7 +109,11 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
         }
     }
 
-    @Override
+
+    /**
+     * called by {@link ReverseFlow.Consumer} when it is completed and asks to not disturb.
+     *
+     */
     public void cancel() {
         plock.lock();
         try {

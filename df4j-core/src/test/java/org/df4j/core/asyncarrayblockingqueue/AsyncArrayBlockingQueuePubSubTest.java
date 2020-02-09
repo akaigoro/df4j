@@ -12,7 +12,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         ProducerActor producer = new ProducerActor(cnt, delay1);
         SubscriberActor subscriber = new SubscriberActor(delay2);
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
-        queue.suck(producer.out);
+        queue.subscribe(producer.out);
         queue.subscribe(subscriber.inp);
         producer.start();
         subscriber.start();

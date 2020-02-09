@@ -85,12 +85,12 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
         }
 
         @Override
-        protected void hasRoomEvent() {
+        protected void _hasRoomEvent() {
             unblock();
         }
 
         @Override
-        protected void noRoomEvent() {
+        protected void _noRoomEvent() {
             block();
         }
     }

@@ -1,10 +1,7 @@
 package org.df4j.core.dataflow;
 
-import function.ThrowingRunnable;
-
 import java.util.TimerTask;
 
-import org.df4j.core.dataflow.ActorState;
 import static org.df4j.core.dataflow.ActorState.*;
 
 /**
@@ -17,8 +14,8 @@ public abstract class Actor extends AsyncProc {
     private volatile ThrowingRunnable nextAction;
     private long delay = 0l;
     private TimerTask task;
-    {
-        setNextAction(this::runAction);}
+
+    {nextAction(this::runAction);}
 
     public Actor(Dataflow parent) {
         super(parent);
@@ -31,7 +28,7 @@ public abstract class Actor extends AsyncProc {
         return nextAction;
     }
 
-    protected void setNextAction(ThrowingRunnable tRunnable) {
+    protected void nextAction(ThrowingRunnable tRunnable) {
         this.nextAction = tRunnable;
     }
 

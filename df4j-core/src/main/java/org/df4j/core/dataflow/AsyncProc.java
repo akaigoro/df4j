@@ -38,40 +38,26 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
      */
     private ArrayList<ControlPort> ports = new ArrayList<>();
     private int blockingPortCount = 0;
-    private Executor executor;
-    private Timer timer;
     protected ControlPort controlport = new ControlPort();
 
     protected AsyncProc(Dataflow dataflow) {
+        super(dataflow);
         if (dataflow == null) {
             throw new IllegalArgumentException();
         }
-        this.parent = dataflow;
-        dataflow.enter(this);
     }
 
     public AsyncProc() {
         this(new Dataflow());
     }
 
-    public Dataflow getDataflow() {
-        return parent;
+    @Override
+    public AsyncProc getItem() {
+        return this;
     }
 
     public ActorState getState() {
         return state;
-    }
-
-    public Timer getTimer() {
-        bblock.lock();
-        try {
-            if (timer == null) {
-                timer = parent.getTimer();
-            }
-            return timer;
-        } finally {
-            bblock.unlock();
-        }
     }
 
     public void setDaemon(boolean daemon) {
@@ -81,9 +67,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 return;
             }
             this.daemon = daemon;
-            if (parent != null) {
-                parent.leave(this);
-            }
+            leaveParent();
         } finally {
             bblock.unlock();
         }
@@ -137,13 +121,10 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 return;
             }
             state = ActorState.Completed;
-            super.onComplete();
-            if (parent != null && !daemon) {
-                parent.leave(this);
-            }
         } finally {
             bblock.unlock();
         }
+        super.onComplete();
     }
 
     /**
@@ -157,37 +138,10 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 return;
             }
             state = ActorState.Completed;
-            super.onError(ex);
         } finally {
             bblock.unlock();
         }
-        parent.onError(ex);
-    }
-
-    public void setExecutor(Executor exec) {
-        bblock.lock();
-        try {
-            this.executor = exec;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    public Executor getExecutor() {
-        bblock.lock();
-        try {
-            if (executor == null) {
-                executor = parent.getExecutor();
-            }
-            return executor;
-        } finally {
-            bblock.unlock();
-        }
-    }
-
-    @Override
-    public AsyncProc getItem() {
-        return this;
+        super.onError(ex);
     }
 
     /**
@@ -225,6 +179,11 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
      * @throws Throwable when thrown, this node is considered failed.
      */
     protected abstract void runAction() throws Throwable;
+
+    @Override
+    public String toString() {
+        return super.toString() + "/"+state;
+    }
 
     private class ControlPort {
         protected boolean ready;
@@ -273,6 +232,11 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             blockingPortCount--;
             ready = true;
             return true;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + (ready?": ready":": blocked");
         }
     }
 
@@ -362,15 +326,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 plock.unlock();
             }
             fire();
-        }
-
-        @Override
-        public String toString() {
-            return super.toString() + (ready?": ready":": blocked");
-        }
-
-        protected Dataflow getDataflow() {
-            return parent;
         }
     }
 }

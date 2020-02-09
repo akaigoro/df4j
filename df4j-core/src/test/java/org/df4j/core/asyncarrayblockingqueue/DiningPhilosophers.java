@@ -17,12 +17,13 @@ import java.util.logging.Level;
 
 import static org.junit.Assert.assertTrue;
 
-/** using AsyncArrayBlockingQueue to connect threads and actors
+/** 1. Using AsyncArrayBlockingQueue to connect threads and actors.
+ *  2. Async Philosofer implemented as multistate actor.
  *
  */
 public class DiningPhilosophers extends Dataflow {
-    static final int num = 5; // number of phylosophers
-    static int N = 4; // number of rounds
+    static final int num = 5; // number of philosophers
+    static int N = 5; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];
     CountDownLatch counter = new CountDownLatch(num);
     Activity[] philosophers = new Activity[num];
@@ -43,7 +44,7 @@ public class DiningPhilosophers extends Dataflow {
         for (int k = 0; k < num; k++) {
             philosophers[k] = create.apply(k);
         }
-        // animate all philosophers
+        // start all the philosophers
         for (int k = 0; k < num; k++) {
             philosophers[k].start();
         }
@@ -102,8 +103,8 @@ public class DiningPhilosophers extends Dataflow {
     class PhilosopherThread extends Thread implements ActivityThread {
         protected final Logger logger = new Logger(this);
         int id;
-        ForkPlace leftPlace, rightPlace;
-        String left, right;
+        ForkPlace firstPlace, secondPlace;
+        String first, second;
         String indent;
         int rounds = 0;
 
@@ -111,18 +112,18 @@ public class DiningPhilosophers extends Dataflow {
             this.id = id;
             // to avoid deadlocks, allocate resource with lower number first
             if (id == num - 1) {
-                leftPlace = forkPlaces[0];
-                rightPlace = forkPlaces[id];
+                firstPlace = forkPlaces[0];
+                secondPlace = forkPlaces[id];
             } else {
-                leftPlace = forkPlaces[id];
-                rightPlace = forkPlaces[id + 1];
+                firstPlace = forkPlaces[id];
+                secondPlace = forkPlaces[id + 1];
             }
 
             StringBuffer sb = new StringBuffer();
             sb.append(id).append(":");
             for (int k = 0; k < id; k++) sb.append("              ");
             indent = sb.toString();
-            logger.info("Ph no. " + id + " (thread): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
+            logger.info("Ph no. " + id + " (thread): first place = " + firstPlace.id + "; second place = " + secondPlace.id + ".");
         }
 
         void println(String s) {
@@ -143,19 +144,19 @@ public class DiningPhilosophers extends Dataflow {
                 // Thinking
                 delay(getDelay());
                 // Hungry
-                println("Request left (" + leftPlace.id + ")");
-                left = leftPlace.get();
-                println("got left "+left + " from "+ leftPlace.id);
-                println("Request right (" + rightPlace.id + ")");
-                right = rightPlace.get();
-                println("got right "+right + " from "+ rightPlace.id);
+                println("Request first (" + firstPlace.id + ")");
+                first = firstPlace.get();
+                println("got first "+first + " from "+ firstPlace.id);
+                println("Request second (" + secondPlace.id + ")");
+                second = secondPlace.get();
+                println("got second "+second + " from "+ secondPlace.id);
                 // Eating
                 delay(getDelay());
                 // Replete
-                println("Release left "+left +" to " + leftPlace.id);
-                leftPlace.put(left);
-                println("Release right "+right +" to " + rightPlace.id);
-                rightPlace.put(right);
+                println("Release first "+first +" to " + firstPlace.id);
+                firstPlace.put(first);
+                println("Release second "+second +" to " + secondPlace.id);
+                secondPlace.put(second);
                 // check end of life
                 rounds++;
                 if (rounds == N) {
@@ -168,12 +169,15 @@ public class DiningPhilosophers extends Dataflow {
         }
     }
 
+    /**
+     * Multistate actor
+     */
     class PhilosopherDF extends Actor {
         protected final Logger logger = new Logger(this, Level.INFO);
-        InpScalar<String> fork = new InpScalar<>(this);
+        InpScalar<String> fork = new InpScalar<>(this, true); // does not blocks this actor when not (yet) subscribed
         int id;
-        ForkPlace leftPlace, rightPlace;
-        String left, right;
+        ForkPlace firstPlace, secondPlace;
+        String first, second;
         String indent;
         int rounds = 0;
 
@@ -182,18 +186,18 @@ public class DiningPhilosophers extends Dataflow {
             this.id = id;
             // to avoid deadlocks, allocate resource with lower number first
             if (id == num - 1) {
-                leftPlace = forkPlaces[0];
-                rightPlace = forkPlaces[id];
+                firstPlace = forkPlaces[0];
+                secondPlace = forkPlaces[id];
             } else {
-                leftPlace = forkPlaces[id];
-                rightPlace = forkPlaces[id + 1];
+                firstPlace = forkPlaces[id];
+                secondPlace = forkPlaces[id + 1];
             }
 
             StringBuffer sb = new StringBuffer();
             sb.append(id).append(":");
             for (int k = 0; k < id; k++) sb.append("              ");
             indent = sb.toString();
-            logger.info("Ph no. " + id + " (dataflow): left place = " + leftPlace.id + "; right place = " + rightPlace.id + ".");
+            logger.info("Ph no. " + id + " (dataflow): first place = " + firstPlace.id + "; second place = " + secondPlace.id + ".");
         }
 
         void println(String s) {
@@ -202,44 +206,45 @@ public class DiningPhilosophers extends Dataflow {
 
         @Override
         protected void runAction() {
-            setNextAction(this::startThinking);
+            startThinking();
         }
 
         void startThinking() {
+            nextAction(this::endThinking);
             delay(getDelay());
-            setNextAction(this::endThinking);
         }
 
         void endThinking()  {
-            println("Request left (" + leftPlace.id + ")");
-            leftPlace.subscribe(fork);
-            setNextAction(this::startEating);
+            println("Request first (" + firstPlace.id + ")");
+            firstPlace.subscribe(fork);
+            nextAction(this::getFork1RequestFork2);
+        }
+
+        void getFork1RequestFork2()  {
+            first = fork.remove();
+            println("got first "+first + " from "+ firstPlace.id);
+            println("Request second (" + secondPlace.id + ")");
+            secondPlace.subscribe(fork);
+            nextAction(this::startEating);
         }
 
         void startEating() {
-            if (left == null) {
-                left = fork.remove();
-                println("got left "+left + " from "+ leftPlace.id);
-                println("Request right (" + rightPlace.id + ")");
-                rightPlace.subscribe(fork);
-            } else {
-                right = fork.remove();
-                println("got right "+right + " from "+ rightPlace.id);
-                setNextAction(this::endEating);
-                delay(getDelay());
-            }
+            second = fork.remove();
+            println("got second "+second + " from "+ secondPlace.id);
+            nextAction(this::endEating);
+            delay(getDelay());
         }
 
         void endEating() {
-            println("Release left "+left +" to " + leftPlace.id);
-            leftPlace.put(left);
-            println("Release right " + right + " to " + rightPlace.id);
-            rightPlace.put(right);
+            println("Release first "+first +" to " + firstPlace.id);
+            firstPlace.put(first);
+            println("Release second " + second + " to " + secondPlace.id);
+            secondPlace.put(second);
             // check end of life
             rounds++;
             if (rounds < N) {
                 println("Ph no. " + id + ": continues round " + rounds);
-                setNextAction(this::startThinking);
+                nextAction(this::startThinking);
             } else {
                 println("Ph no. " + id + ": died at round " + rounds);
                 counter.countDown();

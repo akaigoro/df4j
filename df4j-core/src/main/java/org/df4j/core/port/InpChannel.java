@@ -1,21 +1,27 @@
 package org.df4j.core.port;
 
+import org.df4j.core.base.OutFlowBase;
+import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.util.linked.Link;
+import org.df4j.core.util.linked.LinkImpl;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A passive input parameter.
  * Has room for single value.
  */
 public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
+    private LinkedQueue<ProducerSubscription> activeProducers = new LinkedQueue<>();
+    private LinkedQueue<ProducerSubscription> passiveProducers = new LinkedQueue<>();
     protected volatile boolean completed;
     protected volatile Throwable completionException;
     protected volatile T value;
-    protected Queue<ProducerSubscription> producers = new LinkedList<ProducerSubscription>();
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
@@ -24,7 +30,7 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         parent.super(false);
     }
 
-    public InpChannel(AsyncProc parent, int i) {
+    public InpChannel(AsyncProc parent, int capacity) {
         this(parent);
     }
 
@@ -52,9 +58,33 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
     }
 
     @Override
-    public void suck(ReverseFlow.Producer<T> producer) {
+    public void subscribe(ReverseFlow.Producer<T> producer) {
         ProducerSubscription subscription = new ProducerSubscription(producer);
+        passiveProducers.add(subscription);
         producer.onSubscribe(subscription);
+    }
+
+
+    public void _onComplete(Throwable cause) {
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            completionException = cause;
+            unblock();
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public void onComplete() {
+        _onComplete(null);
+    }
+
+    public void onError(Throwable cause) {
+        _onComplete(cause);
     }
 
     /**
@@ -75,8 +105,13 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
     public T remove() {
         plock.lock();
         try {
+            if (!ready) {
+                throw new IllegalStateException();
+            }
+            ready = false;
             T value = this.value;
             this.value = null;
+            _block();
             return value;
         } finally {
             plock.unlock();
@@ -95,12 +130,24 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
                 return null;
             }
             res = value;
-            ProducerSubscription client = producers.poll();
+            ProducerSubscription client = activeProducers.poll();
             if (client == null) {
                 value = null;
                 block();
             } else {
-                client.remove();
+                if (!client.subscriber.isCompleted()) {
+                    value = client.subscriber.remove();
+                    client.remainedRequests--;
+                    if (client.remainedRequests > 0) {
+                        activeProducers.add(client);
+                    } else {
+                        passiveProducers.add(client);
+                    }
+                } else {
+                    completed = true;
+                    completionException = client.subscriber.getCompletionException();
+                }
+                unblock();
             }
             return res;
         } finally {
@@ -135,81 +182,116 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         }
     }
 
-    class ProducerSubscription implements FlowSubscription {
-        protected ReverseFlow.Producer<T> producer;
+    protected class ProducerSubscription extends LinkImpl<ProducerSubscription> implements ReverseFlow.ReverseFlowSubscription {
+        private final Lock slock = new ReentrantLock();
+        protected final ReverseFlow.Producer<T> subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        public ProducerSubscription(ReverseFlow.Producer<T> producer) {
-            this.producer = producer;
+        ProducerSubscription(ReverseFlow.Producer subscriber) {
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public ProducerSubscription getItem() {
+            return this;
         }
 
         @Override
         public boolean isCancelled() {
-            plock.lock();
+            slock.lock();
             try {
                 return cancelled;
             } finally {
-                plock.unlock();
+                slock.unlock();
             }
         }
 
         /**
-         * @param n number of messages the producer is able to dekiver now
+         *
+         * @param n the increment of demand
          */
         @Override
         public void request(long n) {
             if (n <= 0) {
                 throw new IllegalArgumentException();
             }
-            plock.lock();
+            slock.lock();
             try {
                 if (cancelled) {
                     return;
                 }
                 if (completed) {
-                    producer.cancel();
                     return;
                 }
-                if (remainedRequests > 0) {
-                    remainedRequests += n;
+                remainedRequests += n;
+                if (remainedRequests > n) {
                     return;
                 }
-                remainedRequests = n;
-                if (value != null) {
-                    producers.add(this);
-                    return;
+                plock.lock();
+                try {
+                    passiveProducers.remove(this);
+                    activeProducers.add(this);
+                } finally {
+                    plock.unlock();
                 }
-                remove();
             } finally {
-                plock.unlock();
-            }
-        }
-
-        private void remove() {
-            value = producer.remove();
-            if (value != null) {
-                remainedRequests--;
-                if (remainedRequests > 0) {
-                    producers.add(this);
-                }
-            } else {
-                completed = producer.isCompleted();
-                completionException = producer.getCompletionException();
+                slock.unlock();
             }
             unblock();
         }
 
+        public Link<ProducerSubscription> getNext() {
+            return super.getNext();
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            _onComplete(throwable);
+        }
+
+        private void _onComplete(Throwable throwable) {
+            slock.lock();
+            try {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
+                InpChannel.this._onComplete(throwable);
+            } finally {
+                slock.unlock();
+            }
+        }
+
+        @Override
+        public void onComplete() {
+            _onComplete(null);
+        }
+
         @Override
         public void cancel() {
-            plock.lock();
+            slock.lock();
             try {
-                producers.remove(this);
+                if (cancelled) {
+                    return;
+                }
                 cancelled = true;
+                plock.lock();
+                try {
+                    if (completed) {
+                        return;
+                    }
+                    if (remainedRequests > 0) {
+                        activeProducers.remove(this);
+                    } else {
+                        passiveProducers.remove(this);
+                    }
+                } finally {
+                    plock.unlock();
+                }
             } finally {
-                plock.unlock();
+                slock.unlock();
             }
         }
     }
-
 }

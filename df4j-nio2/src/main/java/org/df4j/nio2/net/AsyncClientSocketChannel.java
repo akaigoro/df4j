@@ -18,10 +18,9 @@ public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketCha
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
     private Dataflow dataflow;
+
     /**
      * Starts connection to a server.
-     *
-     *
      *
      * @param executor
      * @param addr address of the server to connect
@@ -41,11 +40,11 @@ public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketCha
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        super.onSuccess(channel);
+        onSuccess(channel);
     }
 
     @Override
     public void failed(Throwable exc, AsynchronousSocketChannel channel) {
-        super.onError(exc);
+        onError(exc);
     }
 }

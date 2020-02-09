@@ -16,6 +16,7 @@ import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
+import org.df4j.core.util.CurrentThreadExecutor;
 import org.df4j.core.util.Utils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,8 +36,8 @@ public class AsyncFileChannelTest {
         int capacity = 5;
         Path path = Files.createTempFile("tetstfile", ".tmp");
         Dataflow dataflow = new Dataflow();
-        Utils.CurrentThreadExecutor executor = new Utils.CurrentThreadExecutor();
-  //      dataflow.setExecutor(executor); // for debug
+        CurrentThreadExecutor executor = new CurrentThreadExecutor();
+        dataflow.setExecutor(executor); // for debug
 
         {
             DataProducer producer = new DataProducer(dataflow, capacity, byteNunber);
@@ -45,7 +46,7 @@ public class AsyncFileChannelTest {
             fileWriter.output.subscribe(producer.emptyBuffers);
             producer.start();
             fileWriter.start();
-            executor.executeAll(50);
+            executor.executeAll(500);
             boolean finished = dataflow.blockingAwait(10, TimeUnit.MILLISECONDS);
             Assert.assertTrue(finished);
         }

@@ -29,7 +29,12 @@ public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
+     * @param ready initial state
      */
+    public InpScalar(AsyncProc parent, boolean ready) {
+        parent.super(ready);
+    }
+
     public InpScalar(AsyncProc parent) {
         parent.super(false);
     }
@@ -46,6 +51,7 @@ public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
         this.simpleSubscription = subscription;
+        block();
     }
 
     public Throwable getCompletionException() {
@@ -72,7 +78,6 @@ public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
             T value = this.value;
             this.value = null;
             this.completed = false;
-            block();
             return value;
         } finally {
             plock.unlock();

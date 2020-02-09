@@ -19,8 +19,6 @@ public class SumSquareTest {
     public static class Square extends AsyncProc {
         final InpScalar<Integer> param = new InpScalar<>(this);
         final ScalarResult<Integer> out = new ScalarResult<>();
-        {
-            this.start();}
 
         protected void runAction() {
             Integer arg = param.current();
@@ -33,8 +31,6 @@ public class SumSquareTest {
         final InpScalar<Integer> paramX = new InpScalar<>(this);
         final InpScalar<Integer> paramY = new InpScalar<>(this);
         final ScalarResult<Integer> out = new ScalarResult<>();
-        {
-            this.start();}
 
         protected void runAction() {
             Integer argX = paramX.current();
@@ -59,6 +55,9 @@ public class SumSquareTest {
         // provide input information:
         sqX.param.onSuccess(3);
         sqY.param.onSuccess(4);
+        sqX.start();
+        sqY.start();
+        sum.start();
         // get the result
         boolean finished = sum.blockingAwait(1, TimeUnit.SECONDS);
         if (!finished) {

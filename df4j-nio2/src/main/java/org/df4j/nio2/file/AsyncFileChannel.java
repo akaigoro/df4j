@@ -106,7 +106,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
             output.onNext(buffer);
             // start next IO excange only after this reading is finished,
             // to keep buffer ordering
-            this.start();
+            this.resume();
         }
     }
 
@@ -115,7 +115,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
         if (exc instanceof AsynchronousCloseException) {
             close();
         } else {
-            this.start(); // let subsequent requests fail
+            this.resume(); // let subsequent requests fail
             output.onError(exc);
         }
     }

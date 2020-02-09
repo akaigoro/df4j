@@ -11,14 +11,27 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
 import org.df4j.core.util.linked.Link;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
+import java.util.Timer;
+import java.util.concurrent.*;
 
 public abstract class Node<T> extends Completion implements Link<T> {
     private Link<T> prev = this;
     private Link<T> next = this;
-    protected Dataflow parent;
+    private final Dataflow parent;
+    private ExecutorService executor;
+    private Timer timer;
+
+    protected Node() {
+        this.parent = null;
+    }
+
+    protected Node(Dataflow parent) {
+        this.parent = parent;
+        parent.enter(this);
+    }
 
     @Override
     public Link<T> getNext() {
@@ -38,5 +51,136 @@ public abstract class Node<T> extends Completion implements Link<T> {
     @Override
     public void setPrev(Link<T> prev) {
         this.prev = prev;
+    }
+
+    public Dataflow getParent() {
+        return parent;
+    }
+
+    protected void leaveParent() {
+        if (parent != null) {
+            parent.leave(this);
+        }
+    }
+
+    public void setExecutor(ExecutorService executor) {
+        bblock.lock();
+        try {
+            this.executor = executor;
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public void setExecutor(Executor executor) {
+        ExecutorService service = new AbstractExecutorService(){
+            @Override
+            public void execute(@NotNull Runnable command) {
+                executor.execute(command);
+            }
+
+            @Override
+            public void shutdown() {
+
+            }
+
+            @NotNull
+            @Override
+            public List<Runnable> shutdownNow() {
+                return null;
+            }
+
+            @Override
+            public boolean isShutdown() {
+                return false;
+            }
+
+            @Override
+            public boolean isTerminated() {
+                return false;
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) throws InterruptedException {
+                return false;
+            }
+        };
+        setExecutor(service);
+    }
+
+    public ExecutorService getExecutor() {
+        bblock.lock();
+        try {
+            if (executor == null) {
+                if (parent != null) {
+                    executor = parent.getExecutor();
+                } else {
+                    Thread currentThread = Thread.currentThread();
+                    if (currentThread instanceof ForkJoinWorkerThread) {
+                        executor = ((ForkJoinWorkerThread) currentThread).getPool();
+                    } else {
+                        executor = ForkJoinPool.commonPool();
+                    }
+                }
+            }
+            return executor;
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public void setTimer(Timer timer) {
+        bblock.lock();
+        try {
+            this.timer = timer;
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    public Timer getTimer() {
+        bblock.lock();
+        try {
+            if (timer != null) {
+                return timer;
+            } else if (parent != null) {
+                return timer = parent.getTimer();
+            } else {
+                return timer = getSingletonTimer();
+            }
+        } finally {
+            bblock.unlock();
+        }
+    }
+
+    @Override
+    public void onComplete() {
+        super.onComplete();
+        if (parent != null) {
+            parent.leave(this);
+        }
+    }
+
+    protected void onError(Throwable t) {
+        super.onError(t);
+        if (parent != null) {
+            parent.onError(t);
+        }
+    }
+
+    private static Timer singletonTimer;
+
+    @NotNull
+    public static Timer getSingletonTimer() {
+        Timer res = singletonTimer;
+        if (res == null) {
+            synchronized (Dataflow.class) {
+                res = singletonTimer;
+                if (res == null) {
+                    res = singletonTimer = new Timer();
+                }
+            }
+        }
+        return res;
     }
 }

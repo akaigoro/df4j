@@ -52,7 +52,7 @@ public class EchoServer extends Actor {
     @Override
     public void runAction() {
         allowedConnections.acquire();
-        Starter starter = new Starter(getDataflow());
+        Starter starter = new Starter(getParent());
         acceptor.demands.subscribe(starter.inp);
         starter.start();
     }
@@ -82,9 +82,9 @@ public class EchoServer extends Actor {
         private boolean connectionPermitReleased;
 
         public EchoProcessor(AsynchronousSocketChannel assc) {
-            super(EchoServer.this.getDataflow());
+            super(EchoServer.this.getParent());
             int capacity = 2;
-            serverConn = new AsyncSocketChannel(getDataflow(), assc);
+            serverConn = new AsyncSocketChannel(getParent(), assc);
             serverConn.setName("server");
             serverConn.reader.input.setCapacity(capacity);
             for (int k = 0; k<capacity; k++) {

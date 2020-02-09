@@ -20,8 +20,8 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
     private final Condition hasItems;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
-    protected LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<FlowSubscriptionImpl>();
-    protected LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<FlowSubscriptionImpl>();
+    private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<FlowSubscriptionImpl>();
+    private LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<FlowSubscriptionImpl>();
     protected Throwable completionException;
     protected volatile boolean completed;
 
@@ -72,8 +72,22 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
      * how many tokens can be stored in the buffer
      * @return 0 if buffer is full
      */
-    private int remainingCapacity() {
+    private int _remainingCapacity() {
         return capacity - tokens.size();
+    }
+
+  //  @Override
+    public int remainingCapacity() {
+        qlock.lock();
+        try {
+            return capacity - tokens.size();
+        } finally {
+            qlock.unlock();
+        }
+    }
+
+    public boolean hasRoom() {
+        return remainingCapacity() > 0;
     }
 
     /**
@@ -83,6 +97,9 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
      */
     @Override
     public boolean offer(T token) {
+        if (token == null) {
+            throw new NullPointerException();
+        }
         FlowSubscriptionImpl sub;
         qlock.lock();
         try {
@@ -91,13 +108,13 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
             }
             sub = activeSubscribtions.poll();
             if (sub == null) {
-                if (remainingCapacity() == 0) {
+                if (_remainingCapacity() == 0) {
                     return false;
                 }
                 tokens.add(token);
                 hasItemsEvent();
-                if (remainingCapacity() == 0) {
-                    noRoomEvent();
+                if (_remainingCapacity() == 0) {
+                    _noRoomEvent();
                 }
                 return true;
             }
@@ -112,7 +129,7 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
         hasItems.signalAll();
     }
 
-    public void transferTokens(T token, FlowSubscriptionImpl sub) {
+    protected void transferTokens(T token, FlowSubscriptionImpl sub) {
         LinkedQueue<FlowSubscriptionImpl> asubs;
         LinkedQueue<FlowSubscriptionImpl> psubs;
         for (;;) {
@@ -145,8 +162,8 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
                     break;
                 }
                 token = tokens.poll();
-                if (remainingCapacity() == 1) {
-                    hasRoomEvent();
+                if (_remainingCapacity() == 1) {
+                    _hasRoomEvent();
                 }
                 if (sub == null) {
                     sub = activeSubscribtions.poll();
@@ -182,7 +199,7 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
         }
     }
 
-    public void onError(Throwable cause) {
+    public void _onComplete(Throwable cause) {
         LinkedQueue<FlowSubscriptionImpl> asubs;
         LinkedQueue<FlowSubscriptionImpl> psubs;
         qlock.lock();
@@ -207,7 +224,11 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
     }
 
     public void onComplete() {
-        onError(null);
+        _onComplete(null);
+    }
+
+    public void onError(Throwable cause) {
+        _onComplete(cause);
     }
 
     @Override
@@ -217,8 +238,8 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
-                    hasRoomEvent();
-                    hasRoomEvent();
+                    _hasRoomEvent();
+                    _hasRoomEvent();
                     return res;
                 }
                 if (completed) {
@@ -257,8 +278,8 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
-                    hasRoomEvent();
-                    hasRoomEvent();
+                    _hasRoomEvent();
+                    _hasRoomEvent();
                     return res;
                 }
                 if (completed) {
@@ -282,8 +303,8 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
-                    hasRoomEvent();
-                    hasRoomEvent();
+                    _hasRoomEvent();
+                    _hasRoomEvent();
                     return res;
                 }
                 if (completed) {
@@ -431,10 +452,14 @@ public class OutFlowBase<T> extends AbstractQueue<T> implements Flow.Publisher<T
             return this;
         }
     }
-    
-    protected void hasRoomEvent() {
+
+    /** invoked under lock
+     */
+    protected void _hasRoomEvent() {
     }
 
-    protected void noRoomEvent() {
+    /** invoked under lock
+     */
+    protected void _noRoomEvent() {
     }
 }

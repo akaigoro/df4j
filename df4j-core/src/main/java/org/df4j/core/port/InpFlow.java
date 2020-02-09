@@ -12,7 +12,6 @@ import java.util.ArrayDeque;
  */
 public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
-    private boolean lazy = false;
     protected boolean withBuffer;
     private ArrayDeque<T> buff;
     /** extracted token */
@@ -29,6 +28,11 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
      */
     public InpFlow(AsyncProc parent, int capacity) {
         parent.super(false);
+        setCapacity(capacity);
+    }
+
+    public InpFlow(AsyncProc parent, int capacity, boolean ready) {
+        parent.super(ready);
         setCapacity(capacity);
     }
 
@@ -76,14 +80,6 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
         return !withBuffer? 0 : this.bufferCapacity;
     }
 
-    public boolean isLazy() {
-        return lazy;
-    }
-
-    public void setLazy(boolean lazy) {
-        this.lazy = lazy;
-    }
-
     public boolean isCompleted() {
         plock.lock();
         try {
@@ -115,14 +111,12 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
         plock.lock();
         try {
             if (this.subscription != null) {
-                subscription.cancel();
+                subscription.cancel(); // this is dictated by the spec.
                 return;
             }
             this.subscription = subscription;
-            if (lazy) {
-                return;
-            }
             requestedCount = remainingCapacity();
+            block();
         } finally {
             plock.unlock();
         }
