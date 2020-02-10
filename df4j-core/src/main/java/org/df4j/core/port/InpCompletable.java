@@ -17,8 +17,8 @@ public class InpCompletable extends AsyncProc.Port implements Completable.Observ
      * @param parent {@link AsyncProc} to which this port belongs
      * @param ready initial port state
      */
-    public InpCompletable(AsyncProc parent, boolean ready) {
-        parent.super(ready);
+    public InpCompletable(AsyncProc parent, boolean active) {
+        parent.super(false, active);
     }
 
     public InpCompletable(AsyncProc parent) {

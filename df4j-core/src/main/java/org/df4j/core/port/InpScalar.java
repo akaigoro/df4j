@@ -29,10 +29,10 @@ public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
-     * @param ready initial state
+     * @param active initial state
      */
-    public InpScalar(AsyncProc parent, boolean ready) {
-        parent.super(ready);
+    public InpScalar(AsyncProc parent, boolean active) {
+        parent.super(false, active);
     }
 
     public InpScalar(AsyncProc parent) {

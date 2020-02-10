@@ -31,8 +31,8 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
         setCapacity(capacity);
     }
 
-    public InpFlow(AsyncProc parent, int capacity, boolean ready) {
-        parent.super(ready);
+    public InpFlow(AsyncProc parent, int capacity, boolean active) {
+        parent.super(false, active);
         setCapacity(capacity);
     }
 
@@ -116,7 +116,9 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
             }
             this.subscription = subscription;
             requestedCount = remainingCapacity();
-            block();
+            if (value == null) {
+                block();
+            }
         } finally {
             plock.unlock();
         }

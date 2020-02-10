@@ -1,11 +1,10 @@
 package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
-import org.df4j.core.dataflow.Activity;
-import org.df4j.core.dataflow.ActivityThread;
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.dataflow.*;
 import org.df4j.core.port.InpScalar;
+import org.df4j.core.util.transitions.Transition;
+import org.df4j.core.util.transitions.Transitions;
 import org.df4j.core.util.Logger;
 import org.junit.Test;
 
@@ -174,7 +173,9 @@ public class DiningPhilosophers extends Dataflow {
      */
     class PhilosopherDF extends Actor {
         protected final Logger logger = new Logger(this, Level.INFO);
-        InpScalar<String> fork = new InpScalar<>(this, true); // does not blocks this actor when not (yet) subscribed
+//        @Transitions(transitions={"fork"})
+        @Transitions(transitions={"fork"})
+        InpScalar<String> fork = new InpScalar<>(this, false); // does not blocks this actor when not (yet) subscribed
         int id;
         ForkPlace firstPlace, secondPlace;
         String first, second;
@@ -209,17 +210,21 @@ public class DiningPhilosophers extends Dataflow {
             startThinking();
         }
 
+        @Transition(transition="")
         void startThinking() {
             nextAction(this::endThinking);
             delay(getDelay());
         }
 
+        @Transition(transition="ctrl")
         void endThinking()  {
             println("Request first (" + firstPlace.id + ")");
+            fork.setActive(true);
             firstPlace.subscribe(fork);
             nextAction(this::getFork1RequestFork2);
         }
 
+        @Transition(transition="all")
         void getFork1RequestFork2()  {
             first = fork.remove();
             println("got first "+first + " from "+ firstPlace.id);
@@ -228,8 +233,10 @@ public class DiningPhilosophers extends Dataflow {
             nextAction(this::startEating);
         }
 
+        @Transition(transition="fork")
         void startEating() {
             second = fork.remove();
+            fork.setActive(false);
             println("got second "+second + " from "+ secondPlace.id);
             nextAction(this::endEating);
             delay(getDelay());

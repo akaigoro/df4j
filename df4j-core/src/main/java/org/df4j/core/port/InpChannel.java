@@ -111,7 +111,7 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
             ready = false;
             T value = this.value;
             this.value = null;
-            _block();
+            block();
             return value;
         } finally {
             plock.unlock();

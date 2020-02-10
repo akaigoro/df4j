@@ -9,7 +9,7 @@ import org.junit.Assert;
 public class SubscriberActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
-    public final InpFlow<Long> inp = new InpFlow<>(this, 1, false);
+    public final InpFlow<Long> inp = new InpFlow<>(this, 1);
     Long cnt = null;
 
     public SubscriberActor(Dataflow parent, int delay) {

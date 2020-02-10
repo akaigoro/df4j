@@ -23,10 +23,10 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
-     * @param ready initial port state
+     * @param active initial port state
      */
-    public InpFlood(AsyncProc parent, boolean ready) {
-        parent.super(ready);
+    public InpFlood(AsyncProc parent, boolean active) {
+        parent.super(false, active);
     }
 
     public InpFlood(AsyncProc parent) {
@@ -104,7 +104,9 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
         this.subscription = subscription;
-        block();
+        if (tokens.isEmpty()) {
+            block();
+        }
     }
 
     @Override

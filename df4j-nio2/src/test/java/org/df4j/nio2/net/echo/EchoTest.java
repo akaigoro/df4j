@@ -28,7 +28,7 @@ public  class EchoTest {
     public void ClientTest_1(int total) throws IOException, InterruptedException {
         EchoClient client = new EchoClient(clientDataflow, local9990, total);
         client.start();
-        boolean clfinised = clientDataflow.blockingAwait(100, TimeUnit.MILLISECONDS);
+        boolean clfinised = clientDataflow.blockingAwait(1000, TimeUnit.MILLISECONDS);
         Assert.assertTrue(clfinised);
         Assert.assertEquals(0, client.count);
         echoServer.close();
