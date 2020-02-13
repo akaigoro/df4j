@@ -43,7 +43,7 @@ public class Scalar {
      *
      * @param <T>  type of tokens
      */
-    public interface Observer<T> extends BiConsumer<T, Throwable> {
+    public interface Observer<T> extends Completable.Observer, BiConsumer<T, Throwable> {
         void onSubscribe(SimpleSubscription subscription);
 
         /**

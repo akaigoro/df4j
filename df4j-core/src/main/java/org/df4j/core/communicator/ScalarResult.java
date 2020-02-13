@@ -1,11 +1,11 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.SimpleSubscription;
+import org.df4j.protocol.Completable;
 import org.df4j.protocol.Scalar;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.LinkedList;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
@@ -14,59 +14,90 @@ import java.util.concurrent.locks.ReentrantLock;
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
  * interfaces on output end.
- *  an equivalent to {@link CompletableFuture}&lt;{@link T}&gt;
+ *  an equivalent to {@link CompletableFuture}&lt;{@link R}&gt;
  *
- * @param <T> the type of completion value
+ * @param <R> the type of completion value
  */
-public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
-    private final Lock bblock = new ReentrantLock();
-    protected final CompletableFuture<T> cf = new CompletableFuture<>();
+public class ScalarResult<R> extends Completion implements Scalar.Source<R>, Future<R> {
+    private R result;
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return cf.cancel(mayInterruptIfRunning);
+    public void subscribe(Scalar.Observer<? super R> subscriber) {
+        bblock.lock();
+        try {
+            if (!isCancelled() && subscriptions != null) {
+                ValueSubscription subscription = new ValueSubscription(subscriber);
+                subscriptions.add(subscription);
+                subscriber.onSubscribe(subscription);
+                return;
+            }
+        } finally {
+            bblock.unlock();
+        }
+        Throwable completionException = getCompletionException();
+        if (completionException == null) {
+            subscriber.onSuccess(result);
+        } else {
+            subscriber.onError(completionException);
+        }
     }
 
     @Override
-    public boolean isCancelled() {
-        return cf.isCancelled();
-    }
-
-    @Override
-    public boolean isDone() {
-        return cf.isDone();
-    }
-
-    @Override
-    public void subscribe(Scalar.Observer<? super T> subscriber) {
-        Subscription subscription = new Subscription(subscriber);
-        subscriber.onSubscribe(subscription);
+    protected void setResult(Object result) {
+        this.result = (R) result;
     }
 
     /**
      * completes this {@link ScalarResult} with value
      * @param message completion value
      */
-    public void onSuccess(T message) {
-        cf.complete(message);
-    }
-
-    /**
-     * completes this {@link ScalarResult} exceptionally
-      * @param exception completion exception
-     */
-    public void onError(Throwable exception) {
-        cf.completeExceptionally(exception);
+    public void onSuccess(R message) {
+        _onComplete(message, null);
     }
 
     @Override
-    public T get() throws InterruptedException, ExecutionException {
-        return cf.get();
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return false;
     }
 
     @Override
-    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return cf.get(timeout, unit);
+    public boolean isCancelled() {
+        return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return isCompleted();
+    }
+
+    @Override
+    public R get() throws InterruptedException {
+        join();
+        return result;
+    }
+
+    @Override
+    public R get(long timeout, @NotNull TimeUnit unit) throws TimeoutException {
+        if (super.blockingAwait(timeout, unit)) {
+            return result;
+        } else {
+            throw new TimeoutException();
+        }
+    }
+
+    class ValueSubscription extends CompletionSubscription {
+
+        protected ValueSubscription(Scalar.Observer<? super R> subscriber) {
+            super(subscriber);
+        }
+
+        public void onComplete() {
+            if (completionException == null) {
+                ((Scalar.Observer<? super R>)subscriber).onSuccess(result);
+            } else {
+                subscriber.onError(completionException);
+            }
+        }
     }
 
     /**
@@ -76,25 +107,7 @@ public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
      * @return the result value
      * @throws CompletionException if this  {@link ScalarResult} completed exceptionally
      */
-    public T join() {
-        return cf.join();
-    }
-
-    class Subscription implements SimpleSubscription {
-        final CompletableFuture<T> whenComplete;
-
-        public Subscription(Scalar.Observer<? super T> subscriber) {
-            this.whenComplete = cf.whenComplete(subscriber);
-        }
-
-        @Override
-        public void cancel() {
-            whenComplete.cancel(true);
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return whenComplete.isCancelled();
-        }
-    }
+ //   public R join() {
+ //       return cf.join();
+  //  }
 }

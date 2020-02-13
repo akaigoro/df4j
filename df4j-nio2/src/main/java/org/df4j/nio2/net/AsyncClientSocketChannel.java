@@ -17,8 +17,6 @@ import java.util.concurrent.ExecutorService;
 public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketChannel>
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
-    private Dataflow dataflow;
-
     /**
      * Starts connection to a server.
      *

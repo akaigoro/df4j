@@ -10,8 +10,6 @@
 package org.df4j.core.dataflow;
 
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -49,11 +47,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
 
     public AsyncProc() {
         this(new Dataflow());
-    }
-
-    @Override
-    public AsyncProc getItem() {
-        return this;
     }
 
     public ActorState getState() {
@@ -131,7 +124,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
      * finishes parent activity exceptionally.
      * @param ex the exception
      */
-    protected void onError(Throwable ex) {
+    public void onError(Throwable ex) {
         bblock.lock();
         try {
             if (isCompleted()) {
@@ -228,8 +221,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             } else if (blockingPortCount == 1) {
                 return false; //      do      fire();
             }
-            blockingPortCount--;
             ready = true;
+            blockingPortCount--;
             return true;
         }
 
@@ -282,24 +275,19 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             }
         }
 
-        private boolean decrBlockedPortCount() {
-            bblock.lock();
-            try {
-                if (isCompleted()) {
-                    return true;
-                }
-                if (blockingPortCount == 0) {
-                    throw new IllegalStateException("port blocked but blockingPortCount == 0");
-                }
-                blockingPortCount--;
-                if (blockingPortCount > 0) {
-                    return true;
-                }
-                controlport._block();
-                state = ActorState.Running;
-            } finally {
-                bblock.unlock();
+        private boolean _decrBlockedPortCount() {
+            if (isCompleted()) {
+                return true;
             }
+            if (blockingPortCount == 0) {
+                throw new IllegalStateException("port blocked but blockingPortCount == 0");
+            }
+            blockingPortCount--;
+            if (blockingPortCount > 0) {
+                return true;
+            }
+            controlport._block();
+            state = ActorState.Running;
             return false;
         }
 
@@ -323,7 +311,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                         blockingPortCount++;
                         return;
                     }
-                    if (decrBlockedPortCount()) {
+                    if (_decrBlockedPortCount()) {
                         return;
                     }
                 } finally {
@@ -338,7 +326,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         /**
          * sets this port to a blocked state.
          */
-        public synchronized void block() {
+        public void block() {
             plock.lock();
             try {
                 if (!ready) {
@@ -377,8 +365,13 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 if (!active) {
                     return;
                 }
-                if (decrBlockedPortCount()) {
-                    return;
+                bblock.lock();
+                try {
+                    if (_decrBlockedPortCount()) {
+                        return;
+                    }
+                } finally {
+                    bblock.unlock();
                 }
             } finally {
                 plock.unlock();

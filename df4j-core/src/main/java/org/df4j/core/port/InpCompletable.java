@@ -36,6 +36,10 @@ public class InpCompletable extends AsyncProc.Port implements Completable.Observ
 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
+        if (completed) {
+            subscription.cancel();
+            return;
+        }
         this.subscription = subscription;
         block();
     }
@@ -59,13 +63,14 @@ public class InpCompletable extends AsyncProc.Port implements Completable.Observ
         return completionException;
     }
 
-    private  void onComplete(Throwable throwable) {
+    protected  void _onComplete(Object message, Throwable throwable) {
         plock.lock();
         try {
             if (completed) {
                 return;
             }
             this.completed = true;
+            setValue(message);
             this.completionException = throwable;
             unblock();
         } finally {
@@ -73,13 +78,16 @@ public class InpCompletable extends AsyncProc.Port implements Completable.Observ
         }
     }
 
+    protected void setValue(Object message) {
+    }
+
     @Override
     public  void onError(Throwable throwable) {
-        onComplete(throwable);
+        _onComplete(null, throwable);
     }
 
     @Override
     public void onComplete() {
-        onComplete(null);
+        _onComplete(null, null);
     }
 }

@@ -44,7 +44,7 @@ public class SumSquareTest {
      * each node of dataflow graph is declared and created explicitely
      */
     @Test
-    public void testAcyncProc() throws ExecutionException, InterruptedException, TimeoutException {
+    public void testAcyncProc() throws TimeoutException, InterruptedException {
         // create 3 nodes
         Square sqX = new Square();
         Square sqY = new Square();
@@ -59,7 +59,9 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // get the result
-        int res = sum.result.get(1, TimeUnit.SECONDS);
+        boolean fin = sum.result.blockingAwait(1, TimeUnit.SECONDS);
+        Assert.assertTrue(fin);
+        int res = sum.result.get();
         Assert.assertEquals(25, res);
     }
 

@@ -13,7 +13,7 @@ import java.util.concurrent.*;
  * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
 public class Dataflow extends Node<Dataflow> implements Activity {
-    protected LinkedQueue<Node> children = new LinkedQueue<>();
+    protected LinkedQueue<Node.NodeLink> children = new LinkedQueue<>();
 
     /**
      *  creates root {@link Dataflow} graph.
@@ -29,11 +29,6 @@ public class Dataflow extends Node<Dataflow> implements Activity {
         super(parent);
     }
 
-    @Override
-    public Dataflow getItem() {
-        return this;
-    }
-
     /**
      * indicates that a node has added to this graph.
      * @param node
@@ -41,7 +36,7 @@ public class Dataflow extends Node<Dataflow> implements Activity {
     public void enter(Node node) {
         bblock.lock();
         try {
-            children.add(node);
+            children.add(node.nodeLink);
         } finally {
             bblock.unlock();
         }
@@ -56,7 +51,7 @@ public class Dataflow extends Node<Dataflow> implements Activity {
     public void leave(Node node) {
         bblock.lock();
         try {
-            children.remove(node);
+            children.remove(node.nodeLink);
             if (children.size() == 0) {
                 super.onComplete();
             }

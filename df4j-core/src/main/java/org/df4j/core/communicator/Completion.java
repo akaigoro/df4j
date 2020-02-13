@@ -17,10 +17,10 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class Completion implements Completable.Source {
     protected final Lock bblock = new ReentrantLock();
-    private final Condition completedCond = bblock.newCondition();
+    protected final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
     protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
-    private boolean completed;
+    protected boolean completed;
 
     /**
      * @return completion Exception, if this {@link Completable} was completed exceptionally;
@@ -68,7 +68,17 @@ public class Completion implements Completable.Source {
         }
     }
 
-    private void _onComplete(Throwable e) {
+    protected void completeSubscriptions(LinkedList<CompletionSubscription> subs) {
+        for (;;) {
+            CompletionSubscription sub = subs.poll();
+            if (sub == null) {
+                break;
+            }
+            sub.onComplete();
+        }
+    }
+
+    protected void _onComplete(Object result, Throwable e) {
         LinkedList<CompletionSubscription> subs;
         bblock.lock();
         try {
@@ -76,6 +86,7 @@ public class Completion implements Completable.Source {
                 return;
             }
             completed = true;
+            setResult(result);
             this.completionException = e;
             completedCond.signalAll();
             if (subscriptions == null) {
@@ -86,24 +97,17 @@ public class Completion implements Completable.Source {
         } finally {
             bblock.unlock();
         }
-        for (;;) {
-            CompletionSubscription sub = subs.poll();
-            if (sub == null) {
-                break;
-            }
-            if (e == null) {
-                sub.onComplete();
-            } else {
-                sub.onError(e);
-            }
-        }
+        completeSubscriptions(subs);
+    }
+
+    protected void setResult(Object result) {
     }
 
     /**
      * completes this {@link Completable} normally
      */
     public void onComplete() {
-        _onComplete(null);
+        _onComplete(null, null);
     }
 
     /**
@@ -111,7 +115,7 @@ public class Completion implements Completable.Source {
      * @param e completion exception
      */
     protected void onError(Throwable e) {
-        _onComplete(e);
+        _onComplete(null, e);
     }
 
     /**
@@ -225,11 +229,11 @@ public class Completion implements Completable.Source {
         }
 
         public void onComplete() {
-            subscriber.onComplete();
-        }
-
-        public void onError(Throwable e) {
-            subscriber.onError(e);
+            if (completionException == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(completionException);
+            }
         }
     }
 

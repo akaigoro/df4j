@@ -37,7 +37,7 @@ public class EchoServer extends Actor {
         allowedConnections.release(maxConnCount);
     }
 
-    public void close() throws InterruptedException {
+    public void stop() throws InterruptedException {
         acceptor.close();
         onComplete();
         join();
@@ -51,9 +51,9 @@ public class EchoServer extends Actor {
 
     @Override
     public void runAction() {
-        allowedConnections.acquire();
-        Starter starter = new Starter(getParent());
-        acceptor.demands.subscribe(starter.inp);
+        allowedConnections.acquire(); // got permission to accept client connection
+        Starter starter = new Starter(getParent()); // create client connection
+        acceptor.demands.subscribe(starter.inp); // wait for a client willing to connect
         starter.start();
     }
 
@@ -67,8 +67,8 @@ public class EchoServer extends Actor {
 
         @Override
         protected void runAction() {
-            AsynchronousSocketChannel assc = inp.remove();
-            EchoProcessor processor = new EchoProcessor(assc);
+            AsynchronousSocketChannel assc = inp.remove(); // a client connected
+            EchoProcessor processor = new EchoProcessor(assc); // serve client with EchoProcessor
             echoProcessors.add(processor);
             processor.start();
         }
@@ -111,7 +111,7 @@ public class EchoServer extends Actor {
         }
 
         @Override
-        protected void onError(Throwable ex) {
+        public void onError(Throwable ex) {
             super.onError(ex);
             releaseConnectionPermit();
         }

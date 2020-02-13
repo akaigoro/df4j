@@ -11,15 +11,15 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
 import org.df4j.core.util.linked.Link;
+import org.df4j.core.util.linked.LinkImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.*;
 
-public abstract class Node<T> extends Completion implements Link<T> {
-    private Link<T> prev = this;
-    private Link<T> next = this;
+public abstract class Node<T> extends Completion {
+    NodeLink nodeLink = new NodeLink();
     private final Dataflow parent;
     private ExecutorService executor;
     private Timer timer;
@@ -31,26 +31,6 @@ public abstract class Node<T> extends Completion implements Link<T> {
     protected Node(Dataflow parent) {
         this.parent = parent;
         parent.enter(this);
-    }
-
-    @Override
-    public Link<T> getNext() {
-        return next;
-    }
-
-    @Override
-    public void setNext(Link<T> next) {
-        this.next = next;
-    }
-
-    @Override
-    public Link<T> getPrev() {
-        return prev;
-    }
-
-    @Override
-    public void setPrev(Link<T> prev) {
-        this.prev = prev;
     }
 
     public Dataflow getParent() {
@@ -182,5 +162,13 @@ public abstract class Node<T> extends Completion implements Link<T> {
             }
         }
         return res;
+    }
+
+    class NodeLink extends LinkImpl<Node> {
+
+        @Override
+        public Node getItem() {
+            return Node.this;
+        }
     }
 }

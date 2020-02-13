@@ -1,7 +1,6 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.util.Utils;
 import org.junit.*;
 
 import java.io.IOException;
@@ -25,13 +24,18 @@ public  class EchoTest {
         echoServer.start();
     }
 
+    @After
+    public synchronized void deinit() throws InterruptedException {
+        echoServer.stop();
+    }
+
     public void ClientTest_1(int total) throws IOException, InterruptedException {
         EchoClient client = new EchoClient(clientDataflow, local9990, total);
         client.start();
         boolean clfinised = clientDataflow.blockingAwait(1000, TimeUnit.MILLISECONDS);
         Assert.assertTrue(clfinised);
         Assert.assertEquals(0, client.count);
-        echoServer.close();
+        echoServer.stop();
         boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
         Assert.assertTrue(sfinised);
     }
@@ -58,7 +62,7 @@ public  class EchoTest {
         Assert.assertTrue(finised);
         Assert.assertEquals(0, client1.count);
         Assert.assertEquals(0, client2.count);
-        echoServer.close();
+        echoServer.stop();
         boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
         Assert.assertTrue(sfinised);
     }
@@ -73,7 +77,7 @@ public  class EchoTest {
         }
         boolean finised = clientDataflow.blockingAwait(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
-        echoServer.close();
+        echoServer.stop();
         boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
         Assert.assertTrue(sfinised);
     }

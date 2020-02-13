@@ -64,7 +64,6 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         producer.onSubscribe(subscription);
     }
 
-
     public void _onComplete(Throwable cause) {
         plock.lock();
         try {

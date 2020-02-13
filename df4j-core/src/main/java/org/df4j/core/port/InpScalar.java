@@ -13,7 +13,6 @@ import org.reactivestreams.Subscriber;
  *
  * It can connect both to {@link Scalar.Source} and {@link Flow.Publisher}.
  * This port is reusable: to reconnect to another scalar or flow Flow.Publisher, Flow.Publisher.subscribe is used.
- * To reconnect to the same flow Flow.Publisher, {@link #request()} is more efficient than {@link Flow.Publisher#subscribe(Subscriber)};
  * Meaning of "completed normally" is different: it is completed after each succesfull receit of the next message
  * until next {@link #remove()} or resubscription.
  *
@@ -21,41 +20,24 @@ import org.reactivestreams.Subscriber;
  *
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
-public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
+public class InpScalar<T> extends InpCompletable implements Scalar.Observer<T> {
     protected T value;
-    protected volatile boolean completed = false;
-    private Throwable completionException = null;
-    private SimpleSubscription simpleSubscription;
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      * @param active initial state
      */
     public InpScalar(AsyncProc parent, boolean active) {
-        parent.super(false, active);
+        super(parent, active);
     }
 
     public InpScalar(AsyncProc parent) {
-        parent.super(false);
-    }
-
-    public boolean isCompleted() {
-        plock.lock();
-        try {
-            return completed;
-        } finally {
-            plock.unlock();
-        }
+        super(parent);
     }
 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
-        this.simpleSubscription = subscription;
-        block();
-    }
-
-    public Throwable getCompletionException() {
-        return completionException;
+        super.onSubscribe(subscription);
     }
 
     public T current() {
@@ -84,42 +66,18 @@ public class InpScalar<T> extends AsyncProc.Port implements Scalar.Observer<T> {
         }
     }
 
-    private void unsubscribe() {
-        if (simpleSubscription != null) {
-            simpleSubscription.cancel();
-            simpleSubscription = null;
-        }
+    @Override
+    protected void setValue(Object message) {
+        value = (T) message;
     }
 
     @Override
     public  void onSuccess(T message) {
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            this.completed = true;
-            this.value = message;
-            unsubscribe();
-            unblock();
-        } finally {
-            plock.unlock();
-        }
+        _onComplete(message, null);
     }
 
     @Override
     public  void onError(Throwable throwable) {
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            unsubscribe();
-            unblock();
-        } finally {
-            plock.unlock();
-        }
+        _onComplete(null, throwable);
     }
 }
