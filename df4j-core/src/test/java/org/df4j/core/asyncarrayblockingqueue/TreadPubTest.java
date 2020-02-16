@@ -11,14 +11,14 @@ import java.util.logging.Level;
 public class TreadPubTest {
 
     public void pubSubTest(int cnt, int delay1) throws InterruptedException {
-        Dataflow df = new Dataflow();
         ThreadPublisher pub = new ThreadPublisher(cnt, delay1);
         LoggingSubscriber sub = new LoggingSubscriber();
         sub.logger.setLevel(Level.ALL);
         pub.subscribe(sub);
         pub.start();
-        pub.join(1000);
+        pub.join(400);
         Assert.assertEquals(cnt, sub.cnt);
+        Thread.sleep(400);
         Assert.assertTrue(sub.completed);
         Assert.assertNull(sub.completionException);
     }

@@ -4,7 +4,6 @@ import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
-import org.reactivestreams.Subscriber;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -20,7 +19,8 @@ import org.reactivestreams.Subscriber;
  *
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
-public class InpScalar<T> extends InpCompletable implements Scalar.Observer<T> {
+public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> {
+    private SimpleSubscription subscription;
     protected T value;
 
     /**
@@ -28,7 +28,7 @@ public class InpScalar<T> extends InpCompletable implements Scalar.Observer<T> {
      * @param active initial state
      */
     public InpScalar(AsyncProc parent, boolean active) {
-        super(parent, active);
+        super(parent, false, active);
     }
 
     public InpScalar(AsyncProc parent) {
@@ -37,7 +37,27 @@ public class InpScalar<T> extends InpCompletable implements Scalar.Observer<T> {
 
     @Override
     public void onSubscribe(SimpleSubscription subscription) {
-        super.onSubscribe(subscription);
+        if (completed) {
+            subscription.cancel();
+            return;
+        }
+        this.subscription = subscription;
+        block();
+    }
+
+    public void unsubscribe() {
+        plock.lock();
+        SimpleSubscription sub;
+        try {
+            if (subscription == null) {
+                return;
+            }
+            sub = subscription;
+            subscription = null;
+        } finally {
+            plock.unlock();
+        }
+        sub.cancel();
     }
 
     public T current() {
@@ -57,9 +77,13 @@ public class InpScalar<T> extends InpCompletable implements Scalar.Observer<T> {
     public T remove() {
         plock.lock();
         try {
+            if (!ready) {
+                throw new IllegalStateException();
+            }
             T value = this.value;
             this.value = null;
             this.completed = false;
+            block();
             return value;
         } finally {
             plock.unlock();
@@ -67,17 +91,16 @@ public class InpScalar<T> extends InpCompletable implements Scalar.Observer<T> {
     }
 
     @Override
-    protected void setValue(Object message) {
-        value = (T) message;
-    }
-
-    @Override
     public  void onSuccess(T message) {
-        _onComplete(message, null);
-    }
-
-    @Override
-    public  void onError(Throwable throwable) {
-        _onComplete(null, throwable);
+        plock.lock();
+        try {
+            if (completed) {
+                return;
+            }
+            super.onComplete();
+            this.value = message;
+        } finally {
+            plock.unlock();
+        }
     }
 }

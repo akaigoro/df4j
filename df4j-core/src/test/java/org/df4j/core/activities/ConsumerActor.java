@@ -26,7 +26,7 @@ public class ConsumerActor extends Actor {
             logger.info(" completed.");
             onComplete();
         } else {
-            Long in = inp.removeAndRequest();
+            Long in = inp.remove();
             logger.info(" got: "+in);
         }
     }

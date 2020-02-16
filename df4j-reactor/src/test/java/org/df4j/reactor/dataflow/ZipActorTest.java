@@ -23,7 +23,7 @@ public  class ZipActorTest {
                 onComplete();
                 return;
             }
-            T1 element1 = inpFlow.removeAndRequest();
+            T1 element1 = inpFlow.remove();
             T2 element2 = inpScalar.current();
             runAction(element1, element2);
         }

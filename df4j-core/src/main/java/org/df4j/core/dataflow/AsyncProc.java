@@ -34,8 +34,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
     /**
      * blocked initially, until {@link #start} called.
      */
-    private ArrayList<ControlPort> ports = new ArrayList<>();
-    private int blockingPortCount = 0;
+    private ArrayList<Port> ports = new ArrayList<>(4);
+    private int blockedPortsCount = 0;
     protected ControlPort controlport = new ControlPort();
 
     protected AsyncProc(Dataflow dataflow) {
@@ -85,23 +85,11 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             if (state != ActorState.Created) {
                 return;
             }
-            if (_controlportUnblock()) {
-                return;
-            }
+            state = ActorState.Blocked;
         } finally {
             bblock.unlock();
         }
-        fire();
-    }
-
-    protected boolean _controlportUnblock() {
-        if (controlport._unblock()) {
-            state = ActorState.Waiting;
-            return true;
-        } else {
-            state = ActorState.Running;
-            return false;
-        }
+        controlport.unblock();
     }
 
     /**
@@ -137,6 +125,35 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         super.onError(ex);
     }
 
+    // todo switch off
+    protected  void checkPorts() {
+        for (int k=0; k<ports.size(); k++) {
+            Port port = ports.get(k);
+            if (!port.isActive()) {
+                continue;
+            }
+            boolean mustBeBeBlocked = port == controlport;
+            if (mustBeBeBlocked == port.ready) {
+                throw new IllegalStateException(" attempt to fire with wrong port state");
+            }
+        }
+    }
+
+    // todo switch off
+    protected  void checkBlockedPortsCount() {
+        int actualBlockedPortsCount = 0;
+        for (int k=0; k<ports.size(); k++) {
+            Port port = ports.get(k);
+            if (port.isActive() && !port.isReady()) {
+                actualBlockedPortsCount++;
+            }
+        }
+        if (actualBlockedPortsCount != blockedPortsCount) {
+            throw new IllegalStateException("actual blockedPortsCount="+actualBlockedPortsCount+" but blockedPortsCount = "+blockedPortsCount);
+        }
+
+    }
+
     /**
      * invoked when all asyncTask asyncTask are ready,
      * and method run() is to be invoked.
@@ -145,6 +162,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
+        checkPorts();
         getExecutor().execute(this::run);
     }
 
@@ -167,7 +185,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
     }
 
     /**     * User's action.
-     * User is adviswd top override this method, but overriding {@link #fire()} alse is possible
+     * User is adviswd top override this method, but overriding {@link #fire()} is also possible
      *
      * @throws Throwable when thrown, this node is considered failed.
      */
@@ -178,79 +196,53 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         return super.toString() + "/"+state;
     }
 
-    private class ControlPort {
-        protected boolean ready = false;
+    public String portsToString() {
+        return ports.toString();
+    }
 
-        public ControlPort(boolean blocking) {
-            bblock.lock();
-            try {
-                ports.add(this);
-                if (blocking) {
-                    blockingPortCount++;
-                }
-            } finally {
-                bblock.unlock();
-            }
-        }
+    public interface PortI {
+        /** make port not ready */
+        void block();
 
-        public ControlPort() {
-            this(true);
-        }
+        /** make port ready */
+        void unblock();
 
-        /**
-         * must be invoked with locked {@link #bblock}
-         */
-        private synchronized void _block() {
-            if (ready) {
-                ready = false;
-                blockingPortCount++;
-            }
-        }
-
-        /**
-         * must be invoked with locked {@link #bblock}
-         *
-         * @return true if become (or was) unblocked (ready)
-         */
-        private boolean _unblock() {
-            if (ready) {
-                return true;
-            }
-            if (blockingPortCount == 0) {
-                throw new IllegalStateException("blocked port and blockingPortCount == 0");
-            } else if (blockingPortCount == 1) {
-                return false; //      do      fire();
-            }
-            ready = true;
-            blockingPortCount--;
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return super.toString() + (ready?": ready":": blocked");
-        }
+        boolean isReady();
     }
 
     /**
      * Basic class for all ports (places for tokens).
      * Has 2 states: ready or blocked.
      * When all ports become unblocked, method {@link AsyncProc#fire()} is called.
-     * This resembles firing of a Petri Net transition.
+     * This is clear analogue to the firing of a Petri Net transition.
      */
-    public class Port extends ControlPort {
+    public class Port implements PortI {
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected final Lock plock = new ReentrantLock();
         protected boolean active;
+        protected boolean ready = false;
 
         public Port(boolean ready, boolean active) {
-            super(active && !ready);
+            boolean blocked = !ready && active;
+            bblock.lock();
+            try {
+                ports.add(this);
+                if (blocked) {
+                    blockedPortsCount++;
+                }
+            } finally {
+                bblock.unlock();
+            }
             this.ready = ready;
             this.active = active;
         }
 
         public Port(boolean ready) {
             this(ready, true);
+        }
+
+        public Port() {
+            this(false);
         }
 
         protected AsyncProc getParent() {
@@ -275,31 +267,18 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             }
         }
 
-        private boolean _decrBlockedPortCount() {
-            if (isCompleted()) {
-                return true;
-            }
-            if (blockingPortCount == 0) {
-                throw new IllegalStateException("port blocked but blockingPortCount == 0");
-            }
-            blockingPortCount--;
-            if (blockingPortCount > 0) {
-                return true;
-            }
-            controlport._block();
-            state = ActorState.Running;
-            return false;
-        }
-
         public void setActive(boolean active) {
             plock.lock();
             try {
+                checkBlockedPortsCount();
                 boolean wasActive = this.active;
                 if (wasActive == active) {
                     return;
                 }
                 this.active = active;
-                if (ready) {
+                boolean wasBlocked = !ready && wasActive;
+                boolean needBlocked = !ready && active;
+                if (wasBlocked == needBlocked) {
                     return;
                 }
                 bblock.lock();
@@ -307,11 +286,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                     if (isCompleted()) {
                         return;
                     }
-                    if (active) {
-                        blockingPortCount++;
+                    if (needBlocked) {
+                        blockedPortsCount++;
+                        checkBlockedPortsCount();
                         return;
                     }
-                    if (_decrBlockedPortCount()) {
+                    boolean doreturn = _decBlockedPortsCount();
+                    checkBlockedPortsCount();
+                    if (doreturn) {
                         return;
                     }
                 } finally {
@@ -320,7 +302,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             } finally {
                 plock.unlock();
             }
-            fire();;
+            fire();
         }
 
         /**
@@ -329,6 +311,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         public void block() {
             plock.lock();
             try {
+                checkBlockedPortsCount();
                 if (!ready) {
                     return;
                 }
@@ -341,7 +324,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                     if (isCompleted()) {
                         return;
                     }
-                    blockingPortCount++;
+                    blockedPortsCount++;
+                    checkBlockedPortsCount();
                 } finally {
                     bblock.unlock();
                 }
@@ -367,7 +351,11 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
                 }
                 bblock.lock();
                 try {
-                    if (_decrBlockedPortCount()) {
+                    if (isCompleted()) {
+                        return; // do not fire
+                    }
+                    boolean doReturn = _decBlockedPortsCount();
+                    if (doReturn) {
                         return;
                     }
                 } finally {
@@ -378,5 +366,31 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
             }
             fire();
         }
+
+        /**
+         * call only when {@link #bblock} locked
+         * @return true if still in blocked state
+         *         false when must fire
+         */
+        private boolean _decBlockedPortsCount() {
+            if (blockedPortsCount == 0) {
+                throw new IllegalStateException("port blocked but blockingPortCount == 0");
+            }
+            blockedPortsCount--;
+            if (blockedPortsCount > 0) {
+                return true; // do not fire
+            }
+            controlport.block();
+            state = ActorState.Running;
+            return false; // do fire
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + (ready?": ready":": blocked");
+        }
+    }
+
+    public class ControlPort extends Port{
     }
 }

@@ -53,9 +53,7 @@ public class Scalar {
          */
         void onSuccess(T t);
 
-        default void onComplete() {
-            onError(null);
-        }
+        void onComplete();
 
         /**
          * Failed terminal state.

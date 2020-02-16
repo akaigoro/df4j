@@ -72,7 +72,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
     @Override
     protected void runAction() {
         if (!input.isCompleted()) {
-            ByteBuffer buffer = input.removeAndRequest();
+            ByteBuffer buffer = input.remove();
             doIO(buffer);
             suspend();
         } else {

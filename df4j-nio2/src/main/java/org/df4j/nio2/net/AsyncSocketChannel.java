@@ -117,7 +117,7 @@ public class AsyncSocketChannel {
                 output.onError(input.getCompletionException());
                 return;
             }
-            ByteBuffer buffer = input.removeAndRequest();
+            ByteBuffer buffer = input.remove();
             if (timeout > 0) {
                 doIO(buffer, timeout);
             } else {

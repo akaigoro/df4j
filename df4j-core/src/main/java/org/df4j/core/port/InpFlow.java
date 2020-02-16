@@ -10,14 +10,12 @@ import java.util.ArrayDeque;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Subscriber<T> {
+public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
     protected boolean withBuffer;
     private ArrayDeque<T> buff;
     /** extracted token */
     protected T value;
-    private Throwable completionException;
-    protected volatile boolean completed;
     protected Subscription subscription;
     private long requestedCount;
 
@@ -27,12 +25,12 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
      * @param capacity required capacity
      */
     public InpFlow(AsyncProc parent, int capacity) {
-        parent.super(false);
+        super(parent);
         setCapacity(capacity);
     }
 
     public InpFlow(AsyncProc parent, int capacity, boolean active) {
-        parent.super(false, active);
+        super(parent, false, active);
         setCapacity(capacity);
     }
 
@@ -89,14 +87,6 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
         }
     }
 
-    public Throwable getCompletionException() {
-        return completionException;
-    }
-
-    public boolean isCompletedExceptionslly() {
-        return completionException != null;
-    }
-
     public T current() {
         plock.lock();
         try {
@@ -123,22 +113,6 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
             plock.unlock();
         }
         subscription.request(requestedCount);
-    }
-
-    public void request(long n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException();
-        }
-        plock.lock();
-        try {
-            if (n > remainingCapacity()) {
-                throw new IllegalArgumentException();
-            }
-            requestedCount += n;
-        } finally {
-            plock.unlock();
-        }
-        subscription.request(n);
     }
 
     /**
@@ -179,26 +153,6 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
 
     public T remove() {
         plock.lock();
-        try {
-            if (!isReady()) {
-                throw new IllegalStateException();
-            }
-            T res = value;
-            value = null;
-            if (!withBuffer || buff.isEmpty()) {
-                block();
-            } else {
-                value = buff.poll();
-            }
-            roomAvailable();
-            return res;
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    public T removeAndRequest() {
-        plock.lock();
         long n;
         T res;
         try {
@@ -223,34 +177,6 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
         }
         subscription.request(n);
         return res;
-    }
-
-    private void onComplete(Throwable throwable) {
-        plock.lock();
-        try {
-            if (isCompleted()) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            subscription = null;
-            unblock();
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    @Override
-    public void onError(Throwable throwable) {
-        if (throwable == null) {
-            throw new NullPointerException();
-        }
-        onComplete(throwable);
-    }
-
-    @Override
-    public void onComplete() {
-        onComplete(null);
     }
 
     protected void roomExhausted(){}

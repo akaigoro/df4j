@@ -9,7 +9,6 @@ import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 
 /**
  *  A {@link BlockingQueue} augmented with asynchronous interfaces to save and extract messages, and also interfaces to pass completion signal as required by  {@link Flow}.
@@ -29,14 +28,18 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
 {
     protected final InpChannel<T> inp;
     protected final OutFlow<T> out;
-    private final Condition hasRoom;
 
     public AsyncArrayBlockingQueue(int capacity) {
-        hasRoom = bblock.newCondition();
-        inp = new InpChannel<>(this);
-//        out = new OutFlow<>(transition, capacity, this);
-        out = new OutFlow<>(this, capacity);
+        if (capacity < 0) {
+            throw new IllegalArgumentException();
+        }
+        inp = new InpChannel<>(this, capacity>1? capacity-1:1);
+        out = new OutFlow<>(this, 1);
         start();
+    }
+
+    public AsyncArrayBlockingQueue() {
+        this(32);
     }
 
     @Override
@@ -49,71 +52,35 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         out.subscribe(s);
     }
 
-    /**
-     *  If there are subscribers waiting for tokens,
-     *  then the first subscriber is removed from the subscribers queue and is fed with the token,
-     *  otherwise, the token is inserted into this queue, waiting up to the
-     *  specified wait time if necessary for space to become available.
-     *
-     * @param token the element to add
-     * @param timeout how long to wait before giving up, in units of
-     *        {@code unit}
-     * @param unit a {@code TimeUnit} determining how to interpret the
-     *        {@code timeout} parameter
-     * @return {@code true} if successful, or {@code false} if
-     *         the specified waiting time elapses before space is available
-     * @throws InterruptedException if interrupted while waiting
-     */
-    public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
-        if (token == null) {
-            throw new NullPointerException();
-        }
-        long millis = unit.toMillis(timeout);
-        bblock.lock();
-        try {
-            for (;;) {
-                if (completed) {
-                    return false;
-                }
-                if (out.offer(token)) {
-                    return true;
-                }
-                if (millis <= 0) {
-                    return false;
-                }
-                long targetTime = System.currentTimeMillis() + millis;
-                hasRoom.await(millis, TimeUnit.MILLISECONDS);
-                millis = targetTime - System.currentTimeMillis();
-            }
-        } finally {
-            bblock.unlock();
-        }
+    public boolean offer(T token) {
+        return inp.offer(token);
+    }
+
+    public boolean offer(T token, int timeout, TimeUnit unit) throws InterruptedException {
+        return inp.offer(token, timeout, unit);
+    }
+
+    public void add(T token) {
+        inp.add(token);
     }
 
     public void put(T token) throws InterruptedException {
-        if (token == null) {
-            throw new NullPointerException();
-        }
-        bblock.lock();
-        try {
-            for (;;) {
-                if (completed) {
-                    throw new IllegalStateException();
-                }
-                if (offer(token, 1, TimeUnit.DAYS)) {
-                    return;
-                }
-            }
-        } finally {
-            bblock.unlock();
-        }
+        inp.put(token);
     }
 
-    public boolean offer(T token) {
-        return out.offer(token);
+    public int size() {
+        return inp.size()+out.size();
     }
 
-    public T poll() throws InterruptedException {
+    public T remove() {
+        T res = out.poll();
+        if (res == null) {
+            throw new IllegalStateException();
+        }
+        return res;
+    }
+
+    public T poll() {
         return out.poll();
     }
 
@@ -126,9 +93,28 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
     }
 
     @Override
+    public void onComplete() {
+        inp.onComplete();
+    }
+
+    @Override
+    public void onError(Throwable ex) {
+        inp.onError(ex);
+    }
+
+    @Override
+    protected void fire() {
+        while (!super.isCompleted() && inp.isReady() && out.isReady()) {
+            checkPorts();
+            run();
+        }
+    }
+
+    @Override
     protected void runAction() throws Throwable {
         if (inp.isCompleted()) {
             out._onComplete(inp.getCompletionException());
+            super.onComplete();
         } else {
             T token = inp.remove();
             out.onNext(token);

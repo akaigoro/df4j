@@ -6,12 +6,10 @@ import org.df4j.protocol.ReverseFlow;
 /**
  * An active output parameter
  * Has room for single message.
- * Must subscribe to a consumer of type {@link ReverseFlow.Publisher} to send message further and unblock this port.
+ * Must subscribe to a consumer of type {@link ReverseFlow.Producer} to send message further and unblock this port.
  * @param <T> type of accepted messages.
  */
-public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Producer<T> {
-    protected boolean completed;
-    protected volatile Throwable completionException;
+public class OutChannel<T> extends CompletablePort implements ReverseFlow.Producer<T> {
     private T value;
     protected ReverseFlow.ReverseFlowSubscription subscription;
 
@@ -20,19 +18,25 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
      * @param parent {@link AsyncProc} to which this port belongs
      */
     public OutChannel(AsyncProc parent) {
-        parent.super(true);
+        super(parent, true, true);
     }
 
     @Override
     public void onSubscribe(ReverseFlow.ReverseFlowSubscription subscription) {
-        this.subscription = subscription;
+        if (!isCompleted()) {
+            this.subscription = subscription;
+        } else if (completionException == null) {
+            subscription.onComplete();
+        } else {
+            subscription.onError(completionException);
+        }
     }
 
     @Override
     public boolean isCompleted() {
         plock.lock();
         try {
-            return completed;
+            return completed && value == null;
         } finally {
             plock.unlock();
         }
@@ -71,29 +75,25 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
         subscription.request(1);
     }
 
-    public boolean _onComplete(Throwable throwable) {
+    public void _onComplete(Throwable throwable) {
+        ReverseFlow.ReverseFlowSubscription sub;
         plock.lock();
         try {
             if (isCompleted()) {
-                return true;
+                return;
             }
-            this.completed = true;
-            this.completionException = throwable;
-            if (subscription == null) return true;
+            super._onComplete(throwable);
+            if (subscription == null) return;
+            sub = subscription;
+            subscription = null;
         } finally {
             plock.unlock();
         }
-        return false;
-    }
-
-    public void onComplete() {
-        if (_onComplete(null)) return;
-        subscription.onComplete();
-    }
-
-    public void onError(Throwable throwable) {
-        if (_onComplete(throwable)) return;
-        subscription.onError(throwable);
+        if (throwable == null) {
+            sub.onComplete();
+        } else {
+            sub.onError(throwable);
+        }
     }
 
     @Override

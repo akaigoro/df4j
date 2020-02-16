@@ -27,17 +27,15 @@ import java.util.concurrent.locks.ReentrantLock;
  * is ready when has room to store at least one toke
  * @param <T>
  */
-public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flow.Publisher<T> {
+public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Flow.Publisher<T> {
     private final Condition hasItems;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
     private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
     private LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
-    protected Throwable completionException;
-    protected volatile boolean completed;
 
     public OutFlow(AsyncProc parent, int capacity) {
-        parent.super(true);    
+        super(parent, true);
         hasItems = plock.newCondition();
         this.capacity = capacity;
         tokens = new ArrayDeque<>(capacity);
@@ -75,16 +73,6 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
      */
     private int _remainingCapacity() {
         return capacity - tokens.size();
-    }
-
-    //  @Override
-    public int remainingCapacity() {
-        plock.lock();
-        try {
-            return capacity - tokens.size();
-        } finally {
-            plock.unlock();
-        }
     }
 
     /**
@@ -131,7 +119,7 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
                 tokens.add(token);
                 hasItemsEvent();
                 if (_remainingCapacity() == 0) {
-                    _noRoomEvent();
+                    block();
                 }
                 return true;
             }
@@ -180,7 +168,7 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
                 }
                 token = tokens.poll();
                 if (_remainingCapacity() == 1) {
-                    _hasRoomEvent();
+                    unblock();
                 }
                 if (sub == null) {
                     sub = activeSubscribtions.poll();
@@ -240,22 +228,13 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
         completAllSubscriptions(asubs, psubs);
     }
 
-    public void onComplete() {
-        _onComplete(null);
-    }
-
-    public void onError(Throwable cause) {
-        _onComplete(cause);
-    }
-
     public T poll() {
         plock.lock();
         try {
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
-                    _hasRoomEvent();
-                    _hasRoomEvent();
+                    unblock();
                     return res;
                 }
                 if (completed) {
@@ -275,8 +254,7 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
-                    _hasRoomEvent();
-                    _hasRoomEvent();
+                    unblock();
                     return res;
                 }
                 if (completed) {
@@ -300,8 +278,7 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
-                    _hasRoomEvent();
-                    _hasRoomEvent();
+                    unblock();
                     return res;
                 }
                 if (completed) {
@@ -312,6 +289,10 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
         } finally {
             plock.unlock();
         }
+    }
+
+    public int size() {
+        return tokens.size();
     }
 
     protected class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements FlowSubscription {
@@ -356,12 +337,17 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
                 }
                 plock.lock();
                 try {
-                    // remainedRequests was 0, so this subscription was passive
-                    if (passiveSubscribtions == null) {
-                        return; // port closed;
+                    if (isCompleted()) {
+                        if (completionException == null) {
+                            subscriber.onComplete();
+                        } else {
+                            subscriber.onError(completionException);
+                        }
+                        return;
                     }
+                    // remainedRequests was 0, so this subscription was passive
                     passiveSubscribtions.remove(this);
-                    token = tokens.poll();
+                    token = OutFlow.this.poll();
                     if (token == null) {
                         activeSubscribtions.add(this);
                         return;
@@ -443,15 +429,5 @@ public class OutFlow<T> extends AsyncProc.Port implements OutMessagePort<T>, Flo
         public FlowSubscriptionImpl getItem() {
             return this;
         }
-    }
-
-    /** invoked under lock
-     */
-    protected void _hasRoomEvent() {
-    }
-
-    /** invoked under lock
-     */
-    protected void _noRoomEvent() {
     }
 }

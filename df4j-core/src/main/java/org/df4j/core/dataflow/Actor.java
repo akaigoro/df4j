@@ -45,7 +45,7 @@ public abstract class Actor extends AsyncProc {
             if (state != Created) {
                 return;
             }
-            state = Running;
+            state = ActorState.Blocked;
         } finally {
             bblock.unlock();
         }
@@ -89,7 +89,7 @@ public abstract class Actor extends AsyncProc {
     }
 
     /**
-     * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Waiting) or {@link ActorState#Running}.
+     * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Blocked ) or {@link ActorState#Running}.
      * Ignored if current state is not  {@link ActorState#Suspended}.
      */
     public void resume() {
@@ -103,13 +103,10 @@ public abstract class Actor extends AsyncProc {
                 this.task.cancel();
                 this.task = null;
             }
-            if (_controlportUnblock()) {
-                return;
-            }
+            controlport.unblock();
         } finally {
             bblock.unlock();
         }
-        fire();
     }
 
     private void _restart() {
@@ -118,12 +115,8 @@ public abstract class Actor extends AsyncProc {
             if (state == Completed) {
                 return;
             }
-            if (delay == 0l) {
+            if (delay != 0l) {
                 // make loop using fire()
-                if (_controlportUnblock()) {
-                    return;
-                }
-            } else {
                 if (delay > 0l) { // normal delay
                     long d = this.delay;
                     this.delay = 0l;
@@ -133,10 +126,11 @@ public abstract class Actor extends AsyncProc {
                 state = Suspended;
                 return;
             }
+            state = Blocked;
+            controlport.unblock();
         } finally {
             bblock.unlock();
         }
-        fire();
     }
 
     @Override
@@ -145,7 +139,7 @@ public abstract class Actor extends AsyncProc {
             nextAction.run();
             _restart();
         } catch (Throwable e) {
-            onError(e);
+            super.onError(e);
         }
     }
 

@@ -35,11 +35,9 @@ public class ThreadPublisher extends Thread implements Flow.Publisher<Long> {
         try {
             for (long k=0; k<elements; k++) {
                 Thread.sleep(delay);
-                boolean succsess = output.offer(k, 500, TimeUnit.MILLISECONDS);
-                if (!succsess) {
-                    break;
-                }
+                output.put(k);
             }
+            output.onComplete();
         } catch (InterruptedException e) {
             Utils.sneakyThrow(e);
         } finally {

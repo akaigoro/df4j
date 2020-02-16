@@ -96,7 +96,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
 
 
     /**
-     * analogue od {@link InpFlow#removeAndRequest()}
+     * analogue od {@link InpFlow#remove()}
      */
     public void acquireAndRequest() {
         Subscription subs;

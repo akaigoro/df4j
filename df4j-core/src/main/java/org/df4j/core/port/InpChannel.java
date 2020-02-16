@@ -1,49 +1,53 @@
 package org.df4j.core.port;
 
-import org.df4j.core.base.OutFlowBase;
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
-import org.df4j.protocol.FlowSubscription;
 import org.df4j.protocol.ReverseFlow;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.ArrayDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 
 /**
  * A passive input parameter.
  * Has room for single value.
  */
-public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
+public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
+    protected int capacity;
     private LinkedQueue<ProducerSubscription> activeProducers = new LinkedQueue<>();
     private LinkedQueue<ProducerSubscription> passiveProducers = new LinkedQueue<>();
-    protected volatile boolean completed;
-    protected volatile Throwable completionException;
-    protected volatile T value;
+    protected ArrayDeque<T> tokens;
+    private final Condition hasRoom;
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpChannel(AsyncProc parent) {
-        parent.super(false);
+    public InpChannel(AsyncProc parent, int capacity) {
+        super(parent);
+        this.capacity = capacity;
+        tokens = new ArrayDeque<>(capacity);
+        hasRoom = plock.newCondition();
     }
 
-    public InpChannel(AsyncProc parent, int capacity) {
-        this(parent);
+    public InpChannel(AsyncProc parent) {
+        this(parent, 8);
+    }
+
+    private boolean _tokensFull() {
+        return size() == capacity;
     }
 
     public boolean isCompleted() {
         plock.lock();
         try {
-            return completed;
+            return completed && tokens.size() == 0;
         } finally {
             plock.unlock();
         }
     }
 
-    @Override
     public Throwable getCompletionException() {
         plock.lock();
         try {
@@ -64,26 +68,21 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         producer.onSubscribe(subscription);
     }
 
-    public void _onComplete(Throwable cause) {
+    public boolean offer(T token) {
         plock.lock();
         try {
             if (completed) {
-                return;
+                return false;
             }
-            completed = true;
-            completionException = cause;
+            if (_tokensFull()) {
+                return false;
+            }
+            tokens.add(token);
             unblock();
+            return true;
         } finally {
             plock.unlock();
         }
-    }
-
-    public void onComplete() {
-        _onComplete(null);
-    }
-
-    public void onError(Throwable cause) {
-        _onComplete(cause);
     }
 
     /**
@@ -92,26 +91,20 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
     public T current() {
         plock.lock();
         try {
-            return value;
+            return tokens.peek();
         } finally {
             plock.unlock();
         }
     }
 
-    /**
-     * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
-     */
-    public T remove() {
+    @Override
+    public void block() {
         plock.lock();
         try {
-            if (!ready) {
-                throw new IllegalStateException();
+            if (completed) {
+                return;
             }
-            ready = false;
-            T value = this.value;
-            this.value = null;
-            block();
-            return value;
+            super.block();
         } finally {
             plock.unlock();
         }
@@ -125,29 +118,35 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         plock.lock();
         try {
             T res;
-            if (!ready) {
+            if (tokens.isEmpty()) {
                 return null;
             }
-            res = value;
-            ProducerSubscription client = activeProducers.poll();
+            res = tokens.poll();
+            hasRoom.signalAll();
+            ProducerSubscription client = activeProducers.peek();
             if (client == null) {
-                value = null;
-                block();
-            } else {
-                if (!client.subscriber.isCompleted()) {
-                    value = client.subscriber.remove();
-                    client.remainedRequests--;
-                    if (client.remainedRequests > 0) {
-                        activeProducers.add(client);
-                    } else {
-                        passiveProducers.add(client);
-                    }
-                } else {
-                    completed = true;
-                    completionException = client.subscriber.getCompletionException();
+                if (tokens.isEmpty() && !completed) {
+                    block();
                 }
-                unblock();
+                return res;
             }
+            ReverseFlow.Producer<T> subscriber = client.subscriber;
+            if (!subscriber.isCompleted()) {
+                T token = subscriber.remove();
+                if (token == null) {
+                    subscriber.onError(new IllegalArgumentException());
+                }
+                tokens.add(token);
+                client.remainedRequests--;
+                if (client.remainedRequests == 0) {
+                    activeProducers.remove(client);
+                    passiveProducers.add(client);
+                }
+            } else {
+                completed = true;
+                completionException = subscriber.getCompletionException();
+            }
+            unblock();
             return res;
         } finally {
             plock.unlock();
@@ -155,14 +154,94 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
     }
 
     /**
+     *  If there are subscribers waiting for tokens,
+     *  then the first subscriber is removed from the subscribers queue and is fed with the token,
+     *  otherwise, the token is inserted into this queue, waiting up to the
+     *  specified wait time if necessary for space to become available.
      *
+     * @param token the element to add
+     * @param timeout how long to wait before giving up, in units of
+     *        {@code unit}
+     * @param unit a {@code TimeUnit} determining how to interpret the
+     *        {@code timeout} parameter
+     * @return {@code true} if successful, or {@code false} if
+     *         the specified waiting time elapses before space is available
+     * @throws InterruptedException if interrupted while waiting
+     */
+    public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
+        if (token == null) {
+            throw new NullPointerException();
+        }
+        long millis = unit.toMillis(timeout);
+        plock.lock();
+        try {
+            for (;;) {
+                if (completed) {
+                    return false;
+                }
+                if (offer(token)) {
+                    return true;
+                }
+                if (millis <= 0) {
+                    return false;
+                }
+                long targetTime = System.currentTimeMillis() + millis;
+                hasRoom.await(millis, TimeUnit.MILLISECONDS);
+                millis = targetTime - System.currentTimeMillis();
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public void add(T token) {
+        if (token == null) {
+            throw new IllegalArgumentException();
+        }
+        plock.lock();
+        try {
+            for (;;) {
+                if (completed) {
+                    throw new IllegalStateException();
+                }
+                if (offer(token)) {
+                    return;
+                }
+                throw new IllegalStateException();
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    public void put(T token) throws InterruptedException {
+        if (token == null) {
+            throw new NullPointerException();
+        }
+        plock.lock();
+        try {
+            for (;;) {
+                if (completed) {
+                    throw new IllegalStateException();
+                }
+                if (offer(token)) {
+                    return;
+                }
+                hasRoom.await();
+            }
+        } finally {
+            plock.unlock();
+        }
+    }
+
+    /**
      * @return the value received from a subscriber
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
-    public T removeAndRequest() {
+    public T remove() {
         plock.lock();
         try {
-            if (!isReady()) {
+            if (tokens.isEmpty()) {
                 throw new IllegalStateException();
             }
             return poll();
@@ -171,18 +250,11 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         }
     }
 
-    public void extractTo(OutMessagePort<T> out) {
-        if (!isCompleted()) {
-            out.onNext(removeAndRequest());
-        } else if (completionException == null) {
-            out.onComplete();
-        } else {
-            out.onError(completionException);
-        }
+    public int size() {
+        return tokens.size();
     }
 
     protected class ProducerSubscription extends LinkImpl<ProducerSubscription> implements ReverseFlow.ReverseFlowSubscription {
-        private final Lock slock = new ReentrantLock();
         protected final ReverseFlow.Producer<T> subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
@@ -198,11 +270,11 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
 
         @Override
         public boolean isCancelled() {
-            slock.lock();
+            plock.lock();
             try {
                 return cancelled;
             } finally {
-                slock.unlock();
+                plock.unlock();
             }
         }
 
@@ -213,9 +285,10 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         @Override
         public void request(long n) {
             if (n <= 0) {
-                throw new IllegalArgumentException();
+                subscriber.onError(new IllegalArgumentException());
+                return;
             }
-            slock.lock();
+            plock.lock();
             try {
                 if (cancelled) {
                     return;
@@ -225,17 +298,29 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
                 }
                 remainedRequests += n;
                 if (remainedRequests > n) {
-                    return;
+                    return; //  is active already
                 }
-                plock.lock();
-                try {
+                while (!_tokensFull() && remainedRequests > 0) {
+                    if (subscriber.isCompleted()) {
+                        _onComplete(subscriber.getCompletionException());
+                    } else {
+                        T token = subscriber.remove();
+                        if (token == null) {
+                            // wrong subscriber
+                            subscriber.onError(new IllegalArgumentException());
+                            _cancel();
+                            return;
+                        }
+                        tokens.add(token);
+                        remainedRequests--;
+                    }
+                }
+                if (remainedRequests > 0) {
                     passiveProducers.remove(this);
                     activeProducers.add(this);
-                } finally {
-                    plock.unlock();
                 }
             } finally {
-                slock.unlock();
+                plock.unlock();
             }
             unblock();
         }
@@ -244,13 +329,8 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
             return super.getNext();
         }
 
-        @Override
-        public void onError(Throwable throwable) {
-            _onComplete(throwable);
-        }
-
         private void _onComplete(Throwable throwable) {
-            slock.lock();
+            plock.lock();
             try {
                 if (cancelled) {
                     return;
@@ -258,7 +338,7 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
                 cancelled = true;
                 InpChannel.this._onComplete(throwable);
             } finally {
-                slock.unlock();
+                plock.unlock();
             }
         }
 
@@ -268,29 +348,34 @@ public class InpChannel<T> extends AsyncProc.Port implements ReverseFlow.Consume
         }
 
         @Override
+        public void onError(Throwable throwable) {
+            _onComplete(throwable);
+        }
+
+        @Override
         public void cancel() {
-            slock.lock();
+            plock.lock();
             try {
-                if (cancelled) {
-                    return;
-                }
-                cancelled = true;
-                plock.lock();
-                try {
-                    if (completed) {
-                        return;
-                    }
-                    if (remainedRequests > 0) {
-                        activeProducers.remove(this);
-                    } else {
-                        passiveProducers.remove(this);
-                    }
-                } finally {
-                    plock.unlock();
-                }
+                _cancel();
             } finally {
-                slock.unlock();
+                plock.unlock();
             }
+        }
+
+        private boolean _cancel() {
+            if (cancelled) {
+                return true;
+            }
+            cancelled = true;
+            if (completed) {
+                return true;
+            }
+            if (remainedRequests > 0) {
+                activeProducers.remove(this);
+            } else {
+                passiveProducers.remove(this);
+            }
+            return false;
         }
     }
 }

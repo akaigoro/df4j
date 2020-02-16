@@ -118,7 +118,7 @@ public class EchoServer extends Actor {
 
         public void runAction() {
             if (!readBuffers.isCompleted()) {
-                ByteBuffer b = readBuffers.removeAndRequest();
+                ByteBuffer b = readBuffers.remove();
                 buffers2write.onNext(b);
                 LOG.info("EchoProcessor replied");
             } else {

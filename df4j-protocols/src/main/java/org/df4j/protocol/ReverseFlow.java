@@ -51,6 +51,8 @@ public class ReverseFlow {
         default Throwable getCompletionException()  {
             return null;
         }
+
+        void onError(Throwable e);
     }
 
     /**

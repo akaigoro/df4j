@@ -72,7 +72,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
             activities[k].start();
         }
         for (int k = 0; k < N; k++) {
-            queue1.put(new Integer(k));
+            queue1.add(new Integer(k));
         }
         boolean[] result = new boolean[N];
         int failCount = 0;
@@ -164,7 +164,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
         public void runAction() {
             Throwable cause;
             try {
-                Integer in = inp.removeAndRequest();
+                Integer in = inp.remove();
                 logger.info("AsyncProcessor "+n+": got "+in);
                 Thread.sleep(getDelay());
                 out.onNext(in);

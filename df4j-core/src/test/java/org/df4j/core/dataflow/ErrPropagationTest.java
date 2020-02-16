@@ -18,7 +18,9 @@ public class ErrPropagationTest {
 
         @Override
         protected Integer callAction() {
-            return Integer.valueOf(argumnet); // can throw NumberFormatException
+            Integer res = Integer.valueOf(argumnet);  // can throw NumberFormatException
+    //        System.out.println(portsToString());
+            return res;
         }
     }
 
@@ -37,5 +39,10 @@ public class ErrPropagationTest {
             System.err.println(e);
             Assert.assertEquals(NumberFormatException.class, e.getCause().getClass());
         }
+    }
+
+    @Test
+    public void portsToStringTest() {
+
     }
 }

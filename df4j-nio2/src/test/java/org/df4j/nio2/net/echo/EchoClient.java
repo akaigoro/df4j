@@ -105,8 +105,8 @@ class EchoClient extends AsyncProc {
 
         public void runAction() {
             if (!sentMsgs.isCompleted()) {
-                String sent = sentMsgs.removeAndRequest();
-                ByteBuffer received = readBuffers.removeAndRequest();
+                String sent = sentMsgs.remove();
+                ByteBuffer received = readBuffers.remove();
                 String m2 = fromByteBuf(received);
                 LOG.info("Listener received message:"+m2);
                 Assert.assertEquals(sent, m2);

@@ -7,3 +7,13 @@ public interface InpMessagePort<T> {
     boolean isCompleted();
     Throwable getCompletionException();
 }
+/*
+	isCancelled()
+	isCompletedExceptionally()
+    isDone() // Returns true if completed in any fashion: normally, exceptionally, or via cancellation.
+ */
+/*
+Throws exception	Special value
+Remove	remove()	poll()
+Examine	element()	peek()
+ */

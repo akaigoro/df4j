@@ -19,7 +19,14 @@ public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
 
     @Override
     public boolean offer(T item) {
-        header.offer(item);
+        if (item == header) {
+            throw new IllegalArgumentException();
+        }
+        item.setNext(header);
+        Link<T> prev = header.getPrev();
+        item.setPrev(prev);
+        prev.setNext(item);
+        header.setPrev(item);
         size++;
         return true;
     }
@@ -30,7 +37,12 @@ public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
             return null;
         }
         size--;
-        Link<T> first = header.poll();
+        Link<T> first = null;
+        Link<T> res = header.getNext();
+        if (res != this) {
+            res.unlink();
+            first = res;
+        }
         if (first == null) {
             return  null;
         }else {

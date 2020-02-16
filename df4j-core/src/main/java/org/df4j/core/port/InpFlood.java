@@ -14,11 +14,9 @@ import java.util.Queue;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, InpMessagePort<T> {
+public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>, InpMessagePort<T> {
     /** TODO optimize for single token */
     private  final Queue<T> tokens = new LinkedList<T>();
-    private Throwable completionException;
-    protected volatile boolean completed;
     protected SimpleSubscription subscription;
 
     /**
@@ -26,11 +24,11 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
      * @param active initial port state
      */
     public InpFlood(AsyncProc parent, boolean active) {
-        parent.super(false, active);
+        super(parent, false, active);
     }
 
     public InpFlood(AsyncProc parent) {
-        parent.super(false);
+        super(parent);
     }
 
     public boolean isCompleted() {
@@ -40,14 +38,6 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
         } finally {
             plock.unlock();
         }
-    }
-
-    public Throwable getCompletionException() {
-        return completionException;
-    }
-
-    public boolean isCompletedExceptionslly() {
-        return completionException != null;
     }
 
     public T current() {
@@ -124,30 +114,5 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
         } finally {
             plock.unlock();
         }
-    }
-
-    private void onComplete(Throwable throwable) {
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            subscription = null;
-            unblock();
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    @Override
-    public void onError(Throwable throwable) {
-        onComplete(throwable);
-    }
-
-    @Override
-    public void onComplete() {
-        onComplete(null);
     }
 }

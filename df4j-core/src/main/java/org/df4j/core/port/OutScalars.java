@@ -16,14 +16,12 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <T> the type of completion value
  */
-public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, Scalar.Source<T> {
+public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>, Scalar.Source<T> {
     private final Lock plock = new ReentrantLock();
     private  Queue<ScalarSubscription> subscriptions = new LinkedList<>();
-    private Throwable completionException;
-    protected volatile boolean completed;
 
     public OutScalars(AsyncProc parent) {
-        parent.super(true);
+        super(parent);
     }
 
     @Override
@@ -57,7 +55,7 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
         subscription.onNext(message);
     }
 
-    public void onError(Throwable t) {
+    protected void _onComplete(Throwable t) {
         Queue<ScalarSubscription> subscriptions;
         plock.lock();
         try {
@@ -78,10 +76,6 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
             }
             subscription.onError(t);
         }
-    }
-
-    public void onComplete() {
-        onError(null);
     }
 
     class ScalarSubscription implements SimpleSubscription {

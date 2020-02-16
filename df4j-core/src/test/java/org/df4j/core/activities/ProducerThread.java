@@ -6,7 +6,7 @@ import org.df4j.core.util.Logger;
 import org.df4j.core.util.Utils;
 
 public class ProducerThread extends Thread implements ActivityThread {
-    protected final Logger logger = new Logger(this);
+    public final Logger logger = new Logger(this);
     final int delay;
     long cnt;
     AsyncArrayBlockingQueue<Long> queue;
@@ -19,13 +19,9 @@ public class ProducerThread extends Thread implements ActivityThread {
 
     @Override
     public void run() {
-        logger.info("ProducerT started");
-        for (;;) {
-            logger.info("cnt: "+cnt);
-            if (cnt == 0) {
-                queue.onComplete();
-                return;
-            }
+        logger.info("Producer started");
+        while (cnt > 0) {
+            logger.info("queue.put( "+cnt+")");
             try {
                 queue.put(cnt);
                 cnt--;
@@ -34,5 +30,8 @@ public class ProducerThread extends Thread implements ActivityThread {
                 Utils.sneakyThrow(e);
             }
         }
+        logger.info("queue.onComplete()");
+        queue.onComplete();
+        logger.info("Producer completed");
     }
 }
