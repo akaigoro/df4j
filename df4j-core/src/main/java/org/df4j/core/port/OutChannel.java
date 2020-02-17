@@ -56,19 +56,19 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        if (subscription == null) {
-            throw new IllegalArgumentException();
-        }
         plock.lock();
         try {
             if (isCompleted()) {
                 return;
             }
             if (value != null) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("overflow");
             }
             value = message;
             block();
+            if (subscription == null) {
+                return;
+            }
         } finally {
             plock.unlock();
         }

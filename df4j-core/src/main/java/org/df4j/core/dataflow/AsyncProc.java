@@ -27,6 +27,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@link AsyncProc} is submitted for execution to its executor when all ports become ready, including the embedded control port.
  */
 public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
+    private static final boolean checkingMode = true;
+
     protected ActorState state = ActorState.Created;
 
     /** is not encountered as a parent's child */
@@ -125,33 +127,34 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         super.onError(ex);
     }
 
-    // todo switch off
     protected  void checkPorts() {
-        for (int k=0; k<ports.size(); k++) {
-            Port port = ports.get(k);
-            if (!port.isActive()) {
-                continue;
-            }
-            boolean mustBeBeBlocked = port == controlport;
-            if (mustBeBeBlocked == port.ready) {
-                throw new IllegalStateException(" attempt to fire with wrong port state");
+        if (checkingMode) {
+            for (int k=0; k<ports.size(); k++) {
+                Port port = ports.get(k);
+                if (!port.isActive()) {
+                    continue;
+                }
+                boolean mustBeBeBlocked = port == controlport;
+                if (mustBeBeBlocked == port.ready) {
+                    throw new IllegalStateException(" attempt to fire with wrong port state");
+                }
             }
         }
     }
 
-    // todo switch off
     protected  void checkBlockedPortsCount() {
-        int actualBlockedPortsCount = 0;
-        for (int k=0; k<ports.size(); k++) {
-            Port port = ports.get(k);
-            if (port.isActive() && !port.isReady()) {
-                actualBlockedPortsCount++;
+        if (checkingMode) {
+            int actualBlockedPortsCount = 0;
+            for (int k=0; k<ports.size(); k++) {
+                Port port = ports.get(k);
+                if (port.isActive() && !port.isReady()) {
+                    actualBlockedPortsCount++;
+                }
+            }
+            if (actualBlockedPortsCount != blockedPortsCount) {
+                throw new IllegalStateException("actual blockedPortsCount="+actualBlockedPortsCount+" but blockedPortsCount = "+blockedPortsCount);
             }
         }
-        if (actualBlockedPortsCount != blockedPortsCount) {
-            throw new IllegalStateException("actual blockedPortsCount="+actualBlockedPortsCount+" but blockedPortsCount = "+blockedPortsCount);
-        }
-
     }
 
     /**
@@ -391,6 +394,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         }
     }
 
-    public class ControlPort extends Port{
+    public class ControlPort extends Port {
     }
 }

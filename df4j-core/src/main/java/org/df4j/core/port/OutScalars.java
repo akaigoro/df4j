@@ -128,12 +128,12 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             subs.onSuccess(message);
         }
 
-        void onError(Throwable completionException) {
+        private Scalar.Observer<? super T> removeSubscriber() {
             Scalar.Observer<? super T> subs;
             slock.lock();
             try {
                 if (cancelled) {
-                    return;
+                    return null;
                 }
                 cancelled = true;
                 subs = subscriber;
@@ -141,7 +141,21 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             } finally {
                 slock.unlock();
             }
-            subs.onError(completionException);
+            return subs;
+        }
+
+        void onComplete() {
+            Scalar.Observer<? super T> subscriber = removeSubscriber();
+            if (subscriber != null) {
+                subscriber.onComplete();
+            }
+        }
+
+        void onError(Throwable completionException) {
+            Scalar.Observer<? super T> subscriber = removeSubscriber();
+            if (subscriber != null) {
+                subscriber.onError(completionException);
+            }
         }
     }
 }

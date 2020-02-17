@@ -4,6 +4,7 @@ import org.df4j.core.dataflow.AsyncProc;
 import org.reactivestreams.*;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.CompletionException;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -12,10 +13,8 @@ import java.util.ArrayDeque;
  */
 public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
-    protected boolean withBuffer;
-    private ArrayDeque<T> buff;
+    private ArrayDeque<T> tokens;
     /** extracted token */
-    protected T value;
     protected Subscription subscription;
     private long requestedCount;
 
@@ -45,43 +44,32 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
-        if (capacity == getBufferCapacity()) {
+        if (capacity == this.bufferCapacity) {
             return;
         }
         bufferCapacity = capacity;
-        withBuffer = capacity > 1;
-        if (withBuffer) {
-            buff = new ArrayDeque<T>(capacity - 1);
-        } else {
-            buff = null;
-        }
+        tokens = new ArrayDeque<T>(capacity - 1);
     }
 
     private boolean buffIsFull() {
-        return !withBuffer || buff.size() == bufferCapacity;
+        return tokens.size() == bufferCapacity;
     }
 
     private long remainingCapacity() {
         if (requestedCount < 0) {
             throw new IllegalStateException();
         }
-        int cap1 = value == null ? 1 : 0;
-        int cap2 = withBuffer? bufferCapacity-buff.size() : 0;
-        long res = cap1 + cap2 - requestedCount;
+        long res = bufferCapacity- tokens.size() - requestedCount;
         if (res < 0) {
             throw new IllegalStateException();
         }
         return res;
     }
 
-    private int getBufferCapacity() {
-        return !withBuffer? 0 : this.bufferCapacity;
-    }
-
     public boolean isCompleted() {
         plock.lock();
         try {
-            return completed && value==null;
+            return completed && tokens.isEmpty();
         } finally {
             plock.unlock();
         }
@@ -90,7 +78,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     public T current() {
         plock.lock();
         try {
-            return value;
+            return tokens.peek();
         } finally {
             plock.unlock();
         }
@@ -106,7 +94,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             }
             this.subscription = subscription;
             requestedCount = remainingCapacity();
-            if (value == null) {
+            if (tokens.isEmpty()) {
                 block();
             }
         } finally {
@@ -135,17 +123,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (subscription != null) {
                 requestedCount--;
             }
-            if (value == null) {
-                value = message;
-                unblock();
-            } else if (buffIsFull()) {
-                throw new IllegalStateException("buffer overflow");
-            } else {
-                buff.add(message);
-            }
-            if (buffIsFull()) {
-                roomExhausted();
-            }
+            tokens.add(message);
         } finally {
             plock.unlock();
         }
@@ -159,14 +137,13 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (!ready) {
                 throw new IllegalStateException();
             }
-            res = value;
-            value = null;
-            if (withBuffer && !buff.isEmpty()) {
-                value = buff.poll();
-            } else if (!completed) {
+            if (completed) {
+                throw new CompletionException(completionException);
+            }
+            res = tokens.remove();
+            if (tokens.isEmpty()) {
                 block();
             }
-            roomAvailable();
             if (subscription == null) {
                 return res;
             }
@@ -178,7 +155,4 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         subscription.request(n);
         return res;
     }
-
-    protected void roomExhausted(){}
-    protected void roomAvailable(){}
 }

@@ -17,7 +17,6 @@ public class ScalarSubscriberActor extends Actor {
 
     public ScalarSubscriberActor(Dataflow df, int delay, int count,  PublisherActor... pubs) {
         super(df);
-        logger.setLevel(Level.ALL);
         this.delay = delay;
         this.cnt = count;
         this.pubs = pubs;

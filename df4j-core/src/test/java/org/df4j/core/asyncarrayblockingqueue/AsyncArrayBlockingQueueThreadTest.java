@@ -14,10 +14,8 @@ public class AsyncArrayBlockingQueueThreadTest {
         AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
         ProducerThread producer = new ProducerThread(cnt, queue, delay1);
         ConsumerThread consumer = new ConsumerThread(queue, delay2);
-        producer.logger.setLevel(Level.ALL);
         producer.start();
-        consumer.logger.setLevel(Level.ALL);
-    //    consumer.start();
+        consumer.start();
         consumer.join(400);
         Assert.assertFalse(consumer.isAlive());
     }

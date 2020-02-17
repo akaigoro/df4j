@@ -13,7 +13,6 @@ public class TreadPubTest {
     public void pubSubTest(int cnt, int delay1) throws InterruptedException {
         ThreadPublisher pub = new ThreadPublisher(cnt, delay1);
         LoggingSubscriber sub = new LoggingSubscriber();
-        sub.logger.setLevel(Level.ALL);
         pub.subscribe(sub);
         pub.start();
         pub.join(400);

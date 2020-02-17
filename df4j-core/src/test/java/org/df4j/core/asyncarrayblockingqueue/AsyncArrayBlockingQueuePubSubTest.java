@@ -3,6 +3,7 @@ package org.df4j.core.asyncarrayblockingqueue;
 import org.df4j.core.activities.ProducerActor;
 import org.df4j.core.activities.SubscriberActor;
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
+import org.df4j.core.dataflow.Dataflow;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,14 +12,16 @@ import java.util.logging.Level;
 public class AsyncArrayBlockingQueuePubSubTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) {
-        ProducerActor producer = new ProducerActor(cnt, delay1);
+        Dataflow graph = new Dataflow();
+        ProducerActor producer = new ProducerActor(graph, cnt, delay1);
         producer.start();
-        SubscriberActor subscriber = new SubscriberActor(delay2);
+        SubscriberActor subscriber = new SubscriberActor(graph, delay2);
         subscriber.start();
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         queue.subscribe(subscriber.inp);
         queue.subscribe(producer.out);
-        boolean fin = subscriber.blockingAwait(1000);
+        queue.onComplete();
+        boolean fin = graph.blockingAwait(400);
         Assert.assertTrue(fin);
     }
 
@@ -60,7 +63,6 @@ public class AsyncArrayBlockingQueuePubSubTest {
             queue.add(k);
         }
         SubscriberActor subscriber = new SubscriberActor(0);
-        subscriber.setLoggerLevel(Level.ALL);
         queue.subscribe(subscriber.inp);
         subscriber.start();
         Thread.sleep(400);

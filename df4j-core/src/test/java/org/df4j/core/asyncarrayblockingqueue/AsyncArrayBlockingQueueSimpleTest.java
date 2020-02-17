@@ -55,7 +55,6 @@ public class AsyncArrayBlockingQueueSimpleTest {
     public void addSubTest(int cnt) {
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         LoggingSubscriber sub = new LoggingSubscriber();
-        sub.logger.setLevel(Level.ALL);
         queue.subscribe(sub);
         for (long k=0; k<cnt; k++) {
             queue.add(k);
@@ -87,7 +86,6 @@ public class AsyncArrayBlockingQueueSimpleTest {
         int cnt = 4;
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         LoggingSubscriber sub = new LoggingSubscriber();
-        sub.logger.setLevel(Level.ALL);
         queue.subscribe(sub);
         queue.offer(0L);
         Assert.assertEquals(1, sub.cnt);
