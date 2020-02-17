@@ -124,6 +124,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
                 requestedCount--;
             }
             tokens.add(message);
+            unblock();
         } finally {
             plock.unlock();
         }
@@ -137,11 +138,11 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (!ready) {
                 throw new IllegalStateException();
             }
-            if (completed) {
+            if (isCompleted()) {
                 throw new CompletionException(completionException);
             }
             res = tokens.remove();
-            if (tokens.isEmpty()) {
+            if (tokens.isEmpty() && !completed) {
                 block();
             }
             if (subscription == null) {

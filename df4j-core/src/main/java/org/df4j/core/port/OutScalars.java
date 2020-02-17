@@ -29,7 +29,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         ScalarSubscription subscription = new ScalarSubscription(subscriber);
         subscriber.onSubscribe(subscription);
         if (completed) {
-            subscription.onError(completionException);
+            subscription.onComplete(completionException);
         } else {
             plock.lock();
             try {
@@ -74,7 +74,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             if (subscription == null) {
                 break;
             }
-            subscription.onError(t);
+            subscription.onComplete(t);
         }
     }
 
@@ -144,16 +144,14 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             return subs;
         }
 
-        void onComplete() {
+        void onComplete(Throwable completionException) {
             Scalar.Observer<? super T> subscriber = removeSubscriber();
-            if (subscriber != null) {
-                subscriber.onComplete();
+            if (subscriber == null) {
+                return;
             }
-        }
-
-        void onError(Throwable completionException) {
-            Scalar.Observer<? super T> subscriber = removeSubscriber();
-            if (subscriber != null) {
+            if (completionException == null) {
+                subscriber.onComplete();
+            } else {
                 subscriber.onError(completionException);
             }
         }

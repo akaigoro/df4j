@@ -1,15 +1,13 @@
 package org.df4j.core.util.linked;
 
-public interface Link<T> {
-    Link<T> getNext();
+public interface Link {
+    Link getNext();
 
-    void setNext(Link<T> next);
+    void setNext(Link next);
 
-    Link<T> getPrev();
+    Link getPrev();
 
-    void setPrev(Link<T> prev);
-
-    T getItem();
+    void setPrev(Link prev);
 
     default boolean isLinked() {
         return getNext() != this;

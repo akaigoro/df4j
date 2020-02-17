@@ -5,6 +5,8 @@ import org.df4j.core.activities.SubscriberActor;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.logging.Level;
+
 public class PubSubTest {
 
     public void pubSubTest(int cnt, int delay1, int delay2) throws InterruptedException {

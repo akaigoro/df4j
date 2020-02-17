@@ -19,7 +19,7 @@ public class SubscriberActor extends Actor {
         this.delay = delay;
     }
 
-    public void setLoggerLevel(Level all) {
+    public void setLogLevel(Level all) {
         logger.setLevel(all);
     }
 

@@ -295,7 +295,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         return tokens.size();
     }
 
-    protected class FlowSubscriptionImpl extends LinkImpl<FlowSubscriptionImpl> implements FlowSubscription {
+    protected class FlowSubscriptionImpl extends LinkImpl implements FlowSubscription {
         private final Lock slock = new ReentrantLock();
         protected final Subscriber subscriber;
         private long remainedRequests = 0;
@@ -423,11 +423,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
             } else {
                 subscriber.onError(cause);
             }
-        }
-
-        @Override
-        public FlowSubscriptionImpl getItem() {
-            return this;
         }
     }
 }

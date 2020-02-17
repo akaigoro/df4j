@@ -123,7 +123,9 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             }
             res = tokens.poll();
             hasRoom.signalAll();
-            ProducerSubscription client = activeProducers.peek();
+
+            Link link = activeProducers.peek();
+            ProducerSubscription client = (ProducerSubscription) link;
             if (client == null) {
                 if (tokens.isEmpty() && !completed) {
                     block();
@@ -254,18 +256,13 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         return tokens.size();
     }
 
-    protected class ProducerSubscription extends LinkImpl<ProducerSubscription> implements ReverseFlow.ReverseFlowSubscription {
+    protected class ProducerSubscription extends LinkImpl implements ReverseFlow.ReverseFlowSubscription {
         protected final ReverseFlow.Producer<T> subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
         ProducerSubscription(ReverseFlow.Producer subscriber) {
             this.subscriber = subscriber;
-        }
-
-        @Override
-        public ProducerSubscription getItem() {
-            return this;
         }
 
         @Override
@@ -325,7 +322,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             unblock();
         }
 
-        public Link<ProducerSubscription> getNext() {
+        public Link getNext() {
             return super.getNext();
         }
 
