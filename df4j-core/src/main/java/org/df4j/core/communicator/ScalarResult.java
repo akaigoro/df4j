@@ -23,16 +23,13 @@ public class ScalarResult<R> extends Completion implements Scalar.Source<R>, Fut
 
     @Override
     public void subscribe(Scalar.Observer<? super R> subscriber) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (!isCancelled() && subscriptions != null) {
                 ValueSubscription subscription = new ValueSubscription(subscriber);
                 subscriptions.add(subscription);
                 subscriber.onSubscribe(subscription);
                 return;
             }
-        } finally {
-            bblock.unlock();
         }
         Throwable completionException = getCompletionException();
         if (completionException == null) {

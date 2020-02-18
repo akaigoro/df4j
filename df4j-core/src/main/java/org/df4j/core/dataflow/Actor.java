@@ -41,14 +41,11 @@ public abstract class Actor extends AsyncProc {
      */
     @Override
     public void start() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (state != Created) {
                 return;
             }
             state = ActorState.Blocked;
-        } finally {
-            bblock.unlock();
         }
         _restart();
     }
@@ -60,8 +57,7 @@ public abstract class Actor extends AsyncProc {
      * @param delay delay in milliseconds. Value &le; 0 means no delay.
      */
     protected void delay(long delay) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (state == Completed) {
                 return;
             }
@@ -69,8 +65,6 @@ public abstract class Actor extends AsyncProc {
                 delay = 0;
             }
             this.delay = delay;
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -78,14 +72,11 @@ public abstract class Actor extends AsyncProc {
      * sets infinite delay. Previously set delay is canceled.
      */
     protected void suspend() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (state == Completed) {
                 return;
             }
             this.delay = -1;
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -94,8 +85,7 @@ public abstract class Actor extends AsyncProc {
      * Ignored if current state is not {@link ActorState#Suspended}.
      */
     public void resume() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (state != Suspended) {
                 return;
             }
@@ -105,14 +95,11 @@ public abstract class Actor extends AsyncProc {
                 this.task = null;
             }
             controlport.unblock();
-        } finally {
-            bblock.unlock();
         }
     }
 
     private void _restart() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (state == Completed) {
                 return;
             }
@@ -129,8 +116,6 @@ public abstract class Actor extends AsyncProc {
             }
             state = Blocked;
             controlport.unblock();
-        } finally {
-            bblock.unlock();
         }
     }
 

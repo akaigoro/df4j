@@ -45,8 +45,7 @@ public class AsyncServerSocketChannel extends Actor implements CompletionHandler
     }
 
     public synchronized void close() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
@@ -58,8 +57,6 @@ public class AsyncServerSocketChannel extends Actor implements CompletionHandler
             } catch (IOException e) {
                 onError(e);
             }
-        } finally {
-            bblock.unlock();
         }
     }
 

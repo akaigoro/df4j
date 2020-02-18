@@ -34,11 +34,8 @@ public class Dataflow extends Node<Dataflow> {
      * @param node the node which entered the group
      */
     public void enter(Node node) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             children.add(node.nodeLink);
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -49,14 +46,11 @@ public class Dataflow extends Node<Dataflow> {
      * @param node the node which leaves the group
      */
     public void leave(Node node) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             children.remove(node.nodeLink);
             if (children.size() == 0) {
                 super.onComplete();
             }
-        } finally {
-            bblock.unlock();
         }
     }
 

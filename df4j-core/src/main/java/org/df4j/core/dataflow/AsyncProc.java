@@ -9,6 +9,7 @@
  */
 package org.df4j.core.dataflow;
 
+import javax.sound.sampled.Port;
 import java.util.ArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -57,24 +58,18 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     }
 
     public void setDaemon(boolean daemon) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (this.daemon) {
                 return;
             }
             this.daemon = daemon;
             leaveParent();
-        } finally {
-            bblock.unlock();
         }
     }
 
     public boolean isDaemon() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             return daemon;
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -83,14 +78,11 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * This token is consumed when this block is submitted to an executor.
      */
     public void start() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (state != ActorState.Created) {
                 return;
             }
             state = ActorState.Blocked;
-        } finally {
-            bblock.unlock();
         }
         controlport.unblock();
     }
@@ -99,14 +91,11 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * finishes parent activity normally.
      */
     public void onComplete() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
             state = ActorState.Completed;
-        } finally {
-            bblock.unlock();
         }
         super.onComplete();
     }
@@ -116,14 +105,11 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * @param ex the exception
      */
     public void onError(Throwable ex) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
             state = ActorState.Completed;
-        } finally {
-            bblock.unlock();
         }
         super.onError(ex);
     }
@@ -230,14 +216,11 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         public Port(AsyncProc parent, boolean ready, boolean active) {
             this.parent = parent;
             boolean blocked = !ready && active;
-            parent.bblock.lock();
-            try {
+            synchronized(parent) {
                 parent.ports.add(this);
                 if (blocked) {
                     parent.blockedPortsCount++;
                 }
-            } finally {
-                parent.bblock.unlock();
             }
             this.ready = ready;
             this.active = active;
@@ -287,8 +270,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (wasBlocked == needBlocked) {
                     return;
                 }
-                parent.bblock.lock();
-                try {
+                synchronized(parent) {
                     if (parent.isCompleted()) {
                         return;
                     }
@@ -302,8 +284,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                     if (doreturn) {
                         return;
                     }
-                } finally {
-                    parent.bblock.unlock();
                 }
             } finally {
                 plock.unlock();
@@ -325,15 +305,12 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (!active) {
                     return;
                 }
-                parent.bblock.lock();
-                try {
+                synchronized(parent) {
                     if (parent.isCompleted()) {
                         return;
                     }
                     parent.blockedPortsCount++;
                     parent.checkBlockedPortsCount();
-                } finally {
-                    parent.bblock.unlock();
                 }
             } finally {
                 plock.unlock();
@@ -355,8 +332,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (!active) {
                     return;
                 }
-                parent.bblock.lock();
-                try {
+                synchronized(parent) {
                     if (parent.isCompleted()) {
                         return; // do not fire
                     }
@@ -364,8 +340,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                     if (doReturn) {
                         return;
                     }
-                } finally {
-                    parent.bblock.unlock();
                 }
             } finally {
                 plock.unlock();

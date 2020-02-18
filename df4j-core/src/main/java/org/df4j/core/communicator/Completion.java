@@ -7,17 +7,12 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Completes successfully or with failure, without emitting any value.
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
 public class Completion implements Completable.Source {
-    protected final Lock bblock = new ReentrantLock();
-    protected final Condition completedCond = bblock.newCondition();
     protected Throwable completionException;
     protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
     protected boolean completed;
@@ -27,11 +22,8 @@ public class Completion implements Completable.Source {
      *         null otherwise
      */
     public Throwable getCompletionException() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             return completionException;
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -40,25 +32,19 @@ public class Completion implements Completable.Source {
      *         false otherwise
      */
     public boolean isCompleted() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             return completed;
-        } finally {
-            bblock.unlock();
         }
     }
 
     public void subscribe(Completable.Observer co) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (!completed) {
                 CompletionSubscription subscription = new CompletionSubscription(co);
                 subscriptions.add(subscription);
                 co.onSubscribe(subscription);
                 return;
             }
-        } finally {
-            bblock.unlock();
         }
         if (getCompletionException() == null) {
             co.onComplete();
@@ -80,22 +66,19 @@ public class Completion implements Completable.Source {
 
     protected void _onComplete(Object result, Throwable e) {
         LinkedList<CompletionSubscription> subs;
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (completed) {
                 return;
             }
             completed = true;
             setResult(result);
             this.completionException = e;
-            completedCond.signalAll();
+            notifyAll();
             if (subscriptions == null) {
                 return;
             }
             subs = subscriptions;
             subscriptions = null;
-        } finally {
-            bblock.unlock();
         }
         completeSubscriptions(subs);
     }
@@ -123,13 +106,10 @@ public class Completion implements Completable.Source {
      * @throws InterruptedException if this thread interrupted
      */
     public void join()  throws InterruptedException  {
-        bblock.lock();
-        try {
+        synchronized(this) {
             while (!completed) {
-                completedCond.await();
+                notifyAll();
             }
-        } finally {
-            bblock.unlock();
         }
         if (completionException != null) {
             throw new CompletionException(completionException);
@@ -154,19 +134,21 @@ public class Completion implements Completable.Source {
      *         false if timout reached
      */
     public boolean blockingAwait(long timeout, TimeUnit unit) {
-        bblock.lock();
-        try {
-            if (!completed) {
-                completedCond.await(timeout, unit);
+        synchronized(this) {
+            try {
+                if (!completed) {
+                    long timeoutMillis = unit.toMillis(timeout);
+                    if (timeoutMillis > 0) {
+                        wait(timeoutMillis);
+                    }
+                }
+                if (completed && completionException != null) {
+                    throw new CompletionException(completionException);
+                }
+                return completed;
+            } catch (InterruptedException e) {
+                throw new CompletionException(e);
             }
-            if (completed && completionException != null) {
-                throw new CompletionException(completionException);
-            }
-            return completed;
-        } catch (InterruptedException e) {
-            throw new CompletionException(e);
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -205,8 +187,7 @@ public class Completion implements Completable.Source {
 
         @Override
         public void cancel() {
-            bblock.lock();
-            try {
+            synchronized(this) {
                 if (cancelled) {
                     return;
                 }
@@ -214,18 +195,13 @@ public class Completion implements Completable.Source {
                 if (subscriptions != null) {
                     subscriptions.remove(this);
                 }
-            } finally {
-                bblock.unlock();
             }
         }
 
         @Override
         public boolean isCancelled() {
-            bblock.lock();
-            try {
+            synchronized(this) {
                 return cancelled;
-            } finally {
-                bblock.unlock();
             }
         }
 

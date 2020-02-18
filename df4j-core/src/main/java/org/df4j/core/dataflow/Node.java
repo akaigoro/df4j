@@ -43,11 +43,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     }
 
     public void setExecutor(ExecutorService executor) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             this.executor = executor;
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -88,8 +85,7 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     }
 
     public ExecutorService getExecutor() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (executor == null) {
                 if (parent != null) {
                     executor = parent.getExecutor();
@@ -103,23 +99,17 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
                 }
             }
             return executor;
-        } finally {
-            bblock.unlock();
         }
     }
 
     public void setTimer(Timer timer) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             this.timer = timer;
-        } finally {
-            bblock.unlock();
         }
     }
 
     public Timer getTimer() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (timer != null) {
                 return timer;
             } else if (parent != null) {
@@ -127,8 +117,6 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
             } else {
                 return timer = getSingletonTimer();
             }
-        } finally {
-            bblock.unlock();
         }
     }
 
