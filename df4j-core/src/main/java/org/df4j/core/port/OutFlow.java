@@ -10,9 +10,6 @@ import org.reactivestreams.Subscriber;
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A passive source of messages (like a server).
@@ -28,7 +25,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <T> type of emitted tokens
  */
 public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Flow.Publisher<T> {
-    private final Condition hasItems;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
     private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
@@ -36,7 +32,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
     public OutFlow(AsyncProc parent, int capacity) {
         super(parent, true);
-        hasItems = plock.newCondition();
         this.capacity = capacity;
         tokens = new ArrayDeque<>(capacity);
     }
@@ -48,22 +43,16 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
-        } finally {
-            plock.unlock();
         }
         subscriber.onSubscribe(subscription);
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (isCompleted()) {
                 subscription.onComplete(completionException);
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -87,11 +76,8 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed && tokens.size() == 0;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -105,8 +91,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
             throw new NullPointerException();
         }
         FlowSubscriptionImpl sub;
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return false;
             }
@@ -122,15 +107,13 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 }
                 return true;
             }
-        } finally {
-            plock.unlock();
         }
         transferTokens(token, sub);
         return true;
     }
 
     public void hasItemsEvent() {
-        hasItems.signalAll();
+        parent.notifyAll();
     }
 
     protected void transferTokens(T token, FlowSubscriptionImpl sub) {
@@ -138,8 +121,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         LinkedQueue<FlowSubscriptionImpl> psubs;
         for (;;) {
             boolean subIsActive = sub.onNext(token);
-            plock.lock();
-            try {
+            synchronized(parent) {
                 if (!subIsActive) {
                     if (passiveSubscribtions == null) {
                         sub.onComplete(completionException);
@@ -172,8 +154,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 if (sub == null) {
                     sub = activeSubscribtions.poll();
                 }
-            } finally {
-                plock.unlock();
             }
         }
         if (sub != null) {
@@ -206,8 +186,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     public void _onComplete(Throwable cause) {
         LinkedQueue<FlowSubscriptionImpl> asubs;
         LinkedQueue<FlowSubscriptionImpl> psubs;
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return;
             }
@@ -221,15 +200,12 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
             this.activeSubscribtions = null;
             psubs = this.passiveSubscribtions;
             this.passiveSubscribtions = null;
-        } finally {
-            plock.unlock();
         }
         completAllSubscriptions(asubs, psubs);
     }
 
     public T poll() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
@@ -241,14 +217,11 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 }
                 return null;
             }
-        } finally {
-            plock.unlock();
         }
     }
 
     public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        plock.lock();
-        try {
+        synchronized(parent) {
             long millis = unit.toMillis(timeout);
             for (;;) {
                 T res = tokens.poll();
@@ -263,17 +236,14 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     return null;
                 }
                 long targetTime = System.currentTimeMillis() + millis;
-                hasItems.await(millis, TimeUnit.MILLISECONDS);
+                parent.wait(millis);
                 millis = targetTime - System.currentTimeMillis();
             }
-        } finally {
-            plock.unlock();
         }
     }
 
     public T take() throws InterruptedException {
-        plock.lock();
-        try {
+        synchronized(parent) {
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
@@ -283,10 +253,8 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 if (completed) {
                     throw new CompletionException(completionException);
                 }
-                hasItems.await();
+                parent.wait();
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -295,7 +263,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     protected class FlowSubscriptionImpl extends LinkImpl implements FlowSubscription {
-        private final Lock slock = new ReentrantLock();
         protected final Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
@@ -306,11 +273,8 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
         @Override
         public boolean isCancelled() {
-            slock.lock();
-            try {
+            synchronized(parent) {
                 return cancelled;
-            } finally {
-                slock.unlock();
             }
         }
 
@@ -325,8 +289,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 return;
             }
             T token;
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
@@ -334,8 +297,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 if (remainedRequests > n) {
                     return;
                 }
-                plock.lock();
-                try {
+                synchronized(parent) {
                     if (isCompleted()) {
                         if (completionException == null) {
                             subscriber.onComplete();
@@ -351,25 +313,19 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                         activeSubscribtions.add(this);
                         return;
                     }
-                } finally {
-                    plock.unlock();
                 }
-            } finally {
-                slock.unlock();
             }
             transferTokens(token, this);
         }
 
         @Override
         public void cancel() {
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
-                plock.lock();
-                try {
+                synchronized(parent) {
                     if (remainedRequests > 0) {
                         if (activeSubscribtions != null) {
                             activeSubscribtions.remove(this);
@@ -379,11 +335,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                             passiveSubscribtions.remove(this);
                         }
                     }
-                } finally {
-                    plock.unlock();
                 }
-            } finally {
-                slock.unlock();
             }
         }
 
@@ -394,12 +346,9 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
          */
         private boolean onNext(T token) {
             subscriber.onNext(token);
-            slock.lock();
-            try {
+            synchronized(parent) {
                 remainedRequests--;
                 return remainedRequests > 0;
-            } finally {
-                slock.unlock();
             }
         }
 
@@ -408,14 +357,11 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
          * @param cause error
          */
         private void onComplete(Throwable cause) {
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
-            } finally {
-                slock.unlock();
             }
             if (cause == null) {
                 subscriber.onComplete();

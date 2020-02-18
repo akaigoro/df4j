@@ -5,8 +5,6 @@ import org.df4j.protocol.SignalFlow;
 
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *  A {@link Semaphore} extended with asynchronous interface to aquire and release permissions.
@@ -14,7 +12,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * This implementation is unfair: asynchronous clients are served before synchronous (threads blocked in {@link Semaphore#acquire()} method}.
  */
 public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
-    private final Lock bblock = new ReentrantLock();
     protected final LinkedList<SignalSubscription> subscriptions = new LinkedList<>();
 
     public AsyncSemaphore(int count) {
@@ -35,8 +32,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         if (subscriber == null) {
             throw new NullPointerException();
         }
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (super.availablePermits() <= 0) {
                 SignalSubscription subscription = new SignalSubscription(subscriber);
                 subscriptions.add(subscription);
@@ -45,23 +41,18 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
             if (!super.tryAcquire(1)) {
                 throw new RuntimeException("This must not happen, ");
             }
-        } finally {
-            bblock.unlock();
         }
         subscriber.release();
     }
 
     public void release() {
         SignalFlow.Subscriber subscriber;
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (subscriptions.size() == 0) {
                 super.release();
                 return;
             }
             subscriber = subscriptions.remove().subscriber;
-        } finally {
-            bblock.unlock();
         }
         subscriber.release();
     }
@@ -70,23 +61,20 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         if (permits <= 0) {
             throw new IllegalArgumentException();
         }
-        bblock.lock();
-        try {
-        for (;;) {
-            if (subscriptions.size() == 0) {
-                super.release(permits);
-                return;
+        synchronized(this) {
+            for (;;) {
+                if (subscriptions.size() == 0) {
+                    super.release(permits);
+                    return;
+                }
+                SignalSubscription subscription = subscriptions.remove();
+                long delta = Math.min(permits, subscription.remainedRequests);
+                subscription.aquired(delta);
+                permits-=delta;
+                if (permits == 0) {
+                    return;
+                }
             }
-            SignalSubscription subscription = subscriptions.remove();
-            long delta = Math.min(permits, subscription.remainedRequests);
-            subscription.aquired(delta);
-            permits-=delta;
-            if (permits == 0) {
-                return;
-            }
-        }
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -101,11 +89,8 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
 
         @Override
         public boolean isCancelled() {
-            bblock.lock();
-            try {
+            synchronized(this) {
                 return subscriber == null;
-            } finally {
-                bblock.unlock();
             }
         }
 
@@ -114,8 +99,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
             if (n <= 0) {
                 throw new IllegalArgumentException();
             }
-            bblock.lock();
-            try {
+            synchronized(this) {
                 if (subscriber == null) {
                     return;
                 }
@@ -133,8 +117,6 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
                     n--;
                 }
                 subscriber.release();
-            } finally {
-                bblock.unlock();
             }
         }
 
@@ -149,15 +131,12 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
 
         @Override
         public void cancel() {
-            bblock.lock();
-            try {
+            synchronized(this) {
                 if (subscriber == null) {
                     return;
                 }
                 subscriber = null;
                 subscriptions.remove(this);
-            } finally {
-                bblock.unlock();
             }
         }
     }

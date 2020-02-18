@@ -1,7 +1,8 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.reactivestreams.*;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
@@ -67,27 +68,20 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     }
 
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed && tokens.isEmpty();
-        } finally {
-            plock.unlock();
         }
     }
 
     public T current() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return tokens.peek();
-        } finally {
-            plock.unlock();
         }
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (this.subscription != null) {
                 subscription.cancel(); // this is dictated by the spec.
                 return;
@@ -97,8 +91,6 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (tokens.isEmpty()) {
                 block();
             }
-        } finally {
-            plock.unlock();
         }
         subscription.request(requestedCount);
     }
@@ -112,8 +104,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      */
     @Override
     public void onNext(T message) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (message == null) {
                 throw new NullPointerException();
             }
@@ -125,16 +116,13 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             }
             tokens.add(message);
             unblock();
-        } finally {
-            plock.unlock();
         }
     }
 
     public T remove() {
-        plock.lock();
         long n;
         T res;
-        try {
+        synchronized(parent) {
             if (!ready) {
                 throw new IllegalStateException();
             }
@@ -150,8 +138,6 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             }
             n = remainingCapacity();
             requestedCount += n;
-        } finally {
-            plock.unlock();
         }
         subscription.request(n);
         return res;

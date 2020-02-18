@@ -122,8 +122,20 @@ public class Completion implements Completable.Source {
      * @return true if completed;
      *         false if timout reached
      */
-    public boolean blockingAwait(long timeout) {
-       return blockingAwait(timeout, TimeUnit.MILLISECONDS);
+    public synchronized boolean blockingAwait(long timeoutMillis) {
+        long targetTime = System.currentTimeMillis()+timeoutMillis;
+        try {
+            while (!completed && timeoutMillis > 0) {
+                wait(timeoutMillis);
+                timeoutMillis = targetTime - System.currentTimeMillis();
+            }
+            if (completed && completionException != null) {
+                throw new CompletionException(completionException);
+            }
+            return completed;
+        } catch (InterruptedException e) {
+            throw new CompletionException(e);
+        }
     }
 
     /**
@@ -133,23 +145,9 @@ public class Completion implements Completable.Source {
      * @return true if completed;
      *         false if timout reached
      */
-    public boolean blockingAwait(long timeout, TimeUnit unit) {
-        synchronized(this) {
-            try {
-                if (!completed) {
-                    long timeoutMillis = unit.toMillis(timeout);
-                    if (timeoutMillis > 0) {
-                        wait(timeoutMillis);
-                    }
-                }
-                if (completed && completionException != null) {
-                    throw new CompletionException(completionException);
-                }
-                return completed;
-            } catch (InterruptedException e) {
-                throw new CompletionException(e);
-            }
-        }
+    public synchronized boolean blockingAwait(long timeout, TimeUnit unit) {
+        long timeoutMillis = unit.toMillis(timeout);
+        return blockingAwait(timeoutMillis);
     }
 
     @Override

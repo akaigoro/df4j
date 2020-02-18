@@ -34,21 +34,15 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
 
     @Override
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed && value == null;
-        } finally {
-            plock.unlock();
         }
     }
 
     @Override
     public Throwable getCompletionException() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completionException;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -56,8 +50,7 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (isCompleted()) {
                 return;
             }
@@ -69,16 +62,13 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
             if (subscription == null) {
                 return;
             }
-        } finally {
-            plock.unlock();
         }
         subscription.request(1);
     }
 
     public void _onComplete(Throwable throwable) {
         ReverseFlow.ReverseFlowSubscription sub;
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (isCompleted()) {
                 return;
             }
@@ -86,8 +76,6 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
             if (subscription == null) return;
             sub = subscription;
             subscription = null;
-        } finally {
-            plock.unlock();
         }
         if (throwable == null) {
             sub.onComplete();
@@ -98,14 +86,11 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
 
     @Override
     public T remove() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             T res = value;
             value = null;
             unblock();
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -115,16 +100,13 @@ public class OutChannel<T> extends CompletablePort implements ReverseFlow.Produc
      *
      */
     public void cancel() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (subscription == null) {
                 return;
             }
             subscription.cancel();
             this.subscription = null;
             unblock();
-        } finally {
-            plock.unlock();
         }
     }
 }

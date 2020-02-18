@@ -32,26 +32,19 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
     }
 
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed && tokens.isEmpty();
-        } finally {
-            plock.unlock();
         }
     }
 
     public T current() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return tokens.peek();
-        } finally {
-            plock.unlock();
         }
     }
 
     public  T poll() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (!isReady()) {
                 return null;
             }
@@ -60,34 +53,26 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
                 block();
             }
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
     public T remove() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             T res = tokens.remove();
             if (tokens.isEmpty()) {
                 block();
             }
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
     public boolean remove(T token) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             boolean res = tokens.remove(token);
             if (tokens.isEmpty()) {
                 block();
             }
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -101,8 +86,7 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
 
     @Override
     public void onNext(T message) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (message == null) {
                 throw new IllegalArgumentException();
             }
@@ -111,8 +95,6 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
             }
             tokens.add(message);
             unblock();
-        } finally {
-            plock.unlock();
         }
     }
 }

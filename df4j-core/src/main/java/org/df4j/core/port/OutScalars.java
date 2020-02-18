@@ -6,8 +6,6 @@ import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Output port for multiple scalar values.
@@ -17,7 +15,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <T> the type of completion value
  */
 public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>, Scalar.Source<T> {
-    private final Lock plock = new ReentrantLock();
     private  Queue<ScalarSubscription> subscriptions = new LinkedList<>();
 
     public OutScalars(AsyncProc parent) {
@@ -31,34 +28,27 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         if (completed) {
             subscription.onComplete(completionException);
         } else {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 subscriptions.add(subscription);
                 unblock();
-            } finally {
-                plock.unlock();
             }
         }
     }
 
     public void onNext(T message) {
         ScalarSubscription subscription;
-        plock.lock();
-        try {
+        synchronized(parent) {
             subscription = subscriptions.remove();
             if (subscriptions.size() == 0) {
                 block();
             }
-        } finally {
-            plock.unlock();
         }
         subscription.onNext(message);
     }
 
     protected void _onComplete(Throwable t) {
         Queue<ScalarSubscription> subscriptions;
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return;
             }
@@ -66,8 +56,6 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             completionException = t;
             subscriptions = this.subscriptions;
             this.subscriptions = null;
-        } finally {
-            plock.unlock();
         }
         for (;;) {
             ScalarSubscription subscription = subscriptions.poll();
@@ -79,7 +67,6 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
     }
 
     class ScalarSubscription implements SimpleSubscription {
-        private final Lock slock = new ReentrantLock();
         private Scalar.Observer<? super T> subscriber;
         private boolean cancelled;
 
@@ -89,21 +76,15 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         @Override
         public void cancel() {
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
                 subscriber = null;
-                plock.lock();
-                try {
+                synchronized(parent) {
                     subscriptions.remove(this);
-                } finally {
-                    plock.unlock();
                 }
-            } finally {
-                slock.unlock();
             }
         }
 
@@ -114,32 +95,26 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         public void onNext(T message) {
             Scalar.Observer<? super T> subs;
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
                 subs = subscriber;
                 subscriber = null;
-            } finally {
-                slock.unlock();
             }
             subs.onSuccess(message);
         }
 
         private Scalar.Observer<? super T> removeSubscriber() {
             Scalar.Observer<? super T> subs;
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return null;
                 }
                 cancelled = true;
                 subs = subscriber;
                 subscriber = null;
-            } finally {
-                slock.unlock();
             }
             return subs;
         }

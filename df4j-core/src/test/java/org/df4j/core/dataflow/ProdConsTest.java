@@ -12,8 +12,9 @@ public class ProdConsTest {
         ConsumerActor cons = new ConsumerActor(delay2);
         cons.inp.subscribe(prod.out);
         prod.start();
+        Thread.sleep(100);
         cons.start();
-        boolean fin = cons.blockingAwait(200000);
+        boolean fin = cons.blockingAwait(40000);
         Assert.assertTrue(fin);
     }
 

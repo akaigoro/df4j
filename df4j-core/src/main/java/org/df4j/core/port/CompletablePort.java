@@ -24,11 +24,8 @@ public class CompletablePort extends AsyncProc.Port {
     }
 
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -37,16 +34,13 @@ public class CompletablePort extends AsyncProc.Port {
     }
 
     protected  void _onComplete(Throwable throwable) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return;
             }
             this.completed = true;
             this.completionException = throwable;
             unblock();
-        } finally {
-            plock.unlock();
         }
     }
 

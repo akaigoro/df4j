@@ -8,7 +8,6 @@ import org.df4j.protocol.ReverseFlow;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 
 /**
  * A passive input parameter.
@@ -19,7 +18,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     private LinkedQueue<ProducerSubscription> activeProducers = new LinkedQueue<>();
     private LinkedQueue<ProducerSubscription> passiveProducers = new LinkedQueue<>();
     protected ArrayDeque<T> tokens;
-    private final Condition hasRoom;
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
@@ -29,7 +27,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         super(parent);
         this.capacity = capacity;
         tokens = new ArrayDeque<>(capacity);
-        hasRoom = plock.newCondition();
     }
 
     public InpChannel(AsyncProc parent) {
@@ -41,24 +38,18 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed && tokens.size() == 0;
-        } finally {
-            plock.unlock();
         }
     }
 
     public Throwable getCompletionException() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (isCompleted()) {
                 return completionException;
             } else {
                 return null;
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -70,8 +61,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     public boolean offer(T token) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return false;
             }
@@ -81,8 +71,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             tokens.add(token);
             unblock();
             return true;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -90,24 +78,18 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
      */
     public T current() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return tokens.peek();
-        } finally {
-            plock.unlock();
         }
     }
 
     @Override
     public void block() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return;
             }
             super.block();
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -116,14 +98,13 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
      */
     public T poll() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             T res;
             if (tokens.isEmpty()) {
                 return null;
             }
             res = tokens.poll();
-            hasRoom.signalAll();
+            parent.notifyAll();
 
             Link link = activeProducers.peek();
             ProducerSubscription client = (ProducerSubscription) link;
@@ -151,8 +132,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             }
             unblock();
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -176,8 +155,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             throw new NullPointerException();
         }
         long millis = unit.toMillis(timeout);
-        plock.lock();
-        try {
+        synchronized(parent) {
             for (;;) {
                 if (completed) {
                     return false;
@@ -189,11 +167,11 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                     return false;
                 }
                 long targetTime = System.currentTimeMillis() + millis;
-                hasRoom.await(millis, TimeUnit.MILLISECONDS);
-                millis = targetTime - System.currentTimeMillis();
+                if (millis > 0) {
+                    wait(millis);
+                    millis = targetTime - System.currentTimeMillis();
+                }
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -201,8 +179,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         if (token == null) {
             throw new IllegalArgumentException();
         }
-        plock.lock();
-        try {
+        synchronized(parent) {
             for (;;) {
                 if (completed) {
                     throw new IllegalStateException();
@@ -212,8 +189,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 }
                 throw new IllegalStateException();
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -221,8 +196,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         if (token == null) {
             throw new NullPointerException();
         }
-        plock.lock();
-        try {
+        synchronized(parent) {
             for (;;) {
                 if (completed) {
                     throw new IllegalStateException();
@@ -230,10 +204,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 if (offer(token)) {
                     return;
                 }
-                hasRoom.await();
+                parent.wait();
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -242,14 +214,11 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
     public T remove() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (tokens.isEmpty()) {
                 throw new IllegalStateException();
             }
             return poll();
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -268,11 +237,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         @Override
         public boolean isCancelled() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 return cancelled;
-            } finally {
-                plock.unlock();
             }
         }
 
@@ -286,8 +252,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
-            plock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
@@ -317,8 +282,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                     passiveProducers.remove(this);
                     activeProducers.add(this);
                 }
-            } finally {
-                plock.unlock();
             }
             unblock();
         }
@@ -328,15 +291,12 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         }
 
         private void _onComplete(Throwable throwable) {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
                 InpChannel.this._onComplete(throwable);
-            } finally {
-                plock.unlock();
             }
         }
 
@@ -352,11 +312,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         @Override
         public void cancel() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 _cancel();
-            } finally {
-                plock.unlock();
             }
         }
 

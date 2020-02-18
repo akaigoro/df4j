@@ -9,10 +9,7 @@
  */
 package org.df4j.core.dataflow;
 
-import javax.sound.sampled.Port;
 import java.util.ArrayList;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
@@ -29,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
  */
 public abstract class AsyncProc extends Node<AsyncProc> {
-    private static final boolean checkingMode = true;
+    private static final boolean checkingMode = true; // todo false
 
     protected ActorState state = ActorState.Created;
 
@@ -208,10 +205,9 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      */
     public static class Port implements PortI {
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
-        protected final Lock plock = new ReentrantLock();
         protected boolean active;
         protected boolean ready = false;
-        private AsyncProc parent;
+        protected AsyncProc parent;
 
         public Port(AsyncProc parent, boolean ready, boolean active) {
             this.parent = parent;
@@ -239,26 +235,19 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         }
 
         public boolean isReady() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 return ready;
-            } finally {
-                plock.unlock();
             }
         }
 
         public boolean isActive() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 return active;
-            } finally {
-                plock.unlock();
             }
         }
 
         public void setActive(boolean active) {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 parent.checkBlockedPortsCount();
                 boolean wasActive = this.active;
                 if (wasActive == active) {
@@ -285,8 +274,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                         return;
                     }
                 }
-            } finally {
-                plock.unlock();
             }
             parent.fire();
         }
@@ -295,8 +282,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
          * sets this port to a blocked state.
          */
         public void block() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 parent.checkBlockedPortsCount();
                 if (!ready) {
                     return;
@@ -312,8 +298,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                     parent.blockedPortsCount++;
                     parent.checkBlockedPortsCount();
                 }
-            } finally {
-                plock.unlock();
             }
         }
 
@@ -323,8 +307,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
          * this block is submitted to the executor.
          */
         public void unblock() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 if (ready) {
                     return;
                 }
@@ -332,17 +315,13 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (!active) {
                     return;
                 }
-                synchronized(parent) {
-                    if (parent.isCompleted()) {
-                        return; // do not fire
-                    }
-                    boolean doReturn = _decBlockedPortsCount();
-                    if (doReturn) {
-                        return;
-                    }
+                if (parent.isCompleted()) {
+                    return; // do not fire
                 }
-            } finally {
-                plock.unlock();
+                boolean doReturn = _decBlockedPortsCount();
+                if (doReturn) {
+                    return;
+                }
             }
             parent.fire();
         }

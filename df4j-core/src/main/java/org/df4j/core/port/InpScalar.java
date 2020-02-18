@@ -46,26 +46,20 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
     }
 
     public void unsubscribe() {
-        plock.lock();
         SimpleSubscription sub;
-        try {
+        synchronized(parent) {
             if (subscription == null) {
                 return;
             }
             sub = subscription;
             subscription = null;
-        } finally {
-            plock.unlock();
         }
         sub.cancel();
     }
 
     public T current() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return value;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -75,8 +69,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
      * @return current message
      */
     public T remove() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (!ready) {
                 throw new IllegalStateException();
             }
@@ -85,22 +78,17 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
             this.completed = false;
             block();
             return value;
-        } finally {
-            plock.unlock();
         }
     }
 
     @Override
     public  void onSuccess(T message) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return;
             }
             super.onComplete();
             this.value = message;
-        } finally {
-            plock.unlock();
         }
     }
 }

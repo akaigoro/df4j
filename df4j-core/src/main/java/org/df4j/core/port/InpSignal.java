@@ -1,8 +1,8 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.reactivestreams.*;
 import org.df4j.protocol.SignalFlow;
+import org.reactivestreams.Subscription;
 
 import java.util.TimerTask;
 
@@ -34,25 +34,19 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             this.subscription = subscription;
-        } finally {
-            plock.unlock();
         }
     }
 
     @Override
     public  void release(long n) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             boolean wasBlocked = !isReady();
             permits += n;
             if (wasBlocked && permits > 0) {
                 unblock();
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -65,15 +59,12 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      * analogue od {@link InpFlow#remove()}
      */
     public void acquire() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             boolean wasReady = isReady();
             permits--;
             if (wasReady && permits == 0) {
                 block();
             }
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -81,15 +72,12 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
         if (n <= 0) {
             throw new IllegalArgumentException();
         }
-        plock.lock();
         Subscription subs;
-        try {
+        synchronized(parent) {
             subs = this.subscription;
             if (subs == null) {
                 throw new IllegalStateException();
             }
-        } finally {
-            plock.unlock();
         }
         subs.request(n);
     }
@@ -100,8 +88,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      */
     public void acquireAndRequest() {
         Subscription subs;
-        plock.lock();
-        try {
+        synchronized(parent) {
             boolean wasReady = isReady();
             permits--;
             if (wasReady && permits == 0) {
@@ -111,8 +98,6 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
             if (subs == null) {
                 throw new IllegalStateException();
             }
-        } finally {
-            plock.unlock();
         }
         subs.request(1);
     }

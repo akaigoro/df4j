@@ -6,8 +6,6 @@ import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.df4j.protocol.SimpleSubscription;
 
-import java.util.concurrent.locks.ReentrantLock;
-
 public class InpMaybe<T> extends InpScalar<T> implements MaybeObserver<T> {
     /**
      * @param parent {@link AsyncProc} to which this port belongs
@@ -28,7 +26,6 @@ public class InpMaybe<T> extends InpScalar<T> implements MaybeObserver<T> {
 
     static class ProxySub implements SimpleSubscription {
         private io.reactivex.rxjava3.disposables.Disposable d;
-        private ReentrantLock sLock = new ReentrantLock();
 
         public ProxySub(@NonNull io.reactivex.rxjava3.disposables.Disposable d) {
             this.d = d;
@@ -36,28 +33,21 @@ public class InpMaybe<T> extends InpScalar<T> implements MaybeObserver<T> {
 
         @Override
         public void cancel() {
-            sLock.lock();
             io.reactivex.rxjava3.disposables.Disposable dd;
-            try {
+            synchronized(this) {
                 dd = d;
                 if (dd == null) {
                     return;
                 }
                 d = null;
-            } finally {
-                sLock.unlock();
             }
             dd.dispose();
         }
 
         @Override
         public boolean isCancelled() {
-            sLock.lock();
-            io.reactivex.rxjava3.disposables.Disposable dd;
-            try {
+            synchronized(this) {
                 return d == null;
-            } finally {
-                sLock.unlock();
             }
         }
     }

@@ -3,14 +3,11 @@ package org.df4j.core.communicator;
 import org.df4j.protocol.Completable;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *  A {@link CountDownLatch} extended with asynchronous interface to publish the completion signal.
  */
 public class AsyncCountDownLatch extends CountDownLatch implements Completable.Source {
-    private final Lock bblock = new ReentrantLock();
     protected Completion completionSignal = new Completion();
 
     public AsyncCountDownLatch(int count) {
@@ -33,14 +30,11 @@ public class AsyncCountDownLatch extends CountDownLatch implements Completable.S
         if (getCount() == 0) {
             return;
         }
-        bblock.lock();
-        try {
+        synchronized(this) {
             super.countDown();
             if (getCount() > 0) {
                 return;
             }
-        } finally {
-            bblock.unlock();
         }
         completionSignal.onComplete();
     }
