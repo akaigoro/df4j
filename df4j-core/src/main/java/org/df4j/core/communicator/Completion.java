@@ -21,20 +21,16 @@ public class Completion implements Completable.Source {
      * @return completion Exception, if this {@link Completable} was completed exceptionally;
      *         null otherwise
      */
-    public Throwable getCompletionException() {
-        synchronized(this) {
-            return completionException;
-        }
+    public synchronized Throwable getCompletionException() {
+        return completionException;
     }
 
     /**
      * @return true if this {@link Completable} was completed normally or exceptionally;
      *         false otherwise
      */
-    public boolean isCompleted() {
-        synchronized(this) {
-            return completed;
-        }
+    public synchronized boolean isCompleted() {
+        return completed;
     }
 
     public void subscribe(Completable.Observer co) {
@@ -118,7 +114,7 @@ public class Completion implements Completable.Source {
 
     /**
      * waits this {@link Completable} to complete until timeout
-     * @param timeout timeout in millisecomds
+     * @param timeoutMillis timeout in millisecomds
      * @return true if completed;
      *         false if timout reached
      */
@@ -185,7 +181,7 @@ public class Completion implements Completable.Source {
 
         @Override
         public void cancel() {
-            synchronized(this) {
+            synchronized(Completion.this) {
                 if (cancelled) {
                     return;
                 }
@@ -198,12 +194,12 @@ public class Completion implements Completable.Source {
 
         @Override
         public boolean isCancelled() {
-            synchronized(this) {
+            synchronized(Completion.this) {
                 return cancelled;
             }
         }
 
-        public void onComplete() {
+        void onComplete() {
             if (completionException == null) {
                 subscriber.onComplete();
             } else {

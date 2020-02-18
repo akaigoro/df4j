@@ -54,20 +54,16 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         return state;
     }
 
-    public void setDaemon(boolean daemon) {
-        synchronized(this) {
-            if (this.daemon) {
-                return;
-            }
-            this.daemon = daemon;
-            leaveParent();
+    public synchronized void setDaemon(boolean daemon) {
+        if (this.daemon) {
+            return;
         }
+        this.daemon = daemon;
+        leaveParent();
     }
 
-    public boolean isDaemon() {
-        synchronized(this) {
-            return daemon;
-        }
+    public synchronized boolean isDaemon() {
+        return daemon;
     }
 
     /**
@@ -204,7 +200,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * This is clear analogue to the firing of a Petri Net transition.
      */
     public static class Port implements PortI {
-        /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected boolean active;
         protected boolean ready = false;
         protected AsyncProc parent;

@@ -297,22 +297,20 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 if (remainedRequests > n) {
                     return;
                 }
-                synchronized(parent) {
-                    if (isCompleted()) {
-                        if (completionException == null) {
-                            subscriber.onComplete();
-                        } else {
-                            subscriber.onError(completionException);
-                        }
-                        return;
+                if (isCompleted()) {
+                    if (completionException == null) {
+                        subscriber.onComplete();
+                    } else {
+                        subscriber.onError(completionException);
                     }
-                    // remainedRequests was 0, so this subscription was passive
-                    passiveSubscribtions.remove(this);
-                    token = OutFlow.this.poll();
-                    if (token == null) {
-                        activeSubscribtions.add(this);
-                        return;
-                    }
+                    return;
+                }
+                // remainedRequests was 0, so this subscription was passive
+                passiveSubscribtions.remove(this);
+                token = OutFlow.this.poll();
+                if (token == null) {
+                    activeSubscribtions.add(this);
+                    return;
                 }
             }
             transferTokens(token, this);
@@ -325,15 +323,13 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     return;
                 }
                 cancelled = true;
-                synchronized(parent) {
-                    if (remainedRequests > 0) {
-                        if (activeSubscribtions != null) {
-                            activeSubscribtions.remove(this);
-                        }
-                    } else {
-                        if (passiveSubscribtions != null) {
-                            passiveSubscribtions.remove(this);
-                        }
+                if (remainedRequests > 0) {
+                    if (activeSubscribtions != null) {
+                        activeSubscribtions.remove(this);
+                    }
+                } else {
+                    if (passiveSubscribtions != null) {
+                        passiveSubscribtions.remove(this);
                     }
                 }
             }

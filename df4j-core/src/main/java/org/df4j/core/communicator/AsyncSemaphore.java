@@ -88,10 +88,8 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         }
 
         @Override
-        public boolean isCancelled() {
-            synchronized(this) {
-                return subscriber == null;
-            }
+        public synchronized boolean isCancelled() {
+            return subscriber == null;
         }
 
         @Override
@@ -116,8 +114,8 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
                     }
                     n--;
                 }
-                subscriber.release();
             }
+            subscriber.release();
         }
 
         void aquired(long delta) {
@@ -130,14 +128,12 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         }
 
         @Override
-        public void cancel() {
-            synchronized(this) {
-                if (subscriber == null) {
-                    return;
-                }
-                subscriber = null;
-                subscriptions.remove(this);
+        public synchronized void cancel() {
+            if (subscriber == null) {
+                return;
             }
+            subscriber = null;
+            subscriptions.remove(this);
         }
     }
 }

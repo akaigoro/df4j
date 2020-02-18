@@ -82,9 +82,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
                 }
                 cancelled = true;
                 subscriber = null;
-                synchronized(parent) {
-                    subscriptions.remove(this);
-                }
+                subscriptions.remove(this);
             }
         }
 

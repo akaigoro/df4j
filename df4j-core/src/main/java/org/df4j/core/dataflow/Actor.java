@@ -71,52 +71,47 @@ public abstract class Actor extends AsyncProc {
     /**
      * sets infinite delay. Previously set delay is canceled.
      */
-    protected void suspend() {
-        synchronized(this) {
-            if (state == Completed) {
-                return;
-            }
-            this.delay = -1;
+    protected synchronized void suspend() {
+        if (state == Completed) {
+            return;
         }
+        this.delay = -1;
     }
 
     /**
      * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Blocked} or {@link ActorState#Running}.
      * Ignored if current state is not {@link ActorState#Suspended}.
      */
-    public void resume() {
-        synchronized(this) {
-            if (state != Suspended) {
-                return;
-            }
-            this.delay = 0;
-            if (this.task != null) {
-                this.task.cancel();
-                this.task = null;
-            }
-            controlport.unblock();
+    public synchronized void resume() {
+        if (state != Suspended) {
+            return;
         }
+        this.delay = 0;
+        if (this.task != null) {
+            this.task.cancel();
+            this.task = null;
+        }
+        state = Blocked;
+        controlport.unblock();
     }
 
-    private void _restart() {
-        synchronized(this) {
-            if (state == Completed) {
-                return;
-            }
-            if (delay != 0l) {
-                // make loop using fire()
-                if (delay > 0l) { // normal delay
-                    long d = this.delay;
-                    this.delay = 0l;
-                    this.task = new MyTimerTask();
-                    getTimer().schedule(task, d);
-                } // else infinite delay
-                state = Suspended;
-                return;
-            }
-            state = Blocked;
-            controlport.unblock();
+    private synchronized void _restart() {
+        if (state == Completed) {
+            return;
         }
+        if (delay != 0l) {
+            // make loop using fire()
+            if (delay > 0l) { // normal delay
+                long d = this.delay;
+                this.delay = 0l;
+                this.task = new MyTimerTask();
+                getTimer().schedule(task, d);
+            } // else infinite delay
+            state = Suspended;
+            return;
+        }
+        state = Blocked;
+        controlport.unblock();
     }
 
     @Override

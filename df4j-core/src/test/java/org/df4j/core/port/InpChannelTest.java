@@ -29,7 +29,7 @@ public class InpChannelTest {
         actor.start();
         Assert.assertFalse(inp.isReady());
         inp.add(1);
-        Assert.assertEquals(actor.runCounter, 1);
+        Assert.assertEquals(1, actor.runCounter);
         Assert.assertTrue(inp.isReady());
         inp.add(2);
         try {
@@ -37,9 +37,9 @@ public class InpChannelTest {
         } catch (Exception e) {
             Assert.assertTrue(e instanceof IllegalStateException);
         }
-        Assert.assertEquals(actor.runCounter, 1);
+        Assert.assertEquals(1, actor.runCounter);
         actor.resume();
-        Assert.assertEquals(actor.runCounter, 2);
+        Assert.assertEquals(2, actor.runCounter);
         Assert.assertEquals(1, inp.remove().intValue());
         Assert.assertTrue(inp.isReady());
         Assert.assertEquals(2, inp.remove().intValue());

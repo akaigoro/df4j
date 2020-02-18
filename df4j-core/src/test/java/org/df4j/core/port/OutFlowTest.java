@@ -49,15 +49,12 @@ public class OutFlowTest {
 
     @Test
     public void outFlowTest() throws InterruptedException {
-        CurrentThreadExecutor executor = new CurrentThreadExecutor();
         int cnt = 3;
         PublisherActor pub = new PublisherActor(cnt, 0);
-        pub.setExecutor(executor);
         LoggingSubscriber sub = new LoggingSubscriber();
         pub.out.subscribe(sub);
         pub.start();
-        executor.executeAll();
-        boolean success = pub.blockingAwait(0);
+        boolean success = pub.blockingAwait(400);
         Assert.assertTrue(success);
         Thread.sleep(50);
         Assert.assertEquals(cnt, sub.cnt);
