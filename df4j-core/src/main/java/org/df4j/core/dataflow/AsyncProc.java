@@ -220,37 +220,39 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * When all ports become unblocked, method {@link AsyncProc#fire()} is called.
      * This is clear analogue to the firing of a Petri Net transition.
      */
-    public class Port implements PortI {
+    public static class Port implements PortI {
         /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
         protected final Lock plock = new ReentrantLock();
         protected boolean active;
         protected boolean ready = false;
+        private AsyncProc parent;
 
-        public Port(boolean ready, boolean active) {
+        public Port(AsyncProc parent, boolean ready, boolean active) {
+            this.parent = parent;
             boolean blocked = !ready && active;
-            bblock.lock();
+            parent.bblock.lock();
             try {
-                ports.add(this);
+                parent.ports.add(this);
                 if (blocked) {
-                    blockedPortsCount++;
+                    parent.blockedPortsCount++;
                 }
             } finally {
-                bblock.unlock();
+                parent.bblock.unlock();
             }
             this.ready = ready;
             this.active = active;
         }
 
-        public Port(boolean ready) {
-            this(ready, true);
+        public Port(AsyncProc parent, boolean ready) {
+            this(parent, ready, true);
         }
 
-        public Port() {
-            this(false);
+        public Port(AsyncProc parent) {
+            this(parent, false);
         }
 
         protected AsyncProc getParent() {
-            return AsyncProc.this;
+            return parent;
         }
 
         public boolean isReady() {
@@ -274,7 +276,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         public void setActive(boolean active) {
             plock.lock();
             try {
-                checkBlockedPortsCount();
+                parent.checkBlockedPortsCount();
                 boolean wasActive = this.active;
                 if (wasActive == active) {
                     return;
@@ -285,28 +287,28 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (wasBlocked == needBlocked) {
                     return;
                 }
-                bblock.lock();
+                parent.bblock.lock();
                 try {
-                    if (isCompleted()) {
+                    if (parent.isCompleted()) {
                         return;
                     }
                     if (needBlocked) {
-                        blockedPortsCount++;
-                        checkBlockedPortsCount();
+                        parent.blockedPortsCount++;
+                        parent.checkBlockedPortsCount();
                         return;
                     }
                     boolean doreturn = _decBlockedPortsCount();
-                    checkBlockedPortsCount();
+                    parent.checkBlockedPortsCount();
                     if (doreturn) {
                         return;
                     }
                 } finally {
-                    bblock.unlock();
+                    parent.bblock.unlock();
                 }
             } finally {
                 plock.unlock();
             }
-            fire();
+            parent.fire();
         }
 
         /**
@@ -315,7 +317,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         public void block() {
             plock.lock();
             try {
-                checkBlockedPortsCount();
+                parent.checkBlockedPortsCount();
                 if (!ready) {
                     return;
                 }
@@ -323,15 +325,15 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (!active) {
                     return;
                 }
-                bblock.lock();
+                parent.bblock.lock();
                 try {
-                    if (isCompleted()) {
+                    if (parent.isCompleted()) {
                         return;
                     }
-                    blockedPortsCount++;
-                    checkBlockedPortsCount();
+                    parent.blockedPortsCount++;
+                    parent.checkBlockedPortsCount();
                 } finally {
-                    bblock.unlock();
+                    parent.bblock.unlock();
                 }
             } finally {
                 plock.unlock();
@@ -353,9 +355,9 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (!active) {
                     return;
                 }
-                bblock.lock();
+                parent.bblock.lock();
                 try {
-                    if (isCompleted()) {
+                    if (parent.isCompleted()) {
                         return; // do not fire
                     }
                     boolean doReturn = _decBlockedPortsCount();
@@ -363,12 +365,12 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                         return;
                     }
                 } finally {
-                    bblock.unlock();
+                    parent.bblock.unlock();
                 }
             } finally {
                 plock.unlock();
             }
-            fire();
+            parent.fire();
         }
 
         /**
@@ -377,15 +379,15 @@ public abstract class AsyncProc extends Node<AsyncProc> {
          *         false when must fire
          */
         private boolean _decBlockedPortsCount() {
-            if (blockedPortsCount == 0) {
+            if (parent.blockedPortsCount == 0) {
                 throw new IllegalStateException("port blocked but blockingPortCount == 0");
             }
-            blockedPortsCount--;
-            if (blockedPortsCount > 0) {
+            parent.blockedPortsCount--;
+            if (parent.blockedPortsCount > 0) {
                 return true; // do not fire
             }
-            controlport.block();
-            state = ActorState.Running;
+            parent.controlport.block();
+            parent.state = ActorState.Running;
             return false; // do fire
         }
 
@@ -396,5 +398,8 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     }
 
     public class ControlPort extends Port {
+        public ControlPort() {
+            super(AsyncProc.this);
+        }
     }
 }

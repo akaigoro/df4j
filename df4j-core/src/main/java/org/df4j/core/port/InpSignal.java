@@ -20,7 +20,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      * @param parent {@link AsyncProc} to which this port belongs
      */
     public InpSignal(AsyncProc parent) {
-        parent.super(false);
+        super(parent, false);
     }
 
     /**
@@ -28,7 +28,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      * @param permits initial number of permits; can be negative
      */
     public InpSignal(AsyncProc parent, long permits) {
-        parent.super(permits > 0);
+        super(parent, permits > 0);
         this.permits = permits;
     }
 

@@ -12,15 +12,15 @@ public class CompletablePort extends AsyncProc.Port {
      * @param active initial port state - port partisipates in firing
      */
     public CompletablePort(AsyncProc parent, boolean ready, boolean active) {
-        parent.super(ready, active);
+        super(parent, ready, active);
     }
 
     public CompletablePort(AsyncProc parent, boolean ready) {
-        parent.super(ready, true);
+        super(parent, ready, true);
     }
 
     public CompletablePort(AsyncProc parent) {
-        parent.super(false, true);
+        super(parent, false, true);
     }
 
     public boolean isCompleted() {
