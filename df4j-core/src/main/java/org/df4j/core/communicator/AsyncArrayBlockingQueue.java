@@ -11,7 +11,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- *  A {@link BlockingQueue} augmented with asynchronous interfaces to save and extract messages, and also interfaces to pass completion signal as required by  {@link Flow}.
+ *  Partially implemented {@link BlockingQueue} augmented with asynchronous interfaces to save and extract messages,
+ *  and also interfaces to pass completion signal as required by {@link Flow}.
  *
  * <p>
  *  Flow of messages:

@@ -14,7 +14,7 @@ import java.util.concurrent.*;
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
  * interfaces on output end.
- *  an equivalent to {@link CompletableFuture}&lt;{@link R}&gt;
+ *  Similar to {@link CompletableFuture}&lt;{@link R}&gt;
  *
  * @param <R> the type of completion value
  */

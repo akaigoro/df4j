@@ -14,19 +14,20 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * {@link AsyncProc} is the most primitive component of {@link Dataflow} graph.
- *  It plays the same role as basic blocks in a flow chart
- *  (see <a href="https://en.wikipedia.org/wiki/Flowchart">https://en.wikipedia.org/wiki/Flowchart</a>).
- * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.
- * This embedded port is implicitly switched off when this {@link AsyncProc} is fired,
- * so the method {@link AsyncProc#start()} must be called again explicitly if next firings are required.
- * Unlike basic blocks in traditional flow charts, different {@link AsyncProc}s in the same {@link Dataflow} graph can run in parallel.
- *
- * {@link AsyncProc} can contain additional input and output ports
- * to exchange messages and signals with ports of other {@link AsyncProc}s in consistent manner.
- * {@link AsyncProc} is submitted for execution to its executor when all ports become ready, including the embedded control port.
+ * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
+ * Used in this basic form, it allows to construct asynchronous procedure calls.
+ * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.\
+ * As a {@link Node}, it is descendand of {@link org.df4j.core.communicator.Completion} class, which allows to monitor execution
+ * of this asynchonous procedure both with synchronous and asynchronous interfaces.
+ * {@link AsyncProc} usually contains contain additional input and output ports to exchange messages and signals with
+ * other {@link AsyncProc}s in consistent manner.
+ * The lifecycle of any  {@link AsyncProc} is as follows:
+ * {@link ActorState#Created} => {@link ActorState#Blocked} => {@link ActorState#Running} => {@link ActorState#Completed}.
+ * It moves to {@link ActorState#Blocked} as a result of invocation of {@link AsyncProc#start()} method.
+ * It becomes  {@link ActorState#Running} and is submitted for execution to its executor when all ports become ready.
+ * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
  */
-public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
+public abstract class AsyncProc extends Node<AsyncProc> {
     private static final boolean checkingMode = true;
 
     protected ActorState state = ActorState.Created;

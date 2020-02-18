@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * is ready when has room to store at least one toke
- * @param <T>
+ * @param <T> type of emitted tokens
  */
 public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Flow.Publisher<T> {
     private final Condition hasItems;
@@ -78,7 +78,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     /**
      *
      * @param token token to insert
-     * @return true if token inserted
      */
     @Override
     public void onNext(T token) {

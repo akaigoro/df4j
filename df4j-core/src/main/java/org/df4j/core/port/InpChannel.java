@@ -23,6 +23,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
+     * @param capacity max buffer capacity
      */
     public InpChannel(AsyncProc parent, int capacity) {
         super(parent);

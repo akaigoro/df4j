@@ -12,7 +12,7 @@ import java.util.concurrent.*;
  * Completion signals (errors or success) propagate from the leaf nodes to the root node.
  * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
-public class Dataflow extends Node<Dataflow> implements Activity {
+public class Dataflow extends Node<Dataflow> {
     protected LinkedQueue<Node.NodeLink> children = new LinkedQueue<>();
 
     /**
@@ -31,7 +31,7 @@ public class Dataflow extends Node<Dataflow> implements Activity {
 
     /**
      * indicates that a node has added to this graph.
-     * @param node
+     * @param node the node which entered the group
      */
     public void enter(Node node) {
         bblock.lock();
@@ -46,7 +46,7 @@ public class Dataflow extends Node<Dataflow> implements Activity {
      * indicates that a node has left this graph because of successful completion.
      * when all the nodes has left this graph, it is considered successfully completed itself
      * and leaves the pareng graph, if any.
-     * @param node
+     * @param node the node which leaves the group
      */
     public void leave(Node node) {
         bblock.lock();

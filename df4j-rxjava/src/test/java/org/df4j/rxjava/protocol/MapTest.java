@@ -1,19 +1,13 @@
 package org.df4j.rxjava.protocol;
-import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.functions.Function;
-import org.df4j.core.dataflow.Dataflow;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executor;
 
 public  class MapTest {
 
@@ -27,5 +21,4 @@ public  class MapTest {
         Consumer<String> stringConsumer = s -> System.out.println(s);
         map1.subscribe(stringConsumer);
     }
-
 }

@@ -32,7 +32,7 @@ public class SignalFlow {
         void onSubscribe(Subscription subscription);
 
         /**
-         * analogue of {@link Flow.Subscriber#onNext()}
+         * analogue of {@link Flow.Subscriber#onNext(Object)} ()}
          */
         void release();
 

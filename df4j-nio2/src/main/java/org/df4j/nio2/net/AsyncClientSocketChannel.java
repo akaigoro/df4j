@@ -20,7 +20,7 @@ public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketCha
     /**
      * Starts connection to a server.
      *
-     * @param executor
+     * @param executor executor to run {@link CompletionHandler} callbacks
      * @param addr address of the server to connect
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */

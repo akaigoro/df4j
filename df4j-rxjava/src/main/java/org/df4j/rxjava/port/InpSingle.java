@@ -4,6 +4,7 @@ import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.SingleObserver;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
+import org.df4j.protocol.Flow;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
 

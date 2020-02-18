@@ -120,6 +120,7 @@ public class Completion implements Completable.Source {
 
     /**
      * waits this {@link Completable} to complete
+     * @throws InterruptedException if this thread interrupted
      */
     public void join()  throws InterruptedException  {
         bblock.lock();

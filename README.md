@@ -22,35 +22,41 @@ It resembles children's building kit: a set of small parts which can be connecte
 
 The design of Df4j is built on following foundation principles:
 
-1. Any asynchronous computation can be represented as a (dataflow) graph, which consists of basic blocks and nested dataflow graphs.
+1. Any asynchronous computation can be represented as a (dataflow) graph, which consists of active nodes and nested dataflow graphs.
 Such a tree structure allows exceptions propagate from leafs to the root graph, and to watch exceptions only at the root node.
 
-2. Basic block, in turn,  consists of:
+2. Active node, in turn,  consists of:
  - ports: asynchronous input and output parameters. Each port is a (relatively complex) object.
  - user-defined computational procedure,
  - reference to an Executor, and
- - an object that glues all that components together, usually a descendant of class org.df4f.core.dataflow.BasicBlock  
+ - an object that glues all that components together, usually a descendant of class org.df4f.core.dataflow.AsyncProc.  
  
 3. Each port has 2 states: ready and blocked. Input port is ready when it has received a token. 
 Output port is ready when it has room to store a new token.
-Output ports for signals are always ready, as storing signals requires only a counter. Similary, output ports for scalar messages are always ready. 
-The node is submitted to the attached executor when all its ports become ready. Then the user-defined computational procedure is executed.
+Output ports for signals are always ready, as storing signals requires only a counter.
+Similary, output ports for scalar messages are always ready. 
+The node is submitted to the attached executor when all its ports become ready.
+Then the user-defined computational procedure is executed.
 
 4. Nodes are interconnected so that output port of one node is connected to an input port of another node. 
-Connected ports must support the same communication protocol. Some ports may support more than one protocol.
+Connected ports must support the same communication protocol.
+Some ports may support more than one protocol.
 
 Currently Df4j has ports for following protocols:
 
 1. Signal flow. This is the asynchronous variant of the protocol used by java.util.concurrent.Semaphore. 
 2. Scalar messages: this is the protocol similar to that used by java.util.concurrent.CompletableFuture. At most one message or an error is sent.
 3. Unbound message streams, without backpressure. Backpressure can be added later using permit stream and can connect far standing nodes.
-4. Reactive message flow with backpressure, similar to that defined in the package org.reactivestreams and/or class java.util.concurrent.Flow.
+4. Reactive message flow with backpressure, identical to that defined in the package org.reactivestreams and/or class java.util.concurrent.Flow.
 4. Reversed reactive message flow with backpressure. It is similar to the reactive message stream described above, 
-but messages are sent not from Publisher to Subscribers, but from Subscribers to Publisher. 
-This protocol is employed at the asynchronous interface to an implementation of java.util.concurrent.BlockingQueue. 
+but messages are sent not from Publisher to Subscribers, but from Subscribers to Publisher, which are named Producers and Consumers, respectively. 
+This protocol is an asynchronous analog to the input part of the interface of java.util.concurrent.BlockingQueue (method put(T)),
+while org.reactivestreams protocol is in fact asynchronous analogue of the output part of that interface. 
 
 Input and output ports can be connected directly, or via connectors - special nodes which provide temporary memory for tokens.
-The most significant connector is AsyncArrayBlockingQueue. It provide bufferisation of messages and interoperability with threads. 
+The most significant connector is AsyncArrayBlockingQueue. It implements both asynchronous and synchronous access.
+Synchronous access is a subset of the interface java.util.concurrent.BlockingQueue.
+It provide bufferization of messages and interoperability with threads. 
  
 ## The main results of this work
 
@@ -60,18 +66,26 @@ As a result, this library is very compact.
 It does not contain fluent API and does not try to implement [all combinations of all capabilities](https://www.google.ru/search?q="all+combinations+of+all+capabilities),
 but allow developers to freely combine existing and newly developed capabilities.
 
-2. Each communication protocol can be implemented in both synchronous and asynchronous forms. 
+2. The type hierarchy of the active nodes is based on two fundamental classes: 
+- AsyncProc for single-shot computations
+- (dataflow) Actor for recurrent computations
+
+3. AsyncProc, being an asynchronous procedure, does not return value (or better say, returns void value).
+Its simple extension AsyncFunc<T> returns a value of arbitrary reference type T.
+
+4. Actor is provided with machinery to implement finite state machine which can be defined by a flow chart. 
+This allows to transform parallel algorithm into asynchronous mechanically, preserving the semantics.
+See the test DiningPhilosophers as an example of such transformation.
+
+5. Hewitt's Actor (e.g. [Akka](https://akka.io/)) is no more than dataflow Actor with single input message flow parameter.
+
+6. Each communication protocol can be implemented in both synchronous and asynchronous forms. 
 Especially useful are nodes which support both synchronous and asynchronous versions.
 Thus, the class org.df4j.core.communicator.AsyncSemaphore extends java.util.concurrent.Semaphore with implementation of SignalFlow.Publisher.
-Class AsyncArrayBlockingQueue implements from scratch java.util.concurrent.BlockingQueue,
-ReverseFlow.Publisher, and Flow.Publisher. Such communicators can help when transforming muktithreading program to asynchronous.
+Class AsyncArrayBlockingQueue partially implements java.util.concurrent.BlockingQueue, ReverseFlow.Publisher, and Flow.Publisher. 
+Such communicators can help when transforming multithreading program to asynchronous form.
 
-3. Callback is no more than AsyncProc with single scalar input parameter.
-
-4. Actor (e.g. [Akka](https://akka.io/)) is no more than repeatable basic block with one input message flow parameter.
-After the next round of execution, it sends awaking signal to the own control port. 
-
-5. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
+7. Reactive streams are just implementation of a specific protocol, and that protocol is no more but a combination of two more simple protocols. 
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
 
@@ -94,11 +108,11 @@ Version history
 ---------------
 2020/02/05
 version 8.2.
-BasickBlock eliminated. AsyncProc became the root async node. 
+BasicBlock eliminated. AsyncProc became the root async node. 
 Methods awake() and awake(long delay) eliminated. 
 Functionality of BasicBlock is modelled with Actor and new stop() method.
 Old stop methods renamed to onComplete and onError.
-Actor has new methods nextAction(ThrowingRunnable) and delay(millis).
+Actor has new methods nextAction(ThrowingRunnable), suspend(), and delay(millis), to model a control flow chart.
 
 2019/12/30
 version 8.0.

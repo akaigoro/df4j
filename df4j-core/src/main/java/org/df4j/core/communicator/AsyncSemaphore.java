@@ -28,7 +28,7 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
     /**
      *
      * @param subscriber
-     *      the {@link SignalFlow.Subscriber} that will consume signals from this {@link SignalFlow.Flow.Publisher}
+     *      the {@link SignalFlow.Subscriber} that will consume signals from this {@link SignalFlow.Publisher}
      */
     @Override
     public void subscribe(SignalFlow.Subscriber subscriber) {

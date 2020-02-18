@@ -7,13 +7,13 @@ import org.df4j.protocol.SignalFlow;
 import java.util.TimerTask;
 
 /**
- * asynchronous receiver of permit flow from a {@link SignalFlow.Flow.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
+ * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
  *
- * it is lazy, so implicit invocation of {@link InpSignal#request()} required
+ * it is lazy, so implicit invocation of {@link InpSignal#request(long)} required
  */
 public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
     private Subscription subscription;
-    /** the port is blocked if permits <= 0 */
+    /** the port is blocked if permits &le; 0 */
     protected long permits = 0;
 
     /**

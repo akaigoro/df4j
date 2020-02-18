@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.*;
 
-public abstract class Node<T extends Node<T>> extends Completion {
+public abstract class Node<T extends Node<T>> extends Completion implements Activity {
     NodeLink nodeLink = new NodeLink();
     private final Dataflow parent;
     private ExecutorService executor;

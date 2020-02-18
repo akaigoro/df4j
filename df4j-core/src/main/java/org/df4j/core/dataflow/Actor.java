@@ -5,10 +5,11 @@ import java.util.TimerTask;
 import static org.df4j.core.dataflow.ActorState.*;
 
 /**
- * {@link Actor} is a {@link Dataflow} with single {@link AsyncProc} which is executed in a loop.
+ * {@link Actor} is an {@link AsyncProc} whose {@link Actor#runAction()} method can be executed repeatedly,
+ * if its input ports receives more input arguments.
  * In other words, Actor is a repeatable asynchronous procedure.
  *  `Actors` here are <a href="https://pdfs.semanticscholar.org/2dfa/fb6ea86ac739b17641d4c4e51cc17d31a56f.pdf"><i>dataflow actors whith arbitrary number of parameters.</i></a>
- *  An Actor as designed by Carl Hewitt is just an {@link Actor} with single input port.
+ *  An Actor as designed by Carl Hewitt is just an {@link Actor} with single input port, and is implemented as {@link SimpleActor}.
  */
 public abstract class Actor extends AsyncProc {
     private volatile ThrowingRunnable nextAction;
@@ -89,8 +90,8 @@ public abstract class Actor extends AsyncProc {
     }
 
     /**
-     * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Blocked ) or {@link ActorState#Running}.
-     * Ignored if current state is not  {@link ActorState#Suspended}.
+     * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Blocked} or {@link ActorState#Running}.
+     * Ignored if current state is not {@link ActorState#Suspended}.
      */
     public void resume() {
         bblock.lock();

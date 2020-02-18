@@ -3,7 +3,7 @@ package org.df4j.core.dataflow;
 import java.util.concurrent.TimeUnit;
 
 /**
- * methods common to both {@link Dataflow} and {@link Thread}.
+ * methods common to all {@link Node}s and {@link Thread}.
  */
 public interface Activity {
     /**
