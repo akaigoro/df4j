@@ -8,8 +8,8 @@
 		<version>8.3</version>
 	</parent>
 
-    <artifactId>df4j-nio2</artifactId>
-    <name>df4j-nio2</name>
+    <artifactId>df4j-tutorial</artifactId>
+    <name>df4j-tutorial</name>
 	<packaging>jar</packaging>
 
 	<dependencies>

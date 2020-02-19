@@ -15,7 +15,6 @@ import java.util.concurrent.CompletionException;
 public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
     private ArrayDeque<T> tokens;
-    /** extracted token */
     protected Subscription subscription;
     private long requestedCount;
 
@@ -49,7 +48,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             return;
         }
         bufferCapacity = capacity;
-        tokens = new ArrayDeque<T>(capacity - 1);
+        tokens = new ArrayDeque<T>(capacity);
     }
 
     private boolean buffIsFull() {
@@ -119,7 +118,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         }
     }
 
-    public T remove() {
+    public T poll() {
         long n;
         T res;
         synchronized(parent) {
@@ -129,7 +128,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (isCompleted()) {
                 throw new CompletionException(completionException);
             }
-            res = tokens.remove();
+            res = tokens.poll();
             if (tokens.isEmpty() && !completed) {
                 block();
             }
@@ -140,6 +139,15 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             requestedCount += n;
         }
         subscription.request(n);
+        return res;
+    }
+
+    @Override
+    public T remove() {
+        T res = poll();
+        if (res == null) {
+            throw new IllegalStateException();
+        }
         return res;
     }
 }

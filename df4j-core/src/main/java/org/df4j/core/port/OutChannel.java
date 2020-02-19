@@ -9,7 +9,7 @@ import org.df4j.protocol.ReverseFlow;
  * Must subscribe to a consumer of type {@link ReverseFlow.Producer} to send message further and unblock this port.
  * @param <T> type of accepted messages.
  */
-public class OutChannel<T> extends CompletablePort implements ReverseFlow.Producer<T> {
+public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>, ReverseFlow.Producer<T> {
     private T value;
     protected ReverseFlow.ReverseFlowSubscription subscription;
 

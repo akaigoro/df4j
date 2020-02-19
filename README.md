@@ -103,9 +103,17 @@ or send email to alexei.kaigorodov(at)gmail.com.
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
 [df4j-reactivestreams](/df4j-reactivestreams) - runs df4j implementation against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
-
+====================
 Version history
 ---------------
+TODO
+ move JsonScanner+ to new module tutorial
+-----------------
+2020/02/18
+version 8.3.
+Synchronization with ReentrantLocks of different levels replaced with plain synchronized(parentActor).
+Method InpMessagePort.current renamed to InpMessagePort.peek().
+
 2020/02/05
 version 8.2.
 BasicBlock eliminated. AsyncProc became the root async node. 

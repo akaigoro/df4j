@@ -13,7 +13,7 @@ public class ProdConsTest {
         cons.inp.subscribe(prod.out);
         prod.start();
         cons.start();
-        boolean fin = cons.blockingAwait(400);
+        boolean fin = cons.blockingAwait(Math.max(delay1, delay2)*cnt+100);
         Assert.assertTrue(cons.isCompleted());
     }
 

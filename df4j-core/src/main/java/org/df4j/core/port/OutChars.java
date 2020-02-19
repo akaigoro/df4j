@@ -1,8 +1,10 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.util.CharBuffer;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
+import org.df4j.protocol.CharFlow;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.FlowSubscription;
 import org.reactivestreams.Subscriber;
@@ -12,31 +14,29 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A passive source of messages (like a server).
+ * A passive source of characters (like a server).
  * Unblocked initially.
- * It has room for single message.
  * Blocked when overflow.
  * Is ready when has room to store at least one toke
- * @param <T> type of emitted tokens
  */
-public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Flow.Publisher<T> {
+public class OutChars extends CompletablePort implements CharFlow.CharPublisher {
     protected final int capacity;
-    protected ArrayDeque<T> tokens;
+    private CharBuffer charBuffer;
     private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
     private LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
 
-    public OutFlow(AsyncProc parent, int capacity) {
+    public OutChars(AsyncProc parent, int capacity) {
         super(parent, true);
         this.capacity = capacity;
-        tokens = new ArrayDeque<>(capacity);
+        charBuffer = new CharBuffer(capacity);
     }
 
-    public OutFlow(AsyncProc parent) {
+    public OutChars(AsyncProc parent) {
         this(parent, 16);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
+    public void subscribe(CharFlow.CharSubscriber subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
         synchronized(parent) {
             if (passiveSubscribtions != null) {
@@ -52,39 +52,27 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     /**
-     * how many tokens can be stored in the buffer
-     * @return 0 if buffer is full
-     */
-    private int _remainingCapacity() {
-        return capacity - tokens.size();
-    }
-
-    /**
      *
-     * @param token token to insert
+     * @param ch character to insert
      */
-    @Override
-    public void onNext(T token) {
-        if (!offer(token)) {
+    public void onNext(char ch) {
+        if (!offer(ch)) {
             throw new IllegalStateException("buffer overflow");
         }
     }
 
     public boolean isCompleted() {
         synchronized(parent) {
-            return completed && tokens.size() == 0;
+            return completed && charBuffer.isEmpty();
         }
     }
 
     /**
      *
-     * @param token token to insert
-     * @return true if token inserted
+     * @param ch character to insert
+     * @return true if the character inserted
      */
-    public boolean offer(T token) {
-        if (token == null) {
-            throw new NullPointerException();
-        }
+    public boolean offer(char ch) {
         FlowSubscriptionImpl sub;
         synchronized(parent) {
             if (completed) {
@@ -92,16 +80,16 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
             }
             sub = activeSubscribtions.poll();
             if (sub == null) {
-                if (_remainingCapacity() == 0) {
+                if (charBuffer.remainingCapacity() == 0) {
                     return false;
                 }
-                tokens.add(token);
+                charBuffer.add(ch);
                 hasItemsEvent();
-                if (_remainingCapacity() == 0) {
+                if (charBuffer.remainingCapacity() == 0) {
                     block();
                 }
             } else {
-                boolean subIsActive = sub.onNext(token);
+                boolean subIsActive = sub.onNext(ch);
                 if (subIsActive) {
                     activeSubscribtions.add(sub);
                 } else {
@@ -141,77 +129,34 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
             completed = true;
             completionException = cause;
             hasItemsEvent();
-            if (tokens.size() > 0) {
+            if (!charBuffer.isEmpty()) {
                 return;
             }
             completAllSubscriptions();
         }
     }
 
-    public T poll() {
+    public char poll() {
         synchronized(parent) {
             for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
+                if (!charBuffer.isEmpty()) {
+                    char res = charBuffer.remove();
                     unblock();
                     return res;
                 }
                 if (completed) {
                     throw new CompletionException(completionException);
                 }
-                return null;
             }
         }
-    }
-
-    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        synchronized(parent) {
-            long millis = unit.toMillis(timeout);
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                if (millis <= 0) {
-                    return null;
-                }
-                long targetTime = System.currentTimeMillis() + millis;
-                parent.wait(millis);
-                millis = targetTime - System.currentTimeMillis();
-            }
-        }
-    }
-
-    public T take() throws InterruptedException {
-        synchronized(parent) {
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                parent.wait();
-            }
-        }
-    }
-
-    public int size() {
-        return tokens.size();
     }
 
     protected class FlowSubscriptionImpl extends LinkImpl implements FlowSubscription {
-        protected final Subscriber subscriber;
+        protected final CharFlow.CharSubscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        FlowSubscriptionImpl(Subscriber subscriber) {
+        FlowSubscriptionImpl(CharFlow.CharSubscriber subscriber) {
             this.subscriber = subscriber;
         }
 
@@ -232,7 +177,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
-            T token;
             synchronized(parent) {
                 if (cancelled) {
                     return;
@@ -248,18 +192,14 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 // remainedRequests was 0, so this subscription was passive
                 passiveSubscribtions.remove(this);
                 for (;;) {
-                    token = OutFlow.this.poll();
-                    if (token == null) {
+                    if (charBuffer.isEmpty()) {
                         activeSubscribtions.add(this);
                         break;
                     }
-                    boolean subIsActive = this.onNext(token);
+                    char ch = charBuffer.remove();
+                    boolean subIsActive = this.onNext(ch);
                     if (!subIsActive) {
                         passiveSubscribtions.add(this);
-                        break;
-                    }
-                    if (isCompleted()) {
-                        this.onComplete();
                         break;
                     }
                 }
@@ -290,11 +230,11 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
         /**
          * must be unlinked
-         * @param token token to pass
+         * @param ch ch to pass
          * @return
          */
-        private boolean onNext(T token) {
-            subscriber.onNext(token);
+        private boolean onNext(char ch) {
+            subscriber.onNext(ch);
             synchronized(parent) {
                 remainedRequests--;
                 return remainedRequests > 0;

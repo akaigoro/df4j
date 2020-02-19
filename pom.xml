@@ -45,6 +45,7 @@
         <module>df4j-protocols</module>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
+        <module>df4j-tutorial</module>
         <!--module>df4j-jdk9</module>
         <module>df4j-reactivestreams</module>
         <module>df4j-reactor</module>

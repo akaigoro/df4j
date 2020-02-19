@@ -1,9 +1,9 @@
-package org.df4j.core.port;
+package org.df4j.core.port.flow;
 
 import org.df4j.core.activities.LoggingSubscriber;
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.util.CurrentThreadExecutor;
+import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Utils;
 import org.junit.Assert;
 import org.junit.Test;
