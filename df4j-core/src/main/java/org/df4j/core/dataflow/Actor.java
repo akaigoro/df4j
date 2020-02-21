@@ -13,7 +13,6 @@ import static org.df4j.core.dataflow.ActorState.*;
  */
 public abstract class Actor extends AsyncProc {
     private volatile ThrowingRunnable nextAction;
-    private long delay = 0l;
     private TimerTask task;
 
     {nextAction(this::runAction);}
@@ -34,23 +33,6 @@ public abstract class Actor extends AsyncProc {
     }
 
     /**
-     * moves this {@link Actor} from {@link ActorState#Created} state to {@link ActorState#Running}
-     * (or {@link ActorState#Suspended}, if was suspended in constructor).
-     *
-     * Only the first call works, subsequent calls are ignored.
-     */
-    @Override
-    public void start() {
-        synchronized(this) {
-            if (state != Created) {
-                return;
-            }
-            state = ActorState.Blocked;
-        }
-        _restart();
-    }
-
-    /**
      * setes delay before subsequent call to next action.
      * Previousely set delay is canceled.
      *
@@ -62,10 +44,12 @@ public abstract class Actor extends AsyncProc {
                 return;
             }
             if (delay <= 0) {
-                delay = 0;
+                return;
             }
-            this.delay = delay;
+            state = Suspended;
+            this.task = new MyTimerTask();
         }
+        getTimer().schedule(task, delay);
     }
 
     /**
@@ -75,42 +59,24 @@ public abstract class Actor extends AsyncProc {
         if (state == Completed) {
             return;
         }
-        this.delay = -1;
+        state = Suspended;
     }
 
     /**
      * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Blocked} or {@link ActorState#Running}.
      * Ignored if current state is not {@link ActorState#Suspended}.
      */
-    public synchronized void resume() {
-        if (state != Suspended) {
-            return;
+    public  void resume() {
+        synchronized(this) {
+            if (state != Suspended) {
+                return;
+            }
+            if (this.task != null) {
+                this.task.cancel();
+                this.task = null;
+            }
+            state = Blocked;
         }
-        this.delay = 0;
-        if (this.task != null) {
-            this.task.cancel();
-            this.task = null;
-        }
-        state = Blocked;
-        controlport.unblock();
-    }
-
-    private synchronized void _restart() {
-        if (state == Completed) {
-            return;
-        }
-        if (delay != 0l) {
-            // make loop using fire()
-            if (delay > 0l) { // normal delay
-                long d = this.delay;
-                this.delay = 0l;
-                this.task = new MyTimerTask();
-                getTimer().schedule(task, d);
-            } // else infinite delay
-            state = Suspended;
-            return;
-        }
-        state = Blocked;
         controlport.unblock();
     }
 
@@ -118,7 +84,16 @@ public abstract class Actor extends AsyncProc {
     protected void run() {
         try {
             nextAction.run();
-            _restart();
+            synchronized (this) {
+                switch (state) {
+                    case Completed:
+                    case Suspended:
+                    case Blocked:
+                    return;
+                }
+                state = Blocked;
+            }
+            controlport.unblock();
         } catch (Throwable e) {
             super.onError(e);
         }

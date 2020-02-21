@@ -10,6 +10,7 @@
 package org.df4j.core.dataflow;
 
 import java.util.ArrayList;
+import static org.df4j.core.dataflow.ActorState.*;
 
 /**
  * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
@@ -20,7 +21,7 @@ import java.util.ArrayList;
  * {@link AsyncProc} usually contains contain additional input and output ports to exchange messages and signals with
  * other {@link AsyncProc}s in consistent manner.
  * The lifecycle of any  {@link AsyncProc} is as follows:
- * {@link ActorState#Created} => {@link ActorState#Blocked} => {@link ActorState#Running} => {@link ActorState#Completed}.
+ * {@link ActorState#Created} &ge; {@link ActorState#Blocked} &ge; {@link ActorState#Running} &ge; {@link ActorState#Completed}.
  * It moves to {@link ActorState#Blocked} as a result of invocation of {@link AsyncProc#start()} method.
  * It becomes  {@link ActorState#Running} and is submitted for execution to its executor when all ports become ready.
  * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
@@ -28,7 +29,7 @@ import java.util.ArrayList;
 public abstract class AsyncProc extends Node<AsyncProc> {
     private static final boolean checkingMode = true; // todo false
 
-    protected ActorState state = ActorState.Created;
+    protected ActorState state = Created;
 
     /** is not encountered as a parent's child */
     private boolean daemon;
@@ -67,15 +68,19 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     }
 
     /**
-     * passes a control token to this {@link AsyncProc}.
+     * moves this {@link AsyncProc} from {@link ActorState#Created} state to {@link ActorState#Running}
+     * (or {@link ActorState#Suspended}, if was suspended in constructor).
+     *
+     * In other words, passes the control token to this {@link AsyncProc}.
      * This token is consumed when this block is submitted to an executor.
+     * Only the first call works, subsequent calls are ignored.
      */
     public void start() {
         synchronized(this) {
-            if (state != ActorState.Created) {
+            if (state != Created) {
                 return;
             }
-            state = ActorState.Blocked;
+            state = Blocked;
         }
         controlport.unblock();
     }
@@ -88,7 +93,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
             if (isCompleted()) {
                 return;
             }
-            state = ActorState.Completed;
+            state = Completed;
         }
         super.onComplete();
     }
@@ -102,7 +107,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
             if (isCompleted()) {
                 return;
             }
-            state = ActorState.Completed;
+            state = Completed;
         }
         super.onError(ex);
     }
@@ -286,14 +291,30 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 if (!active) {
                     return;
                 }
-                synchronized(parent) {
-                    if (parent.isCompleted()) {
-                        return;
-                    }
-                    parent.blockedPortsCount++;
-                    parent.checkBlockedPortsCount();
+                if (parent.isCompleted()) {
+                    return;
                 }
+                parent.blockedPortsCount++;
+                parent.checkBlockedPortsCount();
             }
+        }
+
+        public boolean _unblock() {
+            if (ready) {
+                return true;
+            }
+            ready = true;
+            if (!active) {
+                return true;
+            }
+            if (parent.isCompleted()) {
+                return true;
+            }
+            boolean doReturn = _decBlockedPortsCount();
+            if (doReturn) {
+                return true;
+            }
+            return false;
         }
 
         /**
@@ -303,20 +324,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
          */
         public void unblock() {
             synchronized(parent) {
-                if (ready) {
-                    return;
-                }
-                ready = true;
-                if (!active) {
-                    return;
-                }
-                if (parent.isCompleted()) {
-                    return; // do not fire
-                }
-                boolean doReturn = _decBlockedPortsCount();
-                if (doReturn) {
-                    return;
-                }
+                if (_unblock()) return;
             }
             parent.fire();
         }
@@ -335,7 +343,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
                 return true; // do not fire
             }
             parent.controlport.block();
-            parent.state = ActorState.Running;
+            parent.state = Running;
             return false; // do fire
         }
 

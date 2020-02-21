@@ -58,7 +58,7 @@ public  class EchoTest {
         client2.start();
         EchoClient client3 = new EchoClient(clientDataflow, local9990, 2);
         client3.start();
-        boolean finised = clientDataflow.blockingAwait(500, TimeUnit.MILLISECONDS);
+        boolean finised = clientDataflow.blockingAwait(1500, TimeUnit.MILLISECONDS);
         Assert.assertTrue(finised);
         Assert.assertEquals(0, client1.count);
         Assert.assertEquals(0, client2.count);

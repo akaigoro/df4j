@@ -62,8 +62,8 @@ public class AsyncServerSocketChannel extends Actor implements CompletionHandler
 
     @Override
     protected final void runAction() throws Throwable {
-        assc.accept(null, this);
         suspend(); // wait CompletionHandler
+        assc.accept(null, this);
     }
 
     //====================== CompletionHandler's backend

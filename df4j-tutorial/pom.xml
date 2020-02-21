@@ -18,6 +18,11 @@
             <artifactId>df4j-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apidesign.javadoc</groupId>
+            <artifactId>codesnippet-doclet</artifactId>
+            <version>0.52</version> <!-- or any newer version -->
+        </dependency>
 	</dependencies>
 
     <build>
@@ -38,18 +43,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${mjdp.version}</version>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                        <configuration>
-                            <failOnError>false</failOnError>
-                        </configuration>
-                    </execution>
-                </executions>
+                <version>2.10.3</version>
+                <configuration>
+                    <doclet>org.apidesign.javadoc.codesnippet.Doclet</doclet>
+                    <docletArtifact>
+                        <groupId>org.apidesign.javadoc</groupId>
+                        <artifactId>codesnippet-doclet</artifactId>
+                        <version>0.52</version> <!-- or any newer version -->
+                    </docletArtifact>
+                    <!-- if you want to reference snippets from your test directory, also include -->
+                    <additionalparam>-snippetpath src/test/java</additionalparam>
+                </configuration>
             </plugin>
         </plugins>
     </build>

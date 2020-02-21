@@ -116,14 +116,17 @@ public class AsyncSocketChannel {
             if (input.isCompleted()) {
                 output.onError(input.getCompletionException());
                 return;
+            } else if (channel == null) {
+                output.onComplete();
+                return;
             }
             ByteBuffer buffer = input.remove();
+            suspend(); // wait CompletionHandler to invoke resume()
             if (timeout > 0) {
                 doIO(buffer, timeout);
             } else {
                 doIO(buffer);
             }
-            suspend(); // wait CompletionHandler to invoke resume()
         }
 
         // ------------- CompletionHandler backend

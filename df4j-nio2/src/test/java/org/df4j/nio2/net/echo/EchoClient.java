@@ -104,16 +104,16 @@ class EchoClient extends AsyncProc {
         }
 
         public void runAction() {
-            if (!sentMsgs.isCompleted()) {
-                String sent = sentMsgs.remove();
-                ByteBuffer received = readBuffers.remove();
-                String m2 = fromByteBuf(received);
-                LOG.info("Listener received message:"+m2);
-                Assert.assertEquals(sent, m2);
-            } else {
+            if (sentMsgs.isCompleted() || readBuffers.isCompleted()) {
                 this.onComplete();
                 LOG.info("Listener finished successfully");
+                return;
             }
+            String sent = sentMsgs.remove();
+            ByteBuffer received = readBuffers.remove();
+            String m2 = fromByteBuf(received);
+            LOG.info("Listener received message:"+m2);
+            Assert.assertEquals(sent, m2);
         }
 
     }
