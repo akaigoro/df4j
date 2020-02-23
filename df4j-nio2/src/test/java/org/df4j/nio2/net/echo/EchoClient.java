@@ -4,11 +4,10 @@ import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
-import org.df4j.core.port.InpScalar;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
-import org.df4j.nio2.net.AsyncClientSocketChannel;
 import org.df4j.nio2.net.AsyncSocketChannel;
+import org.df4j.nio2.net.AsyncClientSocketChannel;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -27,7 +26,7 @@ class EchoClient extends AsyncProc {
     protected final Logger LOG = new Logger(this, Level.INFO);
     public final int total;
     public int count;
-    protected InpScalar<AsynchronousSocketChannel> inp = new InpScalar<>(this);
+    protected AsyncClientSocketChannel inp = new AsyncClientSocketChannel(this);
 
     AsyncSocketChannel clientConn;
     Speaker speaker;
@@ -36,8 +35,7 @@ class EchoClient extends AsyncProc {
     public EchoClient(Dataflow dataflow, SocketAddress local9990, int total) throws IOException {
         super(dataflow);
         this.total = total;
-        AsyncClientSocketChannel clientStarter = new AsyncClientSocketChannel(dataflow, local9990);
-        clientStarter.subscribe(inp);
+        inp.connect(local9990);
     }
 
     public void runAction() {
@@ -99,8 +97,12 @@ class EchoClient extends AsyncProc {
 
         @Override
         public void onComplete() {
-            super.onComplete();
-            clientConn.close();
+            try {
+                clientConn.close();
+                super.onComplete();
+            } catch (IOException e) {
+                super.onError(e);
+            }
         }
 
         public void runAction() {

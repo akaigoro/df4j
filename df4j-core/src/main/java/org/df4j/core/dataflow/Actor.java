@@ -75,25 +75,24 @@ public abstract class Actor extends AsyncProc {
                 this.task.cancel();
                 this.task = null;
             }
-            state = Blocked;
+            _controlportUnblock();
         }
-        controlport.unblock();
     }
 
     @Override
     protected void run() {
         try {
+            ActorState lockState = state;
             nextAction.run();
             synchronized (this) {
                 switch (state) {
                     case Completed:
                     case Suspended:
-                    case Blocked:
                     return;
+                default:
+                    _controlportUnblock();
                 }
-                state = Blocked;
             }
-            controlport.unblock();
         } catch (Throwable e) {
             super.onError(e);
         }

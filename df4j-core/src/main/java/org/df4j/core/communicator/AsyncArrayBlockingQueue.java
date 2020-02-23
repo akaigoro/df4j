@@ -103,12 +103,26 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         inp.onError(ex);
     }
 
+    boolean recurse = false;
+    boolean repeat = false;
+
     @Override
     protected void fire() {
-        while (!super.isCompleted() && inp.isReady() && out.isReady()) {
+        if (recurse) {
+            repeat = true;
+            return;
+        }
+        recurse = true;
+        for (;;) {
             checkPorts();
             run();
+            if (repeat) {
+                repeat = false;
+            } else {
+                break;
+            }
         }
+        recurse = false;
     }
 
     @Override

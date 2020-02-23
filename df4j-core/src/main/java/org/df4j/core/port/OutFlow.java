@@ -20,19 +20,23 @@ import java.util.concurrent.TimeUnit;
  * @param <T> type of emitted tokens
  */
 public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Flow.Publisher<T> {
+    public static final int DEFAULT_CAPACITY = 16;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
     private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
     private LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
 
     public OutFlow(AsyncProc parent, int capacity) {
-        super(parent, true);
+        super(parent, capacity>0);
+        if (capacity < 0) {
+            throw new IllegalArgumentException();
+        }
         this.capacity = capacity;
         tokens = new ArrayDeque<>(capacity);
     }
 
     public OutFlow(AsyncProc parent) {
-        this(parent, 16);
+        this(parent, DEFAULT_CAPACITY);
     }
 
     @Override
@@ -102,10 +106,15 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 }
             } else {
                 boolean subIsActive = sub.onNext(token);
-                if (subIsActive) {
-                    activeSubscribtions.add(sub);
-                } else {
-                    passiveSubscribtions.add(sub);
+                if (!sub.isCancelled()) {
+                    if (subIsActive) {
+                        activeSubscribtions.add(sub);
+                    } else {
+                        passiveSubscribtions.add(sub);
+                    }
+                }
+                if (_remainingCapacity() == 0 && activeSubscribtions.isEmpty()) {
+                    block();
                 }
             }
             return true;
@@ -251,6 +260,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     token = OutFlow.this.poll();
                     if (token == null) {
                         activeSubscribtions.add(this);
+                        unblock();
                         break;
                     }
                     boolean subIsActive = this.onNext(token);

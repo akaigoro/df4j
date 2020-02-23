@@ -58,18 +58,8 @@ public class AsyncSocketChannel {
     /** disallows subsequent posts of requests; already posted requests
      * would be processed.
      */
-    public synchronized void close() {
-        AsynchronousSocketChannel locChannel;
-        synchronized (this) {
-            locChannel = channel;
-            channel=null;
-        }
-    	if (locChannel!=null) {
-            try {
-                locChannel.close();
-            } catch (IOException e) {
-            }
-    	}
+    public synchronized void close() throws IOException {
+        channel.close();
     }
 
     public synchronized boolean isClosed() {
@@ -136,7 +126,6 @@ public class AsyncSocketChannel {
   //          LOG.info("conn "+ name+": "+io+" completed "+result);
             if (result==-1) {
                 output.onComplete();
-                close();
             } else {
                 buffer.flip();
                 output.onNext(buffer);
@@ -149,7 +138,6 @@ public class AsyncSocketChannel {
         public void failed(Throwable exc, ByteBuffer attach) {
  //           LOG.info("conn "+ name+": "+io+" failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
-                close();
                 this.onComplete();
             } else {
                 output.onError(exc);

@@ -1,44 +1,61 @@
 package org.df4j.nio2.net;
 
-import org.df4j.core.communicator.ScalarResult;
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.port.CompletablePort;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.ExecutorService;
 
 /**
- * generates single AsynchronousSocketChannel for client side
- * as a result of the client connection accepted by a server
+ * Client connection implemented as scalar input port.
+ *
  */
-public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketChannel>
+public class AsyncClientSocketChannel extends CompletablePort
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
+    protected AsynchronousSocketChannel asc;
+
     /**
-     * Starts connection to a server.
+     * @param parent {@link AsyncProc} to which this port belongs
+     * @param active initial state
+     */
+    public AsyncClientSocketChannel(AsyncProc parent, boolean active) {
+        super(parent, false, active);
+    }
+
+    public AsyncClientSocketChannel(AsyncProc parent) {
+        super(parent);
+    }
+
+    /**
+     * Starts client's connection to a server.
      *
-     * @param executor executor to run {@link CompletionHandler} callbacks
      * @param addr address of the server to connect
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
-    public AsyncClientSocketChannel(ExecutorService executor, SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(executor);
+    public void connect(SocketAddress addr) throws IOException {
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(parent.getExecutor());
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open(group);
         channel.connect(addr, channel, this);
     }
 
-    public AsyncClientSocketChannel(Dataflow dataflow, SocketAddress addr) throws IOException {
-        this(dataflow.getExecutor(), addr);
+    public AsynchronousSocketChannel current() {
+        synchronized(parent) {
+            return asc;
+        }
     }
 
     //=====================  CompletionHandler callbacks
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        onSuccess(channel);
+        synchronized(parent) {
+            this.asc = channel;
+            onComplete();
+        }
     }
 
     @Override
@@ -46,3 +63,4 @@ public class AsyncClientSocketChannel extends ScalarResult<AsynchronousSocketCha
         onError(exc);
     }
 }
+

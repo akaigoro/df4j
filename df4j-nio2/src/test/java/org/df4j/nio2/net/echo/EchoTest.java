@@ -25,8 +25,8 @@ public  class EchoTest {
     }
 
     @After
-    public synchronized void deinit() throws InterruptedException {
-        echoServer.stop();
+    public synchronized void deinit() throws InterruptedException, IOException {
+        echoServer.onComplete();
     }
 
     public void ClientTest_1(int total) throws IOException, InterruptedException {
@@ -35,7 +35,7 @@ public  class EchoTest {
         boolean clfinised = clientDataflow.blockingAwait(1000, TimeUnit.MILLISECONDS);
         Assert.assertTrue(clfinised);
         Assert.assertEquals(0, client.count);
-        echoServer.stop();
+        echoServer.onComplete();
         boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
         Assert.assertTrue(sfinised);
     }
@@ -58,11 +58,11 @@ public  class EchoTest {
         client2.start();
         EchoClient client3 = new EchoClient(clientDataflow, local9990, 2);
         client3.start();
-        boolean finised = clientDataflow.blockingAwait(1500, TimeUnit.MILLISECONDS);
+        boolean finised = clientDataflow.blockingAwait(5000, TimeUnit.MILLISECONDS);
         Assert.assertTrue(finised);
         Assert.assertEquals(0, client1.count);
         Assert.assertEquals(0, client2.count);
-        echoServer.stop();
+        echoServer.onComplete();
         boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
         Assert.assertTrue(sfinised);
     }
@@ -77,7 +77,7 @@ public  class EchoTest {
         }
         boolean finised = clientDataflow.blockingAwait(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
-        echoServer.stop();
+        echoServer.onComplete();
         boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
         Assert.assertTrue(sfinised);
     }

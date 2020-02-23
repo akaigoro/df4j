@@ -1,11 +1,8 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
-import org.df4j.core.port.InpScalar;
-import org.df4j.core.port.InpSignal;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
@@ -23,66 +20,38 @@ import java.util.logging.Level;
  * generates {@link EchoProcessor}s for incoming connections
  *
  */
-public class EchoServer extends Actor {
+public class EchoServer extends AsyncServerSocketChannel {
     protected final Logger LOG = new Logger(this, Level.INFO);
-    /** limits the munber of simultaneously existing connections */
-    protected InpSignal allowedConnections = new InpSignal(this);
     Set<EchoProcessor> echoProcessors = new HashSet<>();
-    AsyncServerSocketChannel acceptor;
 
     public EchoServer(Dataflow dataflow, SocketAddress addr, int maxConnCount) throws IOException {
-        super(dataflow);
-        acceptor = new AsyncServerSocketChannel(dataflow, addr);
-        acceptor.start();
+        super(dataflow, addr);
         allowedConnections.release(maxConnCount);
     }
 
-    public void stop() throws InterruptedException {
-        acceptor.close();
-        onComplete();
-        join();
+    public void onComplete() {
+        super.onComplete();
         for (EchoProcessor processor: echoProcessors) {
             processor.onComplete();
-        }
-        for (EchoProcessor processor: echoProcessors) {
-            processor.join();
         }
     }
 
     @Override
-    public void runAction() {
-        allowedConnections.acquire(); // got permission to accept client connection
-        Starter starter = new Starter(getParent()); // create client connection
-        acceptor.demands.subscribe(starter.inp); // wait for a client willing to connect
-        starter.start();
-    }
-
-    class Starter extends AsyncProc {
-        protected InpScalar<AsynchronousSocketChannel> inp = new InpScalar<>(this);
-
-        public Starter(Dataflow dataflow) {
-            super(dataflow);
-            setDaemon(true);
-        }
-
-        @Override
-        protected void runAction() {
-            AsynchronousSocketChannel assc = inp.remove(); // a client connected
-            EchoProcessor processor = new EchoProcessor(assc); // serve client with EchoProcessor
-            echoProcessors.add(processor);
-            processor.start();
-        }
+    protected void onAccept(AsynchronousSocketChannel asc, Long connSerialNum) {
+        EchoProcessor processor = new EchoProcessor(getParent(), asc, connSerialNum); // create client connection
+        processor.start();
     }
 
     class EchoProcessor extends Actor {
-        Starter starter;
         AsyncSocketChannel serverConn;
+        Long connSerialNum;
         InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
         OutFlow<ByteBuffer> buffers2write = new OutFlow<>(this);
         private boolean connectionPermitReleased;
 
-        public EchoProcessor(AsynchronousSocketChannel assc) {
-            super(EchoServer.this.getParent());
+        public EchoProcessor(Dataflow parent, AsynchronousSocketChannel assc, Long connSerialNum) {
+            super(parent);
+            this.connSerialNum = connSerialNum;
             int capacity = 2;
             serverConn = new AsyncSocketChannel(getParent(), assc);
             serverConn.setName("server");
@@ -94,6 +63,7 @@ public class EchoServer extends Actor {
             serverConn.reader.output.subscribe(readBuffers);
             buffers2write.subscribe(serverConn.writer.input);
             serverConn.writer.output.subscribe(serverConn.reader.input);
+            LOG.info("EchoProcessor #"+connSerialNum+"started");
         }
 
         public synchronized void releaseConnectionPermit() {
@@ -120,11 +90,16 @@ public class EchoServer extends Actor {
             if (!readBuffers.isCompleted()) {
                 ByteBuffer b = readBuffers.remove();
                 buffers2write.onNext(b);
-                LOG.info("EchoProcessor replied");
+                LOG.info("EchoProcessor #"+connSerialNum+" replied");
             } else {
-                serverConn.close();
-                onComplete();
-                LOG.info("EchoProcessor completed");
+                try {
+                    serverConn.close();
+                    onComplete();
+                    LOG.info("EchoProcessor #"+connSerialNum+"completed");
+                } catch (IOException e) {
+                    onError(e);
+                    LOG.info("EchoProcessor #"+connSerialNum+"completed with error "+e);
+                }
             }
         }
     }
