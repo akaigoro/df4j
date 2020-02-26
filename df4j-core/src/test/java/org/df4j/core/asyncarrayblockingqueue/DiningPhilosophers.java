@@ -161,7 +161,7 @@ public class DiningPhilosophers extends Dataflow {
      */
     class PhilosopherDF extends Actor {
         protected final Logger logger = new Logger(this, Level.INFO);
-        InpScalar<String> forkInput = new InpScalar<>(this, false); // does not blocks this actor when not (yet) subscribed
+        InpScalar<String> forkInput;
         int id;
         ForkPlace firstPlace, secondPlace;
         String first, second;
@@ -193,19 +193,19 @@ public class DiningPhilosophers extends Dataflow {
 
         @Override
         protected void runAction() {
+            forkInput = new InpScalar<>(this);
             startThinking();
         }
 
         void startThinking() {
-            nextAction(this::endThinking);
+            nextAction(this::endThinking, PORTS_NONE);
             delay(getDelay());
         }
 
         void endThinking()  {
             println("Request first (" + firstPlace.id + ")");
-            forkInput.setActive(true);
             firstPlace.subscribe(forkInput);
-            nextAction(this::getFork1RequestFork2);
+            nextAction(this::getFork1RequestFork2, forkInput);
         }
 
         void getFork1RequestFork2()  {
@@ -218,11 +218,10 @@ public class DiningPhilosophers extends Dataflow {
         }
 
         void startEating() {
-            second = forkInput.remove();
+            second = forkInput.current();
             Assert.assertNotNull(second);
-            forkInput.setActive(false);
             println("got second "+second + " from "+ secondPlace.id);
-            nextAction(this::endEating);
+            nextAction(this::endEating, PORTS_NONE);
             delay(getDelay());
         }
 
@@ -235,7 +234,7 @@ public class DiningPhilosophers extends Dataflow {
             rounds++;
             if (rounds < N) {
                 println("Ph no. " + id + ": continues round " + rounds);
-                nextAction(this::startThinking);
+                startThinking();
             } else {
                 println("Ph no. " + id + ": died at round " + rounds);
                 counter.countDown();

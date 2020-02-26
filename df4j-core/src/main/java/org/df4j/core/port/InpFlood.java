@@ -21,12 +21,7 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
-     * @param active initial port state
      */
-    public InpFlood(AsyncProc parent, boolean active) {
-        super(parent, false, active);
-    }
-
     public InpFlood(AsyncProc parent) {
         super(parent);
     }

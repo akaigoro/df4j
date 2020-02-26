@@ -12,6 +12,9 @@ import static org.df4j.core.dataflow.ActorState.*;
  *  An Actor as designed by Carl Hewitt is just an {@link Actor} with single input port, and is implemented as {@link SimpleActor}.
  */
 public abstract class Actor extends AsyncProc {
+    public static final int PORTS_ALL  = 0xFFFFFFFF;
+    public static final int PORTS_NONE = 0x00000001;
+    private int activePortsScale = PORTS_ALL;
     private volatile ThrowingRunnable nextAction;
     private TimerTask task;
 
@@ -24,12 +27,42 @@ public abstract class Actor extends AsyncProc {
     public Actor() {
     }
 
+    public static int makePortScale(Port... ports) {
+        int scale = 0;
+        for (Port port: ports) {
+            scale |= (1 << port.portNum);
+        }
+        return scale;
+    }
+
+    protected void setActivePorts(int scale) {
+        activePortsScale = PORTS_NONE | scale;
+    }
+
+    protected void setActivePorts(Port... ports) {
+        setActivePorts(makePortScale(ports));
+    }
+
+    @Override
+    protected int setUnBlocked(int portNum) {
+        return super.setUnBlocked(portNum) & activePortsScale;
+    }
+
     public ThrowingRunnable getNextAction() {
         return nextAction;
     }
 
-    protected void nextAction(ThrowingRunnable tRunnable) {
+    protected void nextAction(ThrowingRunnable tRunnable, int portScale) {
         this.nextAction = tRunnable;
+        setActivePorts(portScale);
+    }
+
+    protected void nextAction(ThrowingRunnable tRunnable, Port... ports) {
+        nextAction(tRunnable, makePortScale(ports));
+    }
+
+    protected void nextAction(ThrowingRunnable tRunnable) {
+        nextAction(tRunnable, PORTS_ALL);
     }
 
     /**

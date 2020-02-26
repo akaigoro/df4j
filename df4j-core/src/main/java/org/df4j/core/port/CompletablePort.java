@@ -9,18 +9,13 @@ public class CompletablePort extends AsyncProc.Port {
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      * @param ready initial port state - port is not blocking the actor's execution
-     * @param active initial port state - port partisipates in firing
      */
-    public CompletablePort(AsyncProc parent, boolean ready, boolean active) {
-        super(parent, ready, active);
-    }
-
     public CompletablePort(AsyncProc parent, boolean ready) {
-        super(parent, ready, true);
+        super(parent, ready);
     }
 
     public CompletablePort(AsyncProc parent) {
-        super(parent, false, true);
+        super(parent, false);
     }
 
     public boolean isCompleted() {

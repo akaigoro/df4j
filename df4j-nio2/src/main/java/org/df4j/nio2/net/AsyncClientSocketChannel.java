@@ -20,12 +20,7 @@ public class AsyncClientSocketChannel extends CompletablePort
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
-     * @param active initial state
      */
-    public AsyncClientSocketChannel(AsyncProc parent, boolean active) {
-        super(parent, false, active);
-    }
-
     public AsyncClientSocketChannel(AsyncProc parent) {
         super(parent);
     }

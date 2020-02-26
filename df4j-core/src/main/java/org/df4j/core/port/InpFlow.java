@@ -28,11 +28,6 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         setCapacity(capacity);
     }
 
-    public InpFlow(AsyncProc parent, int capacity, boolean active) {
-        super(parent, false, active);
-        setCapacity(capacity);
-    }
-
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      */

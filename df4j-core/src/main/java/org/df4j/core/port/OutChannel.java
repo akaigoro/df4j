@@ -18,7 +18,7 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
      * @param parent {@link AsyncProc} to which this port belongs
      */
     public OutChannel(AsyncProc parent) {
-        super(parent, true, true);
+        super(parent, true);
     }
 
     @Override

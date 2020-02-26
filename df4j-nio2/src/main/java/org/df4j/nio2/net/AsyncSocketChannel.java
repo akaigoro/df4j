@@ -55,8 +55,10 @@ public class AsyncSocketChannel {
         this.name = name;
     }
 
-    /** disallows subsequent posts of requests; already posted requests
-     * would be processed.
+    /**
+     *
+     * @throws IOException
+     *          If an I/O error occurs
      */
     public synchronized void close() throws IOException {
         channel.close();

@@ -25,14 +25,10 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
-     * @param active initial state
+     *
      */
-    public InpScalar(AsyncProc parent, boolean active) {
-        super(parent, false, active);
-    }
-
     public InpScalar(AsyncProc parent) {
-        super(parent);
+        super(parent, false);
     }
 
     @Override

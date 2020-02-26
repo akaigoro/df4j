@@ -114,7 +114,6 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         }
         recurse = true;
         for (;;) {
-            checkPorts();
             run();
             if (repeat) {
                 repeat = false;
