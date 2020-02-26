@@ -1,11 +1,6 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.util.linked.LinkedQueue;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-import java.util.Timer;
-import java.util.concurrent.*;
 
 /**
  * A dataflow graph, consisting of 1 or more {@link AsyncProc}s and, probably, nested {@link Dataflow}s.
@@ -14,6 +9,7 @@ import java.util.concurrent.*;
  */
 public class Dataflow extends Node<Dataflow> {
     protected LinkedQueue<Node.NodeLink> children = new LinkedQueue<>();
+    protected long totalChildCount = 0;
 
     /**
      *  creates root {@link Dataflow} graph.
@@ -32,10 +28,14 @@ public class Dataflow extends Node<Dataflow> {
     /**
      * indicates that a node has added to this graph.
      * @param node the node which entered the group
+     * @return unique sequential number of the child within this dataflow,
+     *         starting from 0.
      */
-    public void enter(Node node) {
+    public long enter(Node node) {
         synchronized(this) {
+            long res = totalChildCount++;
             children.add(node.nodeLink);
+            return res;
         }
     }
 

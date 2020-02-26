@@ -127,7 +127,6 @@ public class AsyncSocketChannel {
             if (result==-1) {
                 output.onComplete();
             } else {
-                buffer.flip();
                 output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
@@ -157,6 +156,7 @@ public class AsyncSocketChannel {
         }
 
         protected void doIO(ByteBuffer buffer) {
+            buffer.clear();
             channel.read(buffer, buffer, this);
         }
 

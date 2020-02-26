@@ -86,9 +86,12 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
                 return;
             }
             this.subscription = subscription;
-            requestedCount = remainingCapacity();
             if (tokens.isEmpty()) {
                 block();
+            }
+            requestedCount = remainingCapacity();
+            if (requestedCount == 0) {
+                return;
             }
         }
         subscription.request(requestedCount);

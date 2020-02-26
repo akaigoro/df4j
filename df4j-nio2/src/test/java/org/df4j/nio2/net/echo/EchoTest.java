@@ -29,57 +29,37 @@ public  class EchoTest {
         echoServer.onComplete();
     }
 
-    public void ClientTest_1(int total) throws IOException, InterruptedException {
-        EchoClient client = new EchoClient(clientDataflow, local9990, total);
-        client.start();
-        boolean clfinised = clientDataflow.blockingAwait(1000, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(clfinised);
-        Assert.assertEquals(0, client.count);
-        echoServer.onComplete();
-        boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(sfinised);
-    }
-
-    @Test
-    public void ClientTest_1_1() throws IOException, InterruptedException {
-        ClientTest_1(1);
-    }
-
-    @Test
-    public void ClientTest_1_4() throws IOException, InterruptedException {
-        ClientTest_1(4);
-    }
-
-    @Test
-    public void ClientTest_3() throws IOException, InterruptedException {
-        EchoClient client1 = new EchoClient(clientDataflow, local9990, 1);
-        client1.start();
-        EchoClient client2 = new EchoClient(clientDataflow, local9990, 2);
-        client2.start();
-        EchoClient client3 = new EchoClient(clientDataflow, local9990, 2);
-        client3.start();
-        boolean finised = clientDataflow.blockingAwait(5000, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(finised);
-        Assert.assertEquals(0, client1.count);
-        Assert.assertEquals(0, client2.count);
-        echoServer.onComplete();
-        boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(sfinised);
-    }
-
-    @Test
-    public void ClientTest_4x4() throws IOException, InterruptedException {
+    public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {
         ArrayList<EchoClient> clients = new ArrayList<>();
-        for (int k=0; k<5; k++)  {
-            EchoClient client = new EchoClient(clientDataflow, local9990, k+1);
+        for (int k = 0; k< nc; k++)  {
+            EchoClient client = new EchoClient(clientDataflow, local9990, total);
             client.start();
             clients.add(client);
         }
         boolean finised = clientDataflow.blockingAwait(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
-        echoServer.onComplete();
-        boolean sfinised = serverDataflow.blockingAwait(1, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(sfinised);
+        for (EchoClient client: clients) {
+            Assert.assertEquals(0, client.count);
+        }
     }
 
+    @Test
+    public void ClientTest_1_1() throws IOException, InterruptedException {
+        ClientTest_1(1, 1);
+    }
+
+    @Test
+    public void ClientTest_1_4() throws IOException, InterruptedException {
+        ClientTest_1(1, 4);
+    }
+
+    @Test
+    public void ClientTest_4x1() throws IOException, InterruptedException {
+        ClientTest_1(4, 1);
+    }
+
+    @Test
+    public void ClientTest_4x4() throws IOException, InterruptedException {
+        ClientTest_1(4, 4);
+    }
 }

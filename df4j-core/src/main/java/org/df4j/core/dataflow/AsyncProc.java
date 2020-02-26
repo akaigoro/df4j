@@ -42,9 +42,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
 
     protected AsyncProc(Dataflow dataflow) {
         super(dataflow);
-        if (dataflow == null) {
-            throw new IllegalArgumentException();
-        }
     }
 
     public AsyncProc() {

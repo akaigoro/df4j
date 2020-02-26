@@ -18,6 +18,7 @@ import java.util.Timer;
 import java.util.concurrent.*;
 
 public abstract class Node<T extends Node<T>> extends Completion implements Activity {
+    public final long seqNum;
     NodeLink nodeLink = new NodeLink();
     private final Dataflow parent;
     private ExecutorService executor;
@@ -25,11 +26,12 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
 
     protected Node() {
         this.parent = null;
+        seqNum = -1;
     }
 
     protected Node(Dataflow parent) {
         this.parent = parent;
-        parent.enter(this);
+        seqNum = parent.enter(this);
     }
 
     public Dataflow getParent() {
@@ -149,6 +151,11 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
             }
         }
         return res;
+    }
+
+    @Override
+    public String toString() {
+        return "(#"+seqNum+')'+super.toString();
     }
 
     class NodeLink extends LinkImpl {

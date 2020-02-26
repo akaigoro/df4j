@@ -21,6 +21,7 @@ import java.util.logging.Level;
  *
  */
 public class EchoServer extends AsyncServerSocketChannel {
+    public static final int BUF_SIZE = 128;
     protected final Logger LOG = new Logger(this, Level.INFO);
     Set<EchoProcessor> echoProcessors = new HashSet<>();
 
@@ -30,10 +31,10 @@ public class EchoServer extends AsyncServerSocketChannel {
     }
 
     public void onComplete() {
-        super.onComplete();
         for (EchoProcessor processor: echoProcessors) {
             processor.onComplete();
         }
+        super.onComplete();
     }
 
     @Override
@@ -57,13 +58,13 @@ public class EchoServer extends AsyncServerSocketChannel {
             serverConn.setName("server");
             serverConn.reader.input.setCapacity(capacity);
             for (int k = 0; k<capacity; k++) {
-                ByteBuffer buf=ByteBuffer.allocate(128);
+                ByteBuffer buf=ByteBuffer.allocate(BUF_SIZE);
                 serverConn.reader.input.onNext(buf);
             }
             serverConn.reader.output.subscribe(readBuffers);
             buffers2write.subscribe(serverConn.writer.input);
             serverConn.writer.output.subscribe(serverConn.reader.input);
-            LOG.info("EchoProcessor #"+connSerialNum+"started");
+            LOG.info("EchoProcessor #"+connSerialNum+" started");
         }
 
         public synchronized void releaseConnectionPermit() {
@@ -76,20 +77,21 @@ public class EchoServer extends AsyncServerSocketChannel {
 
         @Override
         public void onComplete() {
-            super.onComplete();
             releaseConnectionPermit();
+            super.onComplete();
         }
 
         @Override
         public void onError(Throwable ex) {
-            super.onError(ex);
             releaseConnectionPermit();
+            super.onError(ex);
         }
 
         public void runAction() {
             if (!readBuffers.isCompleted()) {
-                ByteBuffer b = readBuffers.remove();
-                buffers2write.onNext(b);
+                ByteBuffer buffer = readBuffers.remove();
+                buffer.flip();
+                buffers2write.onNext(buffer);
                 LOG.info("EchoProcessor #"+connSerialNum+" replied");
             } else {
                 try {

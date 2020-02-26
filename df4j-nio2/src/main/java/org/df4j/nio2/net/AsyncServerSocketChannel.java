@@ -62,8 +62,8 @@ public abstract class AsyncServerSocketChannel extends Actor
 
     @Override
     protected final void runAction() throws Throwable {
-        allowedConnections.acquire(); // got permission to accept client connection
-        suspend(); // wait CompletionHandler
+        allowedConnections.remove(); // use up a permit to accept next client connection
+        suspend(); // wait for CompletionHandler to resume
         assc.accept(connSerialNum++, this);
     }
 

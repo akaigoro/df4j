@@ -50,15 +50,11 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
         }
     }
 
-    @Override
-    public void release() {
-        release(1);
-    }
-
     /**
-     * analogue od {@link InpFlow#remove()}
+     * Reduces the number of permits.
+     * Analogue of {@link InpFlow#remove()} and {@link java.util.concurrent.Semaphore#acquire(int)}
      */
-    public void acquire() {
+    public void remove() {
         synchronized(parent) {
             boolean wasReady = isReady();
             permits--;
