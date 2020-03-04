@@ -17,9 +17,12 @@ import static org.df4j.tutorial.charflow.jsontokens.TokenType.*;
 public class JsonScannerTest {
     static class TokenSinkArray extends Completion implements Subscriber<Token> {
         ArrayList<Token> tokens  = new ArrayList<>();
+        Subscription sub;
 
         @Override
         public void onSubscribe(Subscription s) {
+            sub = s;
+            s.request(1);
         }
 
         @Override
@@ -30,6 +33,7 @@ public class JsonScannerTest {
         @Override
         public void onNext(Token t) {
             tokens.add(t);
+            sub.request(1);
         }
 
         public boolean equals(Token...expected) {
@@ -39,7 +43,7 @@ public class JsonScannerTest {
             for (int k=0; k<expected.length; k++) {
                 Token t1 = expected[k];
                 Token t2 = tokens.get(k);
-                if (t1.equals(t2)) {
+                if (!t1.equals(t2)) {
                     return false;
                 }
             }

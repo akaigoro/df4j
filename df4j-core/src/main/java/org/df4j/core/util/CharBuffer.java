@@ -32,7 +32,7 @@ public class CharBuffer {
     }
 
     public char current() {
-        return charBuffer[(posWrite-1) % bufferCapacity];
+        return charBuffer[(posWrite-count) % bufferCapacity];
     }
 
     public boolean buffIsFull() {

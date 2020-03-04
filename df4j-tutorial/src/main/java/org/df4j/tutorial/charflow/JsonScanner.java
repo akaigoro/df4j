@@ -33,7 +33,7 @@ public class JsonScanner extends Scanner {
                 nextAction(this::stringBody);
             } else if (Character.isDigit(c)) {
                 inp.remove();
-                number = 0;
+                number = c-'0';
                 nextAction(this::numberBody);
             } else if (Character.isLetter(c)) {
                 sb = new StringBuilder();

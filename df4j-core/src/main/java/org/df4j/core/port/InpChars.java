@@ -112,7 +112,7 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
                 throw new IllegalStateException();
             }
             res = charBuffer.remove();
-            if (charBuffer.isEmpty() && completed) {
+            if (charBuffer.isEmpty() && !completed) {
                 block();
             }
             if (subscription == null) {
