@@ -7,8 +7,6 @@ import org.df4j.core.dataflow.Dataflow;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.logging.Level;
-
 public class AsyncArrayBlockingQueuePubSubTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) {
@@ -20,7 +18,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         queue.subscribe(subscriber.inp);
         queue.subscribe(producer.out);
-        queue.onComplete();
+        queue.complete();
         boolean fin = graph.blockingAwait(400);
         Assert.assertTrue(fin);
     }
@@ -49,7 +47,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
     public void testAsyncQueueCompleted() {
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<Long>(1);
         queue.add(1l);
-        queue.onComplete();
+        queue.complete();
         Assert.assertFalse(queue.isCompleted());
         queue.remove();
         Assert.assertTrue(queue.isCompleted());
@@ -66,7 +64,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         queue.subscribe(subscriber.inp);
         subscriber.start();
         Thread.sleep(400);
-        queue.onComplete();
+        queue.complete();
         Thread.sleep(400);
         subscriber.getParent().blockingAwait(400);
         boolean qIsCompleted = queue.isCompleted();

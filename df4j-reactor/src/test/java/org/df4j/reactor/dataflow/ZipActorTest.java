@@ -2,9 +2,12 @@ package org.df4j.reactor.dataflow;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
+import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.concurrent.TimeUnit;
 
 public  class ZipActorTest {
 
@@ -20,7 +23,7 @@ public  class ZipActorTest {
         @Override
         protected void runAction() throws Throwable {
             if (inpFlow.isCompleted()) {
-                onComplete();
+                complete();
                 return;
             }
             T1 element1 = inpFlow.remove();
@@ -42,7 +45,9 @@ public  class ZipActorTest {
             }
         };
         actor.start();
-        actor.join();
+        flux.subscribe(actor.inpFlow);
+        mono.subscribe(actor.inpScalar);
+        Assert.assertTrue(actor.blockingAwait(400, TimeUnit.MILLISECONDS));
     }
 
 }

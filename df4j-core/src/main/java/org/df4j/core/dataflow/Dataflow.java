@@ -49,7 +49,7 @@ public class Dataflow extends Node<Dataflow> {
         synchronized(this) {
             children.remove(node.nodeLink);
             if (children.size() == 0) {
-                super.onComplete();
+                super.complete();
             }
         }
     }

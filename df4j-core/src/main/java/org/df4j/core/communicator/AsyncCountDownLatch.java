@@ -13,7 +13,7 @@ public class AsyncCountDownLatch extends CountDownLatch implements Completable.S
     public AsyncCountDownLatch(int count) {
         super(count);
         if (getCount() == 0) {
-            completionSignal.onComplete();
+            completionSignal.complete();
         }
     }
 
@@ -36,6 +36,6 @@ public class AsyncCountDownLatch extends CountDownLatch implements Completable.S
                 return;
             }
         }
-        completionSignal.onComplete();
+        completionSignal.complete();
     }
 }

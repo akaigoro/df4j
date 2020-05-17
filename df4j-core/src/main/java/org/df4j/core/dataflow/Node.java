@@ -123,17 +123,17 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     }
 
     @Override
-    public void onComplete() {
-        super.onComplete();
+    public void complete() {
+        super.complete();
         if (parent != null) {
             parent.leave(this);
         }
     }
 
-    protected void onError(Throwable t) {
-        super.onError(t);
+    public void completeExceptionally(Throwable t) {
+        super.completeExceptionally(t);
         if (parent != null) {
-            parent.onError(t);
+            parent.completeExceptionally(t);
         }
     }
 

@@ -1,5 +1,6 @@
 package org.df4j.core.communicator;
 
+import org.df4j.core.dataflow.AsyncFunc;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
@@ -16,27 +17,27 @@ import static org.junit.Assert.fail;
 
 public class SumSquareTest {
 
-    public static class Square extends AsyncProc {
+    public static class Square extends AsyncFunc<Integer> {
         final InpScalar<Integer> param = new InpScalar<>(this);
-        final ScalarResult<Integer> out = new ScalarResult<>();
 
-        protected void runAction() {
+        @Override
+        protected Integer callAction() throws Throwable {
             Integer arg = param.current();
             int res = arg*arg;
-            out.onSuccess(res);
+            return res;
         }
     }
 
-    public static class Sum extends AsyncProc {
+    public static class Sum extends AsyncFunc<Integer> {
         final InpScalar<Integer> paramX = new InpScalar<>(this);
         final InpScalar<Integer> paramY = new InpScalar<>(this);
-        final ScalarResult<Integer> out = new ScalarResult<>();
 
-        protected void runAction() {
+        @Override
+        protected Integer callAction() throws Throwable {
             Integer argX = paramX.current();
             Integer argY = paramY.current();
             int res = argX + argY;
-            out.onSuccess(res);
+            return res;
         }
     }
 
@@ -50,8 +51,8 @@ public class SumSquareTest {
         Square sqY = new Square();
         Sum sum = new Sum();
         // connect them
-        sqX.out.subscribe(sum.paramX);
-        sqY.out.subscribe(sum.paramY);
+        sqX.subscribe(sum.paramX);
+        sqY.subscribe(sum.paramY);
         // provide input information:
         sqX.param.onSuccess(3);
         sqY.param.onSuccess(4);
@@ -63,7 +64,7 @@ public class SumSquareTest {
         if (!finished) {
             fail("not finished in time");
         }
-        Integer res = sum.out.get(0, TimeUnit.SECONDS);
+        Integer res = sum.get(0, TimeUnit.SECONDS);
         Assert.assertNotNull(res);
         Assert.assertEquals(25, res.intValue());
     }

@@ -5,8 +5,6 @@ import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
 
-import java.util.logging.Level;
-
 public class ScalarSubscriberActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
@@ -41,7 +39,7 @@ public class ScalarSubscriberActor extends Actor {
             cnt--;
             nextSubscribe();
         } else {
-            onComplete();
+            complete();
         }
     }
 }

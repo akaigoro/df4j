@@ -101,7 +101,7 @@ public class AsyncFileChannelTest {
             filledBuffers.onNext(buf);
             if (byteNumber == 0) {
                 filledBuffers.onComplete();
-                onComplete();
+                complete();
             }
         }
     }
@@ -125,7 +125,7 @@ public class AsyncFileChannelTest {
         @Override
         protected void runAction() throws Throwable {
             if (filledBuffers.isCompleted()) {
-                onComplete();
+                complete();
                 emptyBuffers.onComplete();
                 return;
             }

@@ -2,12 +2,10 @@ package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.activities.LoggingSubscriber;
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
-import org.df4j.core.communicator.Completion;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.CompletionException;
-import java.util.logging.Level;
 
 import static org.junit.Assert.fail;
 
@@ -27,7 +25,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         }
         Assert.assertEquals(cnt, queue.size());
         Assert.assertFalse(queue.isCompleted());
-        queue.onComplete();
+        queue.complete();
         Assert.assertEquals(queue.size()==0, queue.isCompleted());
         for (long k=0; k<cnt; k++) {
             Long value = queue.remove();
@@ -59,7 +57,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         for (long k=0; k<cnt; k++) {
             queue.add(k);
         }
-        queue.onComplete();
+        queue.complete();
         Assert.assertTrue(queue.isCompleted());
         Assert.assertEquals(cnt, sub.cnt);
         Assert.assertTrue(sub.completed);
@@ -92,7 +90,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         Assert.assertFalse(sub.completed);
         Assert.assertNull(sub.completionException);
         sub.subscription.cancel();
-        queue.onComplete();
+        queue.complete();
         for (long k=0; ; k++) {
             if (!queue.offer(k)) {
                 break;

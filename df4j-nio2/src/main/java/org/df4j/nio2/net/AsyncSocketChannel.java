@@ -139,7 +139,7 @@ public class AsyncSocketChannel {
         public void failed(Throwable exc, ByteBuffer attach) {
  //           LOG.info("conn "+ name+": "+io+" failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
-                this.onComplete();
+                this.complete();
             } else {
                 output.onError(exc);
             }

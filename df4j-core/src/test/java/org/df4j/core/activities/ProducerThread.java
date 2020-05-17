@@ -31,7 +31,7 @@ public class ProducerThread extends Thread implements ActivityThread {
             }
         }
         logger.info("queue.onComplete()");
-        queue.onComplete();
+        queue.complete();
         logger.info("Producer completed");
     }
 }

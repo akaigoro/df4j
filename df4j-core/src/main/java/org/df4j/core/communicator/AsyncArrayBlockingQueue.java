@@ -94,12 +94,12 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
     }
 
     @Override
-    public void onComplete() {
+    public void complete() {
         inp.onComplete();
     }
 
     @Override
-    public void onError(Throwable ex) {
+    public void completeExceptionally(Throwable ex) {
         inp.onError(ex);
     }
 
@@ -128,7 +128,7 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
     protected void runAction() throws Throwable {
         if (inp.isCompleted()) {
             out._onComplete(inp.getCompletionException());
-            super.onComplete();
+            super.complete();
         } else {
             T token = inp.remove();
             out.onNext(token);

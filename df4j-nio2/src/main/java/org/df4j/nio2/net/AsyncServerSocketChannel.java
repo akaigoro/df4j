@@ -44,7 +44,7 @@ public abstract class AsyncServerSocketChannel extends Actor
         LOG.info("AsyncServerSocketChannel("+addr+") created");
     }
 
-    public synchronized void onComplete() {
+    public synchronized void complete() {
         synchronized(this) {
             if (isCompleted()) {
                 return;
@@ -53,9 +53,9 @@ public abstract class AsyncServerSocketChannel extends Actor
             assc = null;
             try {
                 asscLock.close();
-                super.onComplete();
+                super.complete();
             } catch (IOException e) {
-                super.onError(e);
+                super.completeExceptionally(e);
             }
         }
     }
@@ -82,7 +82,7 @@ public abstract class AsyncServerSocketChannel extends Actor
                 asc.close();
             } catch (IOException e) {
             }
-            onError(t);
+            completeExceptionally(t);
         }
     }
 
@@ -94,9 +94,9 @@ public abstract class AsyncServerSocketChannel extends Actor
     public void failed(Throwable exc, Long attachement) {
         LOG.info("AsyncServerSocketChannel: client rejected:"+exc);
         if (exc instanceof AsynchronousCloseException) {
-            onComplete();
+            complete();
         } else {
-            onError(exc);
+            completeExceptionally(exc);
         }
     }
 }

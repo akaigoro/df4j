@@ -1,6 +1,5 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.ScalarResult;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,27 +14,27 @@ import java.util.concurrent.TimeoutException;
  */
 public class SumSquareTest {
 
-    public static class Square extends AsyncProc {
+    public static class Square extends AsyncFunc<Integer> {
         InpScalar<Integer> param = new InpScalar<>(this);
-        ScalarResult<Integer> result = new ScalarResult<>();
 
-        public void runAction() {
+        @Override
+        protected Integer callAction() throws Throwable {
             Integer arg = param.current();
             int res = arg*arg;
-            result.onSuccess(res);
+            return res;
         }
     }
 
-    public static class Sum extends AsyncProc {
+    public static class Sum extends AsyncFunc<Integer> {
         InpScalar<Integer> paramX = new InpScalar<>(this);
         InpScalar<Integer> paramY = new InpScalar<>(this);
-        ScalarResult<Integer> result = new ScalarResult<>();
 
-        public void runAction() {
+        @Override
+        protected Integer callAction() throws Throwable {
             Integer argX = paramX.current();
             Integer argY = paramY.current();
             int res = argX + argY;
-            result.onSuccess(res);
+            return res;
         }
     }
 
@@ -50,8 +49,8 @@ public class SumSquareTest {
         Square sqY = new Square();
         Sum sum = new Sum();
         // make 2 connections
-        sqX.result.subscribe(sum.paramX);
-        sqY.result.subscribe(sum.paramY);
+        sqX.subscribe(sum.paramX);
+        sqY.subscribe(sum.paramY);
         // provide input information:
         sqX.param.onSuccess(3);
         sqY.param.onSuccess(4);
@@ -59,9 +58,9 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // get the result
-        boolean fin = sum.result.blockingAwait(1, TimeUnit.SECONDS);
+        boolean fin = sum.blockingAwait(1, TimeUnit.SECONDS);
         Assert.assertTrue(fin);
-        int res = sum.result.get();
+        int res = sum.get();
         Assert.assertEquals(25, res);
     }
 

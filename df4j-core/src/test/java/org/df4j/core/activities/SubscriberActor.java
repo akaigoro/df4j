@@ -33,7 +33,7 @@ public class SubscriberActor extends Actor {
         if (inp.isCompleted()) {
             Throwable completionException = inp.getCompletionException();
             logger.info(" SubscriberActor: completed with: " + completionException);
-            onError(completionException);
+            completeExceptionally(completionException);
             return;
         }
         Long in = inp.remove();

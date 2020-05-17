@@ -95,28 +95,28 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     /**
      * finishes parent activity normally.
      */
-    public void onComplete() {
+    public void complete() {
         synchronized(this) {
             if (isCompleted()) {
                 return;
             }
             state = Completed;
         }
-        super.onComplete();
+        super.complete();
     }
 
     /**
      * finishes parent activity exceptionally.
      * @param ex the exception
      */
-    public void onError(Throwable ex) {
+    public void completeExceptionally(Throwable ex) {
         synchronized(this) {
             if (isCompleted()) {
                 return;
             }
             state = Completed;
         }
-        super.onError(ex);
+        super.completeExceptionally(ex);
     }
 
     /**
@@ -152,9 +152,9 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     protected void run() {
         try {
             runAction();
-            onComplete();
+            complete();
         } catch (Throwable e) {
-            onError(e);
+            completeExceptionally(e);
         }
     }
 

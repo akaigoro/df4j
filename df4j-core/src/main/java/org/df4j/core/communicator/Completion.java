@@ -12,10 +12,14 @@ import java.util.concurrent.TimeUnit;
  * Completes successfully or with failure, without emitting any value.
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
-public class Completion implements Completable.Source {
+public class Completion implements CompletionI {
     protected Throwable completionException;
     protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
     protected boolean completed;
+
+    public void setCompletionException(Throwable completionException) {
+        this.completionException = completionException;
+    }
 
     /**
      * @return completion Exception, if this {@link Completable} was completed exceptionally;
@@ -23,6 +27,14 @@ public class Completion implements Completable.Source {
      */
     public synchronized Throwable getCompletionException() {
         return completionException;
+    }
+
+    public LinkedList<CompletionSubscription> getSubscriptions() {
+        return subscriptions;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
     /**
@@ -36,7 +48,7 @@ public class Completion implements Completable.Source {
     public void subscribe(Completable.Observer co) {
         synchronized(this) {
             if (!completed) {
-                CompletionSubscription subscription = new CompletionSubscription(co);
+                CompletionSubscription subscription = new CompletionSubscription(this, co);
                 subscriptions.add(subscription);
                 co.onSubscribe(subscription);
                 return;
@@ -60,14 +72,13 @@ public class Completion implements Completable.Source {
         }
     }
 
-    protected void _onComplete(Object result, Throwable e) {
+    protected void _complete(Throwable e) {
         LinkedList<CompletionSubscription> subs;
         synchronized(this) {
             if (completed) {
                 return;
             }
             completed = true;
-            setResult(result);
             this.completionException = e;
             notifyAll();
             if (subscriptions == null) {
@@ -79,22 +90,19 @@ public class Completion implements Completable.Source {
         completeSubscriptions(subs);
     }
 
-    protected void setResult(Object result) {
-    }
-
     /**
      * completes this {@link Completable} normally
      */
-    public void onComplete() {
-        _onComplete(null, null);
+    public void complete() {
+        _complete(null);
     }
 
     /**
      * completes this {@link Completable} exceptionally
      * @param e completion exception
      */
-    protected void onError(Throwable e) {
-        _onComplete(null, e);
+    public void completeExceptionally(Throwable e) {
+        _complete(e);
     }
 
     /**
@@ -104,7 +112,7 @@ public class Completion implements Completable.Source {
     public void join()  throws InterruptedException  {
         synchronized(this) {
             while (!completed) {
-                notifyAll();
+                wait();
             }
         }
         if (completionException != null) {
@@ -168,24 +176,28 @@ public class Completion implements Completable.Source {
     }
 
 
-    protected class CompletionSubscription implements SimpleSubscription {
+    static protected class CompletionSubscription implements SimpleSubscription {
+        private final CompletionI completion;
         Completable.Observer subscriber;
         private boolean cancelled;
 
-        protected CompletionSubscription() {
+        protected CompletionSubscription(CompletionI complention) {
+            this.completion = complention;
         }
 
-        protected CompletionSubscription(Completable.Observer subscriber) {
+        protected CompletionSubscription(CompletionI completion, Completable.Observer subscriber) {
+            this.completion = completion;
             this.subscriber = subscriber;
         }
 
         @Override
         public void cancel() {
-            synchronized(Completion.this) {
+            synchronized(completion) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
+                LinkedList<CompletionSubscription> subscriptions = completion.getSubscriptions();
                 if (subscriptions != null) {
                     subscriptions.remove(this);
                 }
@@ -194,12 +206,13 @@ public class Completion implements Completable.Source {
 
         @Override
         public boolean isCancelled() {
-            synchronized(Completion.this) {
+            synchronized(completion) {
                 return cancelled;
             }
         }
 
         void onComplete() {
+            Throwable completionException = completion.getCompletionException();
             if (completionException == null) {
                 subscriber.onComplete();
             } else {

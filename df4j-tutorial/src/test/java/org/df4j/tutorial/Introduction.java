@@ -19,7 +19,7 @@ import static org.junit.Assert.fail;
 
 /**
  * this is a set of code snippets from simple to complex.
- * To run them, run junit tests
+ * run them as junit tests
  */
 public class Introduction<out> {
     /*================================================================ Utility methods*/
@@ -81,13 +81,13 @@ public class Introduction<out> {
      * So each actor must have conditions to stop execution.
      */
     class HelloWorldActor extends Actor {
-        int maxCount = 10;
+        int count = 3;
 
         @Override
         protected void runAction() throws Throwable {
-            out.println("Hello, world!");
-            if (--maxCount == 0) {
-                onComplete();   // stops actor's execution
+            out.println("Hello, world! " + count);
+            if (--count == 0) {
+                complete();   // stops actor's execution
             }
         }
     }

@@ -30,11 +30,11 @@ public class EchoServer extends AsyncServerSocketChannel {
         allowedConnections.release(maxConnCount);
     }
 
-    public void onComplete() {
+    public void complete() {
         for (EchoProcessor processor: echoProcessors) {
-            processor.onComplete();
+            processor.complete();
         }
-        super.onComplete();
+        super.complete();
     }
 
     @Override
@@ -76,15 +76,15 @@ public class EchoServer extends AsyncServerSocketChannel {
         }
 
         @Override
-        public void onComplete() {
+        public void complete() {
             releaseConnectionPermit();
-            super.onComplete();
+            super.complete();
         }
 
         @Override
-        public void onError(Throwable ex) {
+        public void completeExceptionally(Throwable ex) {
             releaseConnectionPermit();
-            super.onError(ex);
+            super.completeExceptionally(ex);
         }
 
         public void runAction() {
@@ -96,10 +96,10 @@ public class EchoServer extends AsyncServerSocketChannel {
             } else {
                 try {
                     serverConn.close();
-                    onComplete();
+                    complete();
                     LOG.info("EchoProcessor #"+connSerialNum+"completed");
                 } catch (IOException e) {
-                    onError(e);
+                    completeExceptionally(e);
                     LOG.info("EchoProcessor #"+connSerialNum+"completed with error "+e);
                 }
             }

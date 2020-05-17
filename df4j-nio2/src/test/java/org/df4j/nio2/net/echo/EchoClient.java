@@ -84,11 +84,11 @@ class EchoClient extends Actor {
         } else {
             try {
                 assc.close();
-                onComplete();
+                complete();
                 LOG.info(clientName+" finished successfully");
             } catch (IOException e) {
                 LOG.info(clientName+" finished exceptionally ("+e+")");
-                onError(e);
+                completeExceptionally(e);
             }
         }
     }

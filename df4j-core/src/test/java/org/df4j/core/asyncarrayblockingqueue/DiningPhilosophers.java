@@ -239,7 +239,7 @@ public class DiningPhilosophers extends Dataflow {
                 println("Ph no. " + id + ": died at round " + rounds);
                 counter.countDown();
                 DiningPhilosophers.this.leave(this);
-                onComplete();
+                complete();
             }
         }
     }

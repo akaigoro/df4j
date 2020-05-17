@@ -26,7 +26,7 @@ public  class EchoTest {
 
     @After
     public synchronized void deinit() throws InterruptedException, IOException {
-        echoServer.onComplete();
+        echoServer.complete();
     }
 
     public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {
