@@ -48,6 +48,7 @@ Currently Df4j has ports for following protocols:
 2. Scalar messages: this is the protocol similar to that used by java.util.concurrent.CompletableFuture. At most one message or an error is sent.
 3. Unbound message streams, without backpressure. Backpressure can be added later using permit stream and can connect far standing nodes.
 4. Reactive message flow with backpressure, identical to that defined in the package org.reactivestreams and/or class java.util.concurrent.Flow.
+   This allows to connect DF4J actors with RxJava and Reactor objects.
 4. Reversed reactive message flow with backpressure. It is similar to the reactive message stream described above, 
 but messages are sent not from Publisher to Subscribers, but from Subscribers to Publisher, which are named Producers and Consumers, respectively. 
 This protocol is an asynchronous analog to the input part of the interface of java.util.concurrent.BlockingQueue (method put(T)),
@@ -77,7 +78,7 @@ Its simple extension AsyncFunc<T> returns a value of arbitrary reference type T.
 This allows to transform parallel algorithm into asynchronous mechanically, preserving the semantics.
 See the test DiningPhilosophers as an example of such transformation.
 
-5. Hewitt's Actor (e.g. [Akka](https://akka.io/)) is no more than dataflow Actor with single input message flow parameter.
+5. Hewitt's Actor (e.g. [Akka](https://akka.io/)) is no more than a dataflow Actor with single input message flow parameter.
 
 6. Each communication protocol can be implemented in both synchronous and asynchronous forms. 
 Especially useful are nodes which support both synchronous and asynchronous versions.
@@ -94,19 +95,17 @@ See examples and test directories for various custom-made dataflow objects and t
 If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
 
-## Library structure:
+## Module structure:
 
-[df4j-protocols](/df4j-protocols/README.md) - Communication interfaces for df4j.
+[df4j-protocols](/df4j-protocols/README.md) - Communication interfaces for df4j. All other modules depend on it.
 
-[df4j-core](/df4j-core/README.md) - various predefined types of asynchronous nodes and ports
+[df4j-core](/df4j-core/README.md) - The main module. Contains various predefined types of asynchronous nodes and ports.
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
 
-[df4j-reactivestreams](/df4j-reactivestreams) - runs df4j implementation against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
+[df4j-reactivestreamsTCK](/df4j-reactivestreamsTCK) - runs df4j implementation against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
 
----------------
-TODO
- move JsonScanner+ to new module tutorial
+[df4j-tutorial](/df4j-tutorial/README.md) - Simple and advanced usages of dataflow and classic actors.
  
  Version history
 -----------------

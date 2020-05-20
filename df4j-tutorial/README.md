@@ -1,1 +1,1 @@
-Advanced usages of dataflow actors.
+Simple and advanced usages of dataflow and classic actors.
