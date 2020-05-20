@@ -5,7 +5,7 @@ import org.df4j.protocol.ReverseFlow;
 
 /**
  * An active output parameter
- * Has room for single message.
+ * Has room for a single message.
  * Must subscribe to a consumer of type {@link ReverseFlow.Producer} to send message further and unblock this port.
  * @param <T> type of accepted messages.
  */
@@ -22,9 +22,12 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
     }
 
     @Override
-    public void onSubscribe(ReverseFlow.ReverseFlowSubscription subscription) {
+    public synchronized void onSubscribe(ReverseFlow.ReverseFlowSubscription subscription) {
         if (!isCompleted()) {
             this.subscription = subscription;
+            if (value != null) {
+                subscription.request(1);
+            }
         } else if (completionException == null) {
             subscription.onComplete();
         } else {

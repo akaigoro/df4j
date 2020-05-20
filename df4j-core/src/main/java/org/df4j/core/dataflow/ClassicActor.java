@@ -11,7 +11,7 @@ import org.df4j.core.port.OutMessagePort;
  */
 public abstract class ClassicActor<T> extends Actor implements OutMessagePort<T> {
     protected InpFlood<T> inp = new InpFlood<>(this);
-    private volatile MessageAction<T> nextMessageAction;
+    private volatile MessageAction<T> nextMessageAction = this::runAction;
 
     public void onNext(T message) {
         inp.onNext(message);
@@ -30,21 +30,12 @@ public abstract class ClassicActor<T> extends Actor implements OutMessagePort<T>
         if (inp.isCompleted()) {
             complete();
         } else {
-            runAction(inp.remove());
-        }
-    }
-
-    protected void runAction2() throws Throwable {
-        if (inp.isCompleted()) {
-            complete();
-        } else {
-            nextMessageAction.runAction(inp.remove());
+            this.nextMessageAction.runAction(inp.remove());
         }
     }
 
     protected void nextMessageAction(MessageAction<T> messageAction) {
-        nextMessageAction = messageAction;
-        nextAction(this::runAction2);
+        this.nextMessageAction = messageAction;
     }
 
     protected abstract void runAction(T message) throws Throwable;

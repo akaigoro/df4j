@@ -115,7 +115,6 @@ public abstract class Actor extends AsyncProc {
     @Override
     protected void run() {
         try {
-            ActorState lockState = state;
             nextAction.run();
             synchronized (this) {
                 switch (state) {

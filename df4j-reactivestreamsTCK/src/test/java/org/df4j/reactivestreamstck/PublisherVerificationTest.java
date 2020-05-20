@@ -1,6 +1,9 @@
-package org.df4j.adapters.reactivestreams;
+package org.df4j.reactivestreamstck;
 
-import org.df4j.core.activities.PublisherActor;
+import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.port.OutFlow;
+import org.df4j.core.util.Logger;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -24,13 +27,7 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
 
     @Override
     public Publisher<Long> createFailedPublisher() {
-        PublisherActor publisher = new PublisherActor(0){
-            @Override
-            protected void runAction() {
-                out.onError(new RuntimeException());
-                complete();
-            }
-        };
+        MyPublisherActor publisher = new MyPublisherActor();
         publisher.start();
         return publisher.out;
     }
@@ -40,17 +37,59 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
         super.stochastic_spec103_mustSignalOnMethodsSequentially();
     }
 
-    static class LoggingPublisherActor extends PublisherActor implements Publisher<Long> {
+    static class LoggingPublisherActor extends Actor implements Publisher<Long> {
+        protected final Logger logger = new Logger(this);
+        final int delay;
+        public OutFlow<Long> out;
+        public long cnt;
+
+        {
+            setLogLevel(Level.OFF);
+        }
 
         public LoggingPublisherActor(long elements) {
-            super(elements);
+            this(elements, 0);
             setLogLevel(Level.OFF);
+        }
+
+        public LoggingPublisherActor(long cnt, int delay) {
+            this(new Dataflow(), cnt, delay);
+        }
+
+        public LoggingPublisherActor(Dataflow parent, long cnt, int delay) {
+            this(parent, cnt, delay, OutFlow.DEFAULT_CAPACITY);
+        }
+
+        public LoggingPublisherActor(Dataflow parent, long cnt, int delay, int capacity) {
+            super(parent);
+            out = new OutFlow<>(this, capacity);
+            this.cnt = cnt;
+            this.delay = delay;
+            logger.info("PublisherActor: cnt = " + cnt);
         }
 
         @Override
         public void subscribe(Subscriber<? super Long> s) {
             logger.info("PublisherActor.subscribe:");
             out.subscribe(new ProxySubscriber(s));
+        }
+
+        public void setLogLevel(Level off) {
+            logger.setLevel(off);
+        }
+
+        @Override
+        protected void runAction() throws Throwable {
+            if (cnt > 0) {
+                logger.info("PublisherActor.onNext(" + cnt+")");
+                out.onNext(cnt);
+                cnt--;
+                Thread.sleep(delay);
+            } else {
+                logger.info("PublisherActor.onComplete");
+                out.onComplete();
+                complete();
+            }
         }
 
         private class ProxySubscription implements Subscription {
@@ -105,6 +144,16 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
                 logger.info("        Subscriber.onNext:"+t);
                 sub.onNext(t);
             }
+        }
+    }
+
+    private static class MyPublisherActor extends Actor {
+        public OutFlow<Long> out = new OutFlow<>(this);
+
+        @Override
+        protected void runAction() {
+            out.onError(new RuntimeException());
+            complete();
         }
     }
 }

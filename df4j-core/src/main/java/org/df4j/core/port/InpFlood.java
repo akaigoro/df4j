@@ -54,17 +54,7 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
     public T remove() {
         synchronized(parent) {
             T res = tokens.remove();
-            if (tokens.isEmpty()) {
-                block();
-            }
-            return res;
-        }
-    }
-
-    public boolean remove(T token) {
-        synchronized(parent) {
-            boolean res = tokens.remove(token);
-            if (tokens.isEmpty()) {
+            if (tokens.isEmpty() && !completed) {
                 block();
             }
             return res;

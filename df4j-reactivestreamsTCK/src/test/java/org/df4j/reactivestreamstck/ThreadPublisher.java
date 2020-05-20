@@ -1,4 +1,4 @@
-package org.reactivestreams.example.unicast;
+package org.df4j.reactivestreamstck;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;

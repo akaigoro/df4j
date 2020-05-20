@@ -1,8 +1,6 @@
-package org.df4j.adapters.reactivestreams;
+package org.df4j.reactivestreamstck;
 
-import org.df4j.core.activities.SubscriberActor;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class SubscriberBlackboxVerificationTest extends org.reactivestreams.tck.SubscriberBlackboxVerification {

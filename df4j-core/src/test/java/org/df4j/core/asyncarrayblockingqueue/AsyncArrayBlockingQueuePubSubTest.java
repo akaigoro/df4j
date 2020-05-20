@@ -17,9 +17,8 @@ public class AsyncArrayBlockingQueuePubSubTest {
         subscriber.start();
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         queue.subscribe(subscriber.inp);
-        queue.subscribe(producer.out);
-        queue.complete();
-        boolean fin = graph.blockingAwait(400);
+        queue.feedFrom(producer.out);
+        boolean fin = graph.blockingAwait(1000);
         Assert.assertTrue(fin);
     }
 

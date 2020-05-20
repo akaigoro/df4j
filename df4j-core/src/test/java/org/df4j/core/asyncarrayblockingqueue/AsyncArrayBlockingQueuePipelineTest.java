@@ -157,7 +157,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
         public AsyncProcessor(int n, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) {
             this.n = n;
             inp.subscribe(this.inp);
-            out.subscribe(this.out);
+            out.feedFrom(this.out);
         }
 
         @Override

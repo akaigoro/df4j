@@ -23,6 +23,21 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
     LinkedList<Completion.CompletionSubscription> getSubscriptions();
     Throwable getCompletionException();
 
+    /**
+     * 	complete(T value)
+     * If not already completed, sets the value returned by get() and related methods to the given value.
+     * @param result the value returned by get()
+     */
+    default void complete(R result) {
+        synchronized (this) {
+            if (isCompleted()) {
+                return;
+            }
+            setResult(result);
+            complete();
+        }
+    }
+
     @Override
     default void subscribe(Scalar.Observer<? super R> subscriber) {
         synchronized(this) {

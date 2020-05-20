@@ -65,16 +65,22 @@ public class ReverseFlow {
      */
     public interface Consumer<T> {
 
-        /**
+        /** subscribes producer to be notified  when Consumer is able to accept tokens
          * @param producer the {@link Producer} which offers messages for this {@link Consumer}
          */
-        void subscribe(Producer<T> producer);
+        void feedFrom(Producer<T> producer);
     }
 
-    public interface ReverseFlowSubscription extends FlowSubscription {
+    public interface ReverseFlowSubscription<T> extends FlowSubscription {
+        /**
+         *
+         * @param token
+         * @return true if token accepted
+         */
+        boolean offer(T token);
+
         void onComplete();
 
         void onError(Throwable e);
-
     }
 }

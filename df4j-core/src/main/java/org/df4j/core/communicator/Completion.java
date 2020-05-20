@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Completes successfully or with failure, without emitting any value.
@@ -102,6 +103,9 @@ public class Completion implements CompletionI {
      * @param e completion exception
      */
     public void completeExceptionally(Throwable e) {
+        if (e == null) {
+            throw new IllegalArgumentException();
+        }
         _complete(e);
     }
 
@@ -129,26 +133,25 @@ public class Completion implements CompletionI {
     public synchronized boolean blockingAwait(long timeoutMillis) {
         long targetTime = System.currentTimeMillis()+timeoutMillis;
         try {
-            while (!completed && timeoutMillis > 0) {
+            for (;;) {
+                if (completed) {
+                    if (completionException == null) {
+                        return true;
+                    } else {
+                        throw new CompletionException(completionException);
+                    }
+                }
+                if (timeoutMillis <= 0) {
+                    return false;
+                }
                 wait(timeoutMillis);
                 timeoutMillis = targetTime - System.currentTimeMillis();
             }
-            if (completed && completionException != null) {
-                throw new CompletionException(completionException);
-            }
-            return completed;
         } catch (InterruptedException e) {
             throw new CompletionException(e);
         }
     }
 
-    /**
-     * waits this {@link Completable} to complete until timeout
-     * @param timeout timeout in units
-     * @param unit time unit
-     * @return true if completed;
-     *         false if timout reached
-     */
     public synchronized boolean blockingAwait(long timeout, TimeUnit unit) {
         long timeoutMillis = unit.toMillis(timeout);
         return blockingAwait(timeoutMillis);
@@ -174,7 +177,6 @@ public class Completion implements CompletionI {
         }
         return sb.toString();
     }
-
 
     static protected class CompletionSubscription implements SimpleSubscription {
         private final CompletionI completion;

@@ -54,10 +54,12 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     @Override
-    public void subscribe(ReverseFlow.Producer<T> producer) {
+    public void feedFrom(ReverseFlow.Producer<T> producer) {
         ProducerSubscription subscription = new ProducerSubscription(producer);
-        passiveProducers.add(subscription);
-        producer.onSubscribe(subscription);
+        synchronized(parent) {
+            passiveProducers.add(subscription);
+            producer.onSubscribe(subscription);
+        }
     }
 
     public boolean offer(T token) {
@@ -226,7 +228,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         return tokens.size();
     }
 
-    protected class ProducerSubscription extends LinkImpl implements ReverseFlow.ReverseFlowSubscription {
+    protected class ProducerSubscription extends LinkImpl implements ReverseFlow.ReverseFlowSubscription<T> {
         protected final ReverseFlow.Producer<T> subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
@@ -259,35 +261,42 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 if (completed) {
                     return;
                 }
+                boolean wasActive = remainedRequests > 0;
                 remainedRequests += n;
-                if (remainedRequests > n) {
+                if (wasActive) {
                     return; //  is active already
                 }
-                while (!_tokensFull() && remainedRequests > 0) {
-                    if (subscriber.isCompleted()) {
-                        _onComplete(subscriber.getCompletionException());
-                    } else {
-                        T token = subscriber.remove();
-                        if (token == null) {
-                            // wrong subscriber
-                            subscriber.onError(new IllegalArgumentException());
-                            _cancel();
-                            return;
-                        }
-                        tokens.add(token);
-                        remainedRequests--;
-                    }
-                }
+                if (transfer()) return;
                 if (remainedRequests > 0) {
                     passiveProducers.remove(this);
                     activeProducers.add(this);
                 }
+                unblock();
             }
-            unblock();
         }
 
-        public Link getNext() {
-            return super.getNext();
+        private boolean transfer() {
+            while (!_tokensFull() && remainedRequests > 0) {
+                if (subscriber.isCompleted()) {
+                    _onComplete(subscriber.getCompletionException());
+                } else {
+                    T token = subscriber.remove();
+                    if (token == null) {
+                        // wrong subscriber
+                        subscriber.onError(new IllegalArgumentException());
+                        _cancel();
+                        return true;
+                    }
+                    tokens.add(token);
+                    remainedRequests--;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean offer(T token) {
+            return InpChannel.this.offer(token);
         }
 
         private void _onComplete(Throwable throwable) {

@@ -44,8 +44,8 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
     }
 
     @Override
-    public void subscribe(ReverseFlow.Producer<T> producer) {
-        inp.subscribe(producer);
+    public void feedFrom(ReverseFlow.Producer<T> producer) {
+        inp.feedFrom(producer);
     }
 
     @Override

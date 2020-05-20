@@ -1,4 +1,4 @@
-package org.df4j.core.activities;
+package org.df4j.reactivestreamstck;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;

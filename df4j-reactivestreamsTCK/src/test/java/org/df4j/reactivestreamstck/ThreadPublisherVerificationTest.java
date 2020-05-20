@@ -1,8 +1,7 @@
-package org.df4j.adapters.reactivestreams;
+package org.df4j.reactivestreamstck;
 
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.example.unicast.ThreadPublisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Ignore;

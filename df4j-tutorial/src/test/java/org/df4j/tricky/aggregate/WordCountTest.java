@@ -16,33 +16,46 @@ package org.df4j.tricky.aggregate;
  * limitations under the License.
  */
 
-import javafx.util.Pair;
+import org.df4j.core.util.Pair;
 import org.junit.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public final class WordCountTest {
   private static final Path path = Paths.get("./src/test/resources/input.txt");
 
   @Test
+  public void test1() throws Exception {
+    ReduceByKey<String, Integer> reduce = new ReduceByKey<>((x, y) -> (int) x + (int) y);
+    reduce.reduceByKey(new Pair<>("word", 1));
+    for (ReduceByKey<String, Integer>.ReducingActor a: reduce.actors.values()) {
+      a.onComplete();
+      Pair<String, Integer> x = a.get(100, TimeUnit.SECONDS);
+      System.out.println(x);
+    }
+  }
+
+  @Test
   public void mainTest() throws Exception {
     ReduceByKey<String, Integer> reduce = new ReduceByKey<>((x, y) -> (int) x + (int) y);
+    int wordcount=0;
     try (Stream<String> stream = Files.lines(path)) {
       stream.map(line -> line.split(" "))
               .flatMap(Arrays::stream)
               .forEach((word) -> reduce.reduceByKey(new Pair<>(word, 1)));
     }
-    reduce.onComplete(); // complete all actors
-    reduce.actors.values().forEach((a) -> {
-      try {
-        Pair<String, Integer> x = a.get();
-        System.out.println(x);
-      } catch (InterruptedException e) {
-      }
-    });
+//    reduce.onComplete(); // complete all actors
+    for (ReduceByKey<String, Integer>.ReducingActor a: reduce.actors.values()) {
+      a.onComplete();
+      Pair<String, Integer> x = a.get(1, TimeUnit.SECONDS);
+      System.out.println(x);
+      wordcount++;
+    }
+    System.out.println("wordcount="+wordcount);
   }
 }

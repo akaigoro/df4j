@@ -16,9 +16,9 @@ package org.df4j.tricky.aggregate;
  * limitations under the License.
  */
 
-import javafx.util.Pair;
 import org.df4j.core.communicator.ScalarResultTrait;
 import org.df4j.core.dataflow.ClassicActor;
+import org.df4j.core.util.Pair;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
@@ -76,9 +76,12 @@ public final class ReduceByKey<K, V> {
     }
 
     @Override
-    public void complete() {
-      super.complete();
+    public synchronized void complete() {
+      if (isCompleted()) {
+        return;
+      }
       setResult(new Pair<>(key, state));
+      super.complete();
     }
   }
 }

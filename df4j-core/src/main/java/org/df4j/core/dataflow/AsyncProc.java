@@ -181,7 +181,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * This is clear analogue to the firing of a Petri Net transition.
      */
     public static class Port {
-        protected boolean ready = false;
+        protected boolean ready;
         protected AsyncProc parent;
         protected final int portNum;
 
