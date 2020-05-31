@@ -97,11 +97,27 @@ or send email to alexei.kaigorodov(at)gmail.com.
 
 ## Module structure:
 
-[df4j-protocols](/df4j-protocols/README.md) - Communication interfaces for df4j. All other modules depend on it.
-
+[df4j-protocols](/df4j-protocols/README.md) - Communication interfaces for df4j. All other modules depend on it. 
+This module can be used independently of others. To use it, add maven dependency
+		<dependency>
+			<groupId>org.df4j</groupId>
+			<artifactId>df4j-protocols</artifactId>
+			<version>8.3</version>
+		</dependency>
+		
 [df4j-core](/df4j-core/README.md) - The main module. Contains various predefined types of asynchronous nodes and ports.
+		<dependency>
+			<groupId>org.df4j</groupId>
+			<artifactId>df4j-core</artifactId>
+			<version>8.3</version>
+		</dependency>
 
 [df4j-nio2](/df4j-nio2/README.md) - wrappers for NIO2 classes, compatible with df4j interfaces
+		<dependency>
+			<groupId>org.df4j</groupId>
+			<artifactId>df4j-nio2</artifactId>
+			<version>8.3</version>
+		</dependency>
 
 [df4j-reactivestreamsTCK](/df4j-reactivestreamsTCK) - runs df4j implementation against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
 
