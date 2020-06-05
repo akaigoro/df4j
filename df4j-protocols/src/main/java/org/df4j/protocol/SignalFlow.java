@@ -31,16 +31,19 @@ public class SignalFlow {
     public interface Subscriber {
         void onSubscribe(Subscription subscription);
 
-        /**
-         * analogue of {@link Flow.Subscriber#onNext()}
+        /** Increases the number of permits by 1.
+         * Analogue of {@link Flow.Subscriber#onNext(Object)} ()} and {@link java.util.concurrent.Semaphore#release()}.
          */
-        void release();
-
-        default void release(long n) {
-            for (long k=0; k<n; k++) {
-                release();
-            }
+        default void release() {
+            release(1);
         }
+
+        /** Increases the number of permits.
+         * Analogue of {@link Flow.Subscriber#onNext(Object)} ()} and {@link java.util.concurrent.Semaphore#release(int)}.
+         *
+         * @param n the number of additional permits.
+         */
+        void release(long n);
     }
 
 }

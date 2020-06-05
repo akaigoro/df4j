@@ -5,3 +5,14 @@ public interface OutMessagePort<T> {
     void onComplete();
     void onError(Throwable ex);
 }
+/*
+onSuccess
+ */
+/*
+	complete(T value)
+	completeExceptionally(Throwable ex)
+ */
+/*
+Throws exception	Special value Insert
+	add(e)
+ */

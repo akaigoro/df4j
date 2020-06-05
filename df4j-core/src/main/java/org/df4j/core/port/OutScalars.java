@@ -6,8 +6,6 @@ import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Output port for multiple scalar values.
@@ -16,14 +14,11 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <T> the type of completion value
  */
-public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, Scalar.Source<T> {
-    private final Lock plock = new ReentrantLock();
+public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>, Scalar.Source<T> {
     private  Queue<ScalarSubscription> subscriptions = new LinkedList<>();
-    private Throwable completionException;
-    protected volatile boolean completed;
 
     public OutScalars(AsyncProc parent) {
-        parent.super(true);
+        super(parent);
     }
 
     @Override
@@ -31,36 +26,29 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
         ScalarSubscription subscription = new ScalarSubscription(subscriber);
         subscriber.onSubscribe(subscription);
         if (completed) {
-            subscription.onError(completionException);
+            subscription.onComplete(completionException);
         } else {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 subscriptions.add(subscription);
                 unblock();
-            } finally {
-                plock.unlock();
             }
         }
     }
 
     public void onNext(T message) {
         ScalarSubscription subscription;
-        plock.lock();
-        try {
+        synchronized(parent) {
             subscription = subscriptions.remove();
             if (subscriptions.size() == 0) {
                 block();
             }
-        } finally {
-            plock.unlock();
         }
         subscription.onNext(message);
     }
 
-    public void onError(Throwable t) {
+    protected void _onComplete(Throwable t) {
         Queue<ScalarSubscription> subscriptions;
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (completed) {
                 return;
             }
@@ -68,24 +56,17 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
             completionException = t;
             subscriptions = this.subscriptions;
             this.subscriptions = null;
-        } finally {
-            plock.unlock();
         }
         for (;;) {
             ScalarSubscription subscription = subscriptions.poll();
             if (subscription == null) {
                 break;
             }
-            subscription.onError(t);
+            subscription.onComplete(t);
         }
     }
 
-    public void onComplete() {
-        onError(null);
-    }
-
     class ScalarSubscription implements SimpleSubscription {
-        private final Lock slock = new ReentrantLock();
         private Scalar.Observer<? super T> subscriber;
         private boolean cancelled;
 
@@ -95,21 +76,13 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
 
         @Override
         public void cancel() {
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
                 subscriber = null;
-                plock.lock();
-                try {
-                    subscriptions.remove(this);
-                } finally {
-                    plock.unlock();
-                }
-            } finally {
-                slock.unlock();
+                subscriptions.remove(this);
             }
         }
 
@@ -120,34 +93,40 @@ public class OutScalars<T> extends AsyncProc.Port implements OutMessagePort<T>, 
 
         public void onNext(T message) {
             Scalar.Observer<? super T> subs;
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
                 subs = subscriber;
                 subscriber = null;
-            } finally {
-                slock.unlock();
             }
             subs.onSuccess(message);
         }
 
-        void onError(Throwable completionException) {
+        private Scalar.Observer<? super T> removeSubscriber() {
             Scalar.Observer<? super T> subs;
-            slock.lock();
-            try {
+            synchronized(parent) {
                 if (cancelled) {
-                    return;
+                    return null;
                 }
                 cancelled = true;
                 subs = subscriber;
                 subscriber = null;
-            } finally {
-                slock.unlock();
             }
-            subs.onError(completionException);
+            return subs;
+        }
+
+        void onComplete(Throwable completionException) {
+            Scalar.Observer<? super T> subscriber = removeSubscriber();
+            if (subscriber == null) {
+                return;
+            }
+            if (completionException == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(completionException);
+            }
         }
     }
 }

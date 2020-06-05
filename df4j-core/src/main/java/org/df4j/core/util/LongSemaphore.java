@@ -68,7 +68,7 @@ public class LongSemaphore {
      * disabled for thread scheduling purposes and lies dormant until
      * one of two things happens:
      * <ul>
-     * <li>Some other thread invokes one of the {@link #release() release}
+     * <li>Some other thread invokes one of the {@link #release(long) release}
      * methods for this semaphore, the current thread is next to be assigned
      * permits and the number of available permits satisfies this request; or
      * <li>Some other thread {@linkplain Thread#interrupt interrupts}
@@ -85,7 +85,7 @@ public class LongSemaphore {
      * interrupted status is cleared.
      * Any permits that were to be assigned to this thread are instead
      * assigned to other threads trying to acquire permits, as if
-     * permits had been made available by a call to {@link #release()}.
+     * permits had been made available by a call to {@link #release(long)}.
      *
      * @param permits the number of permits to acquire
      * @throws InterruptedException if the current thread is interrupted

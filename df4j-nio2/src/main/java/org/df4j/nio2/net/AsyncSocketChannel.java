@@ -55,21 +55,13 @@ public class AsyncSocketChannel {
         this.name = name;
     }
 
-    /** disallows subsequent posts of requests; already posted requests
-     * would be processed.
+    /**
+     *
+     * @throws IOException
+     *          If an I/O error occurs
      */
-    public synchronized void close() {
-        AsynchronousSocketChannel locChannel;
-        synchronized (this) {
-            locChannel = channel;
-            channel=null;
-        }
-    	if (locChannel!=null) {
-            try {
-                locChannel.close();
-            } catch (IOException e) {
-            }
-    	}
+    public synchronized void close() throws IOException {
+        channel.close();
     }
 
     public synchronized boolean isClosed() {
@@ -116,14 +108,17 @@ public class AsyncSocketChannel {
             if (input.isCompleted()) {
                 output.onError(input.getCompletionException());
                 return;
+            } else if (channel == null) {
+                output.onComplete();
+                return;
             }
-            ByteBuffer buffer = input.removeAndRequest();
+            ByteBuffer buffer = input.remove();
+            suspend(); // wait CompletionHandler to invoke resume()
             if (timeout > 0) {
                 doIO(buffer, timeout);
             } else {
                 doIO(buffer);
             }
-            suspend(); // wait CompletionHandler to invoke resume()
         }
 
         // ------------- CompletionHandler backend
@@ -133,9 +128,7 @@ public class AsyncSocketChannel {
   //          LOG.info("conn "+ name+": "+io+" completed "+result);
             if (result==-1) {
                 output.onComplete();
-                close();
             } else {
-                buffer.flip();
                 output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
@@ -146,8 +139,7 @@ public class AsyncSocketChannel {
         public void failed(Throwable exc, ByteBuffer attach) {
  //           LOG.info("conn "+ name+": "+io+" failed "+exc);
             if (exc instanceof AsynchronousCloseException) {
-                close();
-                this.onComplete();
+                this.complete();
             } else {
                 output.onError(exc);
             }
@@ -166,6 +158,7 @@ public class AsyncSocketChannel {
         }
 
         protected void doIO(ByteBuffer buffer) {
+            buffer.clear();
             channel.read(buffer, buffer, this);
         }
 

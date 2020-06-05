@@ -10,47 +10,28 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
-import org.df4j.core.util.linked.Link;
+import org.df4j.core.util.linked.LinkImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.*;
 
-public abstract class Node<T> extends Completion implements Link<T> {
-    private Link<T> prev = this;
-    private Link<T> next = this;
+public abstract class Node<T extends Node<T>> extends Completion implements Activity {
+    public final long seqNum;
+    NodeLink nodeLink = new NodeLink();
     private final Dataflow parent;
     private ExecutorService executor;
     private Timer timer;
 
     protected Node() {
         this.parent = null;
+        seqNum = -1;
     }
 
     protected Node(Dataflow parent) {
         this.parent = parent;
-        parent.enter(this);
-    }
-
-    @Override
-    public Link<T> getNext() {
-        return next;
-    }
-
-    @Override
-    public void setNext(Link<T> next) {
-        this.next = next;
-    }
-
-    @Override
-    public Link<T> getPrev() {
-        return prev;
-    }
-
-    @Override
-    public void setPrev(Link<T> prev) {
-        this.prev = prev;
+        seqNum = parent.enter(this);
     }
 
     public Dataflow getParent() {
@@ -64,11 +45,8 @@ public abstract class Node<T> extends Completion implements Link<T> {
     }
 
     public void setExecutor(ExecutorService executor) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             this.executor = executor;
-        } finally {
-            bblock.unlock();
         }
     }
 
@@ -109,8 +87,7 @@ public abstract class Node<T> extends Completion implements Link<T> {
     }
 
     public ExecutorService getExecutor() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (executor == null) {
                 if (parent != null) {
                     executor = parent.getExecutor();
@@ -124,23 +101,17 @@ public abstract class Node<T> extends Completion implements Link<T> {
                 }
             }
             return executor;
-        } finally {
-            bblock.unlock();
         }
     }
 
     public void setTimer(Timer timer) {
-        bblock.lock();
-        try {
+        synchronized(this) {
             this.timer = timer;
-        } finally {
-            bblock.unlock();
         }
     }
 
     public Timer getTimer() {
-        bblock.lock();
-        try {
+        synchronized(this) {
             if (timer != null) {
                 return timer;
             } else if (parent != null) {
@@ -148,23 +119,21 @@ public abstract class Node<T> extends Completion implements Link<T> {
             } else {
                 return timer = getSingletonTimer();
             }
-        } finally {
-            bblock.unlock();
         }
     }
 
     @Override
-    public void onComplete() {
-        super.onComplete();
+    public void complete() {
+        super.complete();
         if (parent != null) {
             parent.leave(this);
         }
     }
 
-    protected void onError(Throwable t) {
-        super.onError(t);
+    public void completeExceptionally(Throwable t) {
+        super.completeExceptionally(t);
         if (parent != null) {
-            parent.onError(t);
+            parent.completeExceptionally(t);
         }
     }
 
@@ -182,5 +151,22 @@ public abstract class Node<T> extends Completion implements Link<T> {
             }
         }
         return res;
+    }
+
+    @Override
+    public String toString() {
+        return "(#"+seqNum+')'+super.toString();
+    }
+
+    class NodeLink extends LinkImpl {
+
+        public T getItem() {
+            return (T) Node.this;
+        }
+
+        @Override
+        public String toString() {
+            return getItem().toString();
+        }
     }
 }

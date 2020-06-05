@@ -10,11 +10,11 @@ public class ProdConsTest {
     public void testProdCons(int cnt, int delay1, int delay2) throws InterruptedException {
         ProducerActor prod = new ProducerActor(cnt, delay1);
         ConsumerActor cons = new ConsumerActor(delay2);
-        cons.inp.subscribe(prod.out);
+        cons.inp.feedFrom(prod.out);
         prod.start();
         cons.start();
-        boolean fin = cons.blockingAwait(2000);
-        Assert.assertTrue(fin);
+        boolean fin = cons.blockingAwait(Math.max(delay1, delay2)*cnt+100);
+        Assert.assertTrue(cons.isCompleted());
     }
 
     @Test

@@ -17,7 +17,6 @@ import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.CurrentThreadExecutor;
-import org.df4j.core.util.Utils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -90,7 +89,7 @@ public class AsyncFileChannelTest {
 
         @Override
         protected void runAction() throws Throwable {
-            ByteBuffer buf = emptyBuffers.removeAndRequest();
+            ByteBuffer buf = emptyBuffers.remove();
             while (buf.hasRemaining()) {
                 buf.put(nextByte());
                 byteNumber--;
@@ -102,7 +101,7 @@ public class AsyncFileChannelTest {
             filledBuffers.onNext(buf);
             if (byteNumber == 0) {
                 filledBuffers.onComplete();
-                onComplete();
+                complete();
             }
         }
     }
@@ -126,11 +125,11 @@ public class AsyncFileChannelTest {
         @Override
         protected void runAction() throws Throwable {
             if (filledBuffers.isCompleted()) {
-                onComplete();
+                complete();
                 emptyBuffers.onComplete();
                 return;
             }
-            ByteBuffer buf = filledBuffers.removeAndRequest();
+            ByteBuffer buf = filledBuffers.remove();
             while (buf.hasRemaining()) {
                 byte nextByte = buf.get();
 //                Assert.assertEquals(nextByte(), nextByte);

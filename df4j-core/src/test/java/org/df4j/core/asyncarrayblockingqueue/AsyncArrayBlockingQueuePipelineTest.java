@@ -72,7 +72,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
             activities[k].start();
         }
         for (int k = 0; k < N; k++) {
-            queue1.put(new Integer(k));
+            queue1.add(new Integer(k));
         }
         boolean[] result = new boolean[N];
         int failCount = 0;
@@ -143,9 +143,9 @@ public class AsyncArrayBlockingQueuePipelineTest {
                 }
             }
             if (cause == null) {
-                out.onComplete();
+                out.complete();
             } else {
-                out.onError(cause);
+                out.completeExceptionally(cause);
             }
         }
     }
@@ -157,14 +157,14 @@ public class AsyncArrayBlockingQueuePipelineTest {
         public AsyncProcessor(int n, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) {
             this.n = n;
             inp.subscribe(this.inp);
-            out.subscribe(this.out);
+            out.feedFrom(this.out);
         }
 
         @Override
         public void runAction() {
             Throwable cause;
             try {
-                Integer in = inp.removeAndRequest();
+                Integer in = inp.remove();
                 logger.info("AsyncProcessor "+n+": got "+in);
                 Thread.sleep(getDelay());
                 out.onNext(in);
@@ -175,7 +175,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
                 cause = e.getCause();
             }
             out.onError(cause);
-            onError(cause);
+            completeExceptionally(cause);
         }
     }
 }

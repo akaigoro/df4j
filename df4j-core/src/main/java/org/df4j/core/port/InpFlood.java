@@ -14,54 +14,32 @@ import java.util.Queue;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, InpMessagePort<T> {
+public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>, InpMessagePort<T> {
     /** TODO optimize for single token */
     private  final Queue<T> tokens = new LinkedList<T>();
-    private Throwable completionException;
-    protected volatile boolean completed;
     protected SimpleSubscription subscription;
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
-     * @param active initial port state
      */
-    public InpFlood(AsyncProc parent, boolean active) {
-        parent.super(false, active);
-    }
-
     public InpFlood(AsyncProc parent) {
-        parent.super(false);
+        super(parent);
     }
 
     public boolean isCompleted() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completed && tokens.isEmpty();
-        } finally {
-            plock.unlock();
         }
     }
 
-    public Throwable getCompletionException() {
-        return completionException;
-    }
-
-    public boolean isCompletedExceptionslly() {
-        return completionException != null;
-    }
-
     public T current() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return tokens.peek();
-        } finally {
-            plock.unlock();
         }
     }
 
     public  T poll() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (!isReady()) {
                 return null;
             }
@@ -70,34 +48,16 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
                 block();
             }
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
     public T remove() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             T res = tokens.remove();
-            if (tokens.isEmpty()) {
+            if (tokens.isEmpty() && !completed) {
                 block();
             }
             return res;
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    public boolean remove(T token) {
-        plock.lock();
-        try {
-            boolean res = tokens.remove(token);
-            if (tokens.isEmpty()) {
-                block();
-            }
-            return res;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -111,8 +71,7 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
 
     @Override
     public void onNext(T message) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (message == null) {
                 throw new IllegalArgumentException();
             }
@@ -121,33 +80,6 @@ public class InpFlood<T> extends AsyncProc.Port implements Flood.Subscriber<T>, 
             }
             tokens.add(message);
             unblock();
-        } finally {
-            plock.unlock();
         }
-    }
-
-    private void onComplete(Throwable throwable) {
-        plock.lock();
-        try {
-            if (completed) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            subscription = null;
-            unblock();
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    @Override
-    public void onError(Throwable throwable) {
-        onComplete(throwable);
-    }
-
-    @Override
-    public void onComplete() {
-        onComplete(null);
     }
 }

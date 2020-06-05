@@ -8,7 +8,7 @@ import org.junit.Assert;
 import java.util.concurrent.CompletionException;
 
 public class ConsumerThread extends Thread implements ActivityThread {
-    protected final Logger logger = new Logger(this);
+    public final Logger logger = new Logger(this);
     AsyncArrayBlockingQueue<Long> queue;
     final int delay;
     Long in = null;
@@ -20,25 +20,24 @@ public class ConsumerThread extends Thread implements ActivityThread {
 
     @Override
     public void run() {
-        logger.info(" SubscriberT started");
+        logger.info(" Consumer thread started");
         Throwable cause;
-        for (;;) {
-            try {
+        try {
+            for (;;) {
+                logger.info(" Consumer thread: take()");
                 Long in = queue.take();
-                logger.info(" got: " + in);
+                logger.info(" Consumer thread got: " + in);
                 if (this.in != null) {
                     Assert.assertEquals(this.in.intValue() - 1, in.intValue());
                 }
                 this.in = in;
                 Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                cause = e;
-                break;
-            } catch (CompletionException e) {
-                cause = e.getCause();
-                break;
             }
+        } catch (InterruptedException e) {
+            cause = e;
+        } catch (CompletionException e) {
+            cause = e.getCause();
         }
-        logger.info(" completed with: " + cause);
+        logger.info(" Consumer thread completed with: " + cause);
     }
 }

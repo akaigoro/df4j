@@ -10,138 +10,113 @@
 package org.df4j.core.dataflow;
 
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.concurrent.Executor;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import static org.df4j.core.dataflow.ActorState.*;
 
 /**
- * {@link AsyncProc} is the most primitive component of {@link Dataflow} graph.
- *  It plays the same role as basic blocks in a flow chart
- *  (see <a href="https://en.wikipedia.org/wiki/Flowchart">https://en.wikipedia.org/wiki/Flowchart</a>).
- * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.
- * This embedded port is implicitly switched off when this {@link AsyncProc} is fired,
- * so the method {@link AsyncProc#start()} must be called again explicitly if next firings are required.
- * Unlike basic blocks in traditional flow charts, different {@link AsyncProc}s in the same {@link Dataflow} graph can run in parallel.
- *
- * {@link AsyncProc} can contain additional input and output ports
- * to exchange messages and signals with ports of other {@link AsyncProc}s in consistent manner.
- * {@link AsyncProc} is submitted for execution to its executor when all ports become ready, including the embedded control port.
+ * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
+ * Used in this basic form, it allows to construct asynchronous procedure calls.
+ * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.\
+ * As a {@link Node}, it is descendand of {@link org.df4j.core.communicator.Completion} class, which allows to monitor execution
+ * of this asynchonous procedure both with synchronous and asynchronous interfaces.
+ * {@link AsyncProc} usually contains contain additional input and output ports to exchange messages and signals with
+ * other {@link AsyncProc}s in consistent manner.
+ * The lifecycle of any  {@link AsyncProc} is as follows:
+ * {@link ActorState#Created} &ge; {@link ActorState#Blocked} &ge; {@link ActorState#Running} &ge; {@link ActorState#Completed}.
+ * It moves to {@link ActorState#Blocked} as a result of invocation of {@link AsyncProc#start()} method.
+ * It becomes  {@link ActorState#Running} and is submitted for execution to its executor when all ports become ready.
+ * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
  */
-public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
-    protected ActorState state = ActorState.Created;
+public abstract class AsyncProc extends Node<AsyncProc> {
+    public static final int MAX_PORT_NUM = 31;
+    private static final boolean checkingMode = true; // todo false
+
+    protected ActorState state = Created;
 
     /** is not encountered as a parent's child */
     private boolean daemon;
     /**
      * blocked initially, until {@link #start} called.
      */
-    private ArrayList<ControlPort> ports = new ArrayList<>();
-    private int blockingPortCount = 0;
-    protected ControlPort controlport = new ControlPort();
+    private ArrayList<Port> ports = new ArrayList<>(4);
+    private int blockedPortsScale = 0;
+    private ControlPort controlport = new ControlPort(this);
 
     protected AsyncProc(Dataflow dataflow) {
         super(dataflow);
-        if (dataflow == null) {
-            throw new IllegalArgumentException();
-        }
     }
 
     public AsyncProc() {
         this(new Dataflow());
     }
 
-    @Override
-    public AsyncProc getItem() {
-        return this;
-    }
-
     public ActorState getState() {
         return state;
     }
 
-    public void setDaemon(boolean daemon) {
-        bblock.lock();
-        try {
-            if (this.daemon) {
-                return;
-            }
-            this.daemon = daemon;
-            leaveParent();
-        } finally {
-            bblock.unlock();
+    public synchronized void setDaemon(boolean daemon) {
+        if (this.daemon) {
+            return;
         }
+        this.daemon = daemon;
+        leaveParent();
     }
 
-    public boolean isDaemon() {
-        bblock.lock();
-        try {
-            return daemon;
-        } finally {
-            bblock.unlock();
-        }
+    private void setBlocked(int portNum) {
+        blockedPortsScale |= (1<<portNum);
+    }
+
+    protected int setUnBlocked(int portNum) {
+        return blockedPortsScale &= ~(1<<portNum);
+    }
+
+    protected boolean isBlocked(int portNum) {
+        return (blockedPortsScale & (1<<portNum)) != 0;
+    }
+
+    public synchronized boolean isDaemon() {
+        return daemon;
     }
 
     /**
-     * passes a control token to this {@link AsyncProc}.
+     * moves this {@link AsyncProc} from {@link ActorState#Created} state to {@link ActorState#Running}
+     * (or {@link ActorState#Suspended}, if was suspended in constructor).
+     *
+     * In other words, passes the control token to this {@link AsyncProc}.
      * This token is consumed when this block is submitted to an executor.
+     * Only the first call works, subsequent calls are ignored.
      */
-    public void start() {
-        bblock.lock();
-        try {
-            if (state != ActorState.Created) {
-                return;
-            }
-            if (_controlportUnblock()) {
-                return;
-            }
-        } finally {
-            bblock.unlock();
+    public synchronized void start() {
+        if (state != Created) {
+            return;
         }
-        fire();
-    }
-
-    protected boolean _controlportUnblock() {
-        if (controlport._unblock()) {
-            state = ActorState.Waiting;
-            return true;
-        } else {
-            state = ActorState.Running;
-            return false;
-        }
+        _controlportUnblock();
     }
 
     /**
      * finishes parent activity normally.
      */
-    public void onComplete() {
-        bblock.lock();
-        try {
+    public void complete() {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
-            state = ActorState.Completed;
-        } finally {
-            bblock.unlock();
+            state = Completed;
         }
-        super.onComplete();
+        super.complete();
     }
 
     /**
      * finishes parent activity exceptionally.
      * @param ex the exception
      */
-    protected void onError(Throwable ex) {
-        bblock.lock();
-        try {
+    public void completeExceptionally(Throwable ex) {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
-            state = ActorState.Completed;
-        } finally {
-            bblock.unlock();
+            state = Completed;
         }
-        super.onError(ex);
+        super.completeExceptionally(ex);
     }
 
     /**
@@ -160,6 +135,16 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         return !isCompleted();
     }
 
+    protected void _controlportUnblock() {
+        state = Blocked;
+        controlport.unblock();
+    }
+
+    protected void _controlportBlock() {
+        state = Running;
+        controlport.block();
+    }
+
     /**
      * the main entry point.
      * Overwrite only to declare different kind of node.
@@ -167,14 +152,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
     protected void run() {
         try {
             runAction();
-            onComplete();
+            complete();
         } catch (Throwable e) {
-            onError(e);
+            completeExceptionally(e);
         }
     }
 
     /**     * User's action.
-     * User is adviswd top override this method, but overriding {@link #fire()} alse is possible
+     * User is adviswd top override this method, but overriding {@link #fire()} is also possible
      *
      * @throws Throwable when thrown, this node is considered failed.
      */
@@ -185,180 +170,63 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
         return super.toString() + "/"+state;
     }
 
-    private class ControlPort {
-        protected boolean ready = false;
-
-        public ControlPort(boolean blocking) {
-            bblock.lock();
-            try {
-                ports.add(this);
-                if (blocking) {
-                    blockingPortCount++;
-                }
-            } finally {
-                bblock.unlock();
-            }
-        }
-
-        public ControlPort() {
-            this(true);
-        }
-
-        /**
-         * must be invoked with locked {@link #bblock}
-         */
-        private synchronized void _block() {
-            if (ready) {
-                ready = false;
-                blockingPortCount++;
-            }
-        }
-
-        /**
-         * must be invoked with locked {@link #bblock}
-         *
-         * @return true if become (or was) unblocked (ready)
-         */
-        private boolean _unblock() {
-            if (ready) {
-                return true;
-            }
-            if (blockingPortCount == 0) {
-                throw new IllegalStateException("blocked port and blockingPortCount == 0");
-            } else if (blockingPortCount == 1) {
-                return false; //      do      fire();
-            }
-            blockingPortCount--;
-            ready = true;
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return super.toString() + (ready?": ready":": blocked");
-        }
+    public String portsToString() {
+        return ports.toString();
     }
 
     /**
      * Basic class for all ports (places for tokens).
      * Has 2 states: ready or blocked.
      * When all ports become unblocked, method {@link AsyncProc#fire()} is called.
-     * This resembles firing of a Petri Net transition.
+     * This is clear analogue to the firing of a Petri Net transition.
      */
-    public class Port extends ControlPort {
-        /** locking order is: {@link #plock} 1st, {@link #bblock} 2nd */
-        protected final Lock plock = new ReentrantLock();
-        protected boolean active;
+    public static class Port {
+        protected boolean ready;
+        protected AsyncProc parent;
+        protected final int portNum;
 
-        public Port(boolean ready, boolean active) {
-            super(active && !ready);
+        public Port(AsyncProc parent, boolean ready) {
+            this.parent = parent;
+            synchronized(parent) {
+                portNum=parent.ports.size();
+                if (portNum > MAX_PORT_NUM) {
+                    throw new IllegalStateException("too many ports");
+                }
+                parent.ports.add(this);
+                if (!ready) {
+                    parent.setBlocked(portNum);
+                }
+            }
             this.ready = ready;
-            this.active = active;
         }
 
-        public Port(boolean ready) {
-            this(ready, true);
+        public Port(AsyncProc parent) {
+            this(parent, false);
         }
 
         protected AsyncProc getParent() {
-            return AsyncProc.this;
+            return parent;
         }
 
         public boolean isReady() {
-            plock.lock();
-            try {
+            synchronized(parent) {
                 return ready;
-            } finally {
-                plock.unlock();
             }
-        }
-
-        public boolean isActive() {
-            plock.lock();
-            try {
-                return active;
-            } finally {
-                plock.unlock();
-            }
-        }
-
-        private boolean decrBlockedPortCount() {
-            bblock.lock();
-            try {
-                if (isCompleted()) {
-                    return true;
-                }
-                if (blockingPortCount == 0) {
-                    throw new IllegalStateException("port blocked but blockingPortCount == 0");
-                }
-                blockingPortCount--;
-                if (blockingPortCount > 0) {
-                    return true;
-                }
-                controlport._block();
-                state = ActorState.Running;
-            } finally {
-                bblock.unlock();
-            }
-            return false;
-        }
-
-        public void setActive(boolean active) {
-            plock.lock();
-            try {
-                boolean wasActive = this.active;
-                if (wasActive == active) {
-                    return;
-                }
-                this.active = active;
-                if (ready) {
-                    return;
-                }
-                bblock.lock();
-                try {
-                    if (isCompleted()) {
-                        return;
-                    }
-                    if (active) {
-                        blockingPortCount++;
-                        return;
-                    }
-                    if (decrBlockedPortCount()) {
-                        return;
-                    }
-                } finally {
-                    bblock.unlock();
-                }
-            } finally {
-                plock.unlock();
-            }
-            fire();;
         }
 
         /**
          * sets this port to a blocked state.
          */
-        public synchronized void block() {
-            plock.lock();
-            try {
+        public void block() {
+            synchronized(parent) {
                 if (!ready) {
                     return;
                 }
                 ready = false;
-                if (!active) {
+                if (parent.isCompleted()) {
                     return;
                 }
-                bblock.lock();
-                try {
-                    if (isCompleted()) {
-                        return;
-                    }
-                    blockingPortCount++;
-                } finally {
-                    bblock.unlock();
-                }
-            } finally {
-                plock.unlock();
+                parent.setBlocked(portNum);
             }
         }
 
@@ -367,23 +235,34 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
          * If all ports become unblocked,
          * this block is submitted to the executor.
          */
-        public void unblock() {
-            plock.lock();
-            try {
+        public synchronized void unblock() {
+            synchronized(parent) {
                 if (ready) {
                     return;
                 }
                 ready = true;
-                if (!active) {
+                if (parent.isCompleted()) {
                     return;
                 }
-                if (decrBlockedPortCount()) {
-                    return;
+                if (parent.blockedPortsScale == 0) {
+                    throw new IllegalStateException("port blocked but blockedPortsScale == 0");
                 }
-            } finally {
-                plock.unlock();
+                if (parent.setUnBlocked(portNum) == 0) {
+                    parent._controlportBlock();
+                    parent.fire();
+                }
             }
-            fire();
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + (ready?": ready":": blocked");
+        }
+    }
+
+    private static class ControlPort extends Port {
+        ControlPort(AsyncProc parent) {
+            super(parent);
         }
     }
 }

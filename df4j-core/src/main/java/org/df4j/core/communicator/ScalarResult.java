@@ -1,11 +1,14 @@
 package org.df4j.core.communicator;
 
-import org.df4j.protocol.SimpleSubscription;
+import org.df4j.protocol.Completable;
 import org.df4j.protocol.Scalar;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.LinkedList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
@@ -14,87 +17,20 @@ import java.util.concurrent.locks.ReentrantLock;
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
  * interfaces on output end.
- *  an equivalent to {@link CompletableFuture}&lt;{@link T}&gt;
+ *  Similar to {@link CompletableFuture}&lt;{@link R}&gt;
  *
- * @param <T> the type of completion value
+ * @param <R> the type of completion value
  */
-public class ScalarResult<T> implements Scalar.Source<T>, Future<T> {
-    private final Lock bblock = new ReentrantLock();
-    protected final CompletableFuture<T> cf = new CompletableFuture<>();
+public class ScalarResult<R> extends Completion implements ScalarResultTrait<R> {
+    private R result;
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return cf.cancel(mayInterruptIfRunning);
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cf.isCancelled();
+    public R getResult() {
+        return result;
     }
 
     @Override
-    public boolean isDone() {
-        return cf.isDone();
-    }
-
-    @Override
-    public void subscribe(Scalar.Observer<? super T> subscriber) {
-        Subscription subscription = new Subscription(subscriber);
-        subscriber.onSubscribe(subscription);
-    }
-
-    /**
-     * completes this {@link ScalarResult} with value
-     * @param message completion value
-     */
-    public void onSuccess(T message) {
-        cf.complete(message);
-    }
-
-    /**
-     * completes this {@link ScalarResult} exceptionally
-      * @param exception completion exception
-     */
-    public void onError(Throwable exception) {
-        cf.completeExceptionally(exception);
-    }
-
-    @Override
-    public T get() throws InterruptedException, ExecutionException {
-        return cf.get();
-    }
-
-    @Override
-    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return cf.get(timeout, unit);
-    }
-
-    /**
-     * Returns the result value when complete, or throws an
-     * (unchecked) exception if completed exceptionally.
-     *
-     * @return the result value
-     * @throws CompletionException if this  {@link ScalarResult} completed exceptionally
-     */
-    public T join() {
-        return cf.join();
-    }
-
-    class Subscription implements SimpleSubscription {
-        final CompletableFuture<T> whenComplete;
-
-        public Subscription(Scalar.Observer<? super T> subscriber) {
-            this.whenComplete = cf.whenComplete(subscriber);
-        }
-
-        @Override
-        public void cancel() {
-            whenComplete.cancel(true);
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return whenComplete.isCancelled();
-        }
+    public void setResult(R result) {
+        this.result = result;
     }
 }

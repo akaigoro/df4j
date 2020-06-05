@@ -4,7 +4,7 @@
 
     <groupId>org.df4j</groupId>
     <artifactId>df4j</artifactId>
-    <version>8.2</version>
+    <version>8.3</version>
     <packaging>pom</packaging>
     <name>df4j</name>
     <url>https://github.com/akaigoro/df4j</url>
@@ -42,13 +42,11 @@
     </properties>
 
     <modules>
-        <module>df4j-protocols</module>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
-        <!--module>df4j-jdk9</module>
-        <module>df4j-reactivestreams</module>
-        <module>df4j-reactor</module>
-        <module>df4j-rxjava</module-->
+        <module>df4j-protocols</module>
+        <module>df4j-reactivestreamsTCK</module>
+        <module>df4j-tutorial</module>
     </modules>
 
     <dependencies>
@@ -129,40 +127,18 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-maven-plugin</artifactId>
-                <version>${kotlin.version}</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
                 <executions>
                     <execution>
-                        <id>compile</id>
-                        <phase>compile</phase>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
                         <goals>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>test-compile</id>
-                        <phase>test-compile</phase>
-                        <goals>
-                            <goal>test-compile</goal>
+                            <goal>sign</goal>
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <args>
-                        <arg>-Xuse-experimental=kotlinx.coroutines</arg>
-                        <arg>-Xuse-experimental=kotlin.BuilderInference</arg>
-                    </args>
-                    <jvmTarget>1.8</jvmTarget>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>8</source>
-                    <target>8</target>
-                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -178,6 +154,5 @@
             <name>Nexus Release Repository</name>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
-        <downloadUrl>https://oss.sonatype.org/content/groups/public/org/knowm/xchart</downloadUrl>
     </distributionManagement>
 </project>

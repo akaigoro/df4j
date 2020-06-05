@@ -1,0 +1,5 @@
+Apache Spark is a cluster computing technology built for fast computations.
+It efficiently extends Hadoop's MapReduce model to use it for multiple more types of computations like iterative queries and
+stream processing. The main feature of Apache Spark is an in-memory computation which significantly increases
+the processing speed of the application. Spark is built to work with a range of workloads like batch applications interactive queries
+iterative algorithms and streaming data.

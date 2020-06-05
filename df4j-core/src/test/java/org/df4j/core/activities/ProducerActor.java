@@ -29,7 +29,7 @@ public class ProducerActor extends Actor {
         logger.info("cnt: "+cnt);
         if (cnt == 0) {
             out.onComplete();
-            onComplete();
+            complete();
         } else {
             out.onNext(cnt);
             cnt--;

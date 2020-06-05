@@ -3,9 +3,8 @@ package org.df4j.core.asyncarrayblockingqueue;
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.*;
 import org.df4j.core.port.InpScalar;
-import org.df4j.core.util.transitions.Transition;
-import org.df4j.core.util.transitions.Transitions;
 import org.df4j.core.util.Logger;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Random;
@@ -36,7 +35,7 @@ public class DiningPhilosophers extends Dataflow {
         // create places for forks with 1 fork in each
         for (int k = 0; k < num; k++) {
             ForkPlace forkPlace = new ForkPlace(k);
-            forkPlace.put("Fork_" + k);
+            forkPlace.add("Fork_" + k);
             forkPlaces[k] = forkPlace;
         }
         // create philosophers
@@ -48,9 +47,7 @@ public class DiningPhilosophers extends Dataflow {
             philosophers[k].start();
         }
         boolean fin = counter.await(2, TimeUnit.SECONDS);
-        boolean fin2 = this.blockingAwait(50, TimeUnit.MILLISECONDS);
         assertTrue(fin);
-    //    assertTrue(fin2);
     }
 
     @Test
@@ -76,15 +73,6 @@ public class DiningPhilosophers extends Dataflow {
             super(1);
             id = k;
             label = "Forkplace_" + id;
-        }
-
-        @Override
-        public void put(String fork) {
-            try {
-                super.put(fork);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
         }
 
         public String get() {
@@ -153,9 +141,9 @@ public class DiningPhilosophers extends Dataflow {
                 delay(getDelay());
                 // Replete
                 println("Release first "+first +" to " + firstPlace.id);
-                firstPlace.put(first);
+                firstPlace.add(first);
                 println("Release second "+second +" to " + secondPlace.id);
-                secondPlace.put(second);
+                secondPlace.add(second);
                 // check end of life
                 rounds++;
                 if (rounds == N) {
@@ -173,9 +161,7 @@ public class DiningPhilosophers extends Dataflow {
      */
     class PhilosopherDF extends Actor {
         protected final Logger logger = new Logger(this, Level.INFO);
-//        @Transitions(transitions={"fork"})
-        @Transitions(transitions={"fork"})
-        InpScalar<String> fork = new InpScalar<>(this, false); // does not blocks this actor when not (yet) subscribed
+        InpScalar<String> forkInput;
         int id;
         ForkPlace firstPlace, secondPlace;
         String first, second;
@@ -207,56 +193,53 @@ public class DiningPhilosophers extends Dataflow {
 
         @Override
         protected void runAction() {
+            forkInput = new InpScalar<>(this);
             startThinking();
         }
 
-        @Transition(transition="")
         void startThinking() {
-            nextAction(this::endThinking);
+            nextAction(this::endThinking, PORTS_NONE);
             delay(getDelay());
         }
 
-        @Transition(transition="ctrl")
         void endThinking()  {
             println("Request first (" + firstPlace.id + ")");
-            fork.setActive(true);
-            firstPlace.subscribe(fork);
-            nextAction(this::getFork1RequestFork2);
+            firstPlace.subscribe(forkInput);
+            nextAction(this::getFork1RequestFork2, forkInput);
         }
 
-        @Transition(transition="all")
         void getFork1RequestFork2()  {
-            first = fork.remove();
+            first = forkInput.remove();
+            Assert.assertNotNull(first);
             println("got first "+first + " from "+ firstPlace.id);
             println("Request second (" + secondPlace.id + ")");
-            secondPlace.subscribe(fork);
+            secondPlace.subscribe(forkInput);
             nextAction(this::startEating);
         }
 
-        @Transition(transition="fork")
         void startEating() {
-            second = fork.remove();
-            fork.setActive(false);
+            second = forkInput.current();
+            Assert.assertNotNull(second);
             println("got second "+second + " from "+ secondPlace.id);
-            nextAction(this::endEating);
+            nextAction(this::endEating, PORTS_NONE);
             delay(getDelay());
         }
 
         void endEating() {
             println("Release first "+first +" to " + firstPlace.id);
-            firstPlace.put(first);
+            firstPlace.add(first);
             println("Release second " + second + " to " + secondPlace.id);
-            secondPlace.put(second);
+            secondPlace.add(second);
             // check end of life
             rounds++;
             if (rounds < N) {
                 println("Ph no. " + id + ": continues round " + rounds);
-                nextAction(this::startThinking);
+                startThinking();
             } else {
                 println("Ph no. " + id + ": died at round " + rounds);
                 counter.countDown();
                 DiningPhilosophers.this.leave(this);
-                onComplete();
+                complete();
             }
         }
     }

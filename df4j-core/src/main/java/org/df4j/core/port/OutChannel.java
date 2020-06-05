@@ -5,13 +5,11 @@ import org.df4j.protocol.ReverseFlow;
 
 /**
  * An active output parameter
- * Has room for single message.
- * Must subscribe to a consumer of type {@link ReverseFlow.Publisher} to send message further and unblock this port.
+ * Has room for a single message.
+ * Must subscribe to a consumer of type {@link ReverseFlow.Producer} to send message further and unblock this port.
  * @param <T> type of accepted messages.
  */
-public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Producer<T> {
-    protected boolean completed;
-    protected volatile Throwable completionException;
+public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>, ReverseFlow.Producer<T> {
     private T value;
     protected ReverseFlow.ReverseFlowSubscription subscription;
 
@@ -20,31 +18,34 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
      * @param parent {@link AsyncProc} to which this port belongs
      */
     public OutChannel(AsyncProc parent) {
-        parent.super(true);
+        super(parent, true);
     }
 
     @Override
-    public void onSubscribe(ReverseFlow.ReverseFlowSubscription subscription) {
-        this.subscription = subscription;
+    public synchronized void onSubscribe(ReverseFlow.ReverseFlowSubscription subscription) {
+        if (!isCompleted()) {
+            this.subscription = subscription;
+            if (value != null) {
+                subscription.request(1);
+            }
+        } else if (completionException == null) {
+            subscription.onComplete();
+        } else {
+            subscription.onError(completionException);
+        }
     }
 
     @Override
     public boolean isCompleted() {
-        plock.lock();
-        try {
-            return completed;
-        } finally {
-            plock.unlock();
+        synchronized(parent) {
+            return completed && value == null;
         }
     }
 
     @Override
     public Throwable getCompletionException() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             return completionException;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -52,60 +53,47 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        if (subscription == null) {
-            throw new IllegalArgumentException();
-        }
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (isCompleted()) {
                 return;
             }
             if (value != null) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("overflow");
             }
             value = message;
             block();
-        } finally {
-            plock.unlock();
+            if (subscription == null) {
+                return;
+            }
         }
         subscription.request(1);
     }
 
-    public boolean _onComplete(Throwable throwable) {
-        plock.lock();
-        try {
+    public void _onComplete(Throwable throwable) {
+        ReverseFlow.ReverseFlowSubscription sub;
+        synchronized(parent) {
             if (isCompleted()) {
-                return true;
+                return;
             }
-            this.completed = true;
-            this.completionException = throwable;
-            if (subscription == null) return true;
-        } finally {
-            plock.unlock();
+            super._onComplete(throwable);
+            if (subscription == null) return;
+            sub = subscription;
+            subscription = null;
         }
-        return false;
-    }
-
-    public void onComplete() {
-        if (_onComplete(null)) return;
-        subscription.onComplete();
-    }
-
-    public void onError(Throwable throwable) {
-        if (_onComplete(throwable)) return;
-        subscription.onError(throwable);
+        if (throwable == null) {
+            sub.onComplete();
+        } else {
+            sub.onError(throwable);
+        }
     }
 
     @Override
     public T remove() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             T res = value;
             value = null;
             unblock();
             return res;
-        } finally {
-            plock.unlock();
         }
     }
 
@@ -115,16 +103,13 @@ public class OutChannel<T> extends AsyncProc.Port implements ReverseFlow.Produce
      *
      */
     public void cancel() {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (subscription == null) {
                 return;
             }
             subscription.cancel();
             this.subscription = null;
             unblock();
-        } finally {
-            plock.unlock();
         }
     }
 }

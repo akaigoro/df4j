@@ -1,23 +1,20 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.reactivestreams.*;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.CompletionException;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Subscriber<T> {
+public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Subscriber<T> {
     private int bufferCapacity;
-    protected boolean withBuffer;
-    private ArrayDeque<T> buff;
-    /** extracted token */
-    protected T value;
-    private Throwable completionException;
-    protected volatile boolean completed;
+    private ArrayDeque<T> tokens;
     protected Subscription subscription;
     private long requestedCount;
 
@@ -27,12 +24,7 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
      * @param capacity required capacity
      */
     public InpFlow(AsyncProc parent, int capacity) {
-        parent.super(false);
-        setCapacity(capacity);
-    }
-
-    public InpFlow(AsyncProc parent, int capacity, boolean active) {
-        parent.super(false, active);
+        super(parent);
         setCapacity(capacity);
     }
 
@@ -47,98 +39,57 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
-        if (capacity == getBufferCapacity()) {
+        if (capacity == this.bufferCapacity) {
             return;
         }
         bufferCapacity = capacity;
-        withBuffer = capacity > 1;
-        if (withBuffer) {
-            buff = new ArrayDeque<T>(capacity - 1);
-        } else {
-            buff = null;
-        }
+        tokens = new ArrayDeque<T>(capacity);
     }
 
     private boolean buffIsFull() {
-        return !withBuffer || buff.size() == bufferCapacity;
+        return tokens.size() == bufferCapacity;
     }
 
     private long remainingCapacity() {
         if (requestedCount < 0) {
             throw new IllegalStateException();
         }
-        int cap1 = value == null ? 1 : 0;
-        int cap2 = withBuffer? bufferCapacity-buff.size() : 0;
-        long res = cap1 + cap2 - requestedCount;
+        long res = bufferCapacity- tokens.size() - requestedCount;
         if (res < 0) {
             throw new IllegalStateException();
         }
         return res;
     }
 
-    private int getBufferCapacity() {
-        return !withBuffer? 0 : this.bufferCapacity;
-    }
-
     public boolean isCompleted() {
-        plock.lock();
-        try {
-            return completed && value==null;
-        } finally {
-            plock.unlock();
+        synchronized(parent) {
+            return completed && tokens.isEmpty();
         }
     }
 
-    public Throwable getCompletionException() {
-        return completionException;
-    }
-
-    public boolean isCompletedExceptionslly() {
-        return completionException != null;
-    }
-
     public T current() {
-        plock.lock();
-        try {
-            return value;
-        } finally {
-            plock.unlock();
+        synchronized(parent) {
+            return tokens.peek();
         }
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (this.subscription != null) {
                 subscription.cancel(); // this is dictated by the spec.
                 return;
             }
             this.subscription = subscription;
-            requestedCount = remainingCapacity();
-            if (value == null) {
+            if (tokens.isEmpty()) {
                 block();
             }
-        } finally {
-            plock.unlock();
+            requestedCount = remainingCapacity();
+            if (requestedCount == 0) {
+                return;
+            }
         }
         subscription.request(requestedCount);
-    }
-
-    public void request(long n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException();
-        }
-        plock.lock();
-        try {
-            if (n > remainingCapacity()) {
-                throw new IllegalArgumentException();
-            }
-            requestedCount += n;
-        } finally {
-            plock.unlock();
-        }
-        subscription.request(n);
     }
 
     /**
@@ -150,8 +101,7 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
      */
     @Override
     public void onNext(T message) {
-        plock.lock();
-        try {
+        synchronized(parent) {
             if (message == null) {
                 throw new NullPointerException();
             }
@@ -161,98 +111,41 @@ public class InpFlow<T> extends AsyncProc.Port implements InpMessagePort<T>, Sub
             if (subscription != null) {
                 requestedCount--;
             }
-            if (value == null) {
-                value = message;
-                unblock();
-            } else if (buffIsFull()) {
-                throw new IllegalStateException("buffer overflow");
-            } else {
-                buff.add(message);
-            }
-            if (buffIsFull()) {
-                roomExhausted();
-            }
-        } finally {
-            plock.unlock();
+            tokens.add(message);
+            unblock();
         }
     }
 
-    public T remove() {
-        plock.lock();
-        try {
-            if (!isReady()) {
-                throw new IllegalStateException();
-            }
-            T res = value;
-            value = null;
-            if (!withBuffer || buff.isEmpty()) {
-                block();
-            } else {
-                value = buff.poll();
-            }
-            roomAvailable();
-            return res;
-        } finally {
-            plock.unlock();
-        }
-    }
-
-    public T removeAndRequest() {
-        plock.lock();
+    public T poll() {
         long n;
         T res;
-        try {
+        synchronized(parent) {
             if (!ready) {
                 throw new IllegalStateException();
             }
-            res = value;
-            value = null;
-            if (withBuffer && !buff.isEmpty()) {
-                value = buff.poll();
-            } else if (!completed) {
+            if (isCompleted()) {
+                throw new CompletionException(completionException);
+            }
+            res = tokens.poll();
+            if (tokens.isEmpty() && !completed) {
                 block();
             }
-            roomAvailable();
             if (subscription == null) {
                 return res;
             }
             n = remainingCapacity();
             requestedCount += n;
-        } finally {
-            plock.unlock();
         }
         subscription.request(n);
         return res;
     }
 
-    private void onComplete(Throwable throwable) {
-        plock.lock();
-        try {
-            if (isCompleted()) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            subscription = null;
-            unblock();
-        } finally {
-            plock.unlock();
-        }
-    }
-
     @Override
-    public void onError(Throwable throwable) {
-        if (throwable == null) {
-            throw new NullPointerException();
+    public T remove() {
+        T res = poll();
+        if (res == null) {
+            throw new IllegalStateException();
         }
-        onComplete(throwable);
+        return res;
     }
-
-    @Override
-    public void onComplete() {
-        onComplete(null);
-    }
-
-    protected void roomExhausted(){}
-    protected void roomAvailable(){}
 }

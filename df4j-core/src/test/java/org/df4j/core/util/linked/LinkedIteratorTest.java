@@ -1,7 +1,6 @@
 package org.df4j.core.util.linked;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class LinkedIteratorTest {
@@ -27,16 +26,11 @@ public class LinkedIteratorTest {
         Assert.assertEquals(0, queue.size());
     }
 
-    static class MyItem extends LinkImpl<MyItem> {
+    static class MyItem extends LinkImpl {
         final int value;
 
         MyItem(int value) {
             this.value = value;
-        }
-
-        @Override
-        public MyItem getItem() {
-            return this;
         }
 
         @Override

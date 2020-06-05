@@ -72,9 +72,9 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
     @Override
     protected void runAction() {
         if (!input.isCompleted()) {
-            ByteBuffer buffer = input.removeAndRequest();
+            ByteBuffer buffer = input.remove();
+            suspend(); // before doIO, as it can call resume
             doIO(buffer);
-            suspend();
         } else {
             try {
                 channel.close();
@@ -84,10 +84,10 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
                 } else {
                     output.onError(completionException);
                 }
-                onComplete();
+                complete();
             } catch (IOException e) {
                 output.onError(e);
-                onError(e);
+                completeExceptionally(e);
             }
         }
     }

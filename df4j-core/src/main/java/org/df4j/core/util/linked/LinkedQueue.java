@@ -3,12 +3,12 @@ package org.df4j.core.util.linked;
 import java.util.AbstractQueue;
 import java.util.Iterator;
 
-public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
-    private Link<T> header = new HeaderLink();
+public class LinkedQueue<L extends Link> extends AbstractQueue<L> {
+    private LinkImpl header = new LinkImpl();
     private int size = 0;
 
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<L> iterator() {
         return new LinkIterator();
     }
 
@@ -18,37 +18,49 @@ public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
     }
 
     @Override
-    public boolean offer(T item) {
-        header.offer(item);
+    public boolean offer(L item) {
+        if (item == header) {
+            throw new IllegalArgumentException();
+        }
+        item.setNext(header);
+        Link prev = header.getPrev();
+        item.setPrev(prev);
+        prev.setNext(item);
+        header.setPrev(item);
         size++;
         return true;
     }
 
     @Override
-    public T poll() {
+    public L poll() {
         if (size == 0) {
             return null;
         }
         size--;
-        Link<T> first = header.poll();
+        Link first = null;
+        Link res = header.getNext();
+        if (res != this) {
+            res.unlink();
+            first = res;
+        }
         if (first == null) {
             return  null;
         }else {
-            return first.getItem();
+            return (L)first;
         }
     }
 
     @Override
-    public T peek() {
-        Link<T> next = header.getNext();
+    public L peek() {
+        Link next = header.getNext();
         if (next == header) {
             return null;
         } else {
-            return next.getItem();
+            return (L)next;
         }
     }
 
-    public boolean remove(Link<T> subscription) {
+    public boolean remove(Link subscription) {
         if (subscription.isLinked()) {
             subscription.unlink();
             size--;
@@ -58,8 +70,8 @@ public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
         }
     }
 
-    private class LinkIterator implements Iterator<T> {
-        Link<T> current = header;
+    private class LinkIterator implements Iterator<L> {
+        Link current = header;
         boolean hasnext;
 
         @Override
@@ -69,28 +81,21 @@ public class LinkedQueue<T extends Link> extends AbstractQueue<T> {
         }
 
         @Override
-        public T next() {
+        public L next() {
             if (!hasnext) {
                 throw new IllegalStateException();
             }
             hasnext = false;
             current = current.getNext();
-            return current.getItem();
+            return (L)current;
         }
 
         @Override
         public void remove() {
-            Link<T> res = current;
+            Link res = current;
             current = res.getNext();
             res.unlink();
             hasnext = false;
-        }
-    }
-
-    private class HeaderLink extends LinkImpl<T> {
-        @Override
-        public T getItem() {
-            return null;
         }
     }
 }

@@ -6,17 +6,18 @@ import org.df4j.core.communicator.AsyncArrayBlockingQueue;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.logging.Level;
+
 public class AsyncArrayBlockingQueueThreadTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
         AsyncArrayBlockingQueue queue = new AsyncArrayBlockingQueue<Integer>(3);
         ProducerThread producer = new ProducerThread(cnt, queue, delay1);
-        ConsumerThread subscriber = new ConsumerThread(queue, delay2);
+        ConsumerThread consumer = new ConsumerThread(queue, delay2);
         producer.start();
-        subscriber.start();
-//        subscriber.join();
-        subscriber.join(1000);
-        Assert.assertFalse(subscriber.isAlive());
+        consumer.start();
+        consumer.join(400);
+        Assert.assertFalse(consumer.isAlive());
     }
 
     @Test
@@ -31,7 +32,7 @@ public class AsyncArrayBlockingQueueThreadTest {
 
     @Test
     public void testAsyncQueueFast() throws InterruptedException {
-        testAsyncQueue(10,0, 0);
+        testAsyncQueue(2,0, 0);
     }
 
     @Test

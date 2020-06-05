@@ -4,8 +4,8 @@ package org.df4j.protocol;
  * Flow of messages from Subscribers to Publishers
  * (as opposed to the flow of messages from Publishers to Subscribers in {{@link Flow}}).
  *
- * {@link ReverseFlow.Subscriber}s here still are active parties,
- * and {@link ReverseFlow.Publisher}s are passive, just like in {@link Flow}}.
+ * {@link ReverseFlow.Producer}s here still are active parties,
+ * and {@link ReverseFlow.Consumer}s are passive, just like in {@link Flow}}.
         */
 public class ReverseFlow {
 
@@ -34,9 +34,9 @@ public class ReverseFlow {
         void onSubscribe(ReverseFlowSubscription subscription);
 
         /**
-         * {@link Publisher} gets data from {@link Subscriber}
+         * {@link Consumer} gets data from {@link Producer}
          * when it has room to save the data.
-         * @return the data from  {@link Subscriber}
+         * @return the data from  {@link Producer}
          */
         T remove();
 
@@ -51,6 +51,8 @@ public class ReverseFlow {
         default Throwable getCompletionException()  {
             return null;
         }
+
+        void onError(Throwable e);
     }
 
     /**
@@ -63,16 +65,22 @@ public class ReverseFlow {
      */
     public interface Consumer<T> {
 
-        /**
-         * @param producer the {@link Subscriber} which offers messages for this {@link Publisher}
+        /** subscribes producer to be notified  when Consumer is able to accept tokens
+         * @param producer the {@link Producer} which offers messages for this {@link Consumer}
          */
-        void subscribe(Producer<T> producer);
+        void feedFrom(Producer<T> producer);
     }
 
-    public interface ReverseFlowSubscription extends FlowSubscription {
+    public interface ReverseFlowSubscription<T> extends FlowSubscription {
+        /**
+         *
+         * @param token
+         * @return true if token accepted
+         */
+        boolean offer(T token);
+
         void onComplete();
 
         void onError(Throwable e);
-
     }
 }

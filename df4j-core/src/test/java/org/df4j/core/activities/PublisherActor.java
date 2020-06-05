@@ -9,7 +9,7 @@ import java.util.logging.Level;
 
 public class PublisherActor extends Actor {
     protected final Logger logger = new Logger(this);
-    public OutFlow<Long> out = new OutFlow<>(this);
+    public OutFlow<Long> out;
     public long cnt;
     final int delay;
     {
@@ -20,17 +20,20 @@ public class PublisherActor extends Actor {
         logger.setLevel(off);
     }
 
-    public PublisherActor(Dataflow parent, long cnt, int delay) {
+    public PublisherActor(Dataflow parent, long cnt, int delay, int capacity) {
         super(parent);
+        out = new OutFlow<>(this, capacity);
         this.cnt = cnt;
         this.delay = delay;
         logger.info("PublisherActor: cnt = " + cnt);
     }
 
+    public PublisherActor(Dataflow parent, long cnt, int delay) {
+        this(parent, cnt, delay, OutFlow.DEFAULT_CAPACITY);
+    }
+
     public PublisherActor(long cnt, int delay) {
-        this.cnt = cnt;
-        this.delay = delay;
-        logger.info("PublisherActor: cnt = " + cnt);
+        this(new Dataflow(), cnt, delay);
     }
 
     public PublisherActor(long cnt) {
@@ -47,7 +50,7 @@ public class PublisherActor extends Actor {
         } else {
             logger.info("PublisherActor.onComplete");
             out.onComplete();
-            onComplete();
+            complete();
         }
     }
 }
