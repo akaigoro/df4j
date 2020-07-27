@@ -13,9 +13,9 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
-import org.df4j.core.port.OutFlow;
+import org.df4j.core.port.InpFlood;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * Wrapper over {@link AsynchronousSocketChannel}.
  * Simplifies input-output, handling queues of I/O requests.
  */
-public class AsyncSocketChannel {
+public class ReadBuffers extends InpFlood<ByteBuffer> {
     protected final Logger LOG = new Logger(this);
     private final Dataflow dataflow;
 
@@ -43,11 +43,12 @@ public class AsyncSocketChannel {
 
     public String name;
 
-    public AsyncSocketChannel(Dataflow dataflow, AsynchronousSocketChannel channel) {
-        this.dataflow=dataflow;
+    public ReadBuffers(AsyncProc parent, AsynchronousSocketChannel channel) {
+        super(parent);
+        this.dataflow=parent.getParent();
         this.channel=channel;
         reader = new Reader(dataflow);
-        writer = new Writer(dataflow);
+        writer = new Writer(dataflow, reader.input);
         reader.start();
         writer.start();
     }
@@ -86,13 +87,14 @@ public class AsyncSocketChannel {
         protected final Logger LOG = new Logger(this);
 
         final String io;
-        public final InpFlow<ByteBuffer> input = new InpFlow<>(this);
-        public final OutFlow<ByteBuffer> output = new OutFlow<>(this);
+        public final InpFlood<ByteBuffer> input = new InpFlood<>(this);
+        public final InpFlood<ByteBuffer> output;
 
         long timeout=0;
 
-        public IOExecutor(Dataflow dataflow, String io) {
+        public IOExecutor(Dataflow dataflow, String io, InpFlood<ByteBuffer> output) {
             super(dataflow);
+            this.output = output;
             setDaemon(true);
             this.io = io;
         }
@@ -155,7 +157,7 @@ public class AsyncSocketChannel {
     public class Reader extends IOExecutor {
 
         public Reader(Dataflow dataflow) {
-            super(dataflow, "reader");
+            super(dataflow, "reader", ReadBuffers.this);
         }
 
         protected void doIO(ByteBuffer buffer) {
@@ -171,8 +173,8 @@ public class AsyncSocketChannel {
     
     public class Writer extends IOExecutor {
 
-        public Writer(Dataflow dataflow) {
-            super(dataflow, "writer");
+        public Writer(Dataflow dataflow, InpFlood<ByteBuffer> output) {
+            super(dataflow, "writer", output);
         }
 
         protected void doIO(ByteBuffer buffer) {

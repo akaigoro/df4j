@@ -83,8 +83,8 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
             if (completed) {
                 return;
             }
-            super.onComplete();
             this.value = message;
+            super.onComplete();
         }
     }
 }

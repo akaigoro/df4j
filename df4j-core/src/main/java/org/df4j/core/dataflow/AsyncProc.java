@@ -182,7 +182,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      */
     public static class Port {
         protected boolean ready;
-        protected AsyncProc parent;
+        protected final AsyncProc parent;
         protected final int portNum;
 
         public Port(AsyncProc parent, boolean ready) {

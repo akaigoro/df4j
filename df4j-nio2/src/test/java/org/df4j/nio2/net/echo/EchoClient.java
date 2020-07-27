@@ -2,9 +2,8 @@ package org.df4j.nio2.net.echo;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
 import org.df4j.core.util.Logger;
-import org.df4j.nio2.net.AsyncSocketChannel;
+import org.df4j.nio2.net.ReadBuffers;
 import org.df4j.nio2.net.AsyncClientSocketChannel;
 import org.junit.Assert;
 
@@ -13,6 +12,8 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 
 import static org.df4j.nio2.net.echo.EchoServer.BUF_SIZE;
@@ -20,16 +21,16 @@ import static org.df4j.nio2.net.echo.EchoServer.BUF_SIZE;
 /**
  * sends and receives limited number of messages
  *
- * demonstrates dynamic port creation {@link #readBuffers}
+ * demonstrates dynamic port creation {@link #clientConn}
  */
 class EchoClient extends Actor {
-    static final Charset charset = Charset.forName("UTF-8");
+    static final Charset charset = StandardCharsets.UTF_8;
 
+    protected AsyncClientSocketChannel inp = new AsyncClientSocketChannel(this);
+    protected ReadBuffers clientConn;
+    
     protected final Logger LOG = new Logger(this, Level.INFO);
     public int count;
-    protected AsyncClientSocketChannel inp = new AsyncClientSocketChannel(this);
-    AsyncSocketChannel clientConn;
-    InpFlow<ByteBuffer> readBuffers;
     String message;
     private String clientName = "Client#"+seqNum;
     AsynchronousSocketChannel assc;
@@ -42,11 +43,8 @@ class EchoClient extends Actor {
 
     public void runAction() {
         assc = inp.current();
-        clientConn = new AsyncSocketChannel(getParent(), assc);
+        clientConn = new ReadBuffers(this, assc);
         clientConn.setName("client");
-        readBuffers = new InpFlow<>(this);
-        clientConn.writer.output.subscribe(clientConn.reader.input);
-        clientConn.reader.output.subscribe(readBuffers);
         LOG.info(clientName+" started");
         sendMsg(ByteBuffer.allocate(BUF_SIZE));
         nextAction(this::receiveMessage);
@@ -73,8 +71,16 @@ class EchoClient extends Actor {
         LOG.info(clientName+" sent message: "+message);
     }
 
-    public void receiveMessage() {
-        ByteBuffer received = readBuffers.remove();
+    public void receiveMessage() throws CompletionException {
+        if (clientConn.isCompleted()) {
+            if (clientConn.isCompletedExceptionally()) {
+                completeExceptionally(clientConn.getCompletionException());
+            } else {
+                complete();
+            }
+            return;
+        }
+        ByteBuffer received = clientConn.remove();
         String m2 = fromByteBuf(received);
         LOG.info(clientName+" received message:"+m2);
         Assert.assertEquals(message, m2);

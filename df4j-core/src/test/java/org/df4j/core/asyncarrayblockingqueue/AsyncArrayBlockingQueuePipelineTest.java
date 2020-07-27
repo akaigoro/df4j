@@ -28,9 +28,9 @@ public class AsyncArrayBlockingQueuePipelineTest {
 
     public void test2steps(Creator create) throws InterruptedException {
         Activity[] activities = new Activity[n1+n2];
-        AsyncArrayBlockingQueue<Integer> queue1 = new AsyncArrayBlockingQueue<Integer>(N);
-        AsyncArrayBlockingQueue<Integer> queue2 = new AsyncArrayBlockingQueue<Integer>(N/4);
-        AsyncArrayBlockingQueue<Integer> queue3 = new AsyncArrayBlockingQueue<Integer>(N);
+        AsyncArrayBlockingQueue<Integer> queue1 = new AsyncArrayBlockingQueue<>(N);
+        AsyncArrayBlockingQueue<Integer> queue2 = new AsyncArrayBlockingQueue<>(N/4);
+        AsyncArrayBlockingQueue<Integer> queue3 = new AsyncArrayBlockingQueue<>(N);
         for (int k = 0; k < n1; k++) {
             activities[k] = create.create(k, queue1, queue2);
         }
@@ -41,7 +41,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
             activities[k].start();
         }
         for (int k = 0; k < N; k++) {
-            queue1.put(new Integer(k));
+            queue1.put(k);
         }
         boolean[] result = new boolean[N];
         int failCount = 0;
@@ -63,8 +63,8 @@ public class AsyncArrayBlockingQueuePipelineTest {
 
     public void test1steps(Creator create) throws InterruptedException {
         Activity[] activities = new Activity[n1];
-        AsyncArrayBlockingQueue<Integer> queue1 = new AsyncArrayBlockingQueue<Integer>(N);
-        AsyncArrayBlockingQueue<Integer> queue2 = new AsyncArrayBlockingQueue<Integer>(N/4);
+        AsyncArrayBlockingQueue<Integer> queue1 = new AsyncArrayBlockingQueue<>(N);
+        AsyncArrayBlockingQueue<Integer> queue2 = new AsyncArrayBlockingQueue<>(N/4);
         for (int k = 0; k < n1; k++) {
             activities[k] = create.create(k, queue1, queue2);
         }
@@ -72,7 +72,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
             activities[k].start();
         }
         for (int k = 0; k < N; k++) {
-            queue1.add(new Integer(k));
+            queue1.add(k);
         }
         boolean[] result = new boolean[N];
         int failCount = 0;
@@ -137,7 +137,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
                 } catch (InterruptedException e) {
                     cause = e;
                     break;
-                } catch (CompletionException e) {
+                } catch (java.util.concurrent.CompletionException e) {
                     cause = e.getCause();
                     break;
                 }

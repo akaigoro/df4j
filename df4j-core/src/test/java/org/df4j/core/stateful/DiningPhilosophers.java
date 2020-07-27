@@ -1,7 +1,10 @@
-package org.df4j.core.asyncarrayblockingqueue;
+package org.df4j.core.stateful;
 
 import org.df4j.core.communicator.AsyncArrayBlockingQueue;
-import org.df4j.core.dataflow.*;
+import org.df4j.core.dataflow.Activity;
+import org.df4j.core.dataflow.ActivityThread;
+import org.df4j.core.dataflow.Actor;
+import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
 import org.junit.Assert;
@@ -106,7 +109,7 @@ public class DiningPhilosophers extends Dataflow {
                 secondPlace = forkPlaces[id + 1];
             }
 
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             sb.append(id).append(":");
             for (int k = 0; k < id; k++) sb.append("              ");
             indent = sb.toString();

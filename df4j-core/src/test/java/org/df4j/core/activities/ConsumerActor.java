@@ -5,6 +5,8 @@ import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpChannel;
 import org.df4j.core.util.Logger;
 
+import java.util.concurrent.CompletionException;
+
 public class ConsumerActor extends Actor {
     protected final Logger logger = new Logger(this);
     final int delay;
@@ -20,14 +22,14 @@ public class ConsumerActor extends Actor {
     }
 
     @Override
-    protected void runAction() throws Throwable {
+    protected void runAction() throws InterruptedException {
         Thread.sleep(delay);
-        if (inp.isCompleted()) {
-            logger.info(" completed.");
-            complete();
-        } else {
+        try {
             Long in = inp.remove();
             logger.info(" got: "+in);
+        } catch (CompletionException e) {
+            logger.info(" completed.");
+            complete();
         }
     }
 }

@@ -9,14 +9,14 @@ import java.util.logging.Level;
 
 public class PubSubTest {
 
-    public void pubSubTest(int cnt, int delay1, int delay2) throws InterruptedException {
+    public void pubSubTest(int cnt, int delay1, int delay2) {
         Dataflow df = new Dataflow();
         PublisherActor pub = new PublisherActor(df, cnt, delay1);
         SubscriberActor sub = new SubscriberActor(df, delay2);
         pub.out.subscribe(sub.inp);
         pub.start();
         sub.start();
-        boolean res = df.blockingAwait(1000);
+        boolean res = df.blockingAwait(100000);
         Assert.assertTrue(res);
     }
 

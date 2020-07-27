@@ -7,6 +7,7 @@ import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.ReverseFlow;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -108,8 +109,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             res = tokens.poll();
             parent.notifyAll();
 
-            Link link = activeProducers.peek();
-            ProducerSubscription client = (ProducerSubscription) link;
+            ProducerSubscription client = activeProducers.peek();
             if (client == null) {
                 if (tokens.isEmpty() && !completed) {
                     block();
@@ -181,16 +181,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         if (token == null) {
             throw new IllegalArgumentException();
         }
-        synchronized(parent) {
-            for (;;) {
-                if (completed) {
-                    throw new IllegalStateException();
-                }
-                if (offer(token)) {
-                    return;
-                }
-                throw new IllegalStateException();
-            }
+        if (!offer(token)) {
+            throw new IllegalStateException();
         }
     }
 
@@ -215,10 +207,14 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
-    public T remove() {
+    public T remove() throws CompletionException {
         synchronized(parent) {
             if (tokens.isEmpty()) {
-                throw new IllegalStateException();
+                if (completed) {
+                    throw new CompletionException("Port already completed", completionException);
+                } else {
+                    throw new IllegalStateException();
+                }
             }
             return poll();
         }
@@ -233,7 +229,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        ProducerSubscription(ReverseFlow.Producer subscriber) {
+        ProducerSubscription(ReverseFlow.Producer<T> subscriber) {
             this.subscriber = subscriber;
         }
 

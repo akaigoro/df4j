@@ -43,7 +43,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             return;
         }
         bufferCapacity = capacity;
-        tokens = new ArrayDeque<T>(capacity);
+        tokens = new ArrayDeque<>(capacity);
     }
 
     private boolean buffIsFull() {
@@ -123,9 +123,6 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (!ready) {
                 throw new IllegalStateException();
             }
-            if (isCompleted()) {
-                throw new CompletionException(completionException);
-            }
             res = tokens.poll();
             if (tokens.isEmpty() && !completed) {
                 block();
@@ -141,11 +138,11 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     }
 
     @Override
-    public T remove() {
-        T res = poll();
-        if (res == null) {
-            throw new IllegalStateException();
+    public T remove() throws CompletionException {
+        if (isCompleted()) {
+            throw new java.util.concurrent.CompletionException(completionException);
         }
+        T res = poll();
         return res;
     }
 }

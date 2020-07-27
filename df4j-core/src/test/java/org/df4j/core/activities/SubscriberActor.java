@@ -6,6 +6,7 @@ import org.df4j.core.port.InpFlow;
 import org.df4j.core.util.Logger;
 import org.junit.Assert;
 
+import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 
 public class SubscriberActor extends Actor {
@@ -28,9 +29,12 @@ public class SubscriberActor extends Actor {
     }
 
     @Override
-    protected void runAction() throws Throwable {
+    protected void runAction() throws InterruptedException {
         Thread.sleep(delay);
-        if (inp.isCompleted()) {
+        Long in;
+        try {
+            in = inp.remove();
+        } catch (CompletionException e) {
             Throwable completionException = inp.getCompletionException();
             logger.info(" SubscriberActor: completed with: " + completionException);
             if (completionException == null) {
@@ -40,7 +44,6 @@ public class SubscriberActor extends Actor {
             }
             return;
         }
-        Long in = inp.remove();
         logger.info(" SubscriberActor: inp = " + in);
         if (this.cnt != null) {
             Assert.assertEquals(this.cnt.intValue() - 1, in.intValue());

@@ -6,18 +6,20 @@ import org.df4j.core.util.Utils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.concurrent.CompletionException;
+
 public class InpChannelTest {
     static class TestActor extends Actor {
         int runCounter = 0;
         @Override
-        protected void runAction() throws Throwable {
+        protected void runAction() {
             runCounter++;
             suspend();
         }
     }
 
     @Test
-    public void simpleTest() throws InterruptedException {
+    public void simpleTest() throws CompletionException {
         int cnt = 3;
         TestActor actor = new TestActor();
         InpChannel<Integer> inp = new InpChannel<>(actor, 2);

@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 
 /**
@@ -70,7 +71,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
      *  All conditiona are met, start IO operation
      */
     @Override
-    protected void runAction() {
+    protected void runAction() throws CompletionException {
         if (!input.isCompleted()) {
             ByteBuffer buffer = input.remove();
             suspend(); // before doIO, as it can call resume

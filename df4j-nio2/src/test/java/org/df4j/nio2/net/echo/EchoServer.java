@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 
 /**
@@ -56,7 +57,6 @@ public class EchoServer extends AsyncServerSocketChannel {
             int capacity = 2;
             serverConn = new AsyncSocketChannel(getParent(), assc);
             serverConn.setName("server");
-            serverConn.reader.input.setCapacity(capacity);
             for (int k = 0; k<capacity; k++) {
                 ByteBuffer buf=ByteBuffer.allocate(BUF_SIZE);
                 serverConn.reader.input.onNext(buf);
@@ -87,7 +87,7 @@ public class EchoServer extends AsyncServerSocketChannel {
             super.completeExceptionally(ex);
         }
 
-        public void runAction() {
+        public void runAction() throws CompletionException {
             if (!readBuffers.isCompleted()) {
                 ByteBuffer buffer = readBuffers.remove();
                 buffer.flip();

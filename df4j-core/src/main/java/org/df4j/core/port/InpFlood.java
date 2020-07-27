@@ -6,6 +6,7 @@ import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -14,9 +15,9 @@ import java.util.Queue;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>, InpMessagePort<T> {
+public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , Flood.Subscriber<T> {
     /** TODO optimize for single token */
-    private  final Queue<T> tokens = new LinkedList<T>();
+    private  final Queue<T> tokens = new LinkedList<>();
     protected SimpleSubscription subscription;
 
     /**
@@ -51,14 +52,13 @@ public class InpFlood<T> extends CompletablePort implements Flood.Subscriber<T>,
         }
     }
 
-    public T remove() {
-        synchronized(parent) {
-            T res = tokens.remove();
-            if (tokens.isEmpty() && !completed) {
-                block();
-            }
-            return res;
+    @Override
+    public T remove() throws CompletionException {
+        if (isCompleted()) {
+            throw new java.util.concurrent.CompletionException(completionException);
         }
+        T res = poll();
+        return res;
     }
 
     @Override

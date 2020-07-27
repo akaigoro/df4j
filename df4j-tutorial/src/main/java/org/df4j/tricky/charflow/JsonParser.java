@@ -4,11 +4,13 @@ import org.df4j.core.dataflow.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.tricky.charflow.jsontokens.Token;
 
+import java.util.concurrent.CompletionException;
+
 public class JsonParser extends Actor {
     InpFlow<Token> inp = new InpFlow<>(this);
 
     @Override
-    protected void runAction() {
+    protected void runAction() throws CompletionException {
         if (inp.isCompleted()) {
             complete();
             return;
@@ -29,7 +31,7 @@ public class JsonParser extends Actor {
 
     }
 
-    private void parseArray() {
+    private void parseArray() throws CompletionException {
         Token t = inp.current();
         switch (t.type) {
             case LeftBracket:

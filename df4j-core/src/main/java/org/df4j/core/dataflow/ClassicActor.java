@@ -3,6 +3,8 @@ package org.df4j.core.dataflow;
 import org.df4j.core.port.InpFlood;
 import org.df4j.core.port.OutMessagePort;
 
+import java.util.concurrent.CompletionException;
+
 /**
  * Actor according to Carl Hewitt
  * Has a predefined input port.
@@ -27,10 +29,16 @@ public abstract class ClassicActor<T> extends Actor implements OutMessagePort<T>
 
     @Override
     protected void runAction() throws Throwable {
-        if (inp.isCompleted()) {
-            complete();
-        } else {
-            this.nextMessageAction.runAction(inp.remove());
+        try {
+            T token = inp.remove();
+            this.nextMessageAction.runAction(token);
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause == null) {
+                complete();
+            } else {
+                completeExceptionally(cause);
+            }
         }
     }
 
