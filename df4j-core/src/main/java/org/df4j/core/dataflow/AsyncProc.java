@@ -9,7 +9,11 @@
  */
 package org.df4j.core.dataflow;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+
 import static org.df4j.core.dataflow.ActorState.*;
 
 /**
@@ -26,7 +30,7 @@ import static org.df4j.core.dataflow.ActorState.*;
  * It becomes  {@link ActorState#Running} and is submitted for execution to its executor when all ports become ready.
  * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
  */
-public abstract class AsyncProc extends Node<AsyncProc> {
+public abstract class AsyncProc extends Node<AsyncProc> implements Transitionable {
     public static final int MAX_PORT_NUM = 31;
     private static final boolean checkingMode = true; // todo false
 
@@ -34,11 +38,12 @@ public abstract class AsyncProc extends Node<AsyncProc> {
 
     /** is not encountered as a parent's child */
     private boolean daemon;
-    /**
-     * blocked initially, until {@link #start} called.
-     */
-    private ArrayList<Port> ports = new ArrayList<>(4);
-    private int blockedPortsScale = 0;
+    Transition transition = createTransition();
+
+    protected TransitionAll createTransition() {
+        return new TransitionAll();
+    }
+
     private ControlPort controlport = new ControlPort(this);
 
     protected AsyncProc(Dataflow dataflow) {
@@ -61,20 +66,13 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         leaveParent();
     }
 
-    private void setBlocked(int portNum) {
-        blockedPortsScale |= (1<<portNum);
-    }
-
-    protected int setUnBlocked(int portNum) {
-        return blockedPortsScale &= ~(1<<portNum);
-    }
-
-    protected boolean isBlocked(int portNum) {
-        return (blockedPortsScale & (1<<portNum)) != 0;
-    }
-
     public synchronized boolean isDaemon() {
         return daemon;
+    }
+
+    @Override
+    public Transition getTransition() {
+        return transition;
     }
 
     /**
@@ -170,10 +168,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         return super.toString() + "/"+state;
     }
 
-    public String portsToString() {
-        return ports.toString();
-    }
-
     /**
      * Basic class for all ports (places for tokens).
      * Has 2 states: ready or blocked.
@@ -182,29 +176,20 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      */
     public static class Port {
         protected boolean ready;
-        protected final AsyncProc parent;
+        protected final Transition parent;
         protected final int portNum;
 
-        public Port(AsyncProc parent, boolean ready) {
-            this.parent = parent;
-            synchronized(parent) {
-                portNum=parent.ports.size();
-                if (portNum > MAX_PORT_NUM) {
-                    throw new IllegalStateException("too many ports");
-                }
-                parent.ports.add(this);
-                if (!ready) {
-                    parent.setBlocked(portNum);
-                }
-            }
+        public Port(Transitionable parentHolder, boolean ready) {
+            this.parent = parentHolder.getTransition();
             this.ready = ready;
+            portNum = parent.registerPort(this);
         }
 
-        public Port(AsyncProc parent) {
+        public Port(Transitionable parent) {
             this(parent, false);
         }
 
-        protected AsyncProc getParent() {
+        protected Transition getParent() {
             return parent;
         }
 
@@ -218,40 +203,11 @@ public abstract class AsyncProc extends Node<AsyncProc> {
          * sets this port to a blocked state.
          */
         public void block() {
-            synchronized(parent) {
-                if (!ready) {
-                    return;
-                }
-                ready = false;
-                if (parent.isCompleted()) {
-                    return;
-                }
-                parent.setBlocked(portNum);
-            }
+            parent.block(this);
         }
 
-        /**
-         * sets this port to unblocked state.
-         * If all ports become unblocked,
-         * this block is submitted to the executor.
-         */
-        public synchronized void unblock() {
-            synchronized(parent) {
-                if (ready) {
-                    return;
-                }
-                ready = true;
-                if (parent.isCompleted()) {
-                    return;
-                }
-                if (parent.blockedPortsScale == 0) {
-                    throw new IllegalStateException("port blocked but blockedPortsScale == 0");
-                }
-                if (parent.setUnBlocked(portNum) == 0) {
-                    parent._controlportBlock();
-                    parent.fire();
-                }
-            }
+        public void unblock() {
+            parent.unblock(this);
         }
 
         @Override
@@ -263,6 +219,83 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     private static class ControlPort extends Port {
         ControlPort(AsyncProc parent) {
             super(parent);
+        }
+    }
+
+    public interface Transition {
+        int registerPort(Port port);
+        ExecutorService getExecutor();
+        void unblock(Port port);
+        void block(Port port);
+        void setBlocked(int portNum);
+    }
+
+    class TransitionAll implements Transition {
+        private ArrayList<Port> ports = new ArrayList<>(4);
+        private int blockedPortsScale = 0;
+
+        @Override
+        public synchronized int registerPort(Port port) {
+            final int portNum = ports.size();
+            if (portNum > MAX_PORT_NUM) {
+                throw new IllegalStateException("too many ports");
+            }
+            ports.add(port);
+            if (!port.ready) {
+                setBlocked(portNum);
+            }
+            return portNum;
+        }
+
+
+        public void setBlocked(int portNum) {
+            blockedPortsScale |= (1<<portNum);
+        }
+
+        public int setUnBlocked(int portNum) {
+            return blockedPortsScale &= ~(1<<portNum);
+        }
+
+        protected boolean isBlocked(int portNum) {
+            return (blockedPortsScale & (1<<portNum)) != 0;
+        }
+
+        @Override
+        public ExecutorService getExecutor() {
+            return AsyncProc.this.getExecutor();
+        }
+
+        /**
+         * sets this port to unblocked state.
+         * If all ports become unblocked,
+         * this block is submitted to the executor.
+         */
+        @Override
+        public synchronized void unblock(Port port) {
+            if (port.ready) {
+                return;
+            }
+            port.ready = true;
+            if (isCompleted()) {
+                return;
+            }
+            if (setUnBlocked(port.portNum) == 0) {
+                _controlportBlock();
+                fire();
+            }
+        }
+
+        @Override
+        public synchronized void block(Port port) {
+            if (!port.ready) {
+                return;
+            }
+            port.ready = false;
+            setBlocked(port.portNum);
+        }
+
+        public String portsToString() {
+            return ports.toString();
         }
     }
 }

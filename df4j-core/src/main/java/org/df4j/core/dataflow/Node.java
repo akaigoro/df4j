@@ -62,7 +62,6 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
 
             }
 
-            @NotNull
             @Override
             public List<Runnable> shutdownNow() {
                 return null;
@@ -79,29 +78,27 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
             }
 
             @Override
-            public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) throws InterruptedException {
+            public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) {
                 return false;
             }
         };
         setExecutor(service);
     }
 
-    public ExecutorService getExecutor() {
-        synchronized(this) {
-            if (executor == null) {
-                if (parent != null) {
-                    executor = parent.getExecutor();
+    public synchronized ExecutorService getExecutor() {
+        if (executor == null) {
+            if (parent != null) {
+                executor = parent.getExecutor();
+            } else {
+                Thread currentThread = Thread.currentThread();
+                if (currentThread instanceof ForkJoinWorkerThread) {
+                    executor = ((ForkJoinWorkerThread) currentThread).getPool();
                 } else {
-                    Thread currentThread = Thread.currentThread();
-                    if (currentThread instanceof ForkJoinWorkerThread) {
-                        executor = ((ForkJoinWorkerThread) currentThread).getPool();
-                    } else {
-                        executor = ForkJoinPool.commonPool();
-                    }
+                    executor = ForkJoinPool.commonPool();
                 }
             }
-            return executor;
         }
+        return executor;
     }
 
     public void setTimer(Timer timer) {

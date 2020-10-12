@@ -8,6 +8,7 @@ import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Client connection implemented as scalar input port.
@@ -32,7 +33,8 @@ public class AsyncClientSocketChannel extends CompletablePort
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
     public void connect(SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(parent.getExecutor());
+        ExecutorService executor = parent.getExecutor();
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(executor);
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open(group);
         channel.connect(addr, channel, this);
     }

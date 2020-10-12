@@ -97,22 +97,4 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
         }
         subs.request(1);
     }
-
-    /**
-     * awakes this port after delay
-     * @param delay time delay in milliseconds
-     */
-    public void delayedAwake(long delay) {
-        AsyncProc parent = getParent();
-        if (parent.isCompleted()) {
-            return;
-        }
-        TimerTask task = new TimerTask(){
-            @Override
-            public void run() {
-                release();
-            }
-        };
-        parent.getTimer().schedule(task, delay);
-    }
 }
