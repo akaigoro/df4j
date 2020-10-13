@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.dataflow.Transitionable;
 
 public class CompletablePort extends AsyncProc.Port {
     protected volatile boolean completed = false;
@@ -14,7 +15,7 @@ public class CompletablePort extends AsyncProc.Port {
         super(parent, ready);
     }
 
-    public CompletablePort(AsyncProc parent) {
+    public CompletablePort(Transitionable parent) {
         super(parent, false);
     }
 

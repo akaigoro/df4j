@@ -59,7 +59,7 @@ public class OutFlowTest {
         Assert.assertTrue(success);
         Thread.sleep(50);
         Assert.assertEquals(cnt, sub.cnt);
-        Assert.assertTrue(sub.completed);
+        Assert.assertTrue(sub.isCompleted());
     }
 
     @Test
@@ -73,7 +73,7 @@ public class OutFlowTest {
         Assert.assertTrue(success);
         Thread.sleep(50);
         Assert.assertEquals(cnt, sub.cnt);
-        Assert.assertTrue(sub.completed);
+        Assert.assertTrue(sub.isCompleted());
     }
 }
 

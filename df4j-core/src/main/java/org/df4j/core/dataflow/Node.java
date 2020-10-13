@@ -20,7 +20,7 @@ import java.util.concurrent.*;
 public abstract class Node<T extends Node<T>> extends Completion implements Activity {
     public final long seqNum;
     NodeLink nodeLink = new NodeLink();
-    private final Dataflow parent;
+    protected final Dataflow parent;
     private ExecutorService executor;
     private Timer timer;
 

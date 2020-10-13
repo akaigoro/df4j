@@ -48,11 +48,6 @@ public abstract class Actor extends AsyncProc {
         setActivePorts(makePortScale(ports));
     }
 
-/*    @Override
-    public boolean canFire() {
-        return (blockedPortsScale & activePortsScale)  == 0;
-    }
-*/
     public ThrowingRunnable getNextAction() {
         return nextAction;
     }
@@ -142,11 +137,11 @@ public abstract class Actor extends AsyncProc {
         }
     }
 
-    class TransitionSome extends TransitionAll{
-        @Override
-        public int setUnBlocked(int portNum) {
-            return super.setUnBlocked(portNum) & activePortsScale;
-        }
+    class TransitionSome extends TransitionAll {
 
+        @Override
+        public boolean canFire() {
+            return (blockedPortsScale & activePortsScale) == 0;
+        }
     }
 }

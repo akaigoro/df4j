@@ -28,6 +28,10 @@ public class SubscriberActor extends Actor {
         this.delay = delay;
     }
 
+    public SubscriberActor() {
+        this(0);
+    }
+
     @Override
     protected void runAction() throws InterruptedException {
         Thread.sleep(delay);

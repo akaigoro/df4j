@@ -24,6 +24,10 @@ public class ProducerActor extends Actor {
         this.delay = delay;
     }
 
+    public ProducerActor(int cnt) {
+        this(cnt, 0);
+    }
+
     @Override
     protected void runAction() throws Throwable {
         logger.info("cnt: "+cnt);

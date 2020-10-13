@@ -9,8 +9,6 @@
  */
 package org.df4j.core.dataflow;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 
@@ -38,7 +36,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
 
     /** is not encountered as a parent's child */
     private boolean daemon;
-    Transition transition = createTransition();
+    private final Transition transition = createTransition();
 
     protected TransitionAll createTransition() {
         return new TransitionAll();
@@ -125,6 +123,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
      * direct invocations is short to avoid stack overflow.
      */
     protected void fire() {
+        _controlportBlock();
         getExecutor().execute(this::run);
     }
 
@@ -227,12 +226,19 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
         ExecutorService getExecutor();
         void unblock(Port port);
         void block(Port port);
-        void setBlocked(int portNum);
     }
 
     class TransitionAll implements Transition {
         private ArrayList<Port> ports = new ArrayList<>(4);
-        private int blockedPortsScale = 0;
+        protected int blockedPortsScale = 0;
+
+        private void setBlocked(int portNum) {
+            blockedPortsScale |= (1<<portNum);
+        }
+
+        private int setUnBlocked(int portNum) {
+            return blockedPortsScale &= ~(1<<portNum);
+        }
 
         @Override
         public synchronized int registerPort(Port port) {
@@ -247,22 +253,17 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
             return portNum;
         }
 
-
-        public void setBlocked(int portNum) {
-            blockedPortsScale |= (1<<portNum);
+        @Override
+        public ExecutorService getExecutor() {
+            return AsyncProc.this.getExecutor();
         }
 
-        public int setUnBlocked(int portNum) {
-            return blockedPortsScale &= ~(1<<portNum);
+        protected boolean canFire() {
+            return blockedPortsScale == 0;
         }
 
         protected boolean isBlocked(int portNum) {
             return (blockedPortsScale & (1<<portNum)) != 0;
-        }
-
-        @Override
-        public ExecutorService getExecutor() {
-            return AsyncProc.this.getExecutor();
         }
 
         /**
@@ -279,10 +280,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
             if (isCompleted()) {
                 return;
             }
-            if (setUnBlocked(port.portNum) == 0) {
-                _controlportBlock();
-                fire();
+            setUnBlocked(port.portNum);
+            if (canFire()) {
+                callFire();
             }
+        }
+
+        protected void callFire() {
+            fire();
         }
 
         @Override
@@ -296,6 +301,49 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
 
         public String portsToString() {
             return ports.toString();
+        }
+    }
+
+    public class MultiPort extends Port implements Transitionable {
+        final TransitionAny transition;
+
+        public MultiPort(AsyncProc parent) {
+            super(parent);
+            transition = new TransitionAny();
+        }
+
+        @Override
+        public Transition getTransition() {
+            return transition;
+        }
+
+        class TransitionAny extends TransitionAll {
+            int allPortsScale = 0;
+
+            @Override
+            public synchronized int registerPort(Port port) {
+                int portNum = super.registerPort(port);
+                allPortsScale |= (1<<portNum);
+                return portNum;
+            }
+
+            @Override
+            protected boolean canFire() {
+                return (blockedPortsScale ^ allPortsScale) != 0;
+            }
+
+            @Override
+            protected void callFire() {
+                MultiPort.this.unblock();
+            }
+
+            @Override
+            public synchronized void block(Port port) {
+                super.block(port);
+                if (!transition.canFire()) {
+                    MultiPort.this.block();
+                }
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.dataflow.Transitionable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -23,7 +24,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      * @param parent {@link AsyncProc} to wich this port belongs
      * @param capacity required capacity
      */
-    public InpFlow(AsyncProc parent, int capacity) {
+    public InpFlow(Transitionable parent, int capacity) {
         super(parent);
         setCapacity(capacity);
     }
@@ -31,7 +32,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpFlow(AsyncProc parent) {
+    public InpFlow(Transitionable parent) {
         this(parent, 1);
     }
 
