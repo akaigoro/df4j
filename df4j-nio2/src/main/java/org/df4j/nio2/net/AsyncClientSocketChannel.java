@@ -33,14 +33,14 @@ public class AsyncClientSocketChannel extends CompletablePort
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
     public void connect(SocketAddress addr) throws IOException {
-        ExecutorService executor = parent.getExecutor();
+        ExecutorService executor = transition1.getExecutor();
         AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(executor);
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open(group);
         channel.connect(addr, channel, this);
     }
 
     public AsynchronousSocketChannel current() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return asc;
         }
     }
@@ -49,7 +49,7 @@ public class AsyncClientSocketChannel extends CompletablePort
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        synchronized(parent) {
+        synchronized(transition1) {
             this.asc = channel;
             onComplete();
         }

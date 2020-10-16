@@ -28,19 +28,19 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
     }
 
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed && tokens.isEmpty();
         }
     }
 
     public T current() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return tokens.peek();
         }
     }
 
     public  T poll() {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (!isReady()) {
                 return null;
             }
@@ -71,7 +71,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
 
     @Override
     public void onNext(T message) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (message == null) {
                 throw new IllegalArgumentException();
             }
@@ -81,5 +81,18 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
             tokens.add(message);
             unblock();
         }
+    }
+
+    public void cancel() {
+        SimpleSubscription sub;
+        synchronized (transition1) {
+            sub = subscription;
+            onComplete();
+            if (sub == null) {
+                return;
+            }
+            subscription = null;
+        }
+        sub.cancel();
     }
 }

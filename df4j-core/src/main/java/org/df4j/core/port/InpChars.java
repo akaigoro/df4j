@@ -32,14 +32,14 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
     }
 
     public boolean isCompleted() {
-        synchronized (parent) {
+        synchronized (transition1) {
             return completed && charBuffer.isEmpty();
         }
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        synchronized (parent) {
+        synchronized (transition1) {
             if (this.subscription != null) {
                 subscription.cancel(); // this is dictated by the spec.
                 return;
@@ -63,7 +63,7 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
      */
     @Override
     public void onNext(char ch) {
-        synchronized (parent) {
+        synchronized (transition1) {
             if (charBuffer.buffIsFull()) {
                 throw new IllegalStateException();
             }
@@ -84,7 +84,7 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
     }
 
     public char current() {
-        synchronized (parent) {
+        synchronized (transition1) {
             if (!ready) {
                 throw new IllegalStateException();
             }
@@ -101,7 +101,7 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
     public char remove() {
         long n;
         char res;
-        synchronized (parent) {
+        synchronized (transition1) {
             if (!ready) {
                 throw new IllegalStateException();
             }

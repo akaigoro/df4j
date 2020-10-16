@@ -5,6 +5,7 @@ import org.df4j.core.dataflow.Transitionable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import java.nio.BufferOverflowException;
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
 
@@ -63,20 +64,20 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     }
 
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed && tokens.isEmpty();
         }
     }
 
     public T current() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return tokens.peek();
         }
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (this.subscription != null) {
                 subscription.cancel(); // this is dictated by the spec.
                 return;
@@ -102,15 +103,18 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      */
     @Override
     public void onNext(T message) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (message == null) {
                 throw new NullPointerException();
             }
-            if (isCompleted()) {
+            if (completed) {
                 return;
             }
             if (subscription != null) {
                 requestedCount--;
+            }
+            if (tokens.size() == bufferCapacity) {
+                throw new BufferOverflowException();
             }
             tokens.add(message);
             unblock();
@@ -120,7 +124,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     public T poll() {
         long n;
         T res;
-        synchronized(parent) {
+        synchronized(transition1) {
             if (!ready) {
                 throw new IllegalStateException();
             }
@@ -140,10 +144,23 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
 
     @Override
     public T remove() throws CompletionException {
-        if (isCompleted()) {
+        T res = poll();
+        if (res == null) {
             throw new java.util.concurrent.CompletionException(completionException);
         }
-        T res = poll();
         return res;
+    }
+
+    public void cancel() {
+        Subscription sub;
+        synchronized (transition1) {
+            sub = subscription;
+            onComplete();
+            if (sub == null) {
+                return;
+            }
+            subscription = null;
+        }
+        sub.cancel();
     }
 }

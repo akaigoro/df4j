@@ -5,13 +5,9 @@ import org.df4j.core.util.CharBuffer;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.CharFlow;
-import org.df4j.protocol.Flow;
 import org.df4j.protocol.FlowSubscription;
-import org.reactivestreams.Subscriber;
 
-import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A passive source of characters (like a server).
@@ -38,13 +34,13 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     @Override
     public void subscribe(CharFlow.CharSubscriber subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
-        synchronized(parent) {
+        synchronized(transition1) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
-        synchronized(parent) {
+        synchronized(transition1) {
             if (isCompleted()) {
                 subscription.onComplete();
             }
@@ -62,7 +58,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed && charBuffer.isEmpty();
         }
     }
@@ -74,7 +70,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
      */
     public boolean offer(char ch) {
         FlowSubscriptionImpl sub;
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return false;
             }
@@ -101,7 +97,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public void hasItemsEvent() {
-        parent.notifyAll();
+        transition1.notifyAll();
     }
 
     private void completAllSubscriptions() {
@@ -122,7 +118,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public void _onComplete(Throwable cause) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return;
             }
@@ -137,7 +133,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public char poll() {
-        synchronized(parent) {
+        synchronized(transition1) {
             for (;;) {
                 if (!charBuffer.isEmpty()) {
                     char res = charBuffer.remove();
@@ -162,7 +158,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
 
         @Override
         public boolean isCancelled() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 return cancelled;
             }
         }
@@ -177,7 +173,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -211,7 +207,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
 
         @Override
         public void cancel() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -235,7 +231,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
          */
         private boolean onNext(char ch) {
             subscriber.onNext(ch);
-            synchronized(parent) {
+            synchronized(transition1) {
                 remainedRequests--;
                 return remainedRequests > 0;
             }
@@ -246,7 +242,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
          * @param cause error
          */
         private void onComplete() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }

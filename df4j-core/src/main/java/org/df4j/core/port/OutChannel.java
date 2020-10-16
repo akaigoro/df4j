@@ -37,14 +37,14 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
 
     @Override
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed && value == null;
         }
     }
 
     @Override
     public Throwable getCompletionException() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completionException;
         }
     }
@@ -53,7 +53,7 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        synchronized(parent) {
+        synchronized(transition1) {
             if (isCompleted()) {
                 return;
             }
@@ -71,7 +71,7 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
 
     public void _onComplete(Throwable throwable) {
         ReverseFlow.ReverseFlowSubscription sub;
-        synchronized(parent) {
+        synchronized(transition1) {
             if (isCompleted()) {
                 return;
             }
@@ -89,7 +89,7 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
 
     @Override
     public T remove() {
-        synchronized(parent) {
+        synchronized(transition1) {
             T res = value;
             value = null;
             unblock();
@@ -103,7 +103,7 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
      *
      */
     public void cancel() {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (subscription == null) {
                 return;
             }

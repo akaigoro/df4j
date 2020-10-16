@@ -4,8 +4,6 @@ import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.SignalFlow;
 import org.reactivestreams.Subscription;
 
-import java.util.TimerTask;
-
 /**
  * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
  *
@@ -34,14 +32,14 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        synchronized(parent) {
+        synchronized(transition1) {
             this.subscription = subscription;
         }
     }
 
     @Override
     public  void release(long n) {
-        synchronized(parent) {
+        synchronized(transition1) {
             boolean wasBlocked = !isReady();
             permits += n;
             if (wasBlocked && permits > 0) {
@@ -55,7 +53,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      * Analogue of {@link InpFlow#remove()} and {@link java.util.concurrent.Semaphore#acquire(int)}
      */
     public void remove() {
-        synchronized(parent) {
+        synchronized(transition1) {
             boolean wasReady = isReady();
             permits--;
             if (wasReady && permits == 0) {
@@ -69,7 +67,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
             throw new IllegalArgumentException();
         }
         Subscription subs;
-        synchronized(parent) {
+        synchronized(transition1) {
             subs = this.subscription;
             if (subs == null) {
                 throw new IllegalStateException();
@@ -84,7 +82,7 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      */
     public void acquireAndRequest() {
         Subscription subs;
-        synchronized(parent) {
+        synchronized(transition1) {
             boolean wasReady = isReady();
             permits--;
             if (wasReady && permits == 0) {

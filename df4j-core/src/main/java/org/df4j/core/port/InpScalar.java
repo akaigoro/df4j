@@ -43,7 +43,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
 
     public void unsubscribe() {
         SimpleSubscription sub;
-        synchronized(parent) {
+        synchronized(transition1) {
             if (subscription == null) {
                 return;
             }
@@ -54,7 +54,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
     }
 
     public T current() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return value;
         }
     }
@@ -65,7 +65,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
      * @return current message
      */
     public T remove() {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (!ready) {
                 throw new IllegalStateException();
             }
@@ -79,7 +79,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
 
     @Override
     public  void onSuccess(T message) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return;
             }

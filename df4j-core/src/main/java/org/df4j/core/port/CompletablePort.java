@@ -20,7 +20,7 @@ public class CompletablePort extends AsyncProc.Port {
     }
 
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed;
         }
     }
@@ -30,7 +30,7 @@ public class CompletablePort extends AsyncProc.Port {
     }
 
     protected  void _onComplete(Throwable throwable) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return;
             }

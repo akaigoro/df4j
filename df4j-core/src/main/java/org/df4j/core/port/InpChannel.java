@@ -1,10 +1,12 @@
 package org.df4j.core.port;
 
+import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.util.linked.Link;
+import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.ReverseFlow;
+import org.reactivestreams.Publisher;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
@@ -16,8 +18,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
     protected int capacity;
-    private LinkedQueue<ProducerSubscription> activeProducers = new LinkedQueue<>();
-    private LinkedQueue<ProducerSubscription> passiveProducers = new LinkedQueue<>();
+    private LinkedQueue<ProducerSubscription> activeSubscriptions = new LinkedQueue<>();
+    private LinkedQueue<ProducerSubscription> passiveSubscriptions = new LinkedQueue<>();
     protected ArrayDeque<T> tokens;
 
     /**
@@ -39,13 +41,13 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed && tokens.size() == 0;
         }
     }
 
     public Throwable getCompletionException() {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (isCompleted()) {
                 return completionException;
             } else {
@@ -56,15 +58,15 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
     @Override
     public void feedFrom(ReverseFlow.Producer<T> producer) {
-        ProducerSubscription subscription = new ProducerSubscription(producer);
-        synchronized(parent) {
-            passiveProducers.add(subscription);
-            producer.onSubscribe(subscription);
-        }
+        new ProducerSubscription(producer);
+    }
+
+    public void feedFrom(Publisher<T> publisher) {
+        new ProducerSubscription(publisher);
     }
 
     public boolean offer(T token) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return false;
             }
@@ -81,14 +83,14 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
      */
     public T current() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return tokens.peek();
         }
     }
 
     @Override
     public void block() {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return;
             }
@@ -101,22 +103,22 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
      */
     public T poll() {
-        synchronized(parent) {
+        synchronized(transition1) {
             T res;
             if (tokens.isEmpty()) {
                 return null;
             }
             res = tokens.poll();
-            parent.notifyAll();
+            transition1.notifyAll();
 
-            ProducerSubscription client = activeProducers.peek();
+            ProducerSubscription client = activeSubscriptions.peek();
             if (client == null) {
                 if (tokens.isEmpty() && !completed) {
                     block();
                 }
                 return res;
             }
-            ReverseFlow.Producer<T> subscriber = client.subscriber;
+            ReverseFlow.Producer<T> subscriber = client.producer;
             if (!subscriber.isCompleted()) {
                 T token = subscriber.remove();
                 if (token == null) {
@@ -125,8 +127,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 tokens.add(token);
                 client.remainedRequests--;
                 if (client.remainedRequests == 0) {
-                    activeProducers.remove(client);
-                    passiveProducers.add(client);
+                    activeSubscriptions.remove(client);
+                    passiveSubscriptions.add(client);
                 }
             } else {
                 completed = true;
@@ -157,7 +159,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             throw new NullPointerException();
         }
         long millis = unit.toMillis(timeout);
-        synchronized(parent) {
+        synchronized(transition1) {
             for (;;) {
                 if (completed) {
                     return false;
@@ -190,7 +192,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         if (token == null) {
             throw new NullPointerException();
         }
-        synchronized(parent) {
+        synchronized(transition1) {
             for (;;) {
                 if (completed) {
                     throw new IllegalStateException();
@@ -198,7 +200,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 if (offer(token)) {
                     return;
                 }
-                parent.wait();
+                transition1.wait();
             }
         }
     }
@@ -208,7 +210,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
     public T remove() throws CompletionException {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (tokens.isEmpty()) {
                 if (completed) {
                     throw new CompletionException("Port already completed", completionException);
@@ -225,17 +227,31 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     protected class ProducerSubscription extends LinkImpl implements ReverseFlow.ReverseFlowSubscription<T> {
-        protected final ReverseFlow.Producer<T> subscriber;
+        protected final ReverseFlow.Producer<T> producer;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        ProducerSubscription(ReverseFlow.Producer<T> subscriber) {
-            this.subscriber = subscriber;
+        ProducerSubscription(ReverseFlow.Producer<T> producer) {
+            this.producer = producer;
+            synchronized(transition1) {
+                passiveSubscriptions.add(this);
+            }
+            producer.onSubscribe(this);
+        }
+
+        ProducerSubscription(Publisher<T> publisher) {
+            PortAdapter<T> adapter = new PortAdapter<T>(InpChannel.this.getTransition1().getDataflow());
+            publisher.subscribe(adapter.inp);
+            this.producer = adapter.out;
+            synchronized(transition1) {
+                passiveSubscriptions.add(this);
+            }
+            adapter.out.onSubscribe(this);
         }
 
         @Override
         public boolean isCancelled() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 return cancelled;
             }
         }
@@ -247,10 +263,10 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         @Override
         public void request(long n) {
             if (n <= 0) {
-                subscriber.onError(new IllegalArgumentException());
+                producer.onError(new IllegalArgumentException());
                 return;
             }
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -264,8 +280,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 }
                 if (transfer()) return;
                 if (remainedRequests > 0) {
-                    passiveProducers.remove(this);
-                    activeProducers.add(this);
+                    passiveSubscriptions.remove(this);
+                    activeSubscriptions.add(this);
                 }
                 unblock();
             }
@@ -273,13 +289,13 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         private boolean transfer() {
             while (!_tokensFull() && remainedRequests > 0) {
-                if (subscriber.isCompleted()) {
-                    _onComplete(subscriber.getCompletionException());
+                if (producer.isCompleted()) {
+                    _onComplete(producer.getCompletionException());
                 } else {
-                    T token = subscriber.remove();
+                    T token = producer.remove();
                     if (token == null) {
                         // wrong subscriber
-                        subscriber.onError(new IllegalArgumentException());
+                        producer.onError(new IllegalArgumentException());
                         _cancel();
                         return true;
                     }
@@ -296,7 +312,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         }
 
         private void _onComplete(Throwable throwable) {
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -317,7 +333,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         @Override
         public void cancel() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 _cancel();
             }
         }
@@ -331,11 +347,39 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 return true;
             }
             if (remainedRequests > 0) {
-                activeProducers.remove(this);
+                activeSubscriptions.remove(this);
             } else {
-                passiveProducers.remove(this);
+                passiveSubscriptions.remove(this);
             }
             return false;
+        }
+    }
+
+    static class PortAdapter<T> extends Actor {
+        InpFlow<T> inp = new InpFlow<>(this);
+        OutChannel<T> out = new OutChannel<>(this);
+
+        public PortAdapter(Dataflow parent) {
+            super(parent);
+        }
+
+        @Override
+        protected void fire() {
+            run();
+        }
+
+        @Override
+        protected void runAction() throws Throwable {
+            if (inp.isCompleted()) {
+                if (inp.isCompletedExceptionally()) {
+                    out.onError(inp.getCompletionException());
+                } else {
+                    out.cancel();
+                }
+                complete();
+            } else {
+                out.onNext(inp.remove());
+            }
         }
     }
 }

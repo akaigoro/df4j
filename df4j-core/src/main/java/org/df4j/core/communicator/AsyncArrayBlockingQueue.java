@@ -5,6 +5,7 @@ import org.df4j.core.port.InpChannel;
 import org.df4j.core.port.OutFlow;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.ReverseFlow;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.BlockingQueue;
@@ -46,6 +47,11 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
     @Override
     public void feedFrom(ReverseFlow.Producer<T> producer) {
         inp.feedFrom(producer);
+    }
+
+    @Override
+    public void feedFrom(Publisher<T> publisher) {
+        inp.feedFrom(publisher);
     }
 
     @Override
@@ -103,25 +109,9 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         inp.onError(ex);
     }
 
-    boolean recurse = false;
-    boolean repeat = false;
-
     @Override
     protected void fire() {
-        if (recurse) {
-            repeat = true;
-            return;
-        }
-        recurse = true;
-        for (;;) {
-            run();
-            if (repeat) {
-                repeat = false;
-            } else {
-                break;
-            }
-        }
-        recurse = false;
+        run();
     }
 
     @Override

@@ -175,25 +175,25 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
      */
     public static class Port {
         protected boolean ready;
-        protected final Transition parent;
+        protected final Transition transition1;
         protected final int portNum;
 
         public Port(Transitionable parentHolder, boolean ready) {
-            this.parent = parentHolder.getTransition();
+            this.transition1 = parentHolder.getTransition();
             this.ready = ready;
-            portNum = parent.registerPort(this);
+            portNum = transition1.registerPort(this);
         }
 
-        public Port(Transitionable parent) {
-            this(parent, false);
+        public Port(Transitionable transition1) {
+            this(transition1, false);
         }
 
-        protected Transition getParent() {
-            return parent;
+        protected Transition getTransition1() {
+            return transition1;
         }
 
         public boolean isReady() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 return ready;
             }
         }
@@ -202,11 +202,11 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
          * sets this port to a blocked state.
          */
         public void block() {
-            parent.block(this);
+            transition1.block(this);
         }
 
         public void unblock() {
-            parent.unblock(this);
+            transition1.unblock(this);
         }
 
         @Override
@@ -221,16 +221,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
         }
     }
 
-    public interface Transition {
-        int registerPort(Port port);
-        ExecutorService getExecutor();
-        void unblock(Port port);
-        void block(Port port);
-    }
-
     class TransitionAll implements Transition {
         private ArrayList<Port> ports = new ArrayList<>(4);
         protected int blockedPortsScale = 0;
+
+        @Override
+        public Dataflow getDataflow() {
+            return AsyncProc.this.getParent();
+        }
 
         private void setBlocked(int portNum) {
             blockedPortsScale |= (1<<portNum);

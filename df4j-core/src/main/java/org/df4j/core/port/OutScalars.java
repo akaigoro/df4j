@@ -28,7 +28,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         if (completed) {
             subscription.onComplete(completionException);
         } else {
-            synchronized(parent) {
+            synchronized(transition1) {
                 subscriptions.add(subscription);
                 unblock();
             }
@@ -37,7 +37,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
     public void onNext(T message) {
         ScalarSubscription subscription;
-        synchronized(parent) {
+        synchronized(transition1) {
             subscription = subscriptions.remove();
             if (subscriptions.size() == 0) {
                 block();
@@ -48,7 +48,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
     protected void _onComplete(Throwable t) {
         Queue<ScalarSubscription> subscriptions;
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return;
             }
@@ -76,7 +76,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         @Override
         public void cancel() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -93,7 +93,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         public void onNext(T message) {
             Scalar.Observer<? super T> subs;
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -106,7 +106,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         private Scalar.Observer<? super T> removeSubscriber() {
             Scalar.Observer<? super T> subs;
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return null;
                 }

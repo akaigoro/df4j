@@ -42,13 +42,13 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
-        synchronized(parent) {
+        synchronized(transition1) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
-        synchronized(parent) {
+        synchronized(transition1) {
             if (isCompleted()) {
                 subscription.onComplete();
             }
@@ -75,7 +75,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     public boolean isCompleted() {
-        synchronized(parent) {
+        synchronized(transition1) {
             return completed && tokens.size() == 0;
         }
     }
@@ -90,7 +90,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
             throw new NullPointerException();
         }
         FlowSubscriptionImpl sub;
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return false;
             }
@@ -122,7 +122,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     public void hasItemsEvent() {
-        parent.notifyAll();
+        transition1.notifyAll();
     }
 
     private void completAllSubscriptions() {
@@ -143,7 +143,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     public void _onComplete(Throwable cause) {
-        synchronized(parent) {
+        synchronized(transition1) {
             if (completed) {
                 return;
             }
@@ -158,7 +158,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     public T poll() {
-        synchronized(parent) {
+        synchronized(transition1) {
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
@@ -174,7 +174,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        synchronized(parent) {
+        synchronized(transition1) {
             long millis = unit.toMillis(timeout);
             for (;;) {
                 T res = tokens.poll();
@@ -189,14 +189,14 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     return null;
                 }
                 long targetTime = System.currentTimeMillis() + millis;
-                parent.wait(millis);
+                transition1.wait(millis);
                 millis = targetTime - System.currentTimeMillis();
             }
         }
     }
 
     public T take() throws InterruptedException {
-        synchronized(parent) {
+        synchronized(transition1) {
             for (;;) {
                 T res = tokens.poll();
                 if (res != null) {
@@ -206,7 +206,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 if (completed) {
                     throw new CompletionException(completionException);
                 }
-                parent.wait();
+                transition1.wait();
             }
         }
     }
@@ -226,7 +226,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
         @Override
         public boolean isCancelled() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 return cancelled;
             }
         }
@@ -242,7 +242,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                 return;
             }
             T token;
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -281,7 +281,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
         @Override
         public void cancel() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
@@ -305,7 +305,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
          */
         private boolean onNext(T token) {
             subscriber.onNext(token);
-            synchronized(parent) {
+            synchronized(transition1) {
                 remainedRequests--;
                 return remainedRequests > 0;
             }
@@ -316,7 +316,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
          * @param cause error
          */
         private void onComplete() {
-            synchronized(parent) {
+            synchronized(transition1) {
                 if (cancelled) {
                     return;
                 }
