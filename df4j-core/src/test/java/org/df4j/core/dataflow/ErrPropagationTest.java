@@ -7,6 +7,7 @@ import org.junit.Test;
 import java.util.concurrent.CompletionException;
 
 public class ErrPropagationTest {
+
     static class StringToInt extends AsyncFunc<Integer> {
         String argumnet;
 
@@ -39,10 +40,5 @@ public class ErrPropagationTest {
             System.err.println(e);
             Assert.assertEquals(NumberFormatException.class, e.getCause().getClass());
         }
-    }
-
-    @Test
-    public void portsToStringTest() {
-
     }
 }

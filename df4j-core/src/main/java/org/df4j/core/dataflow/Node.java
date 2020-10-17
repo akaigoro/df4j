@@ -10,6 +10,7 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.Completion;
+import org.df4j.core.communicator.CompletionI;
 import org.df4j.core.util.linked.LinkImpl;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,11 +18,12 @@ import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.*;
 
-public abstract class Node<T extends Node<T>> extends Completion implements Activity {
+public abstract class Node<T extends Node<T>> extends Completion {
     public final long seqNum;
     NodeLink nodeLink = new NodeLink();
     private final Dataflow parent;
-    private ExecutorService executor;
+    private Executor executor;
+    private ExecutorService executorService;
     private Timer timer;
 
     protected Node() {
@@ -44,13 +46,41 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         }
     }
 
-    public void setExecutor(ExecutorService executor) {
-        synchronized(this) {
-            this.executor = executor;
-        }
+    public synchronized void setExecutor(ExecutorService executor) {
+        this.executor = executor;
+        this.executorService = executor;
     }
 
-    public void setExecutor(Executor executor) {
+    public synchronized void setExecutor(Executor executor) {
+        this.executor = executor;
+        this.executorService = null;
+    }
+
+    public synchronized Executor getExecutor() {
+        if (executor == null) {
+            if (parent != null) {
+                executor = parent.getExecutor();
+            } else {
+                Thread currentThread = Thread.currentThread();
+                if (currentThread instanceof ForkJoinWorkerThread) {
+                    executor = ((ForkJoinWorkerThread) currentThread).getPool();
+                } else {
+                    executor = ForkJoinPool.commonPool();
+                }
+            }
+        }
+        return executor;
+    }
+
+    public synchronized ExecutorService getExecutorService() {
+        if (executorService != null) {
+            return executorService;
+        }
+        Executor executor = this.executor;
+        if (executor instanceof ExecutorService) {
+            this.executorService = (ExecutorService) executor;
+            return (ExecutorService) executor;
+        }
         ExecutorService service = new AbstractExecutorService(){
             @Override
             public void execute(@NotNull Runnable command) {
@@ -83,25 +113,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
                 return false;
             }
         };
-        setExecutor(service);
-    }
-
-    public ExecutorService getExecutor() {
-        synchronized(this) {
-            if (executor == null) {
-                if (parent != null) {
-                    executor = parent.getExecutor();
-                } else {
-                    Thread currentThread = Thread.currentThread();
-                    if (currentThread instanceof ForkJoinWorkerThread) {
-                        executor = ((ForkJoinWorkerThread) currentThread).getPool();
-                    } else {
-                        executor = ForkJoinPool.commonPool();
-                    }
-                }
-            }
-            return executor;
-        }
+        this.executorService = service;
+        return service;
     }
 
     public void setTimer(Timer timer) {
@@ -123,14 +136,14 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     }
 
     @Override
-    public void complete() {
+    protected void complete() {
         super.complete();
         if (parent != null) {
             parent.leave(this);
         }
     }
 
-    public void completeExceptionally(Throwable t) {
+    protected void completeExceptionally(Throwable t) {
         super.completeExceptionally(t);
         if (parent != null) {
             parent.completeExceptionally(t);

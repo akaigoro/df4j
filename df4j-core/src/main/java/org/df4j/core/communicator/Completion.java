@@ -94,7 +94,7 @@ public class Completion implements CompletionI {
     /**
      * completes this {@link Completable} normally
      */
-    public void complete() {
+    protected void complete() {
         _complete(null);
     }
 
@@ -102,7 +102,7 @@ public class Completion implements CompletionI {
      * completes this {@link Completable} exceptionally
      * @param e completion exception
      */
-    public void completeExceptionally(Throwable e) {
+    protected void completeExceptionally(Throwable e) {
         if (e == null) {
             throw new IllegalArgumentException();
         }
@@ -113,7 +113,7 @@ public class Completion implements CompletionI {
      * waits this {@link Completable} to complete
      * @throws InterruptedException if this thread interrupted
      */
-    public void join()  throws InterruptedException  {
+    public void blockingAwait()  throws InterruptedException  {
         synchronized(this) {
             while (!completed) {
                 wait();
@@ -177,50 +177,4 @@ public class Completion implements CompletionI {
         }
         return sb.toString();
     }
-
-    static protected class CompletionSubscription implements SimpleSubscription {
-        private final CompletionI completion;
-        Completable.Observer subscriber;
-        private boolean cancelled;
-
-        protected CompletionSubscription(CompletionI complention) {
-            this.completion = complention;
-        }
-
-        protected CompletionSubscription(CompletionI completion, Completable.Observer subscriber) {
-            this.completion = completion;
-            this.subscriber = subscriber;
-        }
-
-        @Override
-        public void cancel() {
-            synchronized(completion) {
-                if (cancelled) {
-                    return;
-                }
-                cancelled = true;
-                LinkedList<CompletionSubscription> subscriptions = completion.getSubscriptions();
-                if (subscriptions != null) {
-                    subscriptions.remove(this);
-                }
-            }
-        }
-
-        @Override
-        public boolean isCancelled() {
-            synchronized(completion) {
-                return cancelled;
-            }
-        }
-
-        void onComplete() {
-            Throwable completionException = completion.getCompletionException();
-            if (completionException == null) {
-                subscriber.onComplete();
-            } else {
-                subscriber.onError(completionException);
-            }
-        }
-    }
-
 }

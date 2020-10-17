@@ -16,7 +16,7 @@ public class PubSubTest {
         pub.out.subscribe(sub.inp);
         pub.start();
         sub.start();
-        boolean res = df.blockingAwait(100000);
+        boolean res = df.blockingAwait(1000);
         Assert.assertTrue(res);
     }
 

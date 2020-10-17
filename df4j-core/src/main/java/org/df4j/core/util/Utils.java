@@ -1,5 +1,6 @@
 package org.df4j.core.util;
 
+import org.df4j.core.dataflow.ClassicActor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.Executor;
@@ -12,4 +13,19 @@ public class Utils {
         throw (E) e;
     }
 
+    public static class ZeroThreadedExecutor extends ClassicActor<Runnable> implements Executor {
+        {
+            start();
+        }
+
+        @Override
+        public void execute(@NotNull Runnable command) {
+            super.onNext(command);
+        }
+
+        @Override
+        protected void runAction(Runnable command) throws Throwable {
+            command.run();
+        }
+    }
 }

@@ -4,7 +4,6 @@ import org.df4j.protocol.Completable;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -12,25 +11,13 @@ import java.util.concurrent.TimeUnit;
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
 public interface CompletionI extends Completable.Source {
-    LinkedList<Completion.CompletionSubscription> getSubscriptions();
+    LinkedList<CompletionSubscription> getSubscriptions();
 
     /**
      * @return completion Exception, if this {@link Completable} was completed exceptionally;
      * null otherwise
      */
     Throwable getCompletionException();
-
-    /**
-     * sets the state to completed
-     */
-    void complete();
-
-    /**
-     * If not already completed, causes invocations of get() and related methods to throw {@link CompletionException}
-     * with the given exception as the cause.
-     * @param e exception to throw
-     */
-    void completeExceptionally(Throwable e);
 
     /**
      * @return true if this {@link Completable} was completed normally or exceptionally;
@@ -41,7 +28,7 @@ public interface CompletionI extends Completable.Source {
     /**
      * waits this {@link Completable} to complete indefinetely
      */
-    void join()  throws InterruptedException;
+    void blockingAwait()  throws InterruptedException;
 
     /**
      * waits this {@link Completable} to complete until timeout
@@ -58,5 +45,7 @@ public interface CompletionI extends Completable.Source {
      * @return true if completed;
      *         false if timout reached
      */
-    boolean blockingAwait(long timeout, TimeUnit unit);
+    default boolean blockingAwait(long timeout, TimeUnit unit) {
+        return blockingAwait(unit.toMillis(timeout));
+    }
 }

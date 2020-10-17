@@ -26,7 +26,7 @@ import static org.df4j.core.dataflow.ActorState.*;
  * It becomes  {@link ActorState#Running} and is submitted for execution to its executor when all ports become ready.
  * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
  */
-public abstract class AsyncProc extends Node<AsyncProc> {
+public abstract class AsyncProc extends Node<AsyncProc> implements Activity {
     public static final int MAX_PORT_NUM = 31;
     private static final boolean checkingMode = true; // todo false
 
@@ -95,13 +95,11 @@ public abstract class AsyncProc extends Node<AsyncProc> {
     /**
      * finishes parent activity normally.
      */
-    public void complete() {
-        synchronized(this) {
-            if (isCompleted()) {
-                return;
-            }
-            state = Completed;
+    protected synchronized void complete() {
+        if (isCompleted()) {
+            return;
         }
+        state = Completed;
         super.complete();
     }
 
@@ -109,7 +107,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      * finishes parent activity exceptionally.
      * @param ex the exception
      */
-    public void completeExceptionally(Throwable ex) {
+    protected void completeExceptionally(Throwable ex) {
         synchronized(this) {
             if (isCompleted()) {
                 return;
@@ -128,11 +126,6 @@ public abstract class AsyncProc extends Node<AsyncProc> {
      */
     protected void fire() {
         getExecutor().execute(this::run);
-    }
-
-    @Override
-    public boolean isAlive() {
-        return !isCompleted();
     }
 
     protected void _controlportUnblock() {
@@ -174,13 +167,19 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         return ports.toString();
     }
 
+    public static abstract class AbstractPort {
+        public abstract void block();
+        public abstract void unblock();
+        protected abstract boolean isReady();
+    }
+
     /**
      * Basic class for all ports (places for tokens).
      * Has 2 states: ready or blocked.
      * When all ports become unblocked, method {@link AsyncProc#fire()} is called.
      * This is clear analogue to the firing of a Petri Net transition.
      */
-    public static class Port {
+    public static class Port extends AbstractPort {
         protected boolean ready;
         protected final AsyncProc parent;
         protected final int portNum;
@@ -208,6 +207,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
             return parent;
         }
 
+        @Override
         public boolean isReady() {
             synchronized(parent) {
                 return ready;
@@ -217,6 +217,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
         /**
          * sets this port to a blocked state.
          */
+        @Override
         public void block() {
             synchronized(parent) {
                 if (!ready) {
@@ -235,6 +236,7 @@ public abstract class AsyncProc extends Node<AsyncProc> {
          * If all ports become unblocked,
          * this block is submitted to the executor.
          */
+        @Override
         public synchronized void unblock() {
             synchronized(parent) {
                 if (ready) {

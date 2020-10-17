@@ -76,7 +76,7 @@ public final class ReduceByKey<K, V> {
     }
 
     @Override
-    public synchronized void complete() {
+    protected synchronized void complete() {
       if (isCompleted()) {
         return;
       }

@@ -39,12 +39,12 @@ public class OutFlowTest {
         Assert.assertEquals(actor.runCounter, 1);
         actor.resume();
         Assert.assertEquals(actor.runCounter, 1);
-        Assert.assertEquals(1, out.poll().intValue());
+        Assert.assertEquals(1, out.remove().intValue());
         Assert.assertTrue(out.isReady());
         Assert.assertEquals(actor.runCounter, 2);
-        Assert.assertEquals(2, out.poll().intValue());
+        Assert.assertEquals(2, out.remove().intValue());
         Assert.assertTrue(out.isReady());
-        Assert.assertNull(out.poll());
+        Assert.assertNull(out.remove());
         Assert.assertTrue(out.isReady());
     }
 
@@ -59,21 +59,7 @@ public class OutFlowTest {
         Assert.assertTrue(success);
         Thread.sleep(50);
         Assert.assertEquals(cnt, sub.cnt);
-        Assert.assertTrue(sub.completed);
-    }
-
-    @Test
-    public void outFlowZeroCapacityTest() throws InterruptedException {
-        int cnt = 3;
-        PublisherActor pub = new PublisherActor(new Dataflow(), cnt, 0, 0);
-        LoggingSubscriber sub = new LoggingSubscriber();
-        pub.out.subscribe(sub);
-        pub.start();
-        boolean success = pub.blockingAwait(400);
-        Assert.assertTrue(success);
-        Thread.sleep(50);
-        Assert.assertEquals(cnt, sub.cnt);
-        Assert.assertTrue(sub.completed);
+        Assert.assertTrue(sub.blockingAwait(100));
     }
 }
 

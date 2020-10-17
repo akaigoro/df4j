@@ -9,21 +9,21 @@ public class LinkedIteratorTest {
     public void toStringTest() {
         MyQueue queue = new MyQueue();
         Assert.assertEquals("[]", queue.toString());
-        Assert.assertEquals(0, queue.size());
+        Assert.assertTrue(queue.isEmpty());
         MyItem item22 = new MyItem(22);
         queue.offer(item22);
-        Assert.assertEquals(1, queue.size());
+        Assert.assertFalse( queue.isEmpty());
         Assert.assertEquals("[22]", queue.toString());
         MyItem item33 = new MyItem(33);
         queue.offer(item33);
-        Assert.assertEquals(2, queue.size());
+        Assert.assertFalse( queue.isEmpty());
         Assert.assertEquals("[22, 33]", queue.toString());
         queue.remove(item22);
-        Assert.assertEquals(1, queue.size());
+        Assert.assertFalse( queue.isEmpty());
         Assert.assertEquals("[33]", queue.toString());
         queue.remove(item33);
         Assert.assertEquals("[]", queue.toString());
-        Assert.assertEquals(0, queue.size());
+        Assert.assertTrue(queue.isEmpty());
     }
 
     static class MyItem extends LinkImpl {

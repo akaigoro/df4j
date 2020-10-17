@@ -48,20 +48,10 @@ public class Dataflow extends Node<Dataflow> {
     public void leave(Node node) {
         synchronized(this) {
             children.remove(node.nodeLink);
-            if (children.size() == 0) {
+            if (totalChildCount == 0) {
                 super.complete();
             }
         }
-    }
-
-    @Override
-    public void start() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean isAlive() {
-        return !super.isCompleted();
     }
 
     @Override
@@ -75,7 +65,7 @@ public class Dataflow extends Node<Dataflow> {
             sb.append("completed with exception: ");
             sb.append(this.completionException.toString());
         }
-        sb.append("; child node count: "+children.size());
+        sb.append("; has children: "+totalChildCount);
         return sb.toString();
     }
 }

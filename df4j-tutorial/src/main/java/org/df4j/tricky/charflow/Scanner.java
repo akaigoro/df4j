@@ -7,6 +7,5 @@ import org.df4j.core.port.OutFlow;
 public abstract class Scanner<T> extends Actor {
     public InpChars inp = new InpChars(this);
     public OutFlow<T> outp = new OutFlow<>(this);
-
 }
 

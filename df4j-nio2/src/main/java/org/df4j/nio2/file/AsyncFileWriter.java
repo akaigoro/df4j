@@ -38,7 +38,7 @@ public class AsyncFileWriter extends AsyncFileChannel {
 
     public AsyncFileWriter(Dataflow dataflow, Path path, int capacity) throws IOException {
         this(dataflow,
-                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), dataflow.getExecutor()),
+                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), dataflow.getExecutorService()),
                 capacity);
     }
 

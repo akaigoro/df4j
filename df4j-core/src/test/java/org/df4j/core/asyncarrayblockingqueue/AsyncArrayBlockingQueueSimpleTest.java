@@ -7,8 +7,6 @@ import org.junit.Test;
 
 import java.util.concurrent.CompletionException;
 
-import static org.junit.Assert.fail;
-
 public class AsyncArrayBlockingQueueSimpleTest {
 
     public void addRemoveTest(int cnt) {
@@ -24,14 +22,14 @@ public class AsyncArrayBlockingQueueSimpleTest {
             Assert.assertTrue(e instanceof IllegalStateException);
         }
         Assert.assertEquals(cnt, queue.size());
+        queue.onComplete();
         Assert.assertFalse(queue.isCompleted());
-        queue.complete();
-        Assert.assertEquals(queue.size()==0, queue.isCompleted());
         for (long k=0; k<cnt; k++) {
             Long value = queue.remove();
             Assert.assertEquals(k, value.longValue());
         }
-        Assert.assertTrue(queue.isCompleted());
+        boolean condition = queue.blockingAwait(100);
+        Assert.assertTrue(condition);
         try {
             queue.remove();
             Assert.fail();
@@ -41,8 +39,8 @@ public class AsyncArrayBlockingQueueSimpleTest {
     }
 
     @Test
-    public void addTest2() throws InterruptedException {
-        addRemoveTest(2);
+    public void addTest1() throws InterruptedException {
+        addRemoveTest(1);
     }
 
     @Test
@@ -50,23 +48,19 @@ public class AsyncArrayBlockingQueueSimpleTest {
         addRemoveTest(4);
     }
 
-    public void addSubTest(int cnt) {
-        AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
-        LoggingSubscriber sub = new LoggingSubscriber();
-        queue.subscribe(sub);
+    public void addSubTest(int cnt) throws InterruptedException {
+        AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(cnt);
         for (long k=0; k<cnt; k++) {
             queue.add(k);
         }
-        queue.complete();
-        Assert.assertTrue(queue.isCompleted());
-        Assert.assertEquals(cnt, sub.cnt);
-        Assert.assertTrue(sub.completed);
-        Assert.assertNull(sub.completionException);
-    }
-
-    @Test
-    public void pubSubTest0() throws InterruptedException {
-        addSubTest(0);
+//        queue.onComplete();
+        queue.onComplete();
+        Assert.assertFalse(queue.isCompleted());
+        for (long k=0; k<cnt; k++) {
+            Long item = queue.remove();
+            Assert.assertEquals(k, item.longValue());
+        }
+        Assert.assertTrue(queue.blockingAwait(100));
     }
 
     @Test
@@ -80,24 +74,39 @@ public class AsyncArrayBlockingQueueSimpleTest {
     }
 
     @Test
-    public void cancelTest() {
+    public void cancelTest() throws InterruptedException {
         int cnt = 4;
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         LoggingSubscriber sub = new LoggingSubscriber();
         queue.subscribe(sub);
-        queue.offer(0L);
-        Assert.assertEquals(1, sub.cnt);
-        Assert.assertFalse(sub.completed);
-        Assert.assertNull(sub.completionException);
         sub.subscription.cancel();
-        queue.complete();
-        for (long k=0; ; k++) {
-            if (!queue.offer(k)) {
-                break;
-            }
-        }
-        Assert.assertEquals(1, sub.cnt);
-        Assert.assertFalse(sub.completed);
+        queue.onComplete();
+        Assert.assertTrue(queue.blockingAwait(100));
+        Assert.assertFalse(sub.blockingAwait(100));
+    }
+
+    @Test
+    public void completelTest() throws InterruptedException {
+        int cnt = 4;
+        AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
+        LoggingSubscriber sub = new LoggingSubscriber();
+        queue.subscribe(sub);
+        Assert.assertFalse(sub.blockingAwait(100));
+        queue.onComplete();
+        boolean condition = queue.blockingAwait(100);
+        Assert.assertTrue(condition);
+        Assert.assertTrue(sub.blockingAwait(100));
+    }
+
+    @Test
+    public void testAsyncQueueCompleted() {
+        AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<Long>(1);
+        queue.add(1l);
+        queue.onComplete();
+        Assert.assertFalse(queue.isCompleted());
+        queue.remove();
+        boolean condition = queue.blockingAwait(100);
+        Assert.assertTrue(condition);
     }
 
 }

@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
+import org.jetbrains.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -73,9 +74,39 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         }
     }
 
+    protected void addToken(T message) {
+        tokens.add(message);
+        unblock();
+    }
+
+    @Override
+    protected void _onComplete(Throwable throwable) {
+        super._onComplete(throwable);
+        if (tokens.isEmpty()) {
+            whenComplete();
+        }
+    }
+
+    @Nullable
+    private T pollToken() {
+        T res;
+        res = tokens.poll();
+        if (tokens.isEmpty()) {
+            if (completed) {
+                whenComplete();
+            } else {
+                block();
+            }
+        }
+        return res;
+    }
+
+    protected void whenComplete() {
+    }
+
     @Override
     public void onSubscribe(Subscription subscription) {
-        synchronized(parent) {
+        synchronized(this) {
             if (this.subscription != null) {
                 subscription.cancel(); // this is dictated by the spec.
                 return;
@@ -92,6 +123,21 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         subscription.request(requestedCount);
     }
 
+    public synchronized boolean offer(T message) {
+        if (message == null) {
+            throw new NullPointerException();
+        }
+        if (isCompleted()) {
+            return false;
+        }
+        if (buffIsFull()) {
+            return false;
+        }
+        tokens.addLast(message);
+        unblock();
+        return true;
+    }
+
     /**
      * normally this method is called by Flow.Publisher.
      * But before the port is subscribed, this method can be called directly.
@@ -100,20 +146,33 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      * @param message token to store
      */
     @Override
-    public void onNext(T message) {
-        synchronized(parent) {
-            if (message == null) {
-                throw new NullPointerException();
-            }
-            if (isCompleted()) {
-                return;
-            }
-            if (subscription != null) {
-                requestedCount--;
-            }
-            tokens.add(message);
-            unblock();
+    public synchronized void onNext(T message) {
+        if (message == null) {
+            throw new NullPointerException();
         }
+        if (isCompleted()) {
+            return;
+        }
+        if (buffIsFull()) {
+            throw new IllegalStateException();
+        }
+        if (subscription != null) {
+            requestedCount--;
+        }
+        addToken(message);
+    }
+
+    public synchronized void put(T message) throws InterruptedException {
+        if (message == null) {
+            throw new NullPointerException();
+        }
+        if (isCompleted()) {
+            return;
+        }
+        while (buffIsFull()) {
+            wait();
+        }
+        addToken(message);
     }
 
     public T poll() {
@@ -123,10 +182,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             if (!ready) {
                 throw new IllegalStateException();
             }
-            res = tokens.poll();
-            if (tokens.isEmpty() && !completed) {
-                block();
-            }
+            res = pollToken();
             if (subscription == null) {
                 return res;
             }
@@ -143,6 +199,31 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
             throw new java.util.concurrent.CompletionException(completionException);
         }
         T res = poll();
+        if (res == null) {
+            throw new IllegalStateException();
+        }
         return res;
     }
+
+    public int size() {
+        return tokens.size();
+    }
+
+    public boolean isEmpty() {
+        return tokens.isEmpty();
+    }
+
+    static final AsyncProc.AbstractPort dummyListener = new AsyncProc.AbstractPort() {
+
+        @Override
+        public boolean isReady() {
+            return false;
+        }
+
+        @Override
+        public void block() {}
+
+        @Override
+        public void unblock() {}
+    };
 }

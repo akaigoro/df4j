@@ -1,16 +1,15 @@
 package org.df4j.core.activities;
 
+import org.df4j.core.communicator.Completion;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-public class LoggingSubscriber implements Subscriber<Long> {
+public class LoggingSubscriber extends Completion implements Subscriber<Long> {
     public final Logger logger = new Logger(this);
     public int cnt = 0;
     public Subscription subscription;
     public Long in;
-    public volatile boolean completed = false;
-    public volatile Throwable completionException = null;
 
     @Override
     public void onSubscribe(Subscription subscription) {
@@ -28,12 +27,12 @@ public class LoggingSubscriber implements Subscriber<Long> {
     @Override
     public void onError(Throwable e) {
         logger.info(" completed with: " + e);
-        completed = true;
-        completionException = e;
+        super.completeExceptionally(e);
     }
 
     @Override
     public void onComplete() {
-        onError(null);
+        logger.info(" completed OK");
+        super.complete();
     }
 }

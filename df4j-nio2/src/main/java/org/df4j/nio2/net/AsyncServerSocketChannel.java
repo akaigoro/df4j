@@ -38,7 +38,7 @@ public abstract class AsyncServerSocketChannel extends Actor
         if (addr == null) {
             throw new NullPointerException();
         }
-        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(dataflow.getExecutor());
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(dataflow.getExecutorService());
         assc = AsynchronousServerSocketChannel.open(group);
         assc.bind(addr);
         LOG.info("AsyncServerSocketChannel("+addr+") created");

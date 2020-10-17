@@ -1,14 +1,6 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.communicator.ScalarResultTrait;
-import org.df4j.protocol.Completable;
-import org.df4j.protocol.Scalar;
-import org.df4j.protocol.SimpleSubscription;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public abstract class AsyncFunc<R> extends AsyncProc implements ScalarResultTrait<R> {
     private R result;

@@ -23,4 +23,9 @@ public class LinkImpl implements Link {
     public void setPrev(Link prev) {
         this.prev = prev;
     }
+
+    public boolean isLinked() {
+        return next != this;
+    }
+
 }

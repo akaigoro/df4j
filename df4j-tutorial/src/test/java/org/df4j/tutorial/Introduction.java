@@ -1,5 +1,6 @@
 package org.df4j.tutorial;
 
+import org.df4j.core.communicator.CompletionI;
 import org.df4j.core.dataflow.*;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
@@ -32,7 +33,7 @@ public class Introduction<out> {
      *
      * @param activity
      */
-    public static void blockingAwait(Activity activity) {
+    public static void blockingAwait(CompletionI activity) {
         boolean fin = activity.blockingAwait(400);
         Assert.assertTrue(fin);
     }
@@ -43,7 +44,7 @@ public class Introduction<out> {
      *
      * @param activity
      */
-    public static void expectException(Activity activity, Class<? extends Throwable> exceptionClass) {
+    public static void expectException(CompletionI activity, Class<? extends Throwable> exceptionClass) {
         try {
             activity.blockingAwait(400);
             fail(" exception "+exceptionClass.getSimpleName()+" expected");

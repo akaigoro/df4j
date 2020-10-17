@@ -32,7 +32,7 @@ public class AsyncClientSocketChannel extends CompletablePort
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
     public void connect(SocketAddress addr) throws IOException {
-        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(parent.getExecutor());
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(parent.getExecutorService());
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open(group);
         channel.connect(addr, channel, this);
     }

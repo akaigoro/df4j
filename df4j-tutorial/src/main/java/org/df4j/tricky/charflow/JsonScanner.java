@@ -5,7 +5,7 @@ import org.df4j.tricky.charflow.jsontokens.StringToken;
 import org.df4j.tricky.charflow.jsontokens.Token;
 import org.df4j.tricky.charflow.jsontokens.TokenType;
 
-public class JsonScanner extends Scanner {
+public class JsonScanner extends Scanner<Token> {
     StringBuilder sb;
     int number;
 

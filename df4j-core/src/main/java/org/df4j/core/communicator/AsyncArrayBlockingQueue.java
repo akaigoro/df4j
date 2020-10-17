@@ -1,137 +1,371 @@
 package org.df4j.core.communicator;
 
 import org.df4j.core.dataflow.Actor;
-import org.df4j.core.port.InpChannel;
-import org.df4j.core.port.OutFlow;
+import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.port.InpFlow;
+import org.df4j.core.util.linked.Link;
+import org.df4j.core.util.linked.LinkImpl;
+import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.ReverseFlow;
+import org.df4j.protocol.FlowSubscription;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletionException;
 
 /**
- *  Partially implemented {@link BlockingQueue} augmented with asynchronous interfaces to save and extract messages,
- *  and also interfaces to pass completion signal as required by {@link Flow}.
- *
- * <p>
- *  Flow of messages:
- *  {@link ReverseFlow.Producer} =&gt; {@link AsyncArrayBlockingQueue}  =&gt; {@link Subscriber}
- *
- * @param <T> the type of the values passed through this token container
+ * Analogue of {@link ArrayBlockingQueue} augmented with asynchronous interface on output end
+ * Also, analogue of {@link java.util.concurrent.CompletableFuture} but for a stream of items
+ * Also, analogye of SubmissionPublisher (JDK9)
+ * @param <T> type of emitted tokens
  */
-public class AsyncArrayBlockingQueue<T> extends Actor implements
-        /** asyncronous analogue of  {@link BlockingQueue#put(Object)} */
-        ReverseFlow.Consumer<T>,
-        /** asyncronous analogue of  {@link BlockingQueue#take()} */
-        Flow.Publisher<T>
-//        OutMessagePort<T>
+public class AsyncArrayBlockingQueue<T> extends Actor 
+        implements Flow.Subscriber<T>, Flow.Publisher<T>
 {
-    protected final InpChannel<T> inp;
-    protected final OutFlow<T> out;
+    public static final int DEFAULT_CAPACITY = 16;
+    protected final int capacity;
+    /** input */
+    protected InpFlow<T> input;
+    /** demands */
+    private LinkedQueuePort<FlowSubscriptionImpl> activeSubscriptions = new LinkedQueuePort<>();
+    private LinkedQueue<FlowSubscriptionImpl> passiveSubscriptions = new LinkedQueue<>();
 
-    public AsyncArrayBlockingQueue(int capacity) {
-        if (capacity < 0) {
+    public AsyncArrayBlockingQueue(Dataflow parent, int capacity) {
+        super(parent);
+        if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
-        inp = new InpChannel<>(this, capacity>1? capacity-1:1);
-        out = new OutFlow<>(this, 1);
+        this.capacity = capacity;
+        input = new InpFlow<T>(this, capacity) {
+            @Override
+            protected void whenComplete() {
+                AsyncArrayBlockingQueue.this._complete(input.getCompletionException());
+            }
+        };
         start();
     }
 
+    public AsyncArrayBlockingQueue(Dataflow parent) {
+        this(parent, DEFAULT_CAPACITY);
+    }
+
+    public AsyncArrayBlockingQueue(int capacity) {
+        this(new Dataflow(), capacity);
+    }
+
     public AsyncArrayBlockingQueue() {
-        this(32);
+        this(new Dataflow(), DEFAULT_CAPACITY);
     }
 
-    @Override
-    public void feedFrom(ReverseFlow.Producer<T> producer) {
-        inp.feedFrom(producer);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> s) {
-        out.subscribe(s);
-    }
-
-    public boolean offer(T token) {
-        return inp.offer(token);
-    }
-
-    public boolean offer(T token, int timeout, TimeUnit unit) throws InterruptedException {
-        return inp.offer(token, timeout, unit);
-    }
-
-    public void add(T token) {
-        inp.add(token);
-    }
-
-    public void put(T token) throws InterruptedException {
-        inp.put(token);
+    public synchronized boolean isCompleted() {
+        return completed && input.size() == 0;
     }
 
     public int size() {
-        return inp.size()+out.size();
+        return input.size();
     }
 
+    /**
+     * Inserts next token
+     * @param token token to insert
+     * @return false when input buffer is full
+     */
+    public boolean offer(T token) {
+        return input.offer(token);
+    }
+
+    /**
+     * Inserts next token
+     * blocks when input buffer is full
+     * @param token token to insert
+     * @throws InterruptedException
+     *    when inerrupted
+     */
+    public void put(T token) throws InterruptedException {
+        input.put(token);
+    }
+
+    /**
+     * Inserts next token
+     * @param token token to insert
+     * @throws IllegalStateException when input buffer is full
+     */
+    public void add(T token) {
+        input.onNext(token);
+    }
+
+    @Override
+    public void onSubscribe(Subscription s) {
+        input.onSubscribe(s);
+    }
+
+    /**
+     * Inserts next token
+     * @param token token to insert
+     * @throws IllegalStateException when input buffer is full
+     */
+    public void onNext(T token) {
+        input.onNext(token);
+    }
+
+    public synchronized void onComplete() {
+        input.onComplete();
+    }
+
+    public void onError(Throwable ex) {
+        input.onError(ex);
+    }
+
+    /**
+     * extracts next token
+     * never blocks
+     * @return  token
+     *       or null when the buffer is empty
+     */
+    public synchronized T poll() {
+        T res = input.poll();
+        if (res != null) {
+            return res;
+        }
+        if (completed) {
+            throw new CompletionException(completionException);
+        }
+        return null;
+    }
+
+    /**
+     * extracts next token
+     * @return  token
+     * @throws IllegalStateException when the buffer is empty
+     */
     public T remove() {
-        T res = out.poll();
-        if (res == null) {
-            throw new IllegalStateException();
-        }
-        return res;
+        T result = input.remove();
+        return result;
     }
 
-    public T poll() {
-        return out.poll();
-    }
-
-    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        return out.poll(timeout, unit);
-    }
-
+    /**
+     * extracts next token
+     * blocks when the buffer is empty
+     * @return  token
+     */
     public T take() throws InterruptedException {
-        return out.take();
-    }
-
-    @Override
-    public void complete() {
-        inp.onComplete();
-    }
-
-    @Override
-    public void completeExceptionally(Throwable ex) {
-        inp.onError(ex);
-    }
-
-    boolean recurse = false;
-    boolean repeat = false;
-
-    @Override
-    protected void fire() {
-        if (recurse) {
-            repeat = true;
-            return;
+        T res = poll();
+        if (res != null) {
+            return res;
         }
-        recurse = true;
+        FlowSubscriptionImpl subscription = new FlowSubscriptionImpl();
+        activeSubscriptions.add(subscription);
+        return subscription.get();
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber) {
+        AsyncFlowSubscriptionImpl subscription = new AsyncFlowSubscriptionImpl(subscriber);
+        subscriber.onSubscribe(subscription);
+    }
+
+    @Override
+    protected void runAction() {
+        FlowSubscriptionImpl subscription = activeSubscriptions.poll();
         for (;;) {
-            run();
-            if (repeat) {
-                repeat = false;
-            } else {
+            if (subscription == null) {
                 break;
             }
+            T token = input.poll();
+            if (token == null) {
+                break;
+            }
+            subscription.onNext(token);
+            subscription = activeSubscriptions.poll();
         }
-        recurse = false;
+        if (!input.isCompleted()) {
+            return;
+        }
+        Throwable completionException = input.getCompletionException();
+        if (completionException == null) {
+            complete();
+        } else {
+            completeExceptionally(completionException);
+        }
+        if (subscription != null) {
+            subscription.onComplete(completionException);
+        }
+        for (;;) {
+            FlowSubscriptionImpl subscription1 = activeSubscriptions.poll();
+            if (subscription1 == null) {
+                break;
+            }
+            subscription1.onComplete(completionException);
+        }
+        for (;;) {
+            FlowSubscriptionImpl subscription1 = passiveSubscriptions.poll();
+            if (subscription1 == null) {
+                break;
+            }
+            subscription1.onComplete(completionException);
+        }
     }
 
-    @Override
-    protected void runAction() throws Throwable {
-        if (inp.isCompleted()) {
-            out._onComplete(inp.getCompletionException());
-            super.complete();
-        } else {
-            T token = inp.remove();
-            out.onNext(token);
+    protected class FlowSubscriptionImpl extends LinkImpl {
+        protected boolean cancelled = false;
+        protected T token;
+
+        public synchronized boolean isCancelled() {
+            return cancelled;
+        }
+
+        public synchronized void cancel() {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            this.unlink();
+        }
+
+        /**
+         * must be unlinked
+         * @param token token to pass
+         */
+        protected synchronized void onNext(T token) {
+            this.token = token;
+            notifyAll();
+        }
+
+        /**
+         * must be unlinked
+\
+         * @param completionException*/
+        synchronized void onComplete(Throwable completionException) {
+            notifyAll();
+        }
+
+        public synchronized T get() throws InterruptedException {
+            for (;;) {
+                if (token != null) {
+                    return token;
+                }
+                if (isCompleted()) {
+                    throw new CompletionException(AsyncArrayBlockingQueue.this.completionException);
+                }
+                wait();
+            }
+        }
+    }
+
+    protected class AsyncFlowSubscriptionImpl extends FlowSubscriptionImpl
+            implements FlowSubscription
+    {
+        protected final Subscriber subscriber;
+        private long remainedRequests = 0;
+
+        AsyncFlowSubscriptionImpl(Subscriber subscriber) {
+            this.subscriber = subscriber;
+            passiveSubscriptions.add(this);
+        }
+
+        private synchronized void park() {
+            if (remainedRequests == 0) {
+                passiveSubscriptions.add(this); // todo fix
+            } else {
+                activeSubscriptions.add(this);
+            }
+        }
+
+        /**
+         *
+         * @param n the increment of demand
+         */
+        @Override
+        public synchronized void request(long n) {
+            if (n <= 0) {
+                subscriber.onError(new IllegalArgumentException());
+                return;
+            }
+            if (cancelled) {
+                return;
+            }
+            remainedRequests += n;
+            if (remainedRequests > n) {
+                return;
+            }
+            // remainedRequests was 0, so this subscription was passive
+            passiveSubscriptions.remove(this);
+            activeSubscriptions.add(this);
+        }
+
+        /**
+         * this must be unlinked
+         * @param token token to pass
+         * @return
+         */
+        public synchronized void onNext(T token) {
+            this.token = token;
+            if (token != null) {
+                subscriber.onNext(token);
+                park();
+            } else if (completed) {
+                if (completionException == null) {
+                    subscriber.onComplete();
+                } else {
+                    subscriber.onError(completionException);
+                }
+            }
+        }
+
+        /**
+         * this must be unlinked
+         * @return
+         * @param completionException
+         */
+        public synchronized void onComplete(Throwable completionException) {
+            if (completionException == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(completionException);
+            }
+        }
+    }
+
+    public class LinkedQueuePort<L extends Link> extends LinkedQueue<L> {
+        protected final Port port = new Port(AsyncArrayBlockingQueue.this);
+
+        @Override
+        public boolean offer(L item) {
+            boolean success = super.offer(item);
+            if (success) {
+                port.unblock();
+            }
+            return success;
+        }
+
+        @Override
+        public L poll() {
+            L result = super.poll();
+            if (size()==0) {
+                port.block();
+            }
+            return result;
+        }
+
+        public L remove() {
+            L result = super.poll();
+            if (result == null) {
+                throw new IllegalStateException();
+            }
+            if (size()==0) {
+                port.block();
+            }
+            return result;
+        }
+
+        @Override
+        public boolean remove(Link item) {
+            boolean result = super.remove(item);
+            if (size()==0) {
+                port.block();
+            }
+            return result;
         }
     }
 }

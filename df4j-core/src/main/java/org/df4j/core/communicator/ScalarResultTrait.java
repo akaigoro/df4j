@@ -20,23 +20,8 @@ import java.util.concurrent.*;
 public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Future<R> {
     R getResult();
     void setResult(R result);
-    LinkedList<Completion.CompletionSubscription> getSubscriptions();
+    LinkedList<CompletionSubscription> getSubscriptions();
     Throwable getCompletionException();
-
-    /**
-     * 	complete(T value)
-     * If not already completed, sets the value returned by get() and related methods to the given value.
-     * @param result the value returned by get()
-     */
-    default void complete(R result) {
-        synchronized (this) {
-            if (isCompleted()) {
-                return;
-            }
-            setResult(result);
-            complete();
-        }
-    }
 
     @Override
     default void subscribe(Scalar.Observer<? super R> subscriber) {
@@ -73,7 +58,7 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
 
     @Override
     default R get() throws InterruptedException {
-        join();
+        blockingAwait();
         return getResult();
     }
 
@@ -86,11 +71,11 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
         }
     }
 
-    class ValueSubscription<R> extends Completion.CompletionSubscription {
+    class ValueSubscription<R> extends CompletionSubscription {
         ScalarResultTrait<R> scalarResultTrait;
 
         public ValueSubscription(ScalarResultTrait<R> completion, Scalar.Observer<? super R> subscriber) {
-            super(completion, subscriber);
+            super((Completion) completion, subscriber);
             this.scalarResultTrait = completion;
         }
 

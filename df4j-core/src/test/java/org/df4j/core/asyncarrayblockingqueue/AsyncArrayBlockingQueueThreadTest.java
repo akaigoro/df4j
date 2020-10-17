@@ -17,7 +17,7 @@ public class AsyncArrayBlockingQueueThreadTest {
         producer.start();
         consumer.start();
         consumer.join(400);
-        Assert.assertFalse(consumer.isAlive());
+        Assert.assertTrue(consumer.blockingAwait(100));
     }
 
     @Test
