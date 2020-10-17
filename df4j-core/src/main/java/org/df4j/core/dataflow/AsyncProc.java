@@ -30,7 +30,7 @@ import static org.df4j.core.dataflow.ActorState.*;
  * It becomes  {@link ActorState#Running} and is submitted for execution to its executor when all ports become ready.
  * It becomes {@link ActorState#Completed} when its method {@link AsyncProc#runAction()} completes, normally or exceptionally.
  */
-public abstract class AsyncProc extends Node<AsyncProc> implements Transitionable {
+public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHolder {
     public static final int MAX_PORT_NUM = 31;
     private static final boolean checkingMode = true; // todo false
 
@@ -177,25 +177,21 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
      */
     public static class Port {
         protected boolean ready;
-        protected final Transition transition1;
+        protected final Transition transition;
         protected final int portNum;
 
-        public Port(Transitionable parentHolder, boolean ready) {
-            this.transition1 = parentHolder.getTransition();
+        public Port(TransitionHolder parentHolder, boolean ready) {
+            this.transition = parentHolder.getTransition();
             this.ready = ready;
-            portNum = transition1.registerPort(this);
+            portNum = transition.registerPort(this);
         }
 
-        public Port(Transitionable transition1) {
-            this(transition1, false);
-        }
-
-        protected Transition getTransition1() {
-            return transition1;
+        public Port(TransitionHolder transition) {
+            this(transition, false);
         }
 
         public boolean isReady() {
-            synchronized(transition1) {
+            synchronized(transition) {
                 return ready;
             }
         }
@@ -204,16 +200,20 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
          * sets this port to a blocked state.
          */
         public void block() {
-            transition1.block(this);
+            transition.block(this);
         }
 
         public void unblock() {
-            transition1.unblock(this);
+            transition.unblock(this);
         }
 
         @Override
         public String toString() {
             return super.toString() + (ready?": ready":": blocked");
+        }
+
+        public Dataflow getDataflow() {
+            return transition.getDataflow();
         }
     }
 
@@ -227,17 +227,17 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
         private ArrayList<Port> ports = new ArrayList<>(4);
         protected int blockedPortsScale = 0;
 
-        @Override
-        public Dataflow getDataflow() {
-            return AsyncProc.this.getParent();
-        }
-
         private void setBlocked(int portNum) {
             blockedPortsScale |= (1<<portNum);
         }
 
         private int setUnBlocked(int portNum) {
             return blockedPortsScale &= ~(1<<portNum);
+        }
+
+        @Override
+        public Dataflow getDataflow() {
+            return AsyncProc.this.getDataflow();
         }
 
         @Override
@@ -304,7 +304,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements Transitionabl
         }
     }
 
-    public class MultiPort extends Port implements Transitionable {
+    public class MultiPort extends Port implements TransitionHolder {
         final TransitionAny transition;
 
         public MultiPort(AsyncProc parent) {

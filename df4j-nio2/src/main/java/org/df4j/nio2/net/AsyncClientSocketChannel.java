@@ -2,6 +2,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.CompletablePort;
+import org.df4j.core.port.InpScalar;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -14,11 +15,9 @@ import java.util.concurrent.ExecutorService;
  * Client connection implemented as scalar input port.
  *
  */
-public class AsyncClientSocketChannel extends CompletablePort
+public class AsyncClientSocketChannel extends InpScalar<AsynchronousSocketChannel>
         implements CompletionHandler<Void,AsynchronousSocketChannel>
 {
-    protected AsynchronousSocketChannel asc;
-
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      */
@@ -33,26 +32,17 @@ public class AsyncClientSocketChannel extends CompletablePort
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
     public void connect(SocketAddress addr) throws IOException {
-        ExecutorService executor = transition1.getExecutor();
+        ExecutorService executor = transition.getExecutor();
         AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(executor);
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open(group);
         channel.connect(addr, channel, this);
-    }
-
-    public AsynchronousSocketChannel current() {
-        synchronized(transition1) {
-            return asc;
-        }
     }
 
     //=====================  CompletionHandler callbacks
 
     @Override
     public void completed(Void result, AsynchronousSocketChannel channel) {
-        synchronized(transition1) {
-            this.asc = channel;
-            onComplete();
-        }
+        onSuccess(channel);
     }
 
     @Override

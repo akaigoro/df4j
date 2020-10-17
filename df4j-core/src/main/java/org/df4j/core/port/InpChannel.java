@@ -41,13 +41,13 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     public boolean isCompleted() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return completed && tokens.size() == 0;
         }
     }
 
     public Throwable getCompletionException() {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (isCompleted()) {
                 return completionException;
             } else {
@@ -66,7 +66,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     public boolean offer(T token) {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (completed) {
                 return false;
             }
@@ -83,14 +83,14 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
      */
     public T current() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return tokens.peek();
         }
     }
 
     @Override
     public void block() {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (completed) {
                 return;
             }
@@ -103,13 +103,13 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
      */
     public T poll() {
-        synchronized(transition1) {
+        synchronized(transition) {
             T res;
             if (tokens.isEmpty()) {
                 return null;
             }
             res = tokens.poll();
-            transition1.notifyAll();
+            transition.notifyAll();
 
             ProducerSubscription client = activeSubscriptions.peek();
             if (client == null) {
@@ -159,7 +159,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             throw new NullPointerException();
         }
         long millis = unit.toMillis(timeout);
-        synchronized(transition1) {
+        synchronized(transition) {
             for (;;) {
                 if (completed) {
                     return false;
@@ -192,7 +192,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         if (token == null) {
             throw new NullPointerException();
         }
-        synchronized(transition1) {
+        synchronized(transition) {
             for (;;) {
                 if (completed) {
                     throw new IllegalStateException();
@@ -200,7 +200,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 if (offer(token)) {
                     return;
                 }
-                transition1.wait();
+                transition.wait();
             }
         }
     }
@@ -210,7 +210,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
     public T remove() throws CompletionException {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (tokens.isEmpty()) {
                 if (completed) {
                     throw new CompletionException("Port already completed", completionException);
@@ -233,17 +233,17 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         ProducerSubscription(ReverseFlow.Producer<T> producer) {
             this.producer = producer;
-            synchronized(transition1) {
+            synchronized(transition) {
                 passiveSubscriptions.add(this);
             }
             producer.onSubscribe(this);
         }
 
         ProducerSubscription(Publisher<T> publisher) {
-            PortAdapter<T> adapter = new PortAdapter<T>(InpChannel.this.getTransition1().getDataflow());
+            PortAdapter<T> adapter = new PortAdapter<T>(InpChannel.this.getDataflow());
             publisher.subscribe(adapter.inp);
             this.producer = adapter.out;
-            synchronized(transition1) {
+            synchronized(transition) {
                 passiveSubscriptions.add(this);
             }
             adapter.out.onSubscribe(this);
@@ -259,7 +259,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 producer.onError(new IllegalArgumentException());
                 return;
             }
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
@@ -305,7 +305,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         }
 
         private void _onComplete(Throwable throwable) {
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
@@ -326,7 +326,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         @Override
         public void cancel() {
-            synchronized(transition1) {
+            synchronized(transition) {
                 _cancel();
             }
         }

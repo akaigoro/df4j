@@ -45,7 +45,7 @@ public class ReadBuffers extends InpFlood<ByteBuffer> {
 
     public ReadBuffers(AsyncProc parent, AsynchronousSocketChannel channel) {
         super(parent);
-        this.dataflow=parent.getParent();
+        this.dataflow=parent.getDataflow();
         this.channel=channel;
         reader = new Reader(dataflow);
         writer = new Writer(dataflow, reader.input);

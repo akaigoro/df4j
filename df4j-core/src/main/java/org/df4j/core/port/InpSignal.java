@@ -7,8 +7,6 @@ import org.reactivestreams.Subscription;
 
 /**
  * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link AsyncSemaphore}.
- *
- * it is lazy, so implicit invocation of {@link InpSignal#request(long)} required
  */
 public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
     private Subscription subscription;
@@ -33,14 +31,14 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        synchronized(transition1) {
+        synchronized(transition) {
             this.subscription = subscription;
         }
     }
 
     @Override
     public  void release(long n) {
-        synchronized(transition1) {
+        synchronized(transition) {
             boolean wasBlocked = !isReady();
             permits += n;
             if (wasBlocked && permits > 0) {
@@ -54,46 +52,15 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      * Analogue of {@link InpFlow#remove()} and {@link java.util.concurrent.Semaphore#acquire(int)}
      */
     public void remove() {
-        synchronized(transition1) {
+        synchronized(transition) {
+            if (permits <= 0) {
+                throw new IllegalStateException("no avalable permits");
+            }
             boolean wasReady = isReady();
             permits--;
             if (wasReady && permits == 0) {
                 block();
             }
         }
-    }
-
-    public void request(long n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException();
-        }
-        Subscription subs;
-        synchronized(transition1) {
-            subs = this.subscription;
-            if (subs == null) {
-                throw new IllegalStateException();
-            }
-        }
-        subs.request(n);
-    }
-
-
-    /**
-     * analogue od {@link InpFlow#remove()}
-     */
-    public void acquireAndRequest() {
-        Subscription subs;
-        synchronized(transition1) {
-            boolean wasReady = isReady();
-            permits--;
-            if (wasReady && permits == 0) {
-                block();
-            }
-            subs = this.subscription;
-            if (subs == null) {
-                throw new IllegalStateException();
-            }
-        }
-        subs.request(1);
     }
 }

@@ -1,5 +1,5 @@
 package org.df4j.core.dataflow;
 
-public interface Transitionable {
+public interface TransitionHolder {
     Transition getTransition();
 }

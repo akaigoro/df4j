@@ -15,6 +15,7 @@ package org.df4j.nio2.net;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.InpSignal;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 public class AsyncSocketChannel {
     protected final Logger LOG = new Logger(this);
     private final Dataflow dataflow;
+    private final InpSignal allowedConnections;
 
 	/** read requests queue */
 	public final Reader reader;
@@ -43,8 +45,9 @@ public class AsyncSocketChannel {
 
     public String name;
 
-    public AsyncSocketChannel(Dataflow dataflow, AsynchronousSocketChannel channel) {
+    public AsyncSocketChannel(Dataflow dataflow, InpSignal allowedConnections, AsynchronousSocketChannel channel) {
         this.dataflow=dataflow;
+        this.allowedConnections = allowedConnections;
         this.channel=channel;
         reader = new Reader(dataflow);
         writer = new Writer(dataflow);
@@ -76,6 +79,9 @@ public class AsyncSocketChannel {
         } else {
             return name;
         }
+    }
+
+    public void release(int i) {
     }
 //===================== inner classes
 

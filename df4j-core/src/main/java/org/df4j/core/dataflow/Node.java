@@ -20,27 +20,27 @@ import java.util.concurrent.*;
 public abstract class Node<T extends Node<T>> extends Completion implements Activity {
     public final long seqNum;
     NodeLink nodeLink = new NodeLink();
-    protected final Dataflow parent;
+    protected final Dataflow dataflow;
     private ExecutorService executor;
     private Timer timer;
 
     protected Node() {
-        this.parent = null;
+        this.dataflow = null;
         seqNum = -1;
     }
 
-    protected Node(Dataflow parent) {
-        this.parent = parent;
-        seqNum = parent.enter(this);
+    protected Node(Dataflow dataflow) {
+        this.dataflow = dataflow;
+        seqNum = dataflow.enter(this);
     }
 
-    public Dataflow getParent() {
-        return parent;
+    public Dataflow getDataflow() {
+        return dataflow;
     }
 
     protected void leaveParent() {
-        if (parent != null) {
-            parent.leave(this);
+        if (dataflow != null) {
+            dataflow.leave(this);
         }
     }
 
@@ -87,8 +87,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
 
     public synchronized ExecutorService getExecutor() {
         if (executor == null) {
-            if (parent != null) {
-                executor = parent.getExecutor();
+            if (dataflow != null) {
+                executor = dataflow.getExecutor();
             } else {
                 Thread currentThread = Thread.currentThread();
                 if (currentThread instanceof ForkJoinWorkerThread) {
@@ -111,8 +111,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         synchronized(this) {
             if (timer != null) {
                 return timer;
-            } else if (parent != null) {
-                return timer = parent.getTimer();
+            } else if (dataflow != null) {
+                return timer = dataflow.getTimer();
             } else {
                 return timer = getSingletonTimer();
             }
@@ -122,15 +122,15 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     @Override
     public void complete() {
         super.complete();
-        if (parent != null) {
-            parent.leave(this);
+        if (dataflow != null) {
+            dataflow.leave(this);
         }
     }
 
     public void completeExceptionally(Throwable t) {
         super.completeExceptionally(t);
-        if (parent != null) {
-            parent.completeExceptionally(t);
+        if (dataflow != null) {
+            dataflow.completeExceptionally(t);
         }
     }
 

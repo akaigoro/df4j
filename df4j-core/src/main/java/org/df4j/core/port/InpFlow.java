@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.dataflow.Transitionable;
+import org.df4j.core.dataflow.TransitionHolder;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -25,7 +25,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      * @param parent {@link AsyncProc} to wich this port belongs
      * @param capacity required capacity
      */
-    public InpFlow(Transitionable parent, int capacity) {
+    public InpFlow(TransitionHolder parent, int capacity) {
         super(parent);
         setCapacity(capacity);
     }
@@ -33,7 +33,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpFlow(Transitionable parent) {
+    public InpFlow(TransitionHolder parent) {
         this(parent, 1);
     }
 
@@ -64,20 +64,20 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     }
 
     public boolean isCompleted() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return completed && tokens.isEmpty();
         }
     }
 
     public T current() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return tokens.peek();
         }
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (this.subscription != null) {
                 subscription.cancel(); // this is dictated by the spec.
                 return;
@@ -103,7 +103,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      */
     @Override
     public void onNext(T message) {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (message == null) {
                 throw new NullPointerException();
             }
@@ -124,7 +124,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
     public T poll() {
         long n;
         T res;
-        synchronized(transition1) {
+        synchronized(transition) {
             if (!ready) {
                 throw new IllegalStateException();
             }
@@ -153,7 +153,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
 
     public void cancel() {
         Subscription sub;
-        synchronized (transition1) {
+        synchronized (transition) {
             sub = subscription;
             onComplete();
             if (sub == null) {

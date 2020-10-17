@@ -66,17 +66,12 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
     protected abstract void doIO(ByteBuffer buffer);
 
     //-------------------- dataflow backend
-
     /**
      *  All conditiona are met, start IO operation
      */
     @Override
     protected void runAction() throws CompletionException {
-        if (!input.isCompleted()) {
-            ByteBuffer buffer = input.remove();
-            suspend(); // before doIO, as it can call resume
-            doIO(buffer);
-        } else {
+        if (input.isCompleted()) {
             try {
                 channel.close();
                 Throwable completionException = input.getCompletionException();
@@ -90,7 +85,11 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
                 output.onError(e);
                 completeExceptionally(e);
             }
+            return;
         }
+        ByteBuffer buffer = input.remove();
+        suspend(); // before doIO, as it can call resume
+        doIO(buffer);
     }
 
     // ------------- CompletionHandler backend

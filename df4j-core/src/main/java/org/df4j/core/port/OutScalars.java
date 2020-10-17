@@ -28,7 +28,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         if (completed) {
             subscription.onComplete(completionException);
         } else {
-            synchronized(transition1) {
+            synchronized(transition) {
                 subscriptions.add(subscription);
                 unblock();
             }
@@ -37,7 +37,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
     public void onNext(T message) {
         ScalarSubscription subscription;
-        synchronized(transition1) {
+        synchronized(transition) {
             subscription = subscriptions.remove();
             if (subscriptions.size() == 0) {
                 block();
@@ -48,7 +48,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
     protected void _onComplete(Throwable t) {
         Queue<ScalarSubscription> subscriptions;
-        synchronized(transition1) {
+        synchronized(transition) {
             if (completed) {
                 return;
             }
@@ -76,7 +76,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         @Override
         public void cancel() {
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
@@ -88,7 +88,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         public void onNext(T message) {
             Scalar.Observer<? super T> subs;
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
@@ -101,7 +101,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         private Scalar.Observer<? super T> removeSubscriber() {
             Scalar.Observer<? super T> subs;
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return null;
                 }

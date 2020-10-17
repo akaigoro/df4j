@@ -65,7 +65,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         Thread.sleep(400);
         queue.complete();
         Thread.sleep(400);
-        subscriber.getParent().await(400);
+        subscriber.getDataflow().await(400);
         boolean qIsCompleted = queue.isCompleted();
         Assert.assertTrue(qIsCompleted);
         SubscriberActor subscriber2 = new SubscriberActor(0);

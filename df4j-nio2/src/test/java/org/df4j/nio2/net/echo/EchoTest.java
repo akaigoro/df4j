@@ -1,6 +1,7 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.dataflow.Dataflow;
+import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.junit.*;
 
 import java.io.IOException;
@@ -14,19 +15,29 @@ public  class EchoTest {
 
     Dataflow serverDataflow;
     Dataflow clientDataflow;
+    AsyncServerSocketChannel asyncChannel;
     EchoServer echoServer;
 
     @Before
     public synchronized void init() throws IOException {
         serverDataflow = new Dataflow();
         clientDataflow = new Dataflow();
-        echoServer = new EchoServer(serverDataflow, local9990, 2);
+        asyncChannel = new AsyncServerSocketChannel(serverDataflow, local9990);
+        asyncChannel.allowedConnections.release(2);
+        asyncChannel.start();
+        echoServer = new EchoServer(serverDataflow);
+        asyncChannel.out.subscribe(echoServer.inp);
         echoServer.start();
     }
 
     @After
     public synchronized void deinit() throws InterruptedException, IOException {
-        echoServer.complete();
+        if (echoServer != null) {
+            echoServer.complete();
+        }
+        if (asyncChannel != null) {
+            asyncChannel.complete();
+        }
     }
 
     public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {

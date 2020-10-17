@@ -12,26 +12,25 @@ package org.df4j.nio2.net;
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
 import org.df4j.core.port.InpSignal;
+import org.df4j.core.port.OutFlood;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.*;
 
-
 /**
  * generates flow of AsynchronousSocketChannel for server side
  * as a result of client connections accepted by the server
- *
  */
-public abstract class AsyncServerSocketChannel extends Actor
-        implements CompletionHandler<AsynchronousSocketChannel, Long>
+public class AsyncServerSocketChannel extends Actor
+        implements CompletionHandler<AsynchronousSocketChannel, Void>
 {
     protected final Logger LOG = new Logger(this);
     protected volatile AsynchronousServerSocketChannel assc;
-    /** limits the number of simultaneously existing connections */
-    protected InpSignal allowedConnections = new InpSignal(this);
-    protected long connSerialNum = 0;
+    /** limits the number of simultaneously existing connections - plays the role of backpressure */
+    public InpSignal allowedConnections = new InpSignal(this);
+    public OutFlood<AsyncSocketChannel> out = new OutFlood<>(this);
 
     public AsyncServerSocketChannel(Dataflow dataflow, SocketAddress addr) throws IOException {
         super(dataflow);
@@ -44,39 +43,34 @@ public abstract class AsyncServerSocketChannel extends Actor
         LOG.info("AsyncServerSocketChannel("+addr+") created");
     }
 
-    public synchronized void complete() {
-        synchronized(this) {
-            if (isCompleted()) {
-                return;
-            }
-            AsynchronousServerSocketChannel asscLock = assc;
-            assc = null;
-            try {
-                asscLock.close();
-                super.complete();
-            } catch (IOException e) {
-                super.completeExceptionally(e);
-            }
+    public synchronized void whenComplete() {
+        AsynchronousServerSocketChannel asscLock = assc;
+        if (asscLock == null) {
+            return;
+        }
+        assc = null;
+        try {
+            asscLock.close();
+        } catch (IOException e) {
+            super.completeExceptionally(e);
         }
     }
 
     @Override
     protected final void runAction() throws Throwable {
-        allowedConnections.remove(); // use up a permit to accept next client connection
+        allowedConnections.remove(); // use a permit to accept next client connection
         suspend(); // wait for CompletionHandler to resume
-        assc.accept(connSerialNum++, this);
+        assc.accept(null, this);
     }
-
-    protected abstract void onAccept(AsynchronousSocketChannel asc, Long connSerialNum);
 
     //====================== CompletionHandler's backend
 
     @Override
-    public void completed(AsynchronousSocketChannel asc, Long connSerialNum) {
+    public void completed(AsynchronousSocketChannel asc, Void attachment) {
         try {
-            LOG.info("AsyncServerSocketChannel: client "+ connSerialNum+" accepted");
-            onAccept(asc, connSerialNum);
             this.resume(); // allow  next assc.accpt()
+            AsyncSocketChannel serverConn = new AsyncSocketChannel(getDataflow(), allowedConnections, asc);
+            out.onNext(serverConn);
         } catch (Throwable t) {
             try {
                 asc.close();
@@ -91,12 +85,12 @@ public abstract class AsyncServerSocketChannel extends Actor
      * TODO count failures, do not retry if many
      */
     @Override
-    public void failed(Throwable exc, Long attachement) {
+    public void failed(Throwable exc, Void attachement) {
         LOG.info("AsyncServerSocketChannel: client rejected:"+exc);
         if (exc instanceof AsynchronousCloseException) {
-            complete();
+            out.onComplete();
         } else {
-            completeExceptionally(exc);
+            out.onError(exc);
         }
     }
 }

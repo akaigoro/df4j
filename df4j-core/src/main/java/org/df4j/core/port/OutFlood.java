@@ -3,9 +3,8 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
-import org.df4j.protocol.Flow;
-import org.reactivestreams.Subscription;
-import org.reactivestreams.Subscriber;
+import org.df4j.protocol.Flood;
+import org.df4j.protocol.SimpleSubscription;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
@@ -14,19 +13,17 @@ import java.util.concurrent.TimeUnit;
 /**
  * A passive source of messages (like a server).
  * Unblocked initially.
- * It has room for single message.
  * Blocked when overflow.
  * Is ready when has room to store at least one toke
  * @param <T> type of emitted tokens
  */
-public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Flow.Publisher<T> {
+public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, Flood.Publisher<T> {
     public static final int DEFAULT_CAPACITY = 16;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
     private LinkedQueue<SubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
-    private LinkedQueue<SubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
 
-    public OutFlow(AsyncProc parent, int capacity) {
+    public OutFlood(AsyncProc parent, int capacity) {
         super(parent, capacity>0);
         if (capacity < 0) {
             throw new IllegalArgumentException();
@@ -35,16 +32,16 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         tokens = new ArrayDeque<>(capacity);
     }
 
-    public OutFlow(AsyncProc parent) {
+    public OutFlood(AsyncProc parent) {
         this(parent, DEFAULT_CAPACITY);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
+    public void subscribe(Flood.Subscriber<? super T> subscriber) {
         SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
         synchronized(transition) {
-            if (passiveSubscribtions != null) {
-                passiveSubscribtions.add(subscription);
+            if (activeSubscribtions != null) {
+                activeSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
@@ -105,13 +102,9 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     block();
                 }
             } else {
-                boolean subIsActive = sub.onNext(token);
+                sub.onNext(token);
                 if (!sub.isCancelled()) {
-                    if (subIsActive) {
-                        activeSubscribtions.add(sub);
-                    } else {
-                        passiveSubscribtions.add(sub);
-                    }
+                    activeSubscribtions.add(sub);
                 }
                 if (_remainingCapacity() == 0 && activeSubscribtions.isEmpty()) {
                     block();
@@ -128,13 +121,6 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     private void completAllSubscriptions() {
         for (;;) {
             SubscriptionImpl sub = activeSubscribtions.poll();
-            if (sub == null) {
-                break;
-            }
-            sub.onComplete();
-        }
-        for (;;) {
-            SubscriptionImpl sub = passiveSubscribtions.poll();
             if (sub == null) {
                 break;
             }
@@ -215,67 +201,17 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         return tokens.size();
     }
 
-    protected class
-    SubscriptionImpl extends LinkImpl implements Subscription {
-        protected final Subscriber subscriber;
-        private long remainedRequests = 0;
+    protected class SubscriptionImpl extends LinkImpl implements SimpleSubscription {
+        protected final Flood.Subscriber subscriber;
         private boolean cancelled = false;
 
-        SubscriptionImpl(Subscriber subscriber) {
+        SubscriptionImpl(Flood.Subscriber subscriber) {
             this.subscriber = subscriber;
         }
 
         public boolean isCancelled() {
             synchronized(transition) {
                 return cancelled;
-            }
-        }
-
-        /**
-         *
-         * @param n the increment of demand
-         */
-        @Override
-        public void request(long n) {
-            if (n <= 0) {
-                subscriber.onError(new IllegalArgumentException());
-                return;
-            }
-            T token;
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
-                }
-                remainedRequests += n;
-                if (remainedRequests > n) {
-                    return;
-                }
-                if (isCompleted()) {
-                    this.onComplete();
-                    return;
-                }
-                // remainedRequests was 0, so this subscription was passive
-                passiveSubscribtions.remove(this);
-                for (;;) {
-                    token = OutFlow.this.poll();
-                    if (token == null) {
-                        activeSubscribtions.add(this);
-                        unblock();
-                        break;
-                    }
-                    boolean subIsActive = this.onNext(token);
-                    if (!subIsActive) {
-                        passiveSubscribtions.add(this);
-                        break;
-                    }
-                    if (isCompleted()) {
-                        this.onComplete();
-                        break;
-                    }
-                }
-                if (isCompleted()) {
-                    completAllSubscriptions();
-                }
             }
         }
 
@@ -286,14 +222,8 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     return;
                 }
                 cancelled = true;
-                if (remainedRequests > 0) {
-                    if (activeSubscribtions != null) {
-                        activeSubscribtions.remove(this);
-                    }
-                } else {
-                    if (passiveSubscribtions != null) {
-                        passiveSubscribtions.remove(this);
-                    }
+                if (activeSubscribtions != null) {
+                    activeSubscribtions.remove(this);
                 }
             }
         }
@@ -301,19 +231,13 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         /**
          * must be unlinked
          * @param token token to pass
-         * @return
          */
-        private boolean onNext(T token) {
+        private void onNext(T token) {
             subscriber.onNext(token);
-            synchronized(transition) {
-                remainedRequests--;
-                return remainedRequests > 0;
-            }
         }
 
         /**
          * must be unlinked
-         * @param cause error
          */
         private void onComplete() {
             synchronized(transition) {

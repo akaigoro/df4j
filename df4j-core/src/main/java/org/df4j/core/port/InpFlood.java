@@ -15,7 +15,7 @@ import java.util.concurrent.CompletionException;
  *
  * @param <T> type of accepted tokens.
  */
-public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , Flood.Subscriber<T> {
+public class InpFlood<T> extends CompletablePort implements InpMessagePort<T>, Flood.Subscriber<T> {
     /** TODO optimize for single token */
     private  final Queue<T> tokens = new LinkedList<>();
     protected SimpleSubscription subscription;
@@ -28,19 +28,19 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
     }
 
     public boolean isCompleted() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return completed && tokens.isEmpty();
         }
     }
 
     public T current() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return tokens.peek();
         }
     }
 
     public  T poll() {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (!isReady()) {
                 return null;
             }
@@ -71,7 +71,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
 
     @Override
     public void onNext(T message) {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (message == null) {
                 throw new IllegalArgumentException();
             }
@@ -85,7 +85,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
 
     public void cancel() {
         SimpleSubscription sub;
-        synchronized (transition1) {
+        synchronized (transition) {
             sub = subscription;
             onComplete();
             if (sub == null) {

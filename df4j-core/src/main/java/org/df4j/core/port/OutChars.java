@@ -34,13 +34,13 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     @Override
     public void subscribe(CharFlow.CharSubscriber subscriber) {
         SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
-        synchronized(transition1) {
+        synchronized(transition) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
-        synchronized(transition1) {
+        synchronized(transition) {
             if (isCompleted()) {
                 subscription.onComplete();
             }
@@ -58,7 +58,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public boolean isCompleted() {
-        synchronized(transition1) {
+        synchronized(transition) {
             return completed && charBuffer.isEmpty();
         }
     }
@@ -70,7 +70,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
      */
     public boolean offer(char ch) {
         SubscriptionImpl sub;
-        synchronized(transition1) {
+        synchronized(transition) {
             if (completed) {
                 return false;
             }
@@ -97,7 +97,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public void hasItemsEvent() {
-        transition1.notifyAll();
+        transition.notifyAll();
     }
 
     private void completAllSubscriptions() {
@@ -118,7 +118,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public void _onComplete(Throwable cause) {
-        synchronized(transition1) {
+        synchronized(transition) {
             if (completed) {
                 return;
             }
@@ -133,7 +133,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     public char poll() {
-        synchronized(transition1) {
+        synchronized(transition) {
             for (;;) {
                 if (!charBuffer.isEmpty()) {
                     char res = charBuffer.remove();
@@ -166,7 +166,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
@@ -200,7 +200,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
 
         @Override
         public void cancel() {
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
@@ -224,7 +224,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
          */
         private boolean onNext(char ch) {
             subscriber.onNext(ch);
-            synchronized(transition1) {
+            synchronized(transition) {
                 remainedRequests--;
                 return remainedRequests > 0;
             }
@@ -235,7 +235,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
          * @param cause error
          */
         private void onComplete() {
-            synchronized(transition1) {
+            synchronized(transition) {
                 if (cancelled) {
                     return;
                 }
