@@ -1,4 +1,4 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.protocol.Completable;
 import org.df4j.protocol.SimpleSubscription;
@@ -26,13 +26,6 @@ class CompletionSubscription implements SimpleSubscription {
             if (subscriptions != null) {
                 subscriptions.remove(this);
             }
-        }
-    }
-
-    @Override
-    public boolean isCancelled() {
-        synchronized (completion) {
-            return cancelled;
         }
     }
 

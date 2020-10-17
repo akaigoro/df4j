@@ -1,6 +1,7 @@
 package org.df4j.protocol;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 
 /**
  * Flow of messages from Subscribers to Publishers
@@ -78,7 +79,7 @@ public class ReverseFlow {
         void feedFrom(Publisher<T> publisher);
     }
 
-    public interface ReverseFlowSubscription<T> extends FlowSubscription {
+    public interface ReverseFlowSubscription<T> extends Subscription {
         /**
          *
          * @param token

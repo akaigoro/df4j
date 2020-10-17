@@ -65,11 +65,6 @@ public final class Flow {
             public synchronized void cancel() {
                 cancelled = true;
             }
-
-            @Override
-            public synchronized boolean isCancelled() {
-                return cancelled;
-            }
         }
     }
 

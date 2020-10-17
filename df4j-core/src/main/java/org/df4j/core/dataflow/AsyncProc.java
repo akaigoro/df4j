@@ -9,6 +9,8 @@
  */
 package org.df4j.core.dataflow;
 
+import org.df4j.core.connector.Completion;
+
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 
@@ -18,7 +20,7 @@ import static org.df4j.core.dataflow.ActorState.*;
  * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
  * Used in this basic form, it allows to construct asynchronous procedure calls.
  * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.\
- * As a {@link Node}, it is descendand of {@link org.df4j.core.communicator.Completion} class, which allows to monitor execution
+ * As a {@link Node}, it is descendand of {@link Completion} class, which allows to monitor execution
  * of this asynchonous procedure both with synchronous and asynchronous interfaces.
  * {@link AsyncProc} usually contains contain additional input and output ports to exchange messages and signals with
  * other {@link AsyncProc}s in consistent manner.

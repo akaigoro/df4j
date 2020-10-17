@@ -249,13 +249,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             adapter.out.onSubscribe(this);
         }
 
-        @Override
-        public boolean isCancelled() {
-            synchronized(transition1) {
-                return cancelled;
-            }
-        }
-
         /**
          *
          * @param n the increment of demand

@@ -1,6 +1,6 @@
 package org.df4j.core.activities;
 
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
+import org.df4j.core.connector.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.util.Logger;
 import org.junit.Assert;

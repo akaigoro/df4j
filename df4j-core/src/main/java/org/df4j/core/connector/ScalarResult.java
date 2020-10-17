@@ -1,14 +1,8 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
-import org.df4j.protocol.Completable;
 import org.df4j.protocol.Scalar;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:

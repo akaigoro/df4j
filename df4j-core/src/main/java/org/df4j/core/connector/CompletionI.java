@@ -1,4 +1,4 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.protocol.Completable;
 

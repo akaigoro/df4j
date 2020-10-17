@@ -5,7 +5,7 @@ import org.df4j.core.util.CharBuffer;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.CharFlow;
-import org.df4j.protocol.FlowSubscription;
+import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletionException;
 
@@ -18,8 +18,8 @@ import java.util.concurrent.CompletionException;
 public class OutChars extends CompletablePort implements CharFlow.CharPublisher {
     protected final int capacity;
     private CharBuffer charBuffer;
-    private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
-    private LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
+    private LinkedQueue<SubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
+    private LinkedQueue<SubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
 
     public OutChars(AsyncProc parent, int capacity) {
         super(parent, true);
@@ -33,7 +33,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
 
     @Override
     public void subscribe(CharFlow.CharSubscriber subscriber) {
-        FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
+        SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
         synchronized(transition1) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
@@ -69,7 +69,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
      * @return true if the character inserted
      */
     public boolean offer(char ch) {
-        FlowSubscriptionImpl sub;
+        SubscriptionImpl sub;
         synchronized(transition1) {
             if (completed) {
                 return false;
@@ -102,14 +102,14 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
 
     private void completAllSubscriptions() {
         for (;;) {
-            FlowSubscriptionImpl sub = activeSubscribtions.poll();
+            SubscriptionImpl sub = activeSubscribtions.poll();
             if (sub == null) {
                 break;
             }
             sub.onComplete();
         }
         for (;;) {
-            FlowSubscriptionImpl sub = passiveSubscribtions.poll();
+            SubscriptionImpl sub = passiveSubscribtions.poll();
             if (sub == null) {
                 break;
             }
@@ -147,20 +147,13 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
         }
     }
 
-    protected class FlowSubscriptionImpl extends LinkImpl implements FlowSubscription {
+    protected class SubscriptionImpl extends LinkImpl implements Subscription {
         protected final CharFlow.CharSubscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        FlowSubscriptionImpl(CharFlow.CharSubscriber subscriber) {
+        SubscriptionImpl(CharFlow.CharSubscriber subscriber) {
             this.subscriber = subscriber;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            synchronized(transition1) {
-                return cancelled;
-            }
         }
 
         /**

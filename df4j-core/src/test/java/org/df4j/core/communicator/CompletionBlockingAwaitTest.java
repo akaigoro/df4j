@@ -1,5 +1,6 @@
 package org.df4j.core.communicator;
 
+import org.df4j.core.connector.Completion;
 import org.junit.Assert;
 import org.junit.Test;
 

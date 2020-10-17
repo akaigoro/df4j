@@ -1,11 +1,12 @@
 package org.df4j.core.port;
 
+import org.df4j.core.connector.AsyncSemaphore;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.SignalFlow;
 import org.reactivestreams.Subscription;
 
 /**
- * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
+ * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link AsyncSemaphore}.
  *
  * it is lazy, so implicit invocation of {@link InpSignal#request(long)} required
  */

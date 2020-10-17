@@ -4,7 +4,7 @@ import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
+import org.reactivestreams.Subscription;
 import org.reactivestreams.Subscriber;
 
 import java.util.ArrayDeque;
@@ -23,8 +23,8 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     public static final int DEFAULT_CAPACITY = 16;
     protected final int capacity;
     protected ArrayDeque<T> tokens;
-    private LinkedQueue<FlowSubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
-    private LinkedQueue<FlowSubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
+    private LinkedQueue<SubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
+    private LinkedQueue<SubscriptionImpl> passiveSubscribtions = new LinkedQueue<>();
 
     public OutFlow(AsyncProc parent, int capacity) {
         super(parent, capacity>0);
@@ -41,7 +41,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
-        FlowSubscriptionImpl subscription = new FlowSubscriptionImpl(subscriber);
+        SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
         synchronized(transition1) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
@@ -89,7 +89,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         if (token == null) {
             throw new NullPointerException();
         }
-        FlowSubscriptionImpl sub;
+        SubscriptionImpl sub;
         synchronized(transition1) {
             if (completed) {
                 return false;
@@ -127,14 +127,14 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
 
     private void completAllSubscriptions() {
         for (;;) {
-            FlowSubscriptionImpl sub = activeSubscribtions.poll();
+            SubscriptionImpl sub = activeSubscribtions.poll();
             if (sub == null) {
                 break;
             }
             sub.onComplete();
         }
         for (;;) {
-            FlowSubscriptionImpl sub = passiveSubscribtions.poll();
+            SubscriptionImpl sub = passiveSubscribtions.poll();
             if (sub == null) {
                 break;
             }
@@ -215,16 +215,15 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         return tokens.size();
     }
 
-    protected class FlowSubscriptionImpl extends LinkImpl implements FlowSubscription {
+    protected class SubscriptionImpl extends LinkImpl implements Subscription {
         protected final Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        FlowSubscriptionImpl(Subscriber subscriber) {
+        SubscriptionImpl(Subscriber subscriber) {
             this.subscriber = subscriber;
         }
 
-        @Override
         public boolean isCancelled() {
             synchronized(transition1) {
                 return cancelled;

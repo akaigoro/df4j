@@ -1,6 +1,6 @@
 package org.df4j.core.stateful;
 
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
+import org.df4j.core.connector.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.Activity;
 import org.df4j.core.dataflow.ActivityThread;
 import org.df4j.core.dataflow.Actor;

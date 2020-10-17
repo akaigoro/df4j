@@ -1,6 +1,6 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
-import org.df4j.protocol.FlowSubscription;
+import org.reactivestreams.Subscription;
 import org.df4j.protocol.SignalFlow;
 
 import java.util.LinkedList;
@@ -78,18 +78,13 @@ public class AsyncSemaphore extends Semaphore implements SignalFlow.Publisher {
         }
     }
 
-    private class SignalSubscription implements FlowSubscription {
+    private class SignalSubscription implements Subscription {
         SignalFlow.Subscriber subscriber;
         private long remainedRequests;
 
         private SignalSubscription(SignalFlow.Subscriber subscriber) {
             this.subscriber = subscriber;
             subscriber.onSubscribe(this);
-        }
-
-        @Override
-        public synchronized boolean isCancelled() {
-            return subscriber == null;
         }
 
         @Override

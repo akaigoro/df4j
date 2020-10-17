@@ -1,5 +1,6 @@
 package org.df4j.core.communicator;
 
+import org.df4j.core.connector.AsyncCountDownLatch;
 import org.df4j.protocol.Completable;
 import org.df4j.protocol.SimpleSubscription;
 import org.junit.Assert;
