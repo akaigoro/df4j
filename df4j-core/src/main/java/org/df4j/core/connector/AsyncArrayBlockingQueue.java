@@ -1,4 +1,4 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.core.dataflow.Actor;
 import org.df4j.core.dataflow.Dataflow;
@@ -7,9 +7,8 @@ import org.df4j.core.util.linked.Link;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletionException;
@@ -96,7 +95,7 @@ public class AsyncArrayBlockingQueue<T> extends Actor
     }
 
     @Override
-    public void onSubscribe(Subscription s) {
+    public void onSubscribe(org.reactivestreams.Subscription s) {
         input.onSubscribe(s);
     }
 
@@ -254,7 +253,7 @@ public class AsyncArrayBlockingQueue<T> extends Actor
     }
 
     protected class AsyncFlowSubscriptionImpl extends FlowSubscriptionImpl
-            implements FlowSubscription
+            implements Subscription
     {
         protected final Subscriber subscriber;
         private long remainedRequests = 0;

@@ -2,14 +2,15 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Scalar;
-import org.df4j.protocol.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
 
 /**
  * Output port for multiple scalar values.
- * Hos no internal memory for tokens. as becomes ready only when subscribers appear.
+ * Has no internal memory for tokens.
+ * Becomes ready only when subscribers appear.
  * For demand-driven actors.
  *
  * @param <T> the type of completion value
@@ -66,12 +67,17 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         }
     }
 
-    class ScalarSubscription implements SimpleSubscription {
+    class ScalarSubscription implements Subscription {
         private Scalar.Observer<? super T> subscriber;
         private boolean cancelled;
 
         public ScalarSubscription(Scalar.Observer<? super T> subscriber) {
             this.subscriber = subscriber;
+        }
+
+        @Override
+        public void request(long n) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -84,11 +90,6 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
                 subscriber = null;
                 subscriptions.remove(this);
             }
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
         }
 
         public void onNext(T message) {

@@ -1,6 +1,6 @@
 package org.df4j.tricky.charflow;
 
-import org.df4j.core.communicator.Completion;
+import org.df4j.core.connector.Completion;
 import org.df4j.protocol.CharFlow;
 import org.df4j.tricky.charflow.jsontokens.NumberToken;
 import org.df4j.tricky.charflow.jsontokens.StringToken;

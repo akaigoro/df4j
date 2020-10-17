@@ -1,7 +1,7 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.protocol.Completable;
-import org.df4j.protocol.SimpleSubscription;
+import org.reactivestreams.Subscription;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ public class AsyncCountdownLatchTest {
         AtomicBoolean onCompleteSeen = new AtomicBoolean(false);
 
         @Override
-        public void onSubscribe(SimpleSubscription subscription) {
+        public void onSubscribe(Subscription subscription) {
             onSubscribeSeen.set(true);
         }
 

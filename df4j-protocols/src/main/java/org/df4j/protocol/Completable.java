@@ -1,5 +1,7 @@
 package org.df4j.protocol;
 
+import org.reactivestreams.Subscription;
+
 /**
  * A one-shot signal with completion exceptions
  */
@@ -47,7 +49,7 @@ public class Completable {
      */
     public interface Observer {
 
-        void onSubscribe(SimpleSubscription subscription);
+        void onSubscribe(Subscription subscription);
 
         /**
          * Called once if the deferred computation 'throws' an exception.

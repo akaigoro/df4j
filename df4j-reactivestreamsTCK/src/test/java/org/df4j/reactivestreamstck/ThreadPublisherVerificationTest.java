@@ -1,6 +1,6 @@
 package org.df4j.reactivestreamstck;
 
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
+import org.df4j.core.connector.AsyncArrayBlockingQueue;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;

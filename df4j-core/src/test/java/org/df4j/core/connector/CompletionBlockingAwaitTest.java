@@ -1,4 +1,4 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.junit.Assert;
 import org.junit.Test;

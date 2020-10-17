@@ -1,5 +1,7 @@
 package org.df4j.protocol;
 
+import org.reactivestreams.Subscription;
+
 /**
  * Flow of messages without back-pressure
  */
@@ -37,7 +39,7 @@ public class Flood {
          * violations or errors, the Subscriber's {@code onError}
          * method is invoked with an {@link IllegalStateException}.
          * Otherwise, the Subscriber's {@code onSubscribe} method is
-         * invoked with a new {@link SimpleSubscription}.  Subscribers may
+         * invoked with a new {@link Subscription}.  Subscribers may
          * enable receiving items by invoking the {@code request}
          * method of this Subscription, and may unsubscribe by
          * invoking its {@code cancel} method.
@@ -50,7 +52,7 @@ public class Flood {
 
     /**
      * A receiver of messages.  The methods in this interface are
-     * invoked in strict sequential order for each {@link SimpleSubscription}.
+     * invoked in strict sequential order for each {@link Subscription}.
      *
      * @param <T> the subscribed item type
      */
@@ -60,9 +62,9 @@ public class Flood {
          * Invoked after calling {@link Scalar.Source#subscribe(Scalar.Observer)}.
          *
          * @param s
-         *            {@link SimpleSubscription} that allows cancelling subscription via {@link SimpleSubscription#cancel()} ()} }
+         *            {@link Subscription} that allows cancelling subscription via {@link Subscription#cancel()} ()} }
          */
-        default void onSubscribe(SimpleSubscription s) {}
+        default void onSubscribe(Subscription s) {}
 
         /**
          * Method invoked with a Subscription's next item.  If this

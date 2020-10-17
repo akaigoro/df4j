@@ -1,6 +1,6 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.ScalarResultTrait;
+import org.df4j.core.connector.ScalarResultTrait;
 
 public abstract class AsyncFunc<R> extends AsyncProc implements ScalarResultTrait<R> {
     private R result;

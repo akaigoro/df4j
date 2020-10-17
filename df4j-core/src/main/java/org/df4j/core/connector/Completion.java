@@ -1,13 +1,11 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.protocol.Completable;
-import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Completes successfully or with failure, without emitting any value.

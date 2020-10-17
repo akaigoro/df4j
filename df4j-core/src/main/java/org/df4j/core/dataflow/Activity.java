@@ -1,6 +1,6 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.CompletionI;
+import org.df4j.core.connector.CompletionI;
 
 /**
  * methods common to all {@link Node}s and {@link Thread}.

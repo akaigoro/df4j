@@ -1,6 +1,6 @@
 package org.df4j.core.activities;
 
-import org.df4j.core.communicator.Completion;
+import org.df4j.core.connector.Completion;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;

@@ -11,6 +11,8 @@ package org.df4j.protocol;
  * work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.*
  ************************************************************************/
 
+import org.reactivestreams.Subscription;
+
 /**
  * Flow of messages with back-pressure
  * <p>
@@ -23,13 +25,14 @@ public final class Flow {
     private Flow() {} // uninstantiable
 
     public interface Publisher<T> extends org.reactivestreams.Publisher<T>, Scalar.Source<T> {
+
         @Override
         default void subscribe(Scalar.Observer<? super T> observer) {
             Media<T> media = new Media<T>(observer);
             subscribe(media);
         }
 
-        class Media<T> implements org.reactivestreams.Subscriber<T>, SimpleSubscription {
+        class Media<T> implements org.reactivestreams.Subscriber<T>, Subscription {
             private final Scalar.Observer<? super T> observer;
             private org.reactivestreams.Subscription subscription;
             private boolean cancelled;
@@ -67,8 +70,8 @@ public final class Flow {
             }
 
             @Override
-            public synchronized boolean isCancelled() {
-                return cancelled;
+            public void request(long n) {
+                throw new UnsupportedOperationException();
             }
         }
     }

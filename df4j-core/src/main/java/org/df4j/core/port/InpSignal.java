@@ -7,7 +7,7 @@ import org.reactivestreams.Subscription;
 import java.util.TimerTask;
 
 /**
- * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link org.df4j.core.communicator.AsyncSemaphore}.
+ * asynchronous receiver of permit flow from a {@link SignalFlow.Publisher}, e.g. {@link org.df4j.core.connector.AsyncSemaphore}.
  *
  * it is lazy, so implicit invocation of {@link InpSignal#request(long)} required
  */

@@ -1,6 +1,6 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.CompletionSubscription;
+import org.df4j.core.connector.CompletionSubscription;
 import org.df4j.protocol.Completable;
 
 import java.util.LinkedList;

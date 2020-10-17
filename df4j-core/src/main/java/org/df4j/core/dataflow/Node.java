@@ -9,8 +9,7 @@
  */
 package org.df4j.core.dataflow;
 
-import org.df4j.core.communicator.Completion;
-import org.df4j.core.communicator.CompletionI;
+import org.df4j.core.connector.Completion;
 import org.df4j.core.util.linked.LinkImpl;
 import org.jetbrains.annotations.NotNull;
 

@@ -1,7 +1,6 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.core.dataflow.AsyncFunc;
-import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,13 +14,12 @@ import java.util.function.Function;
 
 import static org.junit.Assert.fail;
 
-public class SumSquareTest {
+public class SumSquareTest1 {
 
     public static class Square extends AsyncFunc<Integer> {
         final InpScalar<Integer> param = new InpScalar<>(this);
 
-        @Override
-        protected Integer callAction() throws Throwable {
+        protected Integer callAction() {
             Integer arg = param.current();
             int res = arg*arg;
             return res;
@@ -32,8 +30,7 @@ public class SumSquareTest {
         final InpScalar<Integer> paramX = new InpScalar<>(this);
         final InpScalar<Integer> paramY = new InpScalar<>(this);
 
-        @Override
-        protected Integer callAction() throws Throwable {
+        protected Integer callAction() {
             Integer argX = paramX.current();
             Integer argY = paramY.current();
             int res = argX + argY;
@@ -45,7 +42,7 @@ public class SumSquareTest {
      * computes arithmetic expression sum = 3*3 + 4*4
      */
     @Test
-    public void testAP() throws InterruptedException, ExecutionException, TimeoutException {
+    public void testAP() throws TimeoutException {
         // create 3 nodes
         Square sqX = new Square();
         Square sqY = new Square();

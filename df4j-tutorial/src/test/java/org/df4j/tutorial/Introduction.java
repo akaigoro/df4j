@@ -1,6 +1,6 @@
 package org.df4j.tutorial;
 
-import org.df4j.core.communicator.CompletionI;
+import org.df4j.core.connector.CompletionI;
 import org.df4j.core.dataflow.*;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;

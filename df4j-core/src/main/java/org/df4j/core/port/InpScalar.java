@@ -3,7 +3,7 @@ package org.df4j.core.port;
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.Scalar;
-import org.df4j.protocol.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
@@ -20,7 +20,7 @@ import org.df4j.protocol.SimpleSubscription;
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
 public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> {
-    private SimpleSubscription subscription;
+    private Subscription subscription;
     protected T value;
 
     /**
@@ -32,7 +32,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
     }
 
     @Override
-    public void onSubscribe(SimpleSubscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         if (completed) {
             subscription.cancel();
             return;
@@ -41,8 +41,8 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
         block();
     }
 
-    public void unsubscribe() {
-        SimpleSubscription sub;
+    public void cancel() {
+        Subscription sub;
         synchronized(parent) {
             if (subscription == null) {
                 return;

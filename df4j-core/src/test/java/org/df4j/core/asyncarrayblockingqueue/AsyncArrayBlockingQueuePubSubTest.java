@@ -2,7 +2,7 @@ package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.activities.ProducerThread;
 import org.df4j.core.activities.SubscriberActor;
-import org.df4j.core.communicator.AsyncArrayBlockingQueue;
+import org.df4j.core.connector.AsyncArrayBlockingQueue;
 import org.df4j.core.dataflow.Dataflow;
 import org.junit.Assert;
 import org.junit.Test;

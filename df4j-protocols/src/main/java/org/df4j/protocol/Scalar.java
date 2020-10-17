@@ -1,5 +1,7 @@
 package org.df4j.protocol;
 
+import org.reactivestreams.Subscription;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -44,7 +46,7 @@ public class Scalar {
      * @param <T>  type of tokens
      */
     public interface Observer<T> extends Completable.Observer, BiConsumer<T, Throwable> {
-        void onSubscribe(SimpleSubscription subscription);
+        void onSubscribe(Subscription subscription);
 
         /**
          * Data notification sent by the {@link Source}

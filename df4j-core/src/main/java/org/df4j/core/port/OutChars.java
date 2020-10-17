@@ -5,13 +5,9 @@ import org.df4j.core.util.CharBuffer;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.CharFlow;
-import org.df4j.protocol.Flow;
-import org.df4j.protocol.FlowSubscription;
-import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
-import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A passive source of characters (like a server).
@@ -151,20 +147,13 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
         }
     }
 
-    protected class FlowSubscriptionImpl extends LinkImpl implements FlowSubscription {
+    protected class FlowSubscriptionImpl extends LinkImpl implements Subscription {
         protected final CharFlow.CharSubscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
         FlowSubscriptionImpl(CharFlow.CharSubscriber subscriber) {
             this.subscriber = subscriber;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            synchronized(parent) {
-                return cancelled;
-            }
         }
 
         /**

@@ -2,7 +2,7 @@ package org.df4j.core.port;
 
 import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.protocol.Flood;
-import org.df4j.protocol.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -18,7 +18,7 @@ import java.util.concurrent.CompletionException;
 public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , Flood.Subscriber<T> {
     /** TODO optimize for single token */
     private  final Queue<T> tokens = new LinkedList<>();
-    protected SimpleSubscription subscription;
+    protected Subscription subscription;
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
@@ -62,7 +62,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T> , 
     }
 
     @Override
-    public void onSubscribe(SimpleSubscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
         if (tokens.isEmpty()) {
             block();

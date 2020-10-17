@@ -1,11 +1,11 @@
-package org.df4j.core.communicator;
+package org.df4j.core.connector;
 
 import org.df4j.protocol.Completable;
-import org.df4j.protocol.SimpleSubscription;
+import org.reactivestreams.Subscription;
 
 import java.util.LinkedList;
 
-public class CompletionSubscription implements SimpleSubscription {
+public class CompletionSubscription implements Subscription {
     private final CompletionI completion;
     Completable.Observer subscriber;
     private boolean cancelled;
@@ -13,6 +13,11 @@ public class CompletionSubscription implements SimpleSubscription {
     protected CompletionSubscription(CompletionI completion, Completable.Observer subscriber) {
         this.completion = completion;
         this.subscriber = subscriber;
+    }
+
+    @Override
+    public void request(long n) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -26,13 +31,6 @@ public class CompletionSubscription implements SimpleSubscription {
             if (subscriptions != null) {
                 subscriptions.remove(this);
             }
-        }
-    }
-
-    @Override
-    public boolean isCancelled() {
-        synchronized (completion) {
-            return cancelled;
         }
     }
 
