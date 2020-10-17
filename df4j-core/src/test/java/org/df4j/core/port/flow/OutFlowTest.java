@@ -55,7 +55,7 @@ public class OutFlowTest {
         LoggingSubscriber sub = new LoggingSubscriber();
         pub.out.subscribe(sub);
         pub.start();
-        boolean success = pub.blockingAwait(400);
+        boolean success = pub.await(400);
         Assert.assertTrue(success);
         Thread.sleep(50);
         Assert.assertEquals(cnt, sub.cnt);
@@ -69,7 +69,7 @@ public class OutFlowTest {
         LoggingSubscriber sub = new LoggingSubscriber();
         pub.out.subscribe(sub);
         pub.start();
-        boolean success = pub.blockingAwait(400);
+        boolean success = pub.await(400);
         Assert.assertTrue(success);
         Thread.sleep(50);
         Assert.assertEquals(cnt, sub.cnt);

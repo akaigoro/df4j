@@ -57,7 +57,7 @@ public class SumSquareTest1 {
         sqY.start();
         sum.start();
         // get the result
-        boolean finished = sum.blockingAwait(1, TimeUnit.SECONDS);
+        boolean finished = sum.await(1, TimeUnit.SECONDS);
         if (!finished) {
             fail("not finished in time");
         }

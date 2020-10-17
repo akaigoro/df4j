@@ -1,6 +1,5 @@
 package org.df4j.core.dataflow;
 
-import org.df4j.core.util.CurrentThreadExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,7 +32,7 @@ public class ErrPropagationTest {
         nodeBad.start();
         nodeOK.start();
         try {
-            upper.blockingAwait(100);
+            upper.await(100);
             Assert.fail("exception expected");
         } catch (CompletionException e) {
             System.err.println(e);

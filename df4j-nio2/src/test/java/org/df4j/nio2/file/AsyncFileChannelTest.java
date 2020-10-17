@@ -46,7 +46,7 @@ public class AsyncFileChannelTest {
             producer.start();
             fileWriter.start();
             executor.executeAll(500);
-            boolean finished = dataflow.blockingAwait(10, TimeUnit.MILLISECONDS);
+            boolean finished = dataflow.await(10, TimeUnit.MILLISECONDS);
             Assert.assertTrue(finished);
         }
 
@@ -61,7 +61,7 @@ public class AsyncFileChannelTest {
             fileReader.start();
             consumer.start();
             executor.executeAll(50);
-            boolean finished = dataflow.blockingAwait(100, TimeUnit.MILLISECONDS); // todo millis
+            boolean finished = dataflow.await(100, TimeUnit.MILLISECONDS); // todo millis
             Assert.assertTrue(finished);
         }
     }

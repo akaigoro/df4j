@@ -21,7 +21,7 @@ public class MultiPortTest {
         prod2.start();
         merger.start();
         //  subscriber.start();
-        boolean ok = subscriber.blockingAwait(1000);
+        boolean ok = subscriber.await(1000);
         Assert.assertTrue(ok);
     }
 
@@ -38,7 +38,7 @@ public class MultiPortTest {
         prod2.start();
         merger.start();
         //  subscriber.start();
-        boolean ok = subscriber.blockingAwait(1000);
+        boolean ok = subscriber.await(1000);
         Assert.assertTrue(ok);
     }
     /**

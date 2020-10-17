@@ -58,7 +58,7 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // get the result
-        boolean fin = sum.blockingAwait(1, TimeUnit.SECONDS);
+        boolean fin = sum.await(1, TimeUnit.SECONDS);
         Assert.assertTrue(fin);
         int res = sum.get();
         Assert.assertEquals(25, res);

@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
 public interface CompletionI extends Completable.Source<Completable.Observer> {
-    LinkedList<Completion.CompletionSubscription> getSubscriptions();
+    LinkedList<CompletionSubscription> getSubscriptions();
 
     /**
      * @return completion Exception, if this {@link Completable} was completed exceptionally;
@@ -49,7 +49,7 @@ public interface CompletionI extends Completable.Source<Completable.Observer> {
     /**
      * waits this {@link Completable} to complete indefinetely
      */
-    void join()  throws InterruptedException;
+    void await()  throws InterruptedException;
 
     /**
      * waits this {@link Completable} to complete until timeout
@@ -57,7 +57,7 @@ public interface CompletionI extends Completable.Source<Completable.Observer> {
      * @return true if completed;
      *         false if timout reached
      */
-    boolean blockingAwait(long timeoutMillis);
+    boolean await(long timeoutMillis);
 
     /**
      * waits this {@link Completable} to complete until timeout
@@ -66,5 +66,5 @@ public interface CompletionI extends Completable.Source<Completable.Observer> {
      * @return true if completed;
      *         false if timout reached
      */
-    boolean blockingAwait(long timeout, TimeUnit unit);
+    boolean await(long timeout, TimeUnit unit);
 }

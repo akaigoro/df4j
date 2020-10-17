@@ -1,7 +1,6 @@
 package org.df4j.core.communicator;
 
 import org.df4j.core.dataflow.AsyncFunc;
-import org.df4j.core.dataflow.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,7 +59,7 @@ public class SumSquareTest {
         sqY.start();
         sum.start();
         // get the result
-        boolean finished = sum.blockingAwait(1, TimeUnit.SECONDS);
+        boolean finished = sum.await(1, TimeUnit.SECONDS);
         if (!finished) {
             fail("not finished in time");
         }

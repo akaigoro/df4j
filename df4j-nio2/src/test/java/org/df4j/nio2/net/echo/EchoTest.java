@@ -36,7 +36,7 @@ public  class EchoTest {
             client.start();
             clients.add(client);
         }
-        boolean finised = clientDataflow.blockingAwait(1, TimeUnit.SECONDS);
+        boolean finised = clientDataflow.await(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
         for (EchoClient client: clients) {
             Assert.assertEquals(0, client.count);

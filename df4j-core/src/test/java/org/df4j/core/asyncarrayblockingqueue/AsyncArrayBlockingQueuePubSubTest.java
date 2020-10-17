@@ -18,7 +18,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         queue.subscribe(subscriber.inp);
         queue.feedFrom(producer.out);
-        boolean fin = graph.blockingAwait(1000);
+        boolean fin = graph.await(1000);
         Assert.assertTrue(fin);
     }
 
@@ -65,14 +65,14 @@ public class AsyncArrayBlockingQueuePubSubTest {
         Thread.sleep(400);
         queue.complete();
         Thread.sleep(400);
-        subscriber.getParent().blockingAwait(400);
+        subscriber.getParent().await(400);
         boolean qIsCompleted = queue.isCompleted();
         Assert.assertTrue(qIsCompleted);
         SubscriberActor subscriber2 = new SubscriberActor(0);
         queue.subscribe(subscriber2.inp);
         subscriber2.start();
-        boolean fin = subscriber.blockingAwait(400);
-        boolean fin2 = subscriber2.blockingAwait(400);
+        boolean fin = subscriber.await(400);
+        boolean fin2 = subscriber2.await(400);
         Assert.assertTrue(fin2);
         Assert.assertTrue(fin);
     }

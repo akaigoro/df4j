@@ -11,7 +11,7 @@ public class CompletionBlockingAwaitTest {
         Completion completion = new Completion();
         completion.complete();
         long start = System.currentTimeMillis();
-        completion.blockingAwait(timeout, unit);
+        completion.await(timeout, unit);
         long actual = System.currentTimeMillis() - start;
         boolean passed = actual < 5;
         Assert.assertTrue("timeout="+unit.toMillis(timeout)+"; actual="+actual, passed);
@@ -41,7 +41,7 @@ public class CompletionBlockingAwaitTest {
     public void basicNotCompletedTest(long timeout, TimeUnit unit) {
         Completion completion = new Completion();
         long start = System.currentTimeMillis();
-        completion.blockingAwait(timeout, unit);
+        completion.await(timeout, unit);
         long actual = System.currentTimeMillis() - start;
         long expected = unit.toMillis(timeout);
         double delta = Math.abs(expected - actual);

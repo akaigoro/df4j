@@ -26,7 +26,6 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         ReverseFlow.Consumer<T>,
         /** asyncronous analogue of  {@link BlockingQueue#take()} */
         Flow.Publisher<T>
-//        OutMessagePort<T>
 {
     protected final InpChannel<T> inp;
     protected final OutFlow<T> out;
@@ -59,6 +58,11 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         out.subscribe(s);
     }
 
+    /**
+     * Inserts next token
+     * @param token token to insert
+     * @return false when input buffer is full
+     */
     public boolean offer(T token) {
         return inp.offer(token);
     }
@@ -67,10 +71,22 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         return inp.offer(token, timeout, unit);
     }
 
+    /**
+     * Inserts next token
+     * @param token token to insert
+     * @throws IllegalStateException when input buffer is full
+     */
     public void add(T token) {
         inp.add(token);
     }
 
+    /**
+     * Inserts next token
+     * blocks when input buffer is full
+     * @param token token to insert
+     * @throws InterruptedException
+     *    when inerrupted
+     */
     public void put(T token) throws InterruptedException {
         inp.put(token);
     }
@@ -79,6 +95,11 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         return inp.size()+out.size();
     }
 
+    /**
+     * extracts next token
+     * @return  token
+     * @throws IllegalStateException when the buffer is empty
+     */
     public T remove() {
         T res = out.poll();
         if (res == null) {
@@ -87,6 +108,12 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         return res;
     }
 
+    /**
+     * extracts next token
+     * never blocks
+     * @return  token
+     *       or null when the buffer is empty
+     */
     public T poll() {
         return out.poll();
     }
@@ -95,6 +122,11 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         return out.poll(timeout, unit);
     }
 
+    /**
+     * extracts next token
+     * blocks when the buffer is empty
+     * @return  token
+     */
     public T take() throws InterruptedException {
         return out.take();
     }

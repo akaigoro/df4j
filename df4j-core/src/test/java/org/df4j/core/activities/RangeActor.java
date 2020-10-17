@@ -18,26 +18,22 @@ public class RangeActor extends Actor {
 
     @Override
     protected void runAction() throws Throwable {
-        if (checkComplete()) return;
-        out.onNext(cnt);
-        cnt++;
-    }
-
-    private boolean checkComplete() {
         if (isCompleted()) {
-            Throwable completionException = getCompletionException();
-            if (completionException == null) {
+            Throwable completionException1 = getCompletionException();
+            if (completionException1 == null) {
                 out.onComplete();
             } else {
-                out.onError(completionException);
+                out.onError(completionException1);
             }
-            return true;
+            return;
         }
         if (cnt == to) {
             complete();
             out.onComplete();
-            return true;
+            return;
         }
-        return false;
+        out.onNext(cnt);
+        cnt++;
     }
+
 }

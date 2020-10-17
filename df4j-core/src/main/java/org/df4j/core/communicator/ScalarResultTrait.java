@@ -20,7 +20,7 @@ import java.util.concurrent.*;
 public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Future<R> {
     R getResult();
     void setResult(R result);
-    LinkedList<Completion.CompletionSubscription> getSubscriptions();
+    LinkedList<CompletionSubscription> getSubscriptions();
     Throwable getCompletionException();
 
     /**
@@ -73,20 +73,20 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
 
     @Override
     default R get() throws InterruptedException {
-        join();
+        await();
         return getResult();
     }
 
     @Override
     default R get(long timeout, @NotNull TimeUnit unit) throws TimeoutException {
-        if (blockingAwait(timeout, unit)) {
+        if (await(timeout, unit)) {
             return getResult();
         } else {
             throw new TimeoutException();
         }
     }
 
-    class ValueSubscription<R> extends Completion.CompletionSubscription {
+    class ValueSubscription<R> extends CompletionSubscription {
         ScalarResultTrait<R> scalarResultTrait;
 
         public ValueSubscription(ScalarResultTrait<R> completion, Scalar.Observer<? super R> subscriber) {

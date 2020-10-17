@@ -23,9 +23,8 @@ public interface Activity {
     /**
      *  Awaits the termination of this Completable instance in a blocking manner
      *  and rethrows any exception, if any.
-     * @throws InterruptedException when the thread is interrupted
      */
-    void join() throws InterruptedException;
+    void await();
 
     /**
      *  Awaits the termination of this Completable instance in a blocking manner with a specific timeout
@@ -34,7 +33,7 @@ public interface Activity {
      * @param timeout timeout in milliseconds
      * @return true if this activity has ended.
      */
-    boolean blockingAwait(long timeout);
+    boolean await(long timeout);
 
     /**
      *  Awaits the termination of this Completable instance in a blocking manner with a specific timeout
@@ -44,7 +43,7 @@ public interface Activity {
      * @param unit TimeUnit
      * @return true if this activity has ended.
      */
-    default boolean blockingAwait(long timeout, TimeUnit unit) {
-        return blockingAwait(unit.toMillis(timeout));
+    default boolean await(long timeout, TimeUnit unit) {
+        return await(unit.toMillis(timeout));
     }
 }

@@ -5,8 +5,6 @@ import org.df4j.core.activities.SubscriberActor;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.logging.Level;
-
 public class PubSubTest {
 
     public void pubSubTest(int cnt, int delay1, int delay2) {
@@ -16,7 +14,7 @@ public class PubSubTest {
         pub.out.subscribe(sub.inp);
         pub.start();
         sub.start();
-        boolean res = df.blockingAwait(100000);
+        boolean res = df.await(100000);
         Assert.assertTrue(res);
     }
 
