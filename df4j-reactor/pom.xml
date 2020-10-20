@@ -14,6 +14,17 @@
 
 	<dependencies>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.30</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.30</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.df4j</groupId>
             <artifactId>df4j-core</artifactId>
             <version>${project.version}</version>
@@ -24,7 +35,7 @@
             <artifactId>reactor-core</artifactId>
             <version>3.3.2.RELEASE</version>
         </dependency>
-	</dependencies>
+    </dependencies>
 
     <build>
         <plugins>

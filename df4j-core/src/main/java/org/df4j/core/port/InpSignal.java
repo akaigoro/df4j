@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.connector.AsyncSemaphore;
-import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.actor.AsyncProc;
 import org.df4j.protocol.SignalFlow;
 import org.reactivestreams.Subscription;
 

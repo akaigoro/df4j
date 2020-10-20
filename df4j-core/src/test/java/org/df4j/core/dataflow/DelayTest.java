@@ -1,5 +1,6 @@
 package org.df4j.core.dataflow;
 
+import org.df4j.core.actor.Actor;
 import org.df4j.core.connector.Completion;
 import org.df4j.core.port.OutFlow;
 import org.junit.Test;

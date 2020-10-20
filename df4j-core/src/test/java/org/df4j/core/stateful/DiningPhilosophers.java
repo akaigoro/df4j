@@ -1,10 +1,10 @@
 package org.df4j.core.stateful;
 
 import org.df4j.core.connector.AsyncArrayBlockingQueue;
-import org.df4j.core.dataflow.Activity;
-import org.df4j.core.dataflow.ActivityThread;
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.actor.Activity;
+import org.df4j.core.actor.ActivityThread;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.Dataflow;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
 import org.junit.Assert;

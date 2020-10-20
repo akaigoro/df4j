@@ -2,6 +2,7 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.ScalarSubscriberActor;
+import org.df4j.core.actor.Dataflow;
 import org.df4j.core.util.CurrentThreadExecutor;
 import org.junit.Assert;
 import org.junit.Test;

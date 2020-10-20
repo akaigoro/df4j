@@ -1,5 +1,7 @@
 package org.df4j.core.dataflow;
 
+import org.df4j.core.actor.AsyncFunc;
+import org.df4j.core.actor.Dataflow;
 import org.junit.Assert;
 import org.junit.Test;
 

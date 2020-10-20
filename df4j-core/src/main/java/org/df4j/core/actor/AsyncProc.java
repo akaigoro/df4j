@@ -7,14 +7,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
 import org.df4j.core.connector.Completion;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
-
-import static org.df4j.core.dataflow.ActorState.*;
 
 /**
  * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
@@ -34,7 +32,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
     public static final int MAX_PORT_NUM = 31;
     private static final boolean checkingMode = true; // todo false
 
-    protected ActorState state = Created;
+    protected ActorState state = ActorState.Created;
 
     /** is not encountered as a parent's child */
     private boolean daemon;
@@ -84,7 +82,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
      * Only the first call works, subsequent calls are ignored.
      */
     public synchronized void start() {
-        if (state != Created) {
+        if (state != ActorState.Created) {
             return;
         }
         _controlportUnblock();
@@ -98,7 +96,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             if (isCompleted()) {
                 return;
             }
-            state = Completed;
+            state = ActorState.Completed;
         }
         super.complete();
     }
@@ -112,7 +110,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             if (isCompleted()) {
                 return;
             }
-            state = Completed;
+            state = ActorState.Completed;
         }
         super.completeExceptionally(ex);
     }
@@ -135,12 +133,12 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
     }
 
     protected void _controlportUnblock() {
-        state = Blocked;
+        state = ActorState.Blocked;
         controlport.unblock();
     }
 
     protected void _controlportBlock() {
-        state = Running;
+        state = ActorState.Running;
         controlport.block();
     }
 

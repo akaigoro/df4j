@@ -12,11 +12,11 @@
  */
 package org.df4j.nio2.net;
 
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
-import org.df4j.core.port.InpSignal;
-import org.df4j.core.port.OutFlow;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.AsyncProc;
+import org.df4j.core.actor.Dataflow;
+import org.df4j.core.port.InpFlood;
+import org.df4j.core.port.OutFlood;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -29,34 +29,50 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
- * Simplifies input-output, handling queues of I/O requests.
+ * Simplfies input-output, handling queues of I/O requests.
  */
-public class AsyncSocketChannel {
+public class SocketPort extends InpFlood<ByteBuffer> {
     protected final Logger LOG = new Logger(this);
-    private final Dataflow dataflow;
-    private final InpSignal allowedConnections;
 
 	/** read requests queue */
-	public final Reader reader;
+	private Reader reader;
 	/** write requests queue */
-	public final Writer writer;
+    private Writer writer;
 
-    protected volatile AsynchronousSocketChannel channel;
+    protected volatile Connection channel;
 
     public String name;
 
-    public AsyncSocketChannel(Dataflow dataflow, InpSignal allowedConnections, AsynchronousSocketChannel channel) {
-        this.dataflow=dataflow;
-        this.allowedConnections = allowedConnections;
-        this.channel=channel;
-        reader = new Reader(dataflow);
-        writer = new Writer(dataflow);
-        reader.start();
-        writer.start();
+    public SocketPort(AsyncProc parent) {
+        super(parent);
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void connect(Connection channel) {
+        Dataflow dataflow = getDataflow();
+        this.channel=channel;
+        reader = new Reader(dataflow);
+        writer = new Writer(dataflow);
+        reader.output.subscribe(SocketPort.this);
+        writer.output.subscribe(reader.input);
+        reader.start();
+        writer.start();
+        LOG.info(name + " started");
+    }
+
+    public void connect(AsynchronousSocketChannel assc) {
+        connect(new Connection(assc));
+    }
+
+    public void read(ByteBuffer buf) {
+        reader.input.onNext(buf);
+    }
+
+    public void send(ByteBuffer buf) {
+        writer.input.onNext(buf);
     }
 
     /**
@@ -81,9 +97,7 @@ public class AsyncSocketChannel {
         }
     }
 
-    public void release(int i) {
-    }
-//===================== inner classes
+    //===================== inner classes
 
     /**
      * an actor with delayed restart of the action
@@ -92,8 +106,8 @@ public class AsyncSocketChannel {
         protected final Logger LOG = new Logger(this);
 
         final String io;
-        public final InpFlow<ByteBuffer> input = new InpFlow<>(this);
-        public final OutFlow<ByteBuffer> output = new OutFlow<>(this);
+        public final InpFlood<ByteBuffer> input = new InpFlood<>(this);
+        public final OutFlood<ByteBuffer> output = new OutFlood<>(this);
 
         long timeout=0;
 
@@ -166,12 +180,12 @@ public class AsyncSocketChannel {
 
         protected void doIO(ByteBuffer buffer) {
             buffer.clear();
-            channel.read(buffer, buffer, this);
+            channel.getChannel().read(buffer, buffer, this);
         }
 
         @Override
         protected void doIO(ByteBuffer buffer, long timeout) {
-            channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
+            channel.getChannel().read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
     }
     
@@ -182,12 +196,12 @@ public class AsyncSocketChannel {
         }
 
         protected void doIO(ByteBuffer buffer) {
-            channel.write(buffer, buffer, this);
+            channel.getChannel().write(buffer, buffer, this);
         }
 
         @Override
         protected void doIO(ByteBuffer buffer, long timeout) {
-            channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
+            channel.getChannel().write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
     }
 

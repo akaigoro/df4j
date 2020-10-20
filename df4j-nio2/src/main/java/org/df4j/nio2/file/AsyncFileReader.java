@@ -12,7 +12,7 @@
  */
 package org.df4j.nio2.file;
 
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.actor.Dataflow;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

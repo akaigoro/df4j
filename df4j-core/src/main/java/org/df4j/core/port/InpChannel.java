@@ -1,8 +1,8 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.AsyncProc;
+import org.df4j.core.actor.Dataflow;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.ReverseFlow;

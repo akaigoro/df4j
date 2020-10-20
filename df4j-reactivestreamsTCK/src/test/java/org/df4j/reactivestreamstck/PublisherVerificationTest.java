@@ -1,7 +1,7 @@
 package org.df4j.reactivestreamstck;
 
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.Dataflow;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.Dataflow;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Publisher;

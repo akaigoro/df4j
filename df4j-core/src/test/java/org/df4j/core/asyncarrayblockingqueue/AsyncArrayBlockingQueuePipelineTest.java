@@ -1,9 +1,9 @@
 package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.connector.AsyncArrayBlockingQueue;
-import org.df4j.core.dataflow.Activity;
-import org.df4j.core.dataflow.ActivityThread;
-import org.df4j.core.dataflow.Actor;
+import org.df4j.core.actor.Activity;
+import org.df4j.core.actor.ActivityThread;
+import org.df4j.core.actor.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
 import org.df4j.core.util.Logger;

@@ -7,7 +7,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
 import org.df4j.core.connector.Completion;
 import org.df4j.core.util.linked.LinkImpl;

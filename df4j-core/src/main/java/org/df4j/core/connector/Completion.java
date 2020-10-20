@@ -100,7 +100,8 @@ public class Completion implements CompletionI {
     protected void whenComplete() {
     }
 
-    protected void whenError() {
+    protected void whenError(Throwable e) {
+        whenComplete();
     }
 
     /**
@@ -113,13 +114,12 @@ public class Completion implements CompletionI {
         if (e == null) {
             throw new IllegalArgumentException();
         }
-        whenError();
+        whenError(e);
         _complete(e);
     }
 
     /**
      * waits this {@link Completable} to complete
-     * @throws InterruptedException if this thread interrupted
      */
     public synchronized void await() {
         try {

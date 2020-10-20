@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 
-import org.df4j.core.dataflow.Actor;
+import org.df4j.core.actor.Actor;
 import org.df4j.core.port.OutFlow;
 
 public class RangeActor extends Actor {

@@ -1,6 +1,6 @@
 package org.df4j.core.communicator;
 
-import org.df4j.core.dataflow.AsyncFunc;
+import org.df4j.core.actor.AsyncFunc;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
 import org.junit.Test;

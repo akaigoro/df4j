@@ -2,7 +2,7 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;
-import org.junit.Assert;
+import org.df4j.core.actor.Dataflow;
 import org.junit.Test;
 
 public class DataflowChildrenTest {

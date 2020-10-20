@@ -1,4 +1,4 @@
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
 import org.df4j.core.util.linked.LinkedQueue;
 

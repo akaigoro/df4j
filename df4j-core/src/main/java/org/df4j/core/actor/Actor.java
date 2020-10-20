@@ -1,8 +1,6 @@
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
 import java.util.TimerTask;
-
-import static org.df4j.core.dataflow.ActorState.*;
 
 /**
  * {@link Actor} is an {@link AsyncProc} whose {@link Actor#runAction()} method can be executed repeatedly,
@@ -73,13 +71,13 @@ public abstract class Actor extends AsyncProc {
      */
     protected void delay(long delay) {
         synchronized(this) {
-            if (state == Completed) {
+            if (state == ActorState.Completed) {
                 return;
             }
             if (delay <= 0) {
                 return;
             }
-            state = Suspended;
+            state = ActorState.Suspended;
             this.task = new MyTimerTask();
         }
         getTimer().schedule(task, delay);
@@ -89,10 +87,10 @@ public abstract class Actor extends AsyncProc {
      * sets infinite delay. Previously set delay is canceled.
      */
     protected synchronized void suspend() {
-        if (state == Completed) {
+        if (state == ActorState.Completed) {
             return;
         }
-        state = Suspended;
+        state = ActorState.Suspended;
     }
 
     /**
@@ -101,7 +99,7 @@ public abstract class Actor extends AsyncProc {
      */
     public  void resume() {
         synchronized(this) {
-            if (state != Suspended) {
+            if (state != ActorState.Suspended) {
                 return;
             }
             if (this.task != null) {

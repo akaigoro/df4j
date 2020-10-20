@@ -1,6 +1,6 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.actor.AsyncProc;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;

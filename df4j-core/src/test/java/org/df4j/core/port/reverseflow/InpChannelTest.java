@@ -1,6 +1,6 @@
 package org.df4j.core.port.reverseflow;
 
-import org.df4j.core.dataflow.Actor;
+import org.df4j.core.actor.Actor;
 import org.df4j.core.port.InpChannel;
 import org.df4j.core.util.Utils;
 import org.junit.Assert;

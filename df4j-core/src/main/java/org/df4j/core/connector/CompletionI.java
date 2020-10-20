@@ -49,7 +49,7 @@ public interface CompletionI extends Completable.Source<Completable.Observer> {
     /**
      * waits this {@link Completable} to complete indefinetely
      */
-    void await()  throws InterruptedException;
+    void await();
 
     /**
      * waits this {@link Completable} to complete until timeout

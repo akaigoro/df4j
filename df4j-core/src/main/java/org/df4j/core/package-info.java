@@ -17,10 +17,10 @@
  * - nodes are executed by an executor set at the period of time between node creation and first execution.
  * If no executor is set, then {@link java.util.concurrent.ForkJoinPool} is used.
  * <p>
- * - nodes are subclasses of abstract class {@link org.df4j.core.dataflow.AsyncProc}.
+ * - nodes are subclasses of abstract class {@link org.df4j.core.actor.AsyncProc}.
  * <p>
  * - ports may be of several predefined types, and user can create specific pin types
- * by subclassing class {@link org.df4j.core.dataflow.AsyncProc.Port}.
+ * by subclassing class {@link org.df4j.core.actor.AsyncProc.Port}.
  *
  */
 

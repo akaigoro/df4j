@@ -1,7 +1,7 @@
 package org.df4j.core.port;
 
-import org.df4j.core.dataflow.AsyncProc;
-import org.df4j.core.dataflow.TransitionHolder;
+import org.df4j.core.actor.AsyncProc;
+import org.df4j.core.actor.TransitionHolder;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 

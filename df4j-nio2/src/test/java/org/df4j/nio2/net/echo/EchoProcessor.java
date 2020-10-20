@@ -1,75 +1,65 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.dataflow.Actor;
-import org.df4j.core.dataflow.Dataflow;
-import org.df4j.core.port.InpFlow;
-import org.df4j.core.port.OutFlow;
-import org.df4j.nio2.net.AsyncSocketChannel;
+import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.Dataflow;
+import org.df4j.core.util.Logger;
+import org.df4j.nio2.net.Connection;
+import org.df4j.nio2.net.SocketPort;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.CompletionException;
+import java.util.logging.Level;
 
 class EchoProcessor extends Actor {
-    private final EchoServer echoServer;
-    AsyncSocketChannel serverConn;
+    protected final Logger LOG = new Logger(this, Level.INFO);
     Long connSerialNum;
-    InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
-    OutFlow<ByteBuffer> buffers2write = new OutFlow<>(this);;
-    private boolean connectionPermitReleased;
+    protected SocketPort socketPort;
+    public String name;
 
-    public EchoProcessor(EchoServer echoServer, Dataflow parent, AsyncSocketChannel assc, Long connSerialNum) {
+    public EchoProcessor(Dataflow parent, Connection channel, Long connSerialNum) {
         super(parent);
-        this.echoServer = echoServer;
         this.connSerialNum = connSerialNum;
         int capacity = 2;
-        serverConn.setName("server");
+        socketPort = new SocketPort(this);
+        name = " processor#"+connSerialNum;
+        socketPort.connect(channel);
         for (int k = 0; k < capacity; k++) {
             ByteBuffer buf = ByteBuffer.allocate(EchoServer.BUF_SIZE);
-            serverConn.reader.input.onNext(buf);
+            socketPort.read(buf);
         }
-        serverConn.reader.output.subscribe(readBuffers);
-        buffers2write.subscribe(serverConn.writer.input);
-        serverConn.writer.output.subscribe(serverConn.reader.input);
-        echoServer.LOG.info("EchoProcessor #" + connSerialNum + " started");
-    }
-
-    public synchronized void releaseConnectionPermit() {
-        if (connectionPermitReleased) {
-            return;
-        }
-        connectionPermitReleased = true;
-        serverConn.release(1);
+        LOG.info(name+" started");
     }
 
     @Override
-    public void complete() {
-        releaseConnectionPermit();
-        super.complete();
+    public String toString() {
+        if (name == null) {
+            return super.toString();
+        } else {
+            return name;
+        }
     }
 
     @Override
-    public void completeExceptionally(Throwable ex) {
-        releaseConnectionPermit();
-        super.completeExceptionally(ex);
+    public void whenComplete() {
+        try {
+            socketPort.close();
+            LOG.info(name + "completed");
+        } catch (IOException e) {
+            completeExceptionally(e);
+            LOG.info(name + "completed with error " + e);
+        }
     }
 
     public void runAction() throws CompletionException {
-        if (!readBuffers.isCompleted()) {
-            ByteBuffer buffer = readBuffers.remove();
-            buffer.flip();
-            buffers2write.onNext(buffer);
-            echoServer.LOG.info("EchoProcessor #" + connSerialNum + " replied");
-        } else {
-            try {
-                serverConn.close();
-                complete();
-                echoServer.LOG.info("EchoProcessor #" + connSerialNum + "completed");
-            } catch (IOException e) {
-                completeExceptionally(e);
-                echoServer.LOG.info("EchoProcessor #" + connSerialNum + "completed with error " + e);
-            }
+        if (socketPort.isCompleted()) {
+            complete();
+            return;
         }
+        ByteBuffer received = socketPort.remove();
+        received.flip();
+        String m2 = EchoClient.fromByteBuf(received);
+        socketPort.send(received);
+        LOG.info(name + " received "+m2);
     }
 }
