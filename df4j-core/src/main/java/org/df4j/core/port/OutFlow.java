@@ -4,6 +4,7 @@ import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.OutMessagePort;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.Subscriber;
 

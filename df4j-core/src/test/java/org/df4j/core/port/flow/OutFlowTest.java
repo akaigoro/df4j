@@ -10,6 +10,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class OutFlowTest {
+
     static class TestActor extends Actor {
         int runCounter = 0;
         @Override

@@ -60,6 +60,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
          * limits the number of simultaneously existing connections - plays the role of backpressure
          */
         public InpSignal allowedConnections = new InpSignal(this);
+        private Port serialAccess = new Port(this, true);
 
         public ServerAcceptor(Dataflow dataflow, SocketAddress addr) throws IOException {
             super(dataflow);
@@ -88,7 +89,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
         @Override
         protected final void runAction() throws Throwable {
             allowedConnections.remove(); // use a permit to accept next client connection
-            suspend(); // wait for CompletionHandler to resume
+            serialAccess.block(); // wait for CompletionHandler to resume
             assc.accept(null, this);
         }
 
@@ -97,7 +98,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
         @Override
         public void completed(AsynchronousSocketChannel asc, Void attachment) {
             try {
-                this.resume(); // allow  next assc.accpt()
+                serialAccess.unblock(); // allow  next assc.accpt()
                 Connection serverConn = new Connection(asc, allowedConnections);
                 ServerSocketPort.this.onNext(serverConn);
             } catch (Throwable t) {

@@ -59,7 +59,7 @@ class EchoProcessor extends Actor {
         ByteBuffer received = socketPort.remove();
         received.flip();
         String m2 = EchoClient.fromByteBuf(received);
-        socketPort.send(received);
         LOG.info(name + " received "+m2);
+        socketPort.send(received);
     }
 }

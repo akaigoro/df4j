@@ -1,7 +1,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.port.InpFlood;
-import org.df4j.core.port.OutMessagePort;
+import org.df4j.protocol.OutMessagePort;
 
 import java.util.concurrent.CompletionException;
 

@@ -178,6 +178,11 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         protected final Transition transition;
         protected final int portNum;
 
+        /**
+         *
+         * @param parentHolder holder of the transition
+         * @param ready true if port initially unblocked
+         */
         public Port(TransitionHolder parentHolder, boolean ready) {
             this.transition = parentHolder.getTransition();
             this.ready = ready;

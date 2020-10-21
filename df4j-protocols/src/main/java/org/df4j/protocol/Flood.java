@@ -54,7 +54,7 @@ public class Flood {
      *
      * @param <T> the subscribed item type
      */
-    public interface Subscriber<T> {
+    public interface Subscriber<T> extends OutMessagePort<T> {
 
         /**
          * Invoked after calling {@link Scalar.Source#subscribe(Scalar.Observer)}.

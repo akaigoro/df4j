@@ -74,8 +74,10 @@ class EchoClient extends Actor {
         if (clientConn.isCompleted()) {
             if (clientConn.isCompletedExceptionally()) {
                 completeExceptionally(clientConn.getCompletionException());
+                LOG.info(" clientConn completed with error");
             } else {
                 complete();
+                LOG.info(" clientConn completed");
             }
             return;
         }
@@ -84,9 +86,8 @@ class EchoClient extends Actor {
         String m2 = fromByteBuf(received);
         LOG.info(clientName+" received message:"+m2);
         Assert.assertEquals(message, m2);
-        count--;
         sendMsg(received);
-        if (count == 0) {
+        if (--count == 0) {
             complete();
         }
     }

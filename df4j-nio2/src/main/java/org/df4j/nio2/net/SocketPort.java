@@ -16,7 +16,7 @@ import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.actor.Dataflow;
 import org.df4j.core.port.InpFlood;
-import org.df4j.core.port.OutFlood;
+import org.df4j.protocol.OutMessagePort;
 import org.df4j.core.util.Logger;
 
 import java.io.IOException;
@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * Wrapper over {@link AsynchronousSocketChannel}.
  * Simplfies input-output, handling queues of I/O requests.
  */
-public class SocketPort extends InpFlood<ByteBuffer> {
+public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<ByteBuffer> {
     protected final Logger LOG = new Logger(this);
 
 	/** read requests queue */
@@ -53,11 +53,9 @@ public class SocketPort extends InpFlood<ByteBuffer> {
 
     public void connect(Connection channel) {
         Dataflow dataflow = getDataflow();
-        this.channel=channel;
-        reader = new Reader(dataflow);
-        writer = new Writer(dataflow);
-        reader.output.subscribe(SocketPort.this);
-        writer.output.subscribe(reader.input);
+        this.channel = channel;
+        reader = new Reader(dataflow, this);
+        writer = new Writer(dataflow, reader.input);
         reader.start();
         writer.start();
         LOG.info(name + " started");
@@ -102,22 +100,28 @@ public class SocketPort extends InpFlood<ByteBuffer> {
     /**
      * an actor with delayed restart of the action
      */
-    public abstract class IOExecutor extends Actor implements CompletionHandler<Integer, ByteBuffer> {
+    protected abstract class IOExecutor extends Actor implements CompletionHandler<Integer, ByteBuffer> {
         protected final Logger LOG = new Logger(this);
 
-        final String io;
-        public final InpFlood<ByteBuffer> input = new InpFlood<>(this);
-        public final OutFlood<ByteBuffer> output = new OutFlood<>(this);
+        private final String io;
+        protected final InpFlood<ByteBuffer> input = new InpFlood<>(this);
+        protected final OutMessagePort<ByteBuffer> output;
+        private Port serialAccess = new Port(this, true);
 
         long timeout=0;
 
-        public IOExecutor(Dataflow dataflow, String io) {
+        public IOExecutor(Dataflow dataflow, String io, OutMessagePort<ByteBuffer> output) {
             super(dataflow);
+            this.output = output;
             setDaemon(true);
             this.io = io;
         }
 
-        //-------------------- dataflow backend
+        @Override
+        protected void fire() {
+            run();
+        }
+//-------------------- dataflow backend
 
         protected abstract void doIO(ByteBuffer buffer);
 
@@ -134,7 +138,7 @@ public class SocketPort extends InpFlood<ByteBuffer> {
                 return;
             }
             ByteBuffer buffer = input.remove();
-            suspend(); // wait CompletionHandler to invoke resume()
+            serialAccess.block(); // wait CompletionHandler to invoke resume()
             if (timeout > 0) {
                 doIO(buffer, timeout);
             } else {
@@ -153,7 +157,7 @@ public class SocketPort extends InpFlood<ByteBuffer> {
                 output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
-                this.resume();
+                serialAccess.unblock();
             }
         }
 
@@ -172,10 +176,10 @@ public class SocketPort extends InpFlood<ByteBuffer> {
      * works both in client-side and server-side modes
      */
     
-    public class Reader extends IOExecutor {
+    protected class Reader extends IOExecutor {
 
-        public Reader(Dataflow dataflow) {
-            super(dataflow, "reader");
+        public Reader(Dataflow dataflow, OutMessagePort<ByteBuffer> output) {
+            super(dataflow, "reader", output);
         }
 
         protected void doIO(ByteBuffer buffer) {
@@ -188,11 +192,11 @@ public class SocketPort extends InpFlood<ByteBuffer> {
             channel.getChannel().read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
     }
-    
-    public class Writer extends IOExecutor {
 
-        public Writer(Dataflow dataflow) {
-            super(dataflow, "writer");
+    protected class Writer extends IOExecutor {
+
+        public Writer(Dataflow dataflow, OutMessagePort<ByteBuffer> output) {
+            super(dataflow, "writer", output);
         }
 
         protected void doIO(ByteBuffer buffer) {
