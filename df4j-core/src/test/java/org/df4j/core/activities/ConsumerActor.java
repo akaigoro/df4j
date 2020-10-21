@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpChannel;
 import org.df4j.core.util.Logger;
 
@@ -12,7 +12,7 @@ public class ConsumerActor extends Actor {
     final int delay;
     public InpChannel<Long> inp = new InpChannel<>(this);
 
-    public ConsumerActor(int delay, Dataflow parent) {
+    public ConsumerActor(int delay, ActorGroup parent) {
         super(parent);
         this.delay = delay;
     }

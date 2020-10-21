@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 
@@ -20,7 +20,7 @@ public class PublisherActor extends Actor {
         logger.setLevel(off);
     }
 
-    public PublisherActor(Dataflow parent, long cnt, int delay, int capacity) {
+    public PublisherActor(ActorGroup parent, long cnt, int delay, int capacity) {
         super(parent);
         out = new OutFlow<>(this, capacity);
         this.cnt = cnt;
@@ -28,12 +28,12 @@ public class PublisherActor extends Actor {
         logger.info("PublisherActor: cnt = " + cnt);
     }
 
-    public PublisherActor(Dataflow parent, long cnt, int delay) {
+    public PublisherActor(ActorGroup parent, long cnt, int delay) {
         this(parent, cnt, delay, OutFlow.DEFAULT_CAPACITY);
     }
 
     public PublisherActor(long cnt, int delay) {
-        this(new Dataflow(), cnt, delay);
+        this(new ActorGroup(), cnt, delay);
     }
 
     public PublisherActor(long cnt) {

@@ -1,7 +1,7 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.SocketPort;
 import org.df4j.nio2.net.ClientSocketPort;
@@ -34,8 +34,8 @@ class EchoClient extends Actor {
     String message;
     private String clientName = "Client#"+seqNum;
 
-    public EchoClient(Dataflow dataflow, SocketAddress addr, int total) throws IOException {
-        super(dataflow);
+    public EchoClient(ActorGroup actorGroup, SocketAddress addr, int total) throws IOException {
+        super(actorGroup);
         this.count = total;
         inp.connect(addr);
     }

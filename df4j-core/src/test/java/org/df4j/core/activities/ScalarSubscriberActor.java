@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
 
@@ -13,7 +13,7 @@ public class ScalarSubscriberActor extends Actor {
     int pubIndex = 0;
     public int cnt;
 
-    public ScalarSubscriberActor(Dataflow df, int delay, int count,  PublisherActor... pubs) {
+    public ScalarSubscriberActor(ActorGroup df, int delay, int count, PublisherActor... pubs) {
         super(df);
         this.delay = delay;
         this.cnt = count;

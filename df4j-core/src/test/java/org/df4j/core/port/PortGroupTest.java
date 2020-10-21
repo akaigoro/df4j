@@ -6,7 +6,7 @@ import org.df4j.core.actor.Actor;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class MultiPortTest {
+public class PortGroupTest {
 
     @Test
     public void mergeTest1() {
@@ -47,7 +47,7 @@ public class MultiPortTest {
      * @param <T>
      */
     static class MergeActor1<T> extends Actor {
-        MultiPort mport = new MultiPort(this);
+        PortGroup mport = new PortGroup(this);
         InpFlow<T> inp1 = new InpFlow<>(mport);
         InpFlow<T> inp2 = new InpFlow<>(mport);
         OutFlow<T> out = new OutFlow<>(this);

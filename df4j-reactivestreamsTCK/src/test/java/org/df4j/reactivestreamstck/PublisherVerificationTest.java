@@ -1,7 +1,7 @@
 package org.df4j.reactivestreamstck;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
 import org.reactivestreams.Publisher;
@@ -53,14 +53,14 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
         }
 
         public LoggingPublisherActor(long cnt, int delay) {
-            this(new Dataflow(), cnt, delay);
+            this(new ActorGroup(), cnt, delay);
         }
 
-        public LoggingPublisherActor(Dataflow parent, long cnt, int delay) {
+        public LoggingPublisherActor(ActorGroup parent, long cnt, int delay) {
             this(parent, cnt, delay, OutFlow.DEFAULT_CAPACITY);
         }
 
-        public LoggingPublisherActor(Dataflow parent, long cnt, int delay, int capacity) {
+        public LoggingPublisherActor(ActorGroup parent, long cnt, int delay, int capacity) {
             super(parent);
             out = new OutFlow<>(this, capacity);
             this.cnt = cnt;

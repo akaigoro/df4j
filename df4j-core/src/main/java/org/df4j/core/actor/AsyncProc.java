@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 
 /**
- * {@link AsyncProc} is the base class of all active components of {@link Dataflow} graph.
+ * {@link AsyncProc} is the base class of all active components of {@link ActorGroup} graph.
  * Used in this basic form, it allows to construct asynchronous procedure calls.
  * {@link AsyncProc} contains single predefined port to accept flow of control by call to the method {@link AsyncProc#start()}.\
  * As a {@link Node}, it is descendand of {@link Completion} class, which allows to monitor execution
@@ -44,12 +44,12 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
 
     private ControlPort controlport = new ControlPort(this);
 
-    protected AsyncProc(Dataflow dataflow) {
-        super(dataflow);
+    protected AsyncProc(ActorGroup actorGroup) {
+        super(actorGroup);
     }
 
     public AsyncProc() {
-        this(new Dataflow());
+        this(new ActorGroup());
     }
 
     public ActorState getState() {
@@ -215,7 +215,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             return super.toString() + (ready?": ready":": blocked");
         }
 
-        public Dataflow getDataflow() {
+        public ActorGroup getDataflow() {
             return transition.getDataflow();
         }
     }
@@ -239,7 +239,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         }
 
         @Override
-        public Dataflow getDataflow() {
+        public ActorGroup getDataflow() {
             return AsyncProc.this.getDataflow();
         }
 
@@ -307,10 +307,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         }
     }
 
-    public class MultiPort extends Port implements TransitionHolder {
+    /**
+     * parent for a group of ports.
+     * Becomes ready when any of child ports become ready.
+     */
+    public class PortGroup extends Port implements TransitionHolder {
         final TransitionAny transition;
 
-        public MultiPort(AsyncProc parent) {
+        public PortGroup(AsyncProc parent) {
             super(parent);
             transition = new TransitionAny();
         }
@@ -337,14 +341,14 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
 
             @Override
             protected void callFire() {
-                MultiPort.this.unblock();
+                PortGroup.this.unblock();
             }
 
             @Override
             public synchronized void block(Port port) {
                 super.block(port);
                 if (!transition.canFire()) {
-                    MultiPort.this.block();
+                    PortGroup.this.block();
                 }
             }
         }

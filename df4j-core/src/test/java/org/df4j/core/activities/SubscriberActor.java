@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.util.Logger;
 import org.junit.Assert;
@@ -15,7 +15,7 @@ public class SubscriberActor extends Actor {
     public final InpFlow<Long> inp = new InpFlow<>(this, 1);
     Long cnt = null;
 
-    public SubscriberActor(Dataflow parent, int delay) {
+    public SubscriberActor(ActorGroup parent, int delay) {
         super(parent);
         this.delay = delay;
     }

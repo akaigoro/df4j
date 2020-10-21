@@ -13,7 +13,7 @@
 package org.df4j.nio2.file;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Logger;
@@ -39,8 +39,8 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
     public final OutFlow<ByteBuffer> output;
     protected volatile long filePosition = 0;
 
-    public AsyncFileChannel(Dataflow dataflow, AsynchronousFileChannel channel, int capacity) {
-        super(dataflow);
+    public AsyncFileChannel(ActorGroup actorGroup, AsynchronousFileChannel channel, int capacity) {
+        super(actorGroup);
         this.channel=channel;
         input = new InpFlow<>(this, capacity);
         output = new OutFlow<>(this, capacity);

@@ -18,7 +18,7 @@ public abstract class Actor extends AsyncProc {
 
     {nextAction(this::runAction);}
 
-    public Actor(Dataflow parent) {
+    public Actor(ActorGroup parent) {
         super(parent);
     }
 

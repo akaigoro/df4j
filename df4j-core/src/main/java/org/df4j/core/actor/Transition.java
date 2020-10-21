@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutorService;
 
 public interface Transition {
 
-    Dataflow getDataflow();
+    ActorGroup getDataflow();
 
     int registerPort(AsyncProc.Port port);
 

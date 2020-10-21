@@ -1,6 +1,6 @@
 package org.df4j.nio2.net.echo;
 
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.junit.*;
 
 import java.io.IOException;
@@ -12,15 +12,15 @@ import java.util.concurrent.TimeUnit;
 public  class EchoTest {
     static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
 
-    Dataflow serverDataflow;
-    Dataflow clientDataflow;
+    ActorGroup serverActorGroup;
+    ActorGroup clientActorGroup;
     EchoServer echoServer;
 
     @Before
     public synchronized void init() throws IOException {
-        serverDataflow = new Dataflow();
-        clientDataflow = new Dataflow();
-        echoServer = new EchoServer(serverDataflow, local9990);
+        serverActorGroup = new ActorGroup();
+        clientActorGroup = new ActorGroup();
+        echoServer = new EchoServer(serverActorGroup, local9990);
         echoServer.start();
     }
 
@@ -34,11 +34,11 @@ public  class EchoTest {
     public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {
         ArrayList<EchoClient> clients = new ArrayList<>();
         for (int k = 0; k< nc; k++)  {
-            EchoClient client = new EchoClient(clientDataflow, local9990, total);
+            EchoClient client = new EchoClient(clientActorGroup, local9990, total);
             client.start();
             clients.add(client);
         }
-        boolean finised = clientDataflow.await(1, TimeUnit.SECONDS);
+        boolean finised = clientActorGroup.await(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
         for (EchoClient client: clients) {
             Assert.assertEquals(0, client.count);

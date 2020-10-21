@@ -1,7 +1,7 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.Connection;
 import org.df4j.nio2.net.SocketPort;
@@ -17,7 +17,7 @@ class EchoProcessor extends Actor {
     protected SocketPort socketPort;
     public String name;
 
-    public EchoProcessor(Dataflow parent, Connection channel, Long connSerialNum) {
+    public EchoProcessor(ActorGroup parent, Connection channel, Long connSerialNum) {
         super(parent);
         this.connSerialNum = connSerialNum;
         int capacity = 2;

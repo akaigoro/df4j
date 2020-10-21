@@ -1,7 +1,7 @@
 package org.df4j.core.dataflow;
 
 import org.df4j.core.actor.AsyncFunc;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -12,7 +12,7 @@ public class ErrPropagationTest {
         String argumnet;
 
         // in constructor, link this async function to a dataflow
-        public StringToInt(Dataflow df, String argumnet) {
+        public StringToInt(ActorGroup df, String argumnet) {
             super(df);
             this.argumnet = argumnet;
         }
@@ -27,8 +27,8 @@ public class ErrPropagationTest {
 
     @Test
     public void test1() throws InterruptedException {
-        Dataflow upper = new Dataflow();
-        Dataflow nested = new Dataflow(upper);
+        ActorGroup upper = new ActorGroup();
+        ActorGroup nested = new ActorGroup(upper);
         StringToInt nodeOK = new StringToInt(nested, "10");
         StringToInt nodeBad = new StringToInt(nested, "not an integer");
         nodeBad.start();

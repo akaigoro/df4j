@@ -13,7 +13,7 @@
 package org.df4j.nio2.file;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.CurrentThreadExecutor;
@@ -34,34 +34,34 @@ public class AsyncFileChannelTest {
     public void testWriteAndRead() throws IOException, InterruptedException {
         int capacity = 5;
         Path path = Files.createTempFile("tetstfile", ".tmp");
-        Dataflow dataflow = new Dataflow();
+        ActorGroup actorGroup = new ActorGroup();
         CurrentThreadExecutor executor = new CurrentThreadExecutor();
-        dataflow.setExecutor(executor); // for debug
+        actorGroup.setExecutor(executor); // for debug
 
         {
-            DataProducer producer = new DataProducer(dataflow, capacity, byteNunber);
-            AsyncFileWriter fileWriter = new AsyncFileWriter(dataflow, path, capacity);
+            DataProducer producer = new DataProducer(actorGroup, capacity, byteNunber);
+            AsyncFileWriter fileWriter = new AsyncFileWriter(actorGroup, path, capacity);
             producer.filledBuffers.subscribe(fileWriter.input);
             fileWriter.output.subscribe(producer.emptyBuffers);
             producer.start();
             fileWriter.start();
             executor.executeAll(500);
-            boolean finished = dataflow.await(10, TimeUnit.MILLISECONDS);
+            boolean finished = actorGroup.await(10, TimeUnit.MILLISECONDS);
             Assert.assertTrue(finished);
         }
 
         {
-            AsyncFileReader fileReader = new AsyncFileReader(dataflow, path, capacity);
+            AsyncFileReader fileReader = new AsyncFileReader(actorGroup, path, capacity);
             for (int k = 0; k< capacity; k++) {
                 fileReader.input.onNext(ByteBuffer.allocate(1024));
             }
-            DataConsumer consumer = new DataConsumer(dataflow, capacity);
+            DataConsumer consumer = new DataConsumer(actorGroup, capacity);
             fileReader.output.subscribe(consumer.filledBuffers);
             consumer.emptyBuffers.subscribe(fileReader.input);
             fileReader.start();
             consumer.start();
             executor.executeAll(50);
-            boolean finished = dataflow.await(100, TimeUnit.MILLISECONDS); // todo millis
+            boolean finished = actorGroup.await(100, TimeUnit.MILLISECONDS); // todo millis
             Assert.assertTrue(finished);
         }
     }
@@ -72,8 +72,8 @@ public class AsyncFileChannelTest {
         OutFlow<ByteBuffer> filledBuffers;
         volatile byte bt = 0;
 
-        public DataProducer(Dataflow dataflow, int capacity, long byteNumber) {
-            super(dataflow);
+        public DataProducer(ActorGroup actorGroup, int capacity, long byteNumber) {
+            super(actorGroup);
             this.byteNumber = byteNumber;
             emptyBuffers = new InpFlow<>(this, capacity);
             filledBuffers = new OutFlow<>(this, capacity);
@@ -111,8 +111,8 @@ public class AsyncFileChannelTest {
         OutFlow<ByteBuffer> emptyBuffers;
         volatile byte bt = 0;
 
-        public DataConsumer(Dataflow dataflow, int capacity) {
-            super(dataflow);
+        public DataConsumer(ActorGroup actorGroup, int capacity) {
+            super(actorGroup);
             filledBuffers = new InpFlow<>(this, capacity);
             emptyBuffers = new OutFlow<>(this, capacity);
         }

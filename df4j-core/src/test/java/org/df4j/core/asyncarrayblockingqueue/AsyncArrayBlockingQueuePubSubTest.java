@@ -2,15 +2,15 @@ package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.activities.ProducerActor;
 import org.df4j.core.activities.SubscriberActor;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.connector.AsyncArrayBlockingQueue;
-import org.df4j.core.actor.Dataflow;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class AsyncArrayBlockingQueuePubSubTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) {
-        Dataflow graph = new Dataflow();
+        ActorGroup graph = new ActorGroup();
         ProducerActor producer = new ProducerActor(graph, cnt, delay1);
         producer.start();
         SubscriberActor subscriber = new SubscriberActor(graph, delay2);

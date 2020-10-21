@@ -2,14 +2,14 @@ package org.df4j.core.dataflow;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class PubSubTest {
 
     public void pubSubTest(int cnt, int delay1, int delay2) {
-        Dataflow df = new Dataflow();
+        ActorGroup df = new ActorGroup();
         PublisherActor pub = new PublisherActor(df, cnt, delay1);
         SubscriberActor sub = new SubscriberActor(df, delay2);
         pub.out.subscribe(sub.inp);

@@ -14,7 +14,7 @@ package org.df4j.nio2.net;
 
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.AsyncProc;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlood;
 import org.df4j.protocol.OutMessagePort;
 import org.df4j.core.util.Logger;
@@ -52,10 +52,10 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
     }
 
     public void connect(Connection channel) {
-        Dataflow dataflow = getDataflow();
+        ActorGroup actorGroup = getDataflow();
         this.channel = channel;
-        reader = new Reader(dataflow, this);
-        writer = new Writer(dataflow, reader.input);
+        reader = new Reader(actorGroup, this);
+        writer = new Writer(actorGroup, reader.input);
         reader.start();
         writer.start();
         LOG.info(name + " started");
@@ -110,8 +110,8 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
 
         long timeout=0;
 
-        public IOExecutor(Dataflow dataflow, String io, OutMessagePort<ByteBuffer> output) {
-            super(dataflow);
+        public IOExecutor(ActorGroup actorGroup, String io, OutMessagePort<ByteBuffer> output) {
+            super(actorGroup);
             this.output = output;
             setDaemon(true);
             this.io = io;
@@ -178,8 +178,8 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
     
     protected class Reader extends IOExecutor {
 
-        public Reader(Dataflow dataflow, OutMessagePort<ByteBuffer> output) {
-            super(dataflow, "reader", output);
+        public Reader(ActorGroup actorGroup, OutMessagePort<ByteBuffer> output) {
+            super(actorGroup, "reader", output);
         }
 
         protected void doIO(ByteBuffer buffer) {
@@ -195,8 +195,8 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
 
     protected class Writer extends IOExecutor {
 
-        public Writer(Dataflow dataflow, OutMessagePort<ByteBuffer> output) {
-            super(dataflow, "writer", output);
+        public Writer(ActorGroup actorGroup, OutMessagePort<ByteBuffer> output) {
+            super(actorGroup, "writer", output);
         }
 
         protected void doIO(ByteBuffer buffer) {

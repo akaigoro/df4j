@@ -1,7 +1,7 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.util.Logger;
 import org.df4j.nio2.net.ServerSocketPort;
 import org.df4j.nio2.net.Connection;
@@ -23,8 +23,8 @@ public class EchoServer extends Actor {
     Set<EchoProcessor> echoProcessors = new HashSet<>();
     long connBSerialNum = 0;
 
-    public EchoServer(Dataflow dataflow, SocketAddress socketAddressdr) throws IOException {
-        super(dataflow);
+    public EchoServer(ActorGroup actorGroup, SocketAddress socketAddressdr) throws IOException {
+        super(actorGroup);
         inp.connect(socketAddressdr, 2);
     }
 

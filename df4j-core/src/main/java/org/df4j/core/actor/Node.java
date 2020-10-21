@@ -20,27 +20,27 @@ import java.util.concurrent.*;
 public abstract class Node<T extends Node<T>> extends Completion implements Activity {
     public final long seqNum;
     NodeLink nodeLink = new NodeLink();
-    protected final Dataflow dataflow;
+    protected final ActorGroup actorGroup;
     private ExecutorService executor;
     private Timer timer;
 
     protected Node() {
-        this.dataflow = null;
+        this.actorGroup = null;
         seqNum = -1;
     }
 
-    protected Node(Dataflow dataflow) {
-        this.dataflow = dataflow;
-        seqNum = dataflow.enter(this);
+    protected Node(ActorGroup actorGroup) {
+        this.actorGroup = actorGroup;
+        seqNum = actorGroup.enter(this);
     }
 
-    public Dataflow getDataflow() {
-        return dataflow;
+    public ActorGroup getDataflow() {
+        return actorGroup;
     }
 
     protected void leaveParent() {
-        if (dataflow != null) {
-            dataflow.leave(this);
+        if (actorGroup != null) {
+            actorGroup.leave(this);
         }
     }
 
@@ -87,8 +87,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
 
     public synchronized ExecutorService getExecutor() {
         if (executor == null) {
-            if (dataflow != null) {
-                executor = dataflow.getExecutor();
+            if (actorGroup != null) {
+                executor = actorGroup.getExecutor();
             } else {
                 Thread currentThread = Thread.currentThread();
                 if (currentThread instanceof ForkJoinWorkerThread) {
@@ -111,8 +111,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         synchronized(this) {
             if (timer != null) {
                 return timer;
-            } else if (dataflow != null) {
-                return timer = dataflow.getTimer();
+            } else if (actorGroup != null) {
+                return timer = actorGroup.getTimer();
             } else {
                 return timer = getSingletonTimer();
             }
@@ -122,15 +122,15 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     @Override
     public void complete() {
         super.complete();
-        if (dataflow != null) {
-            dataflow.leave(this);
+        if (actorGroup != null) {
+            actorGroup.leave(this);
         }
     }
 
     public void completeExceptionally(Throwable t) {
         super.completeExceptionally(t);
-        if (dataflow != null) {
-            dataflow.completeExceptionally(t);
+        if (actorGroup != null) {
+            actorGroup.completeExceptionally(t);
         }
     }
 
@@ -140,7 +140,7 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     public static Timer getSingletonTimer() {
         Timer res = singletonTimer;
         if (res == null) {
-            synchronized (Dataflow.class) {
+            synchronized (ActorGroup.class) {
                 res = singletonTimer;
                 if (res == null) {
                     res = singletonTimer = new Timer();

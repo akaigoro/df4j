@@ -5,7 +5,7 @@ import org.df4j.core.connector.ScalarResultTrait;
 public abstract class AsyncFunc<R> extends AsyncProc implements ScalarResultTrait<R> {
     private R result;
 
-    public AsyncFunc(Dataflow parent) {
+    public AsyncFunc(ActorGroup parent) {
         super(parent);
     }
 

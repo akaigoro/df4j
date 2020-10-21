@@ -10,8 +10,8 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.actor.AsyncProc;
-import org.df4j.core.actor.Dataflow;
 import org.df4j.core.port.InpFlood;
 import org.df4j.core.port.InpSignal;
 import org.df4j.core.util.Logger;
@@ -62,12 +62,12 @@ public class ServerSocketPort extends InpFlood<Connection> {
         public InpSignal allowedConnections = new InpSignal(this);
         private Port serialAccess = new Port(this, true);
 
-        public ServerAcceptor(Dataflow dataflow, SocketAddress addr) throws IOException {
-            super(dataflow);
+        public ServerAcceptor(ActorGroup actorGroup, SocketAddress addr) throws IOException {
+            super(actorGroup);
             if (addr == null) {
                 throw new NullPointerException();
             }
-            AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(dataflow.getExecutor());
+            AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(actorGroup.getExecutor());
             assc = AsynchronousServerSocketChannel.open(group);
             assc.bind(addr);
             LOG.info("AsyncServerSocketChannel(" + addr + ") created");

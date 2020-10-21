@@ -1,7 +1,7 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutChannel;
 import org.df4j.core.util.Logger;
 
@@ -11,7 +11,7 @@ public class ProducerActor extends Actor {
     long cnt;
     public OutChannel<Long> out;
 
-    public ProducerActor(Dataflow parent, int cnt, int delay) {
+    public ProducerActor(ActorGroup parent, int cnt, int delay) {
         super(parent);
         out = new OutChannel<>(this);
         this.cnt = cnt;

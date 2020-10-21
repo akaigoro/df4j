@@ -4,7 +4,7 @@ import org.df4j.core.connector.AsyncArrayBlockingQueue;
 import org.df4j.core.actor.Activity;
 import org.df4j.core.actor.ActivityThread;
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpScalar;
 import org.df4j.core.util.Logger;
 import org.junit.Assert;
@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
  *  2. Async Philosofer implemented as multistate actor.
  *
  */
-public class DiningPhilosophers extends Dataflow {
+public class DiningPhilosophers extends ActorGroup {
     static final int num = 5; // number of philosophers
     static int N = 5; // number of rounds
     ForkPlace[] forkPlaces = new ForkPlace[num];

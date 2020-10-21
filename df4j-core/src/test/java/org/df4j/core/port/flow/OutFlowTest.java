@@ -3,7 +3,7 @@ package org.df4j.core.port.flow;
 import org.df4j.core.activities.LoggingSubscriber;
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.Utils;
 import org.junit.Assert;
@@ -66,7 +66,7 @@ public class OutFlowTest {
     @Test
     public void outFlowZeroCapacityTest() throws InterruptedException {
         int cnt = 3;
-        PublisherActor pub = new PublisherActor(new Dataflow(), cnt, 0, 0);
+        PublisherActor pub = new PublisherActor(new ActorGroup(), cnt, 0, 0);
         LoggingSubscriber sub = new LoggingSubscriber();
         pub.out.subscribe(sub);
         pub.start();

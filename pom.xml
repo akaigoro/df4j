@@ -8,7 +8,7 @@
     <packaging>pom</packaging>
     <name>df4j</name>
     <url>https://github.com/akaigoro/df4j</url>
-    <description>Lightweight dataflow Java library. Includes various asynchronous constructs, including actors and asynchronous I/O requests</description>
+    <description>Lightweight actorGroup Java library. Includes various asynchronous constructs, including actors and asynchronous I/O requests</description>
     <developers>
         <developer>
             <name>Alexei Kaigorodov</name>

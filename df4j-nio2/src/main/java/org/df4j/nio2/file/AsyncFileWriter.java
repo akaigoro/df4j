@@ -12,7 +12,7 @@
  */
 package org.df4j.nio2.file;
 
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,17 +28,17 @@ import java.util.HashSet;
  */
 public class AsyncFileWriter extends AsyncFileChannel {
 
-    public AsyncFileWriter(Dataflow dataflow, AsynchronousFileChannel channel, int capacity) {
-        super(dataflow, channel, capacity);
+    public AsyncFileWriter(ActorGroup actorGroup, AsynchronousFileChannel channel, int capacity) {
+        super(actorGroup, channel, capacity);
     }
 
     public AsyncFileWriter(AsynchronousFileChannel fileChannel, int capacity) {
-        this(new Dataflow(), fileChannel, capacity);
+        this(new ActorGroup(), fileChannel, capacity);
     }
 
-    public AsyncFileWriter(Dataflow dataflow, Path path, int capacity) throws IOException {
-        this(dataflow,
-                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), dataflow.getExecutor()),
+    public AsyncFileWriter(ActorGroup actorGroup, Path path, int capacity) throws IOException {
+        this(actorGroup,
+                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), actorGroup.getExecutor()),
                 capacity);
     }
 

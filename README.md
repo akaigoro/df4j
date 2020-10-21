@@ -6,7 +6,7 @@ Simplicity is prerequisite for reliability. - Edsger W. Dijkstra
 df4j is an abbreviation of "Data Flow for Java".
 It is a library to support asynchronous computations of all flavours: futures, promises, asynchronous procedure calls, actors, reactive streams.
 
-For those interested in the history of dataflow programming, I recommend to start with the [definition in Wikipedia](https://en.wikipedia.org/w/index.php?title=Dataflow_programming)
+For those interested in the history of actorGroup programming, I recommend to start with the [definition in Wikipedia](https://en.wikipedia.org/w/index.php?title=Dataflow_programming)
 and then short introductory article "Dataflow Programming: Concept, Languages and Applications" by Tiago Boldt Sousa.
 
 The primary goal of this library is to investigate the anatomy of asynchronous programming.
@@ -22,14 +22,14 @@ It resembles children's building kit: a set of small parts which can be connecte
 
 The design of Df4j is built on following foundation principles:
 
-1. Any asynchronous computation can be represented as a (dataflow) graph, which consists of active nodes and nested dataflow graphs.
+1. Any asynchronous computation can be represented as a (actorGroup) graph, which consists of active nodes and nested actorGroup graphs.
 Such a tree structure allows exceptions propagate from leafs to the root graph, and to watch exceptions only at the root node.
 
 2. Active node, in turn,  consists of:
  - ports: asynchronous input and output parameters. Each port is a (relatively complex) object.
  - user-defined computational procedure,
  - reference to an Executor, and
- - an object that glues all that components together, usually a descendant of class org.df4f.core.dataflow.AsyncProc.  
+ - an object that glues all that components together, usually a descendant of class org.df4f.core.actorGroup.AsyncProc.  
  
 3. Each port has 2 states: ready and blocked. Input port is ready when it has received a token. 
 Output port is ready when it has room to store a new token.
@@ -69,7 +69,7 @@ but allow developers to freely combine existing and newly developed capabilities
 
 2. The type hierarchy of the active nodes is based on two fundamental classes: 
 - AsyncProc for single-shot computations
-- (dataflow) Actor for recurrent computations
+- (actorGroup) Actor for recurrent computations
 
 3. AsyncProc, being an asynchronous procedure, does not return value (or better say, returns void value).
 Its simple extension AsyncFunc<T> returns a value of arbitrary reference type T.
@@ -78,7 +78,7 @@ Its simple extension AsyncFunc<T> returns a value of arbitrary reference type T.
 This allows to transform parallel algorithm into asynchronous mechanically, preserving the semantics.
 See the test DiningPhilosophers as an example of such transformation.
 
-5. Hewitt's Actor (e.g. [Akka](https://akka.io/)) is no more than a dataflow Actor with single input message flow parameter.
+5. Hewitt's Actor (e.g. [Akka](https://akka.io/)) is no more than a actorGroup Actor with single input message flow parameter.
 
 6. Each communication protocol can be implemented in both synchronous and asynchronous forms. 
 Especially useful are nodes which support both synchronous and asynchronous versions.
@@ -90,7 +90,7 @@ Such communicators can help when transforming multithreading program to asynchro
 Reactive streams in asynchronous programming plays the same role as blocking queues in multithreading programming: probably most useful,
 but by far not the only way to connect independent parties. 
 
-See examples and test directories for various custom-made dataflow objects and their usage.
+See examples and test directories for various custom-made actorGroup objects and their usage.
 
 If you find a bug or have a proposal, create an issue at <https://github.com/akaigoro/df4j/issues/new>,
 or send email to alexei.kaigorodov(at)gmail.com.
@@ -121,7 +121,7 @@ This module can be used independently of others. To use it, add maven dependency
 
 [df4j-reactivestreamsTCK](/df4j-reactivestreamsTCK) - runs df4j implementation against reactive streams tests (<https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck>)
 
-[df4j-tutorial](/df4j-tutorial/README.md) - Simple and advanced usages of dataflow and classic actors.
+[df4j-tutorial](/df4j-tutorial/README.md) - Simple and advanced usages of actorGroup and classic actors.
  
  Version history
 -----------------

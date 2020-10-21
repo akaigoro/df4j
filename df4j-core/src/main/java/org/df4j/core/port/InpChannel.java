@@ -1,8 +1,8 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.actor.AsyncProc;
-import org.df4j.core.actor.Dataflow;
 import org.df4j.core.util.linked.LinkImpl;
 import org.df4j.core.util.linked.LinkedQueue;
 import org.df4j.protocol.ReverseFlow;
@@ -352,7 +352,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         InpFlow<T> inp = new InpFlow<>(this);
         OutChannel<T> out = new OutChannel<>(this);
 
-        public PortAdapter(Dataflow parent) {
+        public PortAdapter(ActorGroup parent) {
             super(parent);
         }
 

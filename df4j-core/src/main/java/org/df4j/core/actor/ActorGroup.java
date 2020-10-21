@@ -3,25 +3,25 @@ package org.df4j.core.actor;
 import org.df4j.core.util.linked.LinkedQueue;
 
 /**
- * A dataflow graph, consisting of 1 or more {@link AsyncProc}s and, probably, nested {@link Dataflow}s.
+ * A dataflow graph, consisting of 1 or more {@link AsyncProc}s and, probably, nested {@link ActorGroup}s.
  * Completion signals (errors or success) propagate from the leaf nodes to the root node.
  * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
-public class Dataflow extends Node<Dataflow> {
+public class ActorGroup extends Node<ActorGroup> {
     protected LinkedQueue<Node.NodeLink> children = new LinkedQueue<>();
     protected long totalChildCount = 0;
 
     /**
-     *  creates root {@link Dataflow} graph.
+     *  creates root {@link ActorGroup} graph.
      */
-    public Dataflow() {
+    public ActorGroup() {
     }
 
     /**
-     *  creates nested {@link Dataflow} graph.
-     * @param parent the parent {@link Dataflow}
+     *  creates nested {@link ActorGroup} graph.
+     * @param parent the parent {@link ActorGroup}
      */
-    public Dataflow(Dataflow parent) {
+    public ActorGroup(ActorGroup parent) {
         super(parent);
     }
 

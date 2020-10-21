@@ -12,7 +12,7 @@
  */
 package org.df4j.nio2.file;
 
-import org.df4j.core.actor.Dataflow;
+import org.df4j.core.actor.ActorGroup;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,16 +25,16 @@ import java.nio.file.StandardOpenOption;
  */
 public class AsyncFileReader extends AsyncFileChannel {
 
-    public AsyncFileReader(Dataflow dataflow, AsynchronousFileChannel channel, int capacity) {
-        super(dataflow, channel, capacity);
+    public AsyncFileReader(ActorGroup actorGroup, AsynchronousFileChannel channel, int capacity) {
+        super(actorGroup, channel, capacity);
     }
 
     public AsyncFileReader(AsynchronousFileChannel fileChannel, int capacity) {
-        this(new Dataflow(), fileChannel, capacity);
+        this(new ActorGroup(), fileChannel, capacity);
     }
 
-    public AsyncFileReader(Dataflow dataflow, Path path, int capacity) throws IOException {
-        this(dataflow, AsynchronousFileChannel.open(path, StandardOpenOption.READ), capacity);
+    public AsyncFileReader(ActorGroup actorGroup, Path path, int capacity) throws IOException {
+        this(actorGroup, AsynchronousFileChannel.open(path, StandardOpenOption.READ), capacity);
     }
 
     @Override
