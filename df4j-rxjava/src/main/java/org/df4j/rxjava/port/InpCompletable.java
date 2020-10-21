@@ -2,7 +2,7 @@ package org.df4j.rxjava.port;
 
 import io.reactivex.rxjava3.core.CompletableObserver;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.port.CompletablePort;
 
 /**

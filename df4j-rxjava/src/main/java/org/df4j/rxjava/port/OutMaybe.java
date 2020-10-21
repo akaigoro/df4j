@@ -3,7 +3,7 @@ package org.df4j.rxjava.port;
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.MaybeObserver;
 import io.reactivex.rxjava3.core.MaybeSource;
-import org.df4j.core.communicator.ScalarResult;
+import org.df4j.core.connector.ScalarResult;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
 

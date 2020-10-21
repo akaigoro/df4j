@@ -6,11 +6,13 @@ import org.reactivestreams.Publisher;
  * for on-shot subscriptions, where subscriber is unsubscribed by publisher after single message transmission.
  */
 public interface SimpleSubscription {
+    /**
+     *  Dispose the resource, the operation should be idempotent.
+     */
+    void cancel();
 
     /**
-     * Request the {@link Publisher} to stop sending data and clean up resources.
-     * <p>
-     * Data may still be sent to meet previously signalled demand after calling cancel.
+     * @return true if this resource has been disposed.
      */
-    public void cancel();
+    boolean isCancelled();
 }

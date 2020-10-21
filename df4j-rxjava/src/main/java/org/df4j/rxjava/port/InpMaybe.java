@@ -2,7 +2,7 @@ package org.df4j.rxjava.port;
 
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.MaybeObserver;
-import org.df4j.core.dataflow.AsyncProc;
+import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.port.InpScalar;
 import org.df4j.protocol.SimpleSubscription;
 

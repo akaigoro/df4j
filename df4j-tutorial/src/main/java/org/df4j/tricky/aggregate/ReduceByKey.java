@@ -16,8 +16,8 @@ package org.df4j.tricky.aggregate;
  * limitations under the License.
  */
 
-import org.df4j.core.communicator.ScalarResultTrait;
-import org.df4j.core.dataflow.ClassicActor;
+import org.df4j.core.connector.ScalarResultTrait;
+import org.df4j.core.actor.ClassicActor;
 import org.df4j.core.util.Pair;
 
 import java.util.concurrent.ConcurrentHashMap;

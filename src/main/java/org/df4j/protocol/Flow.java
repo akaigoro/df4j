@@ -39,6 +39,11 @@ public final class Flow {
             }
 
             @Override
+            public boolean isCancelled() {
+                return cancelled;
+            }
+
+            @Override
             public void onSubscribe(org.reactivestreams.Subscription subscription) {
                 this.subscription = subscription;
                 observer.onSubscribe(this);

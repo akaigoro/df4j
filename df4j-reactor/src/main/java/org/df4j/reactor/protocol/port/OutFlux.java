@@ -1,7 +1,7 @@
 package org.df4j.reactor.protocol.port;
 
-import org.df4j.core.port.OutMessagePort;
 import org.df4j.protocol.Flow;
+import org.df4j.protocol.OutMessagePort;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 

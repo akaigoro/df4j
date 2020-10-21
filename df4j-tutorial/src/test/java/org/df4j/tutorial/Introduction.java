@@ -1,6 +1,6 @@
 package org.df4j.tutorial;
 
-import org.df4j.core.dataflow.*;
+import org.df4j.core.actor.*;
 import org.df4j.core.port.InpScalar;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,7 +33,7 @@ public class Introduction<out> {
      * @param activity
      */
     public static void blockingAwait(Activity activity) {
-        boolean fin = activity.blockingAwait(400);
+        boolean fin = activity.await(400);
         Assert.assertTrue(fin);
     }
 
@@ -45,7 +45,7 @@ public class Introduction<out> {
      */
     public static void expectException(Activity activity, Class<? extends Throwable> exceptionClass) {
         try {
-            activity.blockingAwait(400);
+            activity.await(400);
             fail(" exception "+exceptionClass.getSimpleName()+" expected");
         } catch (CompletionException e) {
             e.printStackTrace();
@@ -109,7 +109,7 @@ public class Introduction<out> {
         public HelloWorldSource() {
         }
 
-        public HelloWorldSource(Dataflow dataflow) {
+        public HelloWorldSource(ActorGroup dataflow) {
             super(dataflow);
         }
 
@@ -137,7 +137,7 @@ public class Introduction<out> {
         public Printer() {
         }
 
-        public Printer(Dataflow dataflow) {
+        public Printer(ActorGroup dataflow) {
             super(dataflow);
         }
 
@@ -182,7 +182,7 @@ public class Introduction<out> {
      */
     @Test
     public void test5() {
-        Dataflow df = new Dataflow();
+        ActorGroup df = new ActorGroup();
         HelloWorldSource helloWorld = new HelloWorldSource(df);
         Printer printer = new Printer(df);
         helloWorld.subscribe(printer.inp);
@@ -200,7 +200,7 @@ public class Introduction<out> {
         public HelloWorldSourceErr() {
         }
 
-        public HelloWorldSourceErr(Dataflow dataflow) {
+        public HelloWorldSourceErr(ActorGroup dataflow) {
             super(dataflow);
         }
 
@@ -218,7 +218,7 @@ public class Introduction<out> {
      */
     @Test
     public void test6() {
-        Dataflow df = new Dataflow();
+        ActorGroup df = new ActorGroup();
         HelloWorldSourceErr helloWorld = new HelloWorldSourceErr(df);
         Printer printer = new Printer(df);
         helloWorld.subscribe(printer.inp);

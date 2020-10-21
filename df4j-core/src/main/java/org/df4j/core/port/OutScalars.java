@@ -87,6 +87,11 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             }
         }
 
+        @Override
+        public boolean isCancelled() {
+            return cancelled;
+        }
+
         public void onNext(T message) {
             Scalar.Observer<? super T> subs;
             synchronized(transition) {

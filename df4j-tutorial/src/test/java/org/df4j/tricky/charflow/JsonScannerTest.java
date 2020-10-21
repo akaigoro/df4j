@@ -1,6 +1,6 @@
 package org.df4j.tricky.charflow;
 
-import org.df4j.core.communicator.Completion;
+import org.df4j.core.connector.Completion;
 import org.df4j.protocol.CharFlow;
 import org.df4j.tricky.charflow.jsontokens.NumberToken;
 import org.df4j.tricky.charflow.jsontokens.StringToken;
@@ -116,9 +116,9 @@ public class JsonScannerTest {
         pub.subscribe(scanner.inp);
         scanner.outp.subscribe(sink);
         scanner.start();
-        boolean fin = scanner.blockingAwait(300);
+        boolean fin = scanner.await(300);
         Assert.assertTrue(fin);
-        fin = sink.blockingAwait(300);
+        fin = sink.await(300);
         Assert.assertTrue(fin);
         return sink;
     }

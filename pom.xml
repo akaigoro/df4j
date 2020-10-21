@@ -44,7 +44,6 @@
     <modules>
         <module>df4j-core</module>
         <module>df4j-nio2</module>
-        <module>df4j-protocols</module>
         <module>df4j-reactivestreamsTCK</module>
         <module>df4j-reactor</module>
         <module>df4j-rxjava</module>
@@ -52,6 +51,11 @@
     </modules>
 
     <dependencies>
+        <dependency>
+            <groupId>org.reactivestreams</groupId>
+            <artifactId>reactive-streams</artifactId>
+            <version>1.0.3</version>
+        </dependency>
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>

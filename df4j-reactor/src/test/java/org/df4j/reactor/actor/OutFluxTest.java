@@ -1,4 +1,4 @@
-package org.df4j.reactor.dataflow;
+package org.df4j.reactor.actor;
 
 import org.junit.Test;
 import reactor.core.publisher.Flux;

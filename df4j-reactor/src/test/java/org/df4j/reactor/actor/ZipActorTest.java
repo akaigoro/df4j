@@ -1,6 +1,6 @@
-package org.df4j.reactor.dataflow;
+package org.df4j.reactor.actor;
 
-import org.df4j.core.dataflow.Actor;
+import org.df4j.core.actor.Actor;
 import org.df4j.core.port.InpFlow;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,7 +47,7 @@ public  class ZipActorTest {
         actor.start();
         flux.subscribe(actor.inpFlow);
         mono.subscribe(actor.inpScalar);
-        Assert.assertTrue(actor.blockingAwait(400, TimeUnit.MILLISECONDS));
+        Assert.assertTrue(actor.await(400, TimeUnit.MILLISECONDS));
     }
 
 }

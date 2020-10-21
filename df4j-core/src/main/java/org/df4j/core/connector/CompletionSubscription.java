@@ -29,6 +29,13 @@ class CompletionSubscription implements SimpleSubscription {
         }
     }
 
+    @Override
+    public boolean isCancelled() {
+        synchronized (completion) {
+            return cancelled;
+        }
+    }
+
     void onComplete() {
         Throwable completionException = completion.getCompletionException();
         if (completionException == null) {
