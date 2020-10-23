@@ -2,19 +2,20 @@ package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.df4j.nio2.net.SocketPort;
 import org.df4j.nio2.net.ClientSocketPort;
 import org.junit.Assert;
+import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
-import java.util.logging.Level;
 
 import static org.df4j.nio2.net.echo.EchoServer.BUF_SIZE;
 
@@ -25,7 +26,7 @@ import static org.df4j.nio2.net.echo.EchoServer.BUF_SIZE;
  */
 class EchoClient extends Actor {
     static final Charset charset = StandardCharsets.UTF_8;
-    protected final Logger LOG = new Logger(this, Level.INFO);
+    protected final Logger logger = LoggerFactory.getLogger(this);
 
     protected ClientSocketPort inp = new ClientSocketPort(this);
     protected SocketPort clientConn;
@@ -40,9 +41,17 @@ class EchoClient extends Actor {
         inp.connect(addr);
     }
 
+    public EchoClient(SocketAddress addr, int total) throws IOException {
+        this(new ActorGroup(), addr, total);
+    }
+
+    public EchoClient(int port, int total) throws IOException {
+        this(new InetSocketAddress("localhost", port), total);
+    }
+
     public static void toByteBuf(ByteBuffer buffer, String message) {
         buffer.clear();
-        byte[] bytes = message.getBytes(charset);
+        byte[] bytes = (message+'\n').getBytes(charset);
         buffer.put(bytes);
         buffer.flip();
     }
@@ -50,14 +59,14 @@ class EchoClient extends Actor {
     public static String fromByteBuf(ByteBuffer buffer) {
         byte[] bytes = new byte[buffer.limit()];
         buffer.get(bytes);
-        return new String(bytes, charset);
+        return new String(bytes, charset).replace("\n", "");
     }
 
     public void sendMsg(ByteBuffer buffer) {
         message = "hi there "+count;
         toByteBuf(buffer, message);
         clientConn.send(buffer);
-        LOG.info(clientName+" sent message: "+message);
+        logger.info(clientName+" sent message: "+message);
     }
 
     public void runAction() {
@@ -65,7 +74,7 @@ class EchoClient extends Actor {
         clientConn = new SocketPort(this);
         clientConn.setName("client");
         clientConn.connect(assc);
-        LOG.info(clientName+" started");
+        logger.info(clientName+" started");
         sendMsg(ByteBuffer.allocate(BUF_SIZE));
         nextAction(this::receiveMessage);
     }
@@ -74,17 +83,17 @@ class EchoClient extends Actor {
         if (clientConn.isCompleted()) {
             if (clientConn.isCompletedExceptionally()) {
                 completeExceptionally(clientConn.getCompletionException());
-                LOG.info(" clientConn completed with error");
+                logger.info(" clientConn completed with error");
             } else {
                 complete();
-                LOG.info(" clientConn completed");
+                logger.info(" clientConn completed");
             }
             return;
         }
         ByteBuffer received = clientConn.remove();
         received.flip();
         String m2 = fromByteBuf(received);
-        LOG.info(clientName+" received message:"+m2);
+        logger.info(clientName+" received message:"+m2);
         Assert.assertEquals(message, m2);
         sendMsg(received);
         if (--count == 0) {
@@ -96,10 +105,18 @@ class EchoClient extends Actor {
     protected void whenComplete() {
         try {
             inp.cancel();
-            LOG.info(clientName+" finished successfully");
+            logger.info(clientName+" finished successfully");
         } catch (IOException e) {
-            LOG.info(clientName+" finished exceptionally ("+e+")");
+            logger.info(clientName+" finished exceptionally ("+e+")");
             completeExceptionally(e);
         }
+    }
+
+    public static void main(String... args) throws IOException, InterruptedException {
+        int port = args.length==0?EchoTest.port:Integer.valueOf(args[0]);
+        EchoClient client = new EchoClient(port, 10);
+        EchoServer.MyExec exec = new EchoServer.MyExec();
+        client.setExecutor(exec);
+        exec.doAll();
     }
 }

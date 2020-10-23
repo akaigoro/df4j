@@ -2,6 +2,8 @@ package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.ActorGroup;
 import org.junit.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -10,22 +12,26 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 public  class EchoTest {
-    static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
-
-    ActorGroup serverActorGroup;
-    ActorGroup clientActorGroup;
+    static final Logger LOG = LoggerFactory.getLogger(EchoTest.class);
+    static final int port = 5555;
+    static final SocketAddress local9990 = new InetSocketAddress("localhost", port);
+//    static final SocketAddress local9990 = new InetSocketAddress("52.20.16.20",30000);
+    ActorGroup clientActorGroup = new ActorGroup();
     EchoServer echoServer;
 
-    @Before
+ //   @Before
+    public synchronized void initP() throws IOException {
+        EchoServer.startEcoServer();
+    }
+
     public synchronized void init() throws IOException {
-        serverActorGroup = new ActorGroup();
         clientActorGroup = new ActorGroup();
-        echoServer = new EchoServer(serverActorGroup, local9990);
+        echoServer = new EchoServer(local9990);
         echoServer.start();
     }
 
-    @After
-    public synchronized void deinit() throws InterruptedException, IOException {
+//    @After
+    public synchronized void deinit() {
         if (echoServer != null) {
             echoServer.complete();
         }
@@ -38,7 +44,7 @@ public  class EchoTest {
             client.start();
             clients.add(client);
         }
-        boolean finised = clientActorGroup.await(1, TimeUnit.SECONDS);
+        boolean finised = clientActorGroup.await(1000, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
         for (EchoClient client: clients) {
             Assert.assertEquals(0, client.count);

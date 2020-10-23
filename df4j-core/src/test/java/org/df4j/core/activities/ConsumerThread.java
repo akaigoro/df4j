@@ -2,13 +2,14 @@ package org.df4j.core.activities;
 
 import org.df4j.core.connector.AsyncArrayBlockingQueue;
 import org.df4j.core.actor.ActivityThread;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.junit.Assert;
+import org.slf4j.Logger;
 
 import java.util.concurrent.CompletionException;
 
 public class ConsumerThread extends Thread implements ActivityThread {
-    public final Logger logger = new Logger(this);
+    public final Logger logger = LoggerFactory.getLogger(this);
     AsyncArrayBlockingQueue<Long> queue;
     final int delay;
     Long in = null;

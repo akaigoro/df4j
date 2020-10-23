@@ -3,22 +3,16 @@ package org.df4j.core.activities;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutFlow;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.util.logging.Level;
 
 public class PublisherActor extends Actor {
-    protected final Logger logger = new Logger(this);
+    protected final Logger logger = LoggerFactory.getLogger(this);
     public OutFlow<Long> out;
     public long cnt;
     final int delay;
-    {
-        setLogLevel(Level.OFF);
-    }
-
-    public void setLogLevel(Level off) {
-        logger.setLevel(off);
-    }
 
     public PublisherActor(ActorGroup parent, long cnt, int delay, int capacity) {
         super(parent);

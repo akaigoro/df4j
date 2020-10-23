@@ -6,9 +6,10 @@ import org.df4j.core.actor.ActivityThread;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutChannel;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 import java.util.Random;
 import java.util.concurrent.CompletionException;
@@ -17,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.fail;
 
 public class AsyncArrayBlockingQueuePipelineTest {
-    protected final Logger logger = new Logger(this);
+    protected final Logger logger = LoggerFactory.getLogger(this);
     static final int N=20;
     static final int n1=1, n2=3;
 

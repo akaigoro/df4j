@@ -16,7 +16,8 @@ import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.port.OutFlow;
-import org.df4j.core.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -24,14 +25,13 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.CompletionException;
-import java.util.logging.Level;
 
 /**
  * Wrapper over {@link AsynchronousFileChannel}.
  * Simplifies input-output, handling queues of {@link ByteBuffer}s.
  */
 public abstract class AsyncFileChannel extends Actor implements CompletionHandler<Integer, ByteBuffer> {
-    protected final Logger LOG = new Logger(this, Level.INFO);
+    static final Logger LOG = LoggerFactory.getLogger(AsyncFileChannel.class);
     protected volatile AsynchronousFileChannel channel;
     /** input queue of empty buffers */
     public final InpFlow<ByteBuffer> input;

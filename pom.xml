@@ -30,15 +30,17 @@
 
     <properties>
         <!--project.version>8.0</project.version-->
-        <maven.version>3.6.0</maven.version>
         <java.version>8</java.version>
+        <kotlin.version>1.3.61</kotlin.version>
+        <logback.version>1.2.3</logback.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.version>3.6.0</maven.version>
+        <mjdp.version>3.0.1</mjdp.version>
+        <msp.version>3.0.1</msp.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <msp.version>3.0.1</msp.version>
-        <mjdp.version>3.0.1</mjdp.version>
-        <kotlin.version>1.3.61</kotlin.version>
+
     </properties>
 
     <modules>
@@ -60,12 +62,6 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>20.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

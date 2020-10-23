@@ -5,6 +5,8 @@ import org.df4j.protocol.Flow;
 import org.df4j.protocol.Scalar;
 import org.df4j.protocol.SimpleSubscription;
 
+import java.util.concurrent.CompletionException;
+
 /**
  * Token storage with standard Subscriber&lt;T&gt; interface.
  * It has place for only one message.
@@ -19,7 +21,7 @@ import org.df4j.protocol.SimpleSubscription;
  *
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
-public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> {
+public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T>, InpMessagePort<T> {
     private SimpleSubscription subscription;
     protected T value;
 
@@ -55,8 +57,25 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T> 
 
     public T current() {
         synchronized(transition) {
+            if (!completed) {
+                throw new IllegalStateException();
+            }
+            if (isCompletedExceptionally()) {
+                throw new CompletionException(getCompletionException());
+            }
             return value;
         }
+    }
+
+    @Override
+    public T poll() {
+        if (!completed) {
+            return null;
+        }
+        if (isCompletedExceptionally()) {
+            throw new CompletionException(getCompletionException());
+        }
+        return value;
     }
 
     /**

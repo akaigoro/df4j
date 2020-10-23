@@ -3,14 +3,15 @@ package org.df4j.core.activities;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlow;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.junit.Assert;
+import org.slf4j.Logger;
 
 import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 
 public class SubscriberActor extends Actor {
-    protected final Logger logger = new Logger(this);
+    protected final Logger logger = LoggerFactory.getLogger(this);
     final int delay;
     public final InpFlow<Long> inp = new InpFlow<>(this, 1);
     Long cnt = null;
@@ -18,10 +19,6 @@ public class SubscriberActor extends Actor {
     public SubscriberActor(ActorGroup parent, int delay) {
         super(parent);
         this.delay = delay;
-    }
-
-    public void setLogLevel(Level all) {
-        logger.setLevel(all);
     }
 
     public SubscriberActor(int delay) {

@@ -1,21 +1,18 @@
 package org.df4j.core.activities;
 
 import org.df4j.core.connector.Completion;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
 
 import java.util.logging.Level;
 
 public class LoggingSubscriber extends Completion implements Subscriber<Long> {
-    public final Logger logger = new Logger(this);
+    public final Logger logger = LoggerFactory.getLogger(this);
     public int cnt = 0;
     public Subscription subscription;
     public Long in;
-
-    {
-        logger.setLevel(Level.ALL);
-    }
 
     @Override
     public void onSubscribe(Subscription subscription) {

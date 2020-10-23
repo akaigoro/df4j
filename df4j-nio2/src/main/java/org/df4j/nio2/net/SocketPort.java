@@ -17,7 +17,8 @@ import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlood;
 import org.df4j.protocol.OutMessagePort;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * Simplfies input-output, handling queues of I/O requests.
  */
 public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<ByteBuffer> {
-    protected final Logger LOG = new Logger(this);
+    protected final Logger logger = LoggerFactory.getLogger(this);
 
 	/** read requests queue */
 	private Reader reader;
@@ -58,7 +59,7 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
         writer = new Writer(actorGroup, reader.input);
         reader.start();
         writer.start();
-        LOG.info(name + " started");
+        logger.info(name + " started");
     }
 
     public void connect(AsynchronousSocketChannel assc) {
@@ -88,11 +89,8 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
 
     @Override
     public String toString() {
-        if (name == null) {
-            return super.toString();
-        } else {
-            return name;
-        }
+        String name = (this.name == null)?super.toString():this.name;
+        return name + ": ready="+isReady();
     }
 
     //===================== inner classes
@@ -101,7 +99,7 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
      * an actor with delayed restart of the action
      */
     protected abstract class IOExecutor extends Actor implements CompletionHandler<Integer, ByteBuffer> {
-        protected final Logger LOG = new Logger(this);
+        protected final Logger logger = LoggerFactory.getLogger(this);
 
         private final String io;
         protected final InpFlood<ByteBuffer> input = new InpFlood<>(this);

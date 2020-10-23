@@ -14,7 +14,8 @@ import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.port.InpFlood;
 import org.df4j.core.port.InpSignal;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -54,7 +55,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
     }
 
     class ServerAcceptor extends Actor implements CompletionHandler<AsynchronousSocketChannel, Void> {
-        protected final Logger LOG = new Logger(this);
+        protected final Logger logger = LoggerFactory.getLogger(this);
         protected volatile AsynchronousServerSocketChannel assc;
         /**
          * limits the number of simultaneously existing connections - plays the role of backpressure
@@ -70,7 +71,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
             AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(actorGroup.getExecutor());
             assc = AsynchronousServerSocketChannel.open(group);
             assc.bind(addr);
-            LOG.info("AsyncServerSocketChannel(" + addr + ") created");
+            logger.info("AsyncServerSocketChannel(" + addr + ") created");
         }
 
         public synchronized void whenComplete() {
@@ -116,7 +117,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
          */
         @Override
         public void failed(Throwable exc, Void attachement) {
-            LOG.info("AsyncServerSocketChannel: client rejected:" + exc);
+            logger.info("AsyncServerSocketChannel: client rejected:" + exc);
             if (exc instanceof AsynchronousCloseException) {
                 ServerSocketPort.this.onComplete();
             } else {

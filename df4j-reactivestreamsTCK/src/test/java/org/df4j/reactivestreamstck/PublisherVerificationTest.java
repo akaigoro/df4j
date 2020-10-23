@@ -3,11 +3,12 @@ package org.df4j.reactivestreamstck;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutFlow;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.TestEnvironment;
+import org.slf4j.Logger;
 
 import java.util.logging.Level;
 
@@ -38,18 +39,13 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
     }
 
     static class LoggingPublisherActor extends Actor implements Publisher<Long> {
-        protected final Logger logger = new Logger(this);
+        protected final Logger logger = LoggerFactory.getLogger(this);
         final int delay;
         public OutFlow<Long> out;
         public long cnt;
 
-        {
-            setLogLevel(Level.OFF);
-        }
-
         public LoggingPublisherActor(long elements) {
             this(elements, 0);
-            setLogLevel(Level.OFF);
         }
 
         public LoggingPublisherActor(long cnt, int delay) {
@@ -72,10 +68,6 @@ public class PublisherVerificationTest extends org.reactivestreams.tck.Publisher
         public void subscribe(Subscriber<? super Long> s) {
             logger.info("PublisherActor.subscribe:");
             out.subscribe(new ProxySubscriber(s));
-        }
-
-        public void setLogLevel(Level off) {
-            logger.setLevel(off);
         }
 
         @Override

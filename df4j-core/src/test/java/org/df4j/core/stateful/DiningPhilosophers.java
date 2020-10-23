@@ -6,9 +6,10 @@ import org.df4j.core.actor.ActivityThread;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpScalar;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -91,7 +92,7 @@ public class DiningPhilosophers extends ActorGroup {
      * Synchronous implementation, for reference
      */
     class PhilosopherThread extends Thread implements ActivityThread {
-        protected final Logger logger = new Logger(this);
+        protected final Logger logger = LoggerFactory.getLogger(this);
         int id;
         ForkPlace firstPlace, secondPlace;
         String first, second;
@@ -163,7 +164,7 @@ public class DiningPhilosophers extends ActorGroup {
      * Multistate actor
      */
     class PhilosopherDF extends Actor {
-        protected final Logger logger = new Logger(this, Level.INFO);
+        protected final Logger logger = LoggerFactory.getLogger(this);
         InpScalar<String> forkInput;
         int id;
         ForkPlace firstPlace, secondPlace;

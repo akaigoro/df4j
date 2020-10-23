@@ -3,12 +3,13 @@ package org.df4j.core.activities;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpChannel;
-import org.df4j.core.util.Logger;
+import org.df4j.core.util.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.util.concurrent.CompletionException;
 
 public class ConsumerActor extends Actor {
-    protected final Logger logger = new Logger(this);
+    protected final Logger logger = LoggerFactory.getLogger(this);
     final int delay;
     public InpChannel<Long> inp = new InpChannel<>(this);
 
