@@ -125,7 +125,7 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         long n;
         T res;
         synchronized(transition) {
-            if (!ready) {
+            if (!isReady()) {
                 throw new IllegalStateException();
             }
             res = tokens.poll();

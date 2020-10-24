@@ -142,4 +142,9 @@ public abstract class Actor extends AsyncProc {
             return (blockedPortsScale & activePortsScale) == 0;
         }
     }
+
+    @FunctionalInterface
+    public static interface ThrowingRunnable {
+        void run() throws Throwable;
+    }
 }

@@ -118,7 +118,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
         Activity create(int k, AsyncArrayBlockingQueue<Integer> queue1, AsyncArrayBlockingQueue<Integer> queue2);
     }
 
-    class ThreadProcessor extends Thread implements ActivityThread {
+    class ThreadProcessor extends ActivityThread {
         AsyncArrayBlockingQueue<Integer> inp;
         AsyncArrayBlockingQueue<Integer> out;
 

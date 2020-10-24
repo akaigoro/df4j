@@ -240,7 +240,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         }
 
         ProducerSubscription(Publisher<T> publisher) {
-            PortAdapter<T> adapter = new PortAdapter<T>(InpChannel.this.getDataflow());
+            PortAdapter<T> adapter = new PortAdapter<T>(getParentActor().getActorGroup());
             publisher.subscribe(adapter.inp);
             this.producer = adapter.out;
             synchronized(transition) {

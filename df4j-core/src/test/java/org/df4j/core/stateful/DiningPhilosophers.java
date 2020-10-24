@@ -91,7 +91,7 @@ public class DiningPhilosophers extends ActorGroup {
     /**
      * Synchronous implementation, for reference
      */
-    class PhilosopherThread extends Thread implements ActivityThread {
+    class PhilosopherThread extends ActivityThread {
         protected final Logger logger = LoggerFactory.getLogger(this);
         int id;
         ForkPlace firstPlace, secondPlace;

@@ -85,7 +85,7 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
 
     public char current() {
         synchronized (transition) {
-            if (!ready) {
+            if (!isReady()) {
                 throw new IllegalStateException();
             }
             if (charBuffer.isEmpty()) {
@@ -102,7 +102,7 @@ public class InpChars extends CompletablePort implements CharFlow.CharSubscriber
         long n;
         char res;
         synchronized (transition) {
-            if (!ready) {
+            if (!isReady()) {
                 throw new IllegalStateException();
             }
             if (isCompleted()) {

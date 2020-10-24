@@ -6,7 +6,7 @@ import org.df4j.core.util.LoggerFactory;
 import org.df4j.core.util.Utils;
 import org.slf4j.Logger;
 
-public class ProducerThread extends Thread implements ActivityThread {
+public class ProducerThread extends ActivityThread {
     public final Logger logger = LoggerFactory.getLogger(this);
     final int delay;
     long cnt;

@@ -1,4 +1,4 @@
-package org.df4j.nio2.net.echo;
+package org.df4j.nio2.net.echo.async;
 
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletionException;
-import java.util.logging.Level;
 
 class EchoProcessor extends Actor {
     static final Logger LOG = LoggerFactory.getLogger(EchoProcessor.class);

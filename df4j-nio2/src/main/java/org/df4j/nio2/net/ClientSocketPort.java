@@ -31,7 +31,7 @@ public class ClientSocketPort extends InpScalar<AsynchronousSocketChannel> {
      * @throws IOException exception thrown by {@link AsynchronousSocketChannel#open}
      */
     public void connect(SocketAddress addr) throws IOException {
-        ExecutorService executor = transition.getExecutor();
+        ExecutorService executor = getParentActor().getExecutorService();
         AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(executor);
         AsynchronousSocketChannel channel =	AsynchronousSocketChannel.open(group);
         CompletionHandler<Void,AsynchronousSocketChannel> handler = new Handler();

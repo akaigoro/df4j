@@ -40,7 +40,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
     }
 
     public void connect(SocketAddress address, int connCount) throws IOException {
-        asyncChannel = new ServerAcceptor(transition.getDataflow(), address);
+        asyncChannel = new ServerAcceptor(transition.getActorGroup(), address);
         asyncChannel.start();
         asyncChannel.allowedConnections.release(connCount);
     }
@@ -68,10 +68,10 @@ public class ServerSocketPort extends InpFlood<Connection> {
             if (addr == null) {
                 throw new NullPointerException();
             }
-            AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(actorGroup.getExecutor());
+            AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(actorGroup.getExecutorService());
             assc = AsynchronousServerSocketChannel.open(group);
             assc.bind(addr);
-            logger.info("AsyncServerSocketChannel(" + addr + ") created");
+            logger.info("listening to " + addr + " started");
         }
 
         public synchronized void whenComplete() {
@@ -117,7 +117,7 @@ public class ServerSocketPort extends InpFlood<Connection> {
          */
         @Override
         public void failed(Throwable exc, Void attachement) {
-            logger.info("AsyncServerSocketChannel: client rejected:" + exc);
+            logger.info("client rejected by the server:" + exc);
             if (exc instanceof AsynchronousCloseException) {
                 ServerSocketPort.this.onComplete();
             } else {

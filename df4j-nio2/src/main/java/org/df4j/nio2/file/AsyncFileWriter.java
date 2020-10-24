@@ -38,7 +38,7 @@ public class AsyncFileWriter extends AsyncFileChannel {
 
     public AsyncFileWriter(ActorGroup actorGroup, Path path, int capacity) throws IOException {
         this(actorGroup,
-                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), actorGroup.getExecutor()),
+                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), actorGroup.getExecutorService()),
                 capacity);
     }
 

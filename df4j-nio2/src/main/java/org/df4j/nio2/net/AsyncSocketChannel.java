@@ -13,10 +13,9 @@
 package org.df4j.nio2.net;
 
 import org.df4j.core.actor.Actor;
-import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.actor.ActorGroup;
-import org.df4j.core.port.InpFlood;
-import org.df4j.protocol.OutMessagePort;
+import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -25,55 +24,36 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Wrapper over {@link AsynchronousSocketChannel}.
- * Simplfies input-output, handling queues of I/O requests.
+ * Simplifies input-output, handling queues of I/O requests.
  */
-public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<ByteBuffer> {
-    protected final Logger logger = LoggerFactory.getLogger(this);
+public class AsyncSocketChannel {
+    protected final Logger LOG = LoggerFactory.getLogger(this);
+    private final ActorGroup dataflow;
 
 	/** read requests queue */
-	private Reader reader;
+	public final Reader reader;
 	/** write requests queue */
-    private Writer writer;
+	public final Writer writer;
 
-    protected Connection connection;
-    protected AsynchronousSocketChannel channel;
+    protected volatile AsynchronousSocketChannel channel;
 
     public String name;
 
-    public SocketPort(AsyncProc parent) {
-        super(parent);
+    public AsyncSocketChannel(ActorGroup dataflow, AsynchronousSocketChannel channel) {
+        this.dataflow=dataflow;
+        this.channel=channel;
+        reader = new Reader(dataflow);
+        writer = new Writer(dataflow);
+        reader.start();
+        writer.start();
     }
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public void connect(Connection conn) {
-        ActorGroup actorGroup = getParentActor().getActorGroup();
-        this.connection = conn;
-        this.channel = conn.getChannel();
-        reader = new Reader(actorGroup, this);
-        writer = new Writer(actorGroup, reader.input);
-        reader.start();
-        writer.start();
-        logger.info(name + " started");
-    }
-
-    public void connect(AsynchronousSocketChannel assc) {
-        connect(new Connection(assc));
-    }
-
-    public void read(ByteBuffer buf) {
-        reader.input.onNext(buf);
-    }
-
-    public void send(ByteBuffer buf) {
-        writer.input.onNext(buf);
     }
 
     /**
@@ -82,60 +62,64 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
      *          If an I/O error occurs
      */
     public synchronized void close() throws IOException {
-        connection.close();
+        channel.close();
     }
 
     public synchronized boolean isClosed() {
-        return connection ==null;
+        return channel==null;
     }
 
     @Override
     public String toString() {
-        String name = (this.name == null)?super.toString():this.name;
-        return name + ": ready="+isReady();
+        if (name == null) {
+            return super.toString();
+        } else {
+            return name;
+        }
     }
-
-    //===================== inner classes
+//===================== inner classes
 
     /**
      * an actor with delayed restart of the action
      */
-    protected abstract class IOExecutor extends Actor implements CompletionHandler<Integer, ByteBuffer> {
-        protected final Logger logger = LoggerFactory.getLogger(this);
+    public abstract class IOExecutor extends Actor implements CompletionHandler<Integer, ByteBuffer> {
+        protected final Logger LOG = LoggerFactory.getLogger(this);
 
-        private final String io;
-        protected final InpFlood<ByteBuffer> input = new InpFlood<>(this);
-        protected final OutMessagePort<ByteBuffer> output;
-        private Port serialAccess = new Port(this, true);
-        protected long timeout=0;
+        final String io;
+        public final InpFlow<ByteBuffer> input = new InpFlow<>(this);
+        public final OutFlow<ByteBuffer> output = new OutFlow<>(this);
 
-        public IOExecutor(ActorGroup actorGroup, String io, OutMessagePort<ByteBuffer> output) {
-            super(actorGroup);
-            this.output = output;
-         //  setDaemon(true);
+        long timeout=0;
+
+        public IOExecutor(ActorGroup dataflow, String io) {
+            super(dataflow);
+            setDaemon(true);
             this.io = io;
         }
 
-        @Override
-        protected void fire() {
-            run();
-        }
+        //-------------------- dataflow backend
 
         protected abstract void doIO(ByteBuffer buffer);
 
+        protected abstract void doIO(ByteBuffer buffer, long timeout);
+
         @Override
-        protected void runAction() throws CompletionException {
+        protected void runAction() {
   //          LOG.info("conn "+ name+ ": " + io + " started");
             if (input.isCompleted()) {
                 output.onError(input.getCompletionException());
                 return;
-            } else if (connection == null) {
+            } else if (channel == null) {
                 output.onComplete();
                 return;
             }
             ByteBuffer buffer = input.remove();
-            serialAccess.block(); // wait CompletionHandler to invoke resume()
-            doIO(buffer);
+            suspend(); // wait CompletionHandler to invoke resume()
+            if (timeout > 0) {
+                doIO(buffer, timeout);
+            } else {
+                doIO(buffer);
+            }
         }
 
         // ------------- CompletionHandler backend
@@ -146,10 +130,10 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
             if (result==-1) {
                 output.onComplete();
             } else {
-                serialAccess.unblock();
                 output.onNext(buffer);
                 // start next IO excange only after this reading is finished,
                 // to keep buffer ordering
+                this.resume();
             }
         }
 
@@ -168,23 +152,35 @@ public class SocketPort extends InpFlood<ByteBuffer> implements OutMessagePort<B
      * works both in client-side and server-side modes
      */
     
-    protected class Reader extends IOExecutor {
-        public Reader(ActorGroup actorGroup, OutMessagePort<ByteBuffer> output) {
-            super(actorGroup, "reader", output);
+    public class Reader extends IOExecutor {
+
+        public Reader(ActorGroup dataflow) {
+            super(dataflow, "reader");
         }
 
         protected void doIO(ByteBuffer buffer) {
             buffer.clear();
+            channel.read(buffer, buffer, this);
+        }
+
+        @Override
+        protected void doIO(ByteBuffer buffer, long timeout) {
             channel.read(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
     }
+    
+    public class Writer extends IOExecutor {
 
-    protected class Writer extends IOExecutor {
-        public Writer(ActorGroup actorGroup, OutMessagePort<ByteBuffer> output) {
-            super(actorGroup, "writer", output);
+        public Writer(ActorGroup dataflow) {
+            super(dataflow, "writer");
         }
 
         protected void doIO(ByteBuffer buffer) {
+            channel.write(buffer, buffer, this);
+        }
+
+        @Override
+        protected void doIO(ByteBuffer buffer, long timeout) {
             channel.write(buffer, timeout, TimeUnit.MILLISECONDS, buffer, this);
         }
     }

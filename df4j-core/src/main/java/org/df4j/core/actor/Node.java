@@ -21,7 +21,8 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     public final long seqNum;
     NodeLink nodeLink = new NodeLink();
     protected final ActorGroup actorGroup;
-    private ExecutorService executor;
+    private Executor executor;
+    private ExecutorService executorService;
     private Timer timer;
 
     protected Node() {
@@ -34,7 +35,7 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         seqNum = actorGroup.enter(this);
     }
 
-    public ActorGroup getDataflow() {
+    public ActorGroup getActorGroup() {
         return actorGroup;
     }
 
@@ -44,13 +45,15 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         }
     }
 
-    public void setExecutor(ExecutorService executor) {
-        synchronized(this) {
-            this.executor = executor;
-        }
+    public synchronized void setExecutor(Executor executor) {
+        this.executor = executor;
     }
 
-    public void setExecutor(Executor executor) {
+    public synchronized void setExecutorService(ExecutorService executorService) {
+        this.executorService = executorService;
+    }
+
+    public synchronized void setExecutorService(Executor executor) {
         ExecutorService service = new AbstractExecutorService(){
             @Override
             public void execute(@NotNull Runnable command) {
@@ -85,7 +88,7 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         setExecutor(service);
     }
 
-    public synchronized ExecutorService getExecutor() {
+    public synchronized Executor getExecutor() {
         if (executor == null) {
             if (actorGroup != null) {
                 executor = actorGroup.getExecutor();
@@ -99,6 +102,46 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
             }
         }
         return executor;
+    }
+
+    public synchronized ExecutorService getExecutorService() {
+        if (executorService == null) {
+            Executor executor = getExecutor();
+            if (executor instanceof ExecutorService) {
+                executorService = (ExecutorService)executor;
+                return executorService;
+            }
+            executorService = new AbstractExecutorService(){
+                @Override
+                public void execute(@NotNull Runnable command) {
+                    executor.execute(command);
+                }
+
+                @Override
+                public void shutdown() {}
+
+                @Override
+                public List<Runnable> shutdownNow() {
+                    return null;
+                }
+
+                @Override
+                public boolean isShutdown() {
+                    return false;
+                }
+
+                @Override
+                public boolean isTerminated() {
+                    return false;
+                }
+
+                @Override
+                public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) {
+                    return false;
+                }
+            };
+        }
+        return executorService;
     }
 
     public void setTimer(Timer timer) {

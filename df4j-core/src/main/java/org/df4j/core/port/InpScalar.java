@@ -85,7 +85,7 @@ public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T>,
      */
     public T remove() {
         synchronized(transition) {
-            if (!ready) {
+            if (!isReady()) {
                 throw new IllegalStateException();
             }
             T value = this.value;

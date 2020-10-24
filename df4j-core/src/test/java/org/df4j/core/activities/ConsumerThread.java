@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 
 import java.util.concurrent.CompletionException;
 
-public class ConsumerThread extends Thread implements ActivityThread {
+public class ConsumerThread extends ActivityThread {
     public final Logger logger = LoggerFactory.getLogger(this);
     AsyncArrayBlockingQueue<Long> queue;
     final int delay;

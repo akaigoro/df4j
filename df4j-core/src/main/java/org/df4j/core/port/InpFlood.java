@@ -1,6 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.AsyncProc;
+import org.df4j.core.actor.TransitionHolder;
 import org.df4j.protocol.Flood;
 import org.df4j.protocol.SimpleSubscription;
 
@@ -23,7 +24,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T>, F
     /**
      * @param parent {@link AsyncProc} to which this port belongs
      */
-    public InpFlood(AsyncProc parent) {
+    public InpFlood(TransitionHolder parent) {
         super(parent);
     }
 

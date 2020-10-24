@@ -2,15 +2,22 @@ package org.df4j.core.actor;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Analogue of Petri Net's transition.
+ * Ports are like places, but can belong to only one transition.
+ * Tokens are tokens :).
+ */
 public interface Transition {
 
-    ActorGroup getDataflow();
+    AsyncProc getParentActor();
+
+    default ActorGroup getActorGroup() {
+        return getParentActor().getActorGroup();
+    }
 
     int registerPort(AsyncProc.Port port);
 
-    ExecutorService getExecutor();
+    void block(AsyncProc.Port port);
 
     void unblock(AsyncProc.Port port);
-
-    void block(AsyncProc.Port port);
 }

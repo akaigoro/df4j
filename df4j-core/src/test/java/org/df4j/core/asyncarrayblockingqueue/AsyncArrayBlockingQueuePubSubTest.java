@@ -1,6 +1,7 @@
 package org.df4j.core.asyncarrayblockingqueue;
 
 import org.df4j.core.activities.ProducerActor;
+import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.connector.AsyncArrayBlockingQueue;
@@ -12,12 +13,14 @@ public class AsyncArrayBlockingQueuePubSubTest {
     public void testAsyncQueue(int cnt, int delay1, int delay2) {
         ActorGroup graph = new ActorGroup();
         ProducerActor producer = new ProducerActor(graph, cnt, delay1);
-        producer.start();
-        SubscriberActor subscriber = new SubscriberActor(graph, delay2);
-        subscriber.start();
+        PublisherActor publisher = new PublisherActor(graph, cnt, delay1);
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
-        queue.subscribe(subscriber.inp);
         queue.feedFrom(producer.out);
+        queue.feedFrom(publisher.out);
+        SubscriberActor subscriber = new SubscriberActor(graph, delay2);
+        queue.subscribe(subscriber.inp);
+        producer.start();
+        subscriber.start();
         boolean fin = graph.await(1000);
         Assert.assertTrue(fin);
     }
@@ -65,7 +68,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         Thread.sleep(400);
         queue.complete();
         Thread.sleep(400);
-        subscriber.getDataflow().await(400);
+        subscriber.getActorGroup().await(400);
         boolean qIsCompleted = queue.isCompleted();
         Assert.assertTrue(qIsCompleted);
         SubscriberActor subscriber2 = new SubscriberActor(0);

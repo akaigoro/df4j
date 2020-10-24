@@ -12,7 +12,6 @@ package org.df4j.core.actor;
 import org.df4j.core.connector.Completion;
 
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
 
 /**
  * {@link AsyncProc} is the base class of all active components of {@link ActorGroup} graph.
@@ -174,7 +173,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
      * This is clear analogue to the firing of a Petri Net transition.
      */
     public static class Port {
-        protected boolean ready;
+        private boolean ready;
         protected final Transition transition;
         protected final int portNum;
 
@@ -215,8 +214,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             return super.toString() + (ready?": ready":": blocked");
         }
 
-        public ActorGroup getDataflow() {
-            return transition.getDataflow();
+        public AsyncProc getParentActor() {
+            return transition.getParentActor();
         }
     }
 
@@ -239,11 +238,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         }
 
         @Override
-        public ActorGroup getDataflow() {
-            return AsyncProc.this.getDataflow();
-        }
-
-        @Override
         public synchronized int registerPort(Port port) {
             final int portNum = ports.size();
             if (portNum > MAX_PORT_NUM) {
@@ -257,8 +251,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         }
 
         @Override
-        public ExecutorService getExecutor() {
-            return AsyncProc.this.getExecutor();
+        public AsyncProc getParentActor() {
+            return AsyncProc.this;
         }
 
         protected boolean canFire() {

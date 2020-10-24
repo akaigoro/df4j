@@ -2,105 +2,108 @@ package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
-import org.df4j.nio2.net.ServerSocketPort;
-import org.df4j.nio2.net.Connection;
-import org.jetbrains.annotations.NotNull;
+import org.df4j.core.port.InpFlow;
+import org.df4j.core.port.OutFlow;
+import org.df4j.core.util.LoggerFactory;
+import org.df4j.nio2.net.AsyncServerSocketChannel;
+import org.df4j.nio2.net.AsyncSocketChannel;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import ch.qos.logback.classic.Level;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 /**
  * generates {@link EchoProcessor}s for incoming connections
  *
  */
-public class EchoServer extends Actor {
+public class EchoServer extends AsyncServerSocketChannel {
     public static final int BUF_SIZE = 128;
-    static final Logger LOG = LoggerFactory.getLogger(EchoServer.class);
-    ServerSocketPort inp = new ServerSocketPort(this);
+    protected final Logger LOG = LoggerFactory.getLogger(this, Level.INFO);
     Set<EchoProcessor> echoProcessors = new HashSet<>();
-    long connBSerialNum = 0;
 
-    public EchoServer(ActorGroup actorGroup, SocketAddress socketAddressdr) throws IOException {
-        super(actorGroup);
-        inp.connect(socketAddressdr, 2);
+    public EchoServer(ActorGroup dataflow, SocketAddress addr, int maxConnCount) throws IOException {
+        super(dataflow, addr);
+        allowedConnections.release(maxConnCount);
     }
 
-    public EchoServer(SocketAddress socketAddressdr) throws IOException {
-        this(new ActorGroup(), socketAddressdr);
-    }
-
-    public EchoServer(int port) throws IOException {
-        this(new InetSocketAddress("localhost", port));
-    }
-
-    public void whenComplete() {
-        LOG.info(" completion started");
-        inp.cancel();
+    public void complete() {
         for (EchoProcessor processor: echoProcessors) {
             processor.complete();
         }
-    }
-
-    public void whenError(Throwable e) {
-        whenComplete();
+        super.complete();
     }
 
     @Override
-    protected void runAction() throws Throwable {
-        if (inp.isCompleted()) {
-            complete();
-            return;
-        }
-        Connection serverConn = inp.remove();
-        LOG.info(" request accepted");
-        EchoProcessor processor =
-                new EchoProcessor(getDataflow(), serverConn, connBSerialNum++); // create client connection
+    protected void onAccept(AsynchronousSocketChannel asc, Long connSerialNum) {
+        EchoProcessor processor = new EchoProcessor(getActorGroup(), asc, connSerialNum); // create client connection
         processor.start();
     }
 
-    static class MyExec implements Executor {
-        LinkedBlockingQueue<Runnable> q = new LinkedBlockingQueue<>();
+    class EchoProcessor extends Actor {
+        AsyncSocketChannel serverConn;
+        Long connSerialNum;
+        InpFlow<ByteBuffer> readBuffers = new InpFlow<>(this);
+        OutFlow<ByteBuffer> buffers2write = new OutFlow<>(this);
+        private boolean connectionPermitReleased;
+
+        public EchoProcessor(ActorGroup parent, AsynchronousSocketChannel assc, Long connSerialNum) {
+            super(parent);
+            this.connSerialNum = connSerialNum;
+            int capacity = 2;
+            serverConn = new AsyncSocketChannel(getActorGroup(), assc);
+            serverConn.setName("server");
+            serverConn.reader.input.setCapacity(capacity);
+            for (int k = 0; k<capacity; k++) {
+                ByteBuffer buf=ByteBuffer.allocate(BUF_SIZE);
+                serverConn.reader.input.onNext(buf);
+            }
+            serverConn.reader.output.subscribe(readBuffers);
+            buffers2write.subscribe(serverConn.writer.input);
+            serverConn.writer.output.subscribe(serverConn.reader.input);
+            LOG.info("EchoProcessor #"+connSerialNum+" started");
+        }
+
+        public synchronized void releaseConnectionPermit() {
+            if (connectionPermitReleased) {
+                return;
+            }
+            connectionPermitReleased = true;
+            allowedConnections.release(1);
+        }
 
         @Override
-        public void execute(@NotNull Runnable command) {
-            q.add(command);
+        public void complete() {
+            releaseConnectionPermit();
+            super.complete();
         }
 
-        public void doAll() throws InterruptedException {
-            for (;;) {
-                Runnable runnable = q.poll(1000, TimeUnit.SECONDS);
-                if (runnable == null) {
-                    break;
+        @Override
+        public void completeExceptionally(Throwable ex) {
+            releaseConnectionPermit();
+            super.completeExceptionally(ex);
+        }
+
+        public void runAction() {
+            if (!readBuffers.isCompleted()) {
+                ByteBuffer buffer = readBuffers.remove();
+                buffer.flip();
+                buffers2write.onNext(buffer);
+                LOG.info("EchoProcessor #"+connSerialNum+" replied");
+            } else {
+                try {
+                    serverConn.close();
+                    complete();
+                    LOG.info("EchoProcessor #"+connSerialNum+"completed");
+                } catch (IOException e) {
+                    completeExceptionally(e);
+                    LOG.info("EchoProcessor #"+connSerialNum+"completed with error "+e);
                 }
-                runnable.run();
             }
         }
-    }
-
-    public static void main(String... args) throws IOException, InterruptedException {
-        int port = args.length==0?EchoTest.port:Integer.valueOf(args[0]);
-        EchoServer server = new EchoServer(port);
-        MyExec exec = new MyExec();
-        server.setExecutor(exec);
-        exec.doAll();
-    }
-
-    public static void startEcoServer(String... args) throws IOException {
-        ProcessBuilder pb = new ProcessBuilder();
-        String userDir = System.getProperty("user.dir");
-        String port = args.length==0?Integer.toString(EchoTest.port):args[0];
-        pb.command("java",
-                "-cp", userDir+"df4j-nio2/target/classes;"+userDir+"df4j-nio2/target/test-classes",
-                EchoServer.class.getCanonicalName(), port);
-        pb.start();
     }
 }

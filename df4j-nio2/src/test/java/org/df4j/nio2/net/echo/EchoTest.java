@@ -2,8 +2,6 @@ package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.ActorGroup;
 import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -12,39 +10,33 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 public  class EchoTest {
-    static final Logger LOG = LoggerFactory.getLogger(EchoTest.class);
-    static final int port = 5555;
-    static final SocketAddress local9990 = new InetSocketAddress("localhost", port);
-//    static final SocketAddress local9990 = new InetSocketAddress("52.20.16.20",30000);
-    ActorGroup clientActorGroup = new ActorGroup();
+    static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
+
+    ActorGroup serverDataflow;
+    ActorGroup clientDataflow;
     EchoServer echoServer;
 
- //   @Before
-    public synchronized void initP() throws IOException {
-        EchoServer.startEcoServer();
-    }
-
+    @Before
     public synchronized void init() throws IOException {
-        clientActorGroup = new ActorGroup();
-        echoServer = new EchoServer(local9990);
+        serverDataflow = new ActorGroup();
+        clientDataflow = new ActorGroup();
+        echoServer = new EchoServer(serverDataflow, local9990, 2);
         echoServer.start();
     }
 
-//    @After
-    public synchronized void deinit() {
-        if (echoServer != null) {
-            echoServer.complete();
-        }
+    @After
+    public synchronized void deinit() throws InterruptedException, IOException {
+        echoServer.complete();
     }
 
     public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {
         ArrayList<EchoClient> clients = new ArrayList<>();
         for (int k = 0; k< nc; k++)  {
-            EchoClient client = new EchoClient(clientActorGroup, local9990, total);
+            EchoClient client = new EchoClient(clientDataflow, local9990, total);
             client.start();
             clients.add(client);
         }
-        boolean finised = clientActorGroup.await(1000, TimeUnit.SECONDS);
+        boolean finised = clientDataflow.await(1, TimeUnit.SECONDS);
         Assert.assertTrue(finised);
         for (EchoClient client: clients) {
             Assert.assertEquals(0, client.count);

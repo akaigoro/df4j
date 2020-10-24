@@ -5,12 +5,10 @@ import java.util.concurrent.CompletionException;
 /**
  * a helper interface to convert a {@link Thread} to {@link Activity}.
  */
-public interface ActivityThread extends Activity {
-    void join()  throws InterruptedException;
-    void join(long timeout)  throws InterruptedException;
+public class ActivityThread extends Thread implements Activity {
 
     @Override
-    default void await() {
+    public void await() {
         try {
             join();
         } catch (InterruptedException e) {
@@ -19,7 +17,7 @@ public interface ActivityThread extends Activity {
     }
 
     @Override
-    default boolean await(long timeout){
+    public boolean await(long timeout){
         try {
             join(timeout);
         } catch (InterruptedException e) {
