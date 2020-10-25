@@ -4,8 +4,8 @@ import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpFlow;
 import org.df4j.core.util.LoggerFactory;
-import org.df4j.nio2.net.AsyncSocketChannel;
 import org.df4j.nio2.net.AsyncClientSocketChannel;
+import org.df4j.nio2.net.AsyncSocketChannel;
 import org.junit.Assert;
 import org.slf4j.Logger;
 

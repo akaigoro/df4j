@@ -12,6 +12,7 @@ package org.df4j.nio2.net;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpSignal;
+import org.df4j.core.port.OutFlood;
 import org.df4j.core.util.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -25,13 +26,14 @@ import java.nio.channels.*;
  * as a result of client connections accepted by the server
  *
  */
-public abstract class AsyncServerSocketChannel extends Actor
+public class AsyncServerSocketChannel extends Actor
         implements CompletionHandler<AsynchronousSocketChannel, Long>
 {
-    protected final Logger LOG = LoggerFactory. getLogger(this);
-    protected volatile AsynchronousServerSocketChannel assc;
+    private final Logger LOG = LoggerFactory. getLogger(this);
+    private volatile AsynchronousServerSocketChannel assc;
     /** limits the number of simultaneously existing connections */
-    protected InpSignal allowedConnections = new InpSignal(this);
+    private InpSignal allowedConnections = new InpSignal(this);
+    public final OutFlood<Connection> out = new OutFlood<>(this);
     protected long connSerialNum = 0;
 
     public AsyncServerSocketChannel(ActorGroup dataflow, SocketAddress addr) throws IOException {
@@ -43,6 +45,10 @@ public abstract class AsyncServerSocketChannel extends Actor
         assc = AsynchronousServerSocketChannel.open(group);
         assc.bind(addr);
         LOG.info("AsyncServerSocketChannel("+addr+") created");
+    }
+
+    public void release(int count) {
+        allowedConnections.release(count);
     }
 
     public synchronized void complete() {
@@ -68,15 +74,14 @@ public abstract class AsyncServerSocketChannel extends Actor
         assc.accept(connSerialNum++, this);
     }
 
-    protected abstract void onAccept(AsynchronousSocketChannel asc, Long connSerialNum);
-
     //====================== CompletionHandler's backend
 
     @Override
     public void completed(AsynchronousSocketChannel asc, Long connSerialNum) {
         try {
             LOG.info("AsyncServerSocketChannel: client "+ connSerialNum+" accepted");
-            onAccept(asc, connSerialNum);
+            Connection conn = new Connection(asc, connSerialNum, allowedConnections);
+            out.onNext(conn);
             this.resume(); // allow  next assc.accpt()
         } catch (Throwable t) {
             try {

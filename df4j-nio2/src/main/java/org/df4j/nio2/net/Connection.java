@@ -22,20 +22,27 @@ import java.nio.channels.AsynchronousSocketChannel;
  * Simplifies input-output, handling queues of I/O requests.
  */
 public class Connection {
+    private final Long connSerialNum;
     private final InpSignal allowedConnections;
     private volatile AsynchronousSocketChannel channel;
+    private boolean completed = false;
 
-    public Connection(AsynchronousSocketChannel channel, InpSignal allowedConnections) {
+    public Connection(AsynchronousSocketChannel channel, Long connSerialNum, InpSignal allowedConnections) {
+        this.connSerialNum = connSerialNum;
         this.allowedConnections = allowedConnections;
         this.channel=channel;
     }
 
-    public Connection(AsynchronousSocketChannel assc) {
-        this(assc, null);
+    public Connection(AsynchronousSocketChannel assc, Long connSerialNum) {
+        this(assc, connSerialNum, null);
     }
 
     public AsynchronousSocketChannel getChannel() {
         return channel;
+    }
+
+    public Long getConnSerialNum() {
+        return connSerialNum;
     }
 
     /**
@@ -44,9 +51,11 @@ public class Connection {
      *          If an I/O error occurs
      */
     public synchronized void close() throws IOException {
-        if (allowedConnections != null) {
-            allowedConnections.release();
+        if (completed) {
+            return;
         }
+        allowedConnections.release();
         channel.close();
+        completed = true;
     }
 }

@@ -1,7 +1,10 @@
 package org.df4j.nio2.net.echo;
 
 import org.df4j.core.actor.ActorGroup;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
