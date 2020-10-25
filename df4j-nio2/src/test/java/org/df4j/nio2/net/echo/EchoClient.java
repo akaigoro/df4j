@@ -31,11 +31,12 @@ class EchoClient extends Actor {
     AsyncSocketChannel clientConn;
     InpFlow<ByteBuffer> readBuffers;
     String message;
-    private String clientName = "Client#"+seqNum;
+    private String clientName;
     AsynchronousSocketChannel assc;
 
-    public EchoClient(ActorGroup dataflow, SocketAddress addr, int total) throws IOException {
+    public EchoClient(ActorGroup dataflow, SocketAddress addr, int seqNum, int total) throws IOException {
         super(dataflow);
+        clientName = "Client#"+seqNum;
         this.count = total;
         inp.connect(addr);
     }

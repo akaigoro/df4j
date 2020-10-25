@@ -36,7 +36,7 @@ public  class EchoTest {
     public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {
         ArrayList<EchoClient> clients = new ArrayList<>();
         for (int k = 0; k< nc; k++)  {
-            EchoClient client = new EchoClient(clientDataflow, local9990, total);
+            EchoClient client = new EchoClient(clientDataflow, local9990, k, total);
             client.start();
             clients.add(client);
         }
