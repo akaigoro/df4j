@@ -20,6 +20,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         SubscriberActor subscriber = new SubscriberActor(graph, delay2);
         queue.subscribe(subscriber.inp);
         producer.start();
+        publisher.start();
         subscriber.start();
         boolean fin = graph.await(1000);
         Assert.assertTrue(fin);

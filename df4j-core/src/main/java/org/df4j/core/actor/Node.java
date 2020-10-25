@@ -10,7 +10,6 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.connector.Completion;
-import org.df4j.core.util.linked.LinkImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -19,7 +18,6 @@ import java.util.concurrent.*;
 
 public abstract class Node<T extends Node<T>> extends Completion implements Activity {
     public final long seqNum;
-    NodeLink nodeLink = new NodeLink();
     protected final ActorGroup actorGroup;
     private Executor executor;
     private ExecutorService executorService;
@@ -196,17 +194,5 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     @Override
     public String toString() {
         return "(#"+seqNum+')'+super.toString();
-    }
-
-    class NodeLink extends LinkImpl {
-
-        public T getItem() {
-            return (T) Node.this;
-        }
-
-        @Override
-        public String toString() {
-            return getItem().toString();
-        }
     }
 }

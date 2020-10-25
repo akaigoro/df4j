@@ -1,6 +1,8 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.util.linked.LinkedQueue;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 /**
  * A dataflow graph, consisting of 1 or more {@link AsyncProc}s and, probably, nested {@link ActorGroup}s.
@@ -8,14 +10,13 @@ import org.df4j.core.util.linked.LinkedQueue;
  * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
 public class ActorGroup extends Node<ActorGroup> {
-    protected LinkedQueue<Node.NodeLink> children = new LinkedQueue<>();
+    protected Set<Node> children = Collections.newSetFromMap( new IdentityHashMap<>());
     protected long totalChildCount = 0;
 
     /**
      *  creates root {@link ActorGroup} graph.
      */
-    public ActorGroup() {
-    }
+    public ActorGroup() {}
 
     /**
      *  creates nested {@link ActorGroup} graph.
@@ -34,7 +35,7 @@ public class ActorGroup extends Node<ActorGroup> {
     public long enter(Node node) {
         synchronized(this) {
             long res = totalChildCount++;
-            children.add(node.nodeLink);
+            children.add(node);
             return res;
         }
     }
@@ -47,7 +48,7 @@ public class ActorGroup extends Node<ActorGroup> {
      */
     public void leave(Node node) {
         synchronized(this) {
-            children.remove(node.nodeLink);
+            children.remove(node);
             if (children.size() == 0) {
                 super.complete();
             }
