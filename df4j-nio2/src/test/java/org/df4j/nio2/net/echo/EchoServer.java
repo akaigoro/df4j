@@ -7,6 +7,7 @@ import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.LoggerFactory;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.AsyncSocketChannel;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import ch.qos.logback.classic.Level;
 
@@ -16,6 +17,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * generates {@link EchoProcessor}s for incoming connections
@@ -42,6 +46,25 @@ public class EchoServer extends AsyncServerSocketChannel {
     protected void onAccept(AsynchronousSocketChannel asc, Long connSerialNum) {
         EchoProcessor processor = new EchoProcessor(getActorGroup(), asc, connSerialNum); // create client connection
         processor.start();
+    }
+
+    static class MyExec implements Executor {
+        LinkedBlockingQueue<Runnable> q = new LinkedBlockingQueue<>();
+
+        @Override
+        public void execute(@NotNull Runnable command) {
+            q.add(command);
+        }
+
+        public void doAll() throws InterruptedException {
+            for (;;) {
+                Runnable runnable = q.poll(1000, TimeUnit.SECONDS);
+                if (runnable == null) {
+                    break;
+                }
+                runnable.run();
+            }
+        }
     }
 
     class EchoProcessor extends Actor {

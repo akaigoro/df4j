@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 public  class EchoTest {
-    static final SocketAddress local9990 = new InetSocketAddress("localhost", 9990);
+    static final int port = 5555;
+    static final SocketAddress local9990 = new InetSocketAddress("localhost", port);
 
     ActorGroup serverDataflow;
     ActorGroup clientDataflow;
