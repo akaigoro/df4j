@@ -7,10 +7,10 @@ import java.util.LinkedList;
 
 class CompletionSubscription implements SimpleSubscription {
     private final CompletionI completion;
-    Completable.Observer subscriber;
+    Completable.Subscriber subscriber;
     private boolean cancelled;
 
-    protected CompletionSubscription(CompletionI completion, Completable.Observer subscriber) {
+    protected CompletionSubscription(CompletionI completion, Completable.Subscriber subscriber) {
         this.completion = completion;
         this.subscriber = subscriber;
     }

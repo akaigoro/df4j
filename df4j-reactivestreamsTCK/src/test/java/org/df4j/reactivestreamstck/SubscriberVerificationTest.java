@@ -12,10 +12,10 @@ import org.slf4j.Logger;
 
 import java.util.logging.Level;
 
-public class PublisherVerificationTest extends org.reactivestreams.tck.PublisherVerification<Long> {
+public class SubscriberVerificationTest extends org.reactivestreams.tck.PublisherVerification<Long> {
     static final long defaultTimeout = 400;
 
-    public PublisherVerificationTest() {
+    public SubscriberVerificationTest() {
         super(new TestEnvironment(defaultTimeout));
     }
 

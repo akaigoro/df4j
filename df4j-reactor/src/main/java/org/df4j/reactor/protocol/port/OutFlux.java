@@ -24,4 +24,9 @@ public class OutFlux<T> extends Flux<T> implements Flow.Publisher<T>, OutMessage
     public void onError(Throwable ex) {
 
     }
+
+    @Override
+    public boolean isCompleted() {
+        return false;
+    }
 }

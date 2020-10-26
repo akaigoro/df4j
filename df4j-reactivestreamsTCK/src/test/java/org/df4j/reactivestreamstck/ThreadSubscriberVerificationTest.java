@@ -11,10 +11,10 @@ import org.testng.annotations.Test;
  * checks {@link AsyncArrayBlockingQueue} as implementation of {@link Publisher}
  */
 @Test // Must be here for TestNG to find and run this, do not remove
-public class ThreadPublisherVerificationTest extends PublisherVerification<Long> {
+public class ThreadSubscriberVerificationTest extends PublisherVerification<Long> {
     static final long defaultTimeout = 400;
 
-    public ThreadPublisherVerificationTest() {
+    public ThreadSubscriberVerificationTest() {
         super(new TestEnvironment(defaultTimeout));
     }
 

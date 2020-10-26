@@ -11,11 +11,11 @@ public class OutMaybe<T> extends ScalarResult implements MaybeSource<T> {
 
     @Override
     public void subscribe(@NonNull MaybeObserver<? super T> observer) {
-        Scalar.Observer proxySubscriber = new ProxySubscriber(observer);
+        Scalar.Subscriber proxySubscriber = new ProxySubscriber(observer);
         super.subscribe(proxySubscriber);
     }
 
-    private class ProxySubscriber implements Scalar.Observer<T>, io.reactivex.rxjava3.disposables.Disposable {
+    private class ProxySubscriber implements Scalar.Subscriber<T>, io.reactivex.rxjava3.disposables.Disposable {
         private  MaybeObserver<? super T> observer;
         private SimpleSubscription scalarSubscription;
 

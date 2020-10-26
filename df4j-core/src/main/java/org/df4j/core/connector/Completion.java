@@ -44,7 +44,7 @@ public class Completion implements CompletionI {
         return completed;
     }
 
-    public void subscribe(Completable.Observer co) {
+    public void subscribe(Completable.Subscriber co) {
         synchronized(this) {
             if (!completed) {
                 CompletionSubscription subscription = new CompletionSubscription(this, co);

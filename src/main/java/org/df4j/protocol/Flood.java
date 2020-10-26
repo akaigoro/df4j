@@ -45,7 +45,7 @@ public class Flood {
          * @param subscriber the subscriber
          * @throws NullPointerException if subscriber is null
          */
-        public void subscribe(Subscriber<? super T> subscriber);
+        public void subscribe(Flood.Subscriber<? super T> subscriber);
     }
 
     /**
@@ -57,7 +57,7 @@ public class Flood {
     public interface Subscriber<T> extends OutMessagePort<T> {
 
         /**
-         * Invoked after calling {@link Scalar.Source#subscribe(Scalar.Observer)}.
+         * Invoked after calling {@link Scalar.Publisher#subscribe(Scalar.Subscriber)}.
          *
          * @param s
          *            {@link SimpleSubscription} that allows cancelling subscription via {@link SimpleSubscription#cancel()} ()} }

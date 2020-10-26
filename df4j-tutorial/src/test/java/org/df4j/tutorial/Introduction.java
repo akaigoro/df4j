@@ -105,11 +105,11 @@ public class Introduction<out> {
      * Simplest asynchronous function
      * Executes its {@link #callAction} method once.
      */
-    class HelloWorldSource extends AsyncFunc<String> {
-        public HelloWorldSource() {
+    class HelloWorldPublisher extends AsyncFunc<String> {
+        public HelloWorldPublisher() {
         }
 
-        public HelloWorldSource(ActorGroup dataflow) {
+        public HelloWorldPublisher(ActorGroup dataflow) {
             super(dataflow);
         }
 
@@ -120,8 +120,8 @@ public class Introduction<out> {
     }
 
     @Test
-    public void test3() throws TimeoutException {
-        HelloWorldSource helloWorld = new HelloWorldSource();
+    public void test3() throws TimeoutException, InterruptedException {
+        HelloWorldPublisher helloWorld = new HelloWorldPublisher();
         helloWorld.start();
         String result = helloWorld.get(1, TimeUnit.SECONDS);
         out.println("result: "+result);
@@ -163,7 +163,7 @@ public class Introduction<out> {
     public void test4() {
         // recommended scenario to work with graphs consists of 4 steps:
         // 1. create nodes
-        HelloWorldSource helloWorld = new HelloWorldSource();
+        HelloWorldPublisher helloWorld = new HelloWorldPublisher();
         Printer printer = new Printer();
         // 2. connect nodes
         helloWorld.subscribe(printer.inp);
@@ -183,7 +183,7 @@ public class Introduction<out> {
     @Test
     public void test5() {
         ActorGroup df = new ActorGroup();
-        HelloWorldSource helloWorld = new HelloWorldSource(df);
+        HelloWorldPublisher helloWorld = new HelloWorldPublisher(df);
         Printer printer = new Printer(df);
         helloWorld.subscribe(printer.inp);
         helloWorld.start();
@@ -196,11 +196,11 @@ public class Introduction<out> {
     /**
      * Asynchronous function with an error
      */
-    class HelloWorldSourceErr extends AsyncFunc<String> {
-        public HelloWorldSourceErr() {
+    class HelloWorldPublisherErr extends AsyncFunc<String> {
+        public HelloWorldPublisherErr() {
         }
 
-        public HelloWorldSourceErr(ActorGroup dataflow) {
+        public HelloWorldPublisherErr(ActorGroup dataflow) {
             super(dataflow);
         }
 
@@ -219,7 +219,7 @@ public class Introduction<out> {
     @Test
     public void test6() {
         ActorGroup df = new ActorGroup();
-        HelloWorldSourceErr helloWorld = new HelloWorldSourceErr(df);
+        HelloWorldPublisherErr helloWorld = new HelloWorldPublisherErr(df);
         Printer printer = new Printer(df);
         helloWorld.subscribe(printer.inp);
         helloWorld.start();

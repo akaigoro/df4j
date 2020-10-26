@@ -5,11 +5,11 @@ import org.reactivestreams.Subscription;
 public class CharFlow {
     private CharFlow(){}
 
-    public interface CharPublisher {
-        void subscribe(CharSubscriber subscriber);
+    public interface Publisher {
+        void subscribe(Subscriber subscriber);
     }
 
-    public interface CharSubscriber {
+    public interface Subscriber {
         void onSubscribe(Subscription subscription);
 
         void onNext(char c);

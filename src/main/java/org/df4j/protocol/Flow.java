@@ -22,19 +22,19 @@ public final class Flow {
 
     private Flow() {} // uninstantiable
 
-    public interface Publisher<T> extends org.reactivestreams.Publisher<T>, Scalar.Source<T> {
+    public interface Publisher<T> extends org.reactivestreams.Publisher<T>, Scalar.Publisher<T> {
         @Override
-        default void subscribe(Scalar.Observer<? super T> observer) {
+        default void subscribe(Scalar.Subscriber<? super T> observer) {
             Media<T> media = new Media<T>(observer);
             subscribe(media);
         }
 
         class Media<T> implements org.reactivestreams.Subscriber<T>, SimpleSubscription {
-            private final Scalar.Observer<? super T> observer;
+            private final Scalar.Subscriber<? super T> observer;
             private org.reactivestreams.Subscription subscription;
             private boolean cancelled;
 
-            public Media(Scalar.Observer<? super T> observer) {
+            public Media(Scalar.Subscriber<? super T> observer) {
                 this.observer = observer;
             }
 

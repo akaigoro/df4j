@@ -13,7 +13,7 @@ import org.df4j.protocol.SimpleSubscription;
  * It has place for only one message.
  * After the message is received, this port stays ready forever.
  *
- * It can connect both to {@link Scalar.Source} and {@link Flow.Publisher}.
+ * It can connect both to {@link Scalar.Publisher} and {@link Flow.Publisher}.
  *
  * @param <T> type of accepted tokens.
  */

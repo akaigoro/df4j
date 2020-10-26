@@ -15,7 +15,7 @@ import java.util.concurrent.CompletionException;
  * Blocked when overflow.
  * Is ready when has room to store at least one toke
  */
-public class OutChars extends CompletablePort implements CharFlow.CharPublisher {
+public class OutChars extends CompletablePort implements CharFlow.Publisher {
     protected final int capacity;
     private CharBuffer charBuffer;
     private LinkedQueue<SubscriptionImpl> activeSubscribtions = new LinkedQueue<>();
@@ -32,7 +32,7 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     @Override
-    public void subscribe(CharFlow.CharSubscriber subscriber) {
+    public void subscribe(CharFlow.Subscriber subscriber) {
         SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
         synchronized(transition) {
             if (passiveSubscribtions != null) {
@@ -148,11 +148,11 @@ public class OutChars extends CompletablePort implements CharFlow.CharPublisher 
     }
 
     protected class SubscriptionImpl extends LinkImpl implements Subscription {
-        protected final CharFlow.CharSubscriber subscriber;
+        protected final CharFlow.Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;
 
-        SubscriptionImpl(CharFlow.CharSubscriber subscriber) {
+        SubscriptionImpl(CharFlow.Subscriber subscriber) {
             this.subscriber = subscriber;
         }
 

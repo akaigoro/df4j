@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 
 /**
  * {@link ScalarResultTrait} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
- *   once set, it always satisfies {@link ScalarResultTrait#subscribe(Scalar.Observer)}
+ *   once set, it always satisfies {@link ScalarResultTrait#subscribe(Scalar.Subscriber)}
  * <p>
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)
@@ -17,7 +17,7 @@ import java.util.concurrent.*;
  *
  * @param <R> the type of completion value
  */
-public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Future<R> {
+public interface ScalarResultTrait<R> extends CompletionI, Scalar.Publisher<R>, Future<R> {
     R getResult();
     void setResult(R result);
     LinkedList<CompletionSubscription> getSubscriptions();
@@ -39,7 +39,7 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
     }
 
     @Override
-    default void subscribe(Scalar.Observer<? super R> subscriber) {
+    default void subscribe(Scalar.Subscriber<? super R> subscriber) {
         synchronized(this) {
             if (!isCancelled() && getSubscriptions() != null) {
                 ValueSubscription subscription = new ValueSubscription(this, subscriber);
@@ -78,7 +78,7 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
     }
 
     @Override
-    default R get(long timeout, @NotNull TimeUnit unit) throws TimeoutException {
+    default R get(long timeout, @NotNull TimeUnit unit) throws TimeoutException, InterruptedException {
         if (await(timeout, unit)) {
             return getResult();
         } else {
@@ -89,7 +89,7 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
     class ValueSubscription<R> extends CompletionSubscription {
         ScalarResultTrait<R> scalarResultTrait;
 
-        public ValueSubscription(ScalarResultTrait<R> completion, Scalar.Observer<? super R> subscriber) {
+        public ValueSubscription(ScalarResultTrait<R> completion, Scalar.Subscriber<? super R> subscriber) {
             super(completion, subscriber);
             this.scalarResultTrait = completion;
         }
@@ -97,7 +97,7 @@ public interface ScalarResultTrait<R> extends CompletionI, Scalar.Source<R>, Fut
         void onComplete() {
             Throwable completionException = scalarResultTrait.getCompletionException();
             if (completionException == null) {
-                ((Scalar.Observer<? super R>)subscriber).onSuccess(scalarResultTrait.getResult());
+                ((Scalar.Subscriber<? super R>)subscriber).onSuccess(scalarResultTrait.getResult());
             } else {
                 subscriber.onError(completionException);
             }

@@ -12,7 +12,7 @@ import java.util.concurrent.CompletionException;
  * It has place for only one message.
  * After the message is received, this port stays ready until{@link #remove()}. method is called.
  *
- * It can connect both to {@link Scalar.Source} and {@link Flow.Publisher}.
+ * It can connect both to {@link Scalar.Publisher} and {@link Flow.Publisher}.
  * This port is reusable: to reconnect to another scalar or flow Flow.Publisher, Flow.Publisher.subscribe is used.
  * Meaning of "completed normally" is different: it is completed after each succesfull receit of the next message
  * until next {@link #remove()} or resubscription.
@@ -21,7 +21,8 @@ import java.util.concurrent.CompletionException;
  *
  *  TODO clean code for mixed Scalar/Flow subscriptions
  */
-public class InpScalar<T> extends CompletablePort implements Scalar.Observer<T>, InpMessagePort<T> {
+public class InpScalar<T> extends CompletablePort
+        implements Scalar.Subscriber<T>, InpMessagePort<T> {
     private SimpleSubscription subscription;
     protected T value;
 

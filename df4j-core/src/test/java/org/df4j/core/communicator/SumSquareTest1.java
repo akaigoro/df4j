@@ -42,7 +42,7 @@ public class SumSquareTest1 {
      * computes arithmetic expression sum = 3*3 + 4*4
      */
     @Test
-    public void testAP() throws TimeoutException {
+    public void testAP() throws TimeoutException, InterruptedException {
         // create 3 nodes
         Square sqX = new Square();
         Square sqY = new Square();

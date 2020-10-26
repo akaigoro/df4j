@@ -7,7 +7,6 @@ import org.df4j.tricky.charflow.jsontokens.StringToken;
 import org.df4j.tricky.charflow.jsontokens.Token;
 import org.junit.Assert;
 import org.junit.Test;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.ArrayList;
@@ -15,7 +14,7 @@ import java.util.ArrayList;
 import static org.df4j.tricky.charflow.jsontokens.TokenType.*;
 
 public class JsonScannerTest {
-    static class TokenSinkArray extends Completion implements Subscriber<Token> {
+    static class TokenSinkArray extends Completion implements org.reactivestreams.Subscriber {
         ArrayList<Token> tokens  = new ArrayList<>();
         Subscription sub;
 
@@ -56,26 +55,26 @@ public class JsonScannerTest {
         }
     }
 
-    static class CharPublisherImpl implements CharFlow.CharPublisher {
+    static class PublisherImpl implements CharFlow.Publisher {
         final String str;
         int pos = 0;
         CharSubscription subscription;
 
-        CharPublisherImpl(String str) {
+        PublisherImpl(String str) {
             this.str = str;
         }
 
         @Override
-        public void subscribe(CharFlow.CharSubscriber subscriber) {
+        public void subscribe(CharFlow.Subscriber subscriber) {
             subscription = new CharSubscription(subscriber);
             subscriber.onSubscribe(subscription);
         }
 
         class CharSubscription implements Subscription {
-            final CharFlow.CharSubscriber subscriber;
+            final CharFlow.Subscriber subscriber;
             private boolean cancelled = false;
 
-            public CharSubscription(CharFlow.CharSubscriber subscriber) {
+            public CharSubscription(CharFlow.Subscriber subscriber) {
                 this.subscriber = subscriber;
             }
 
@@ -110,7 +109,7 @@ public class JsonScannerTest {
     }
 
     private TokenSinkArray toScanner(String s) {
-        CharPublisherImpl pub = new CharPublisherImpl(s);
+        PublisherImpl pub = new PublisherImpl(s);
         JsonScanner scanner = new JsonScanner();
         TokenSinkArray sink = new TokenSinkArray();
         pub.subscribe(scanner.inp);

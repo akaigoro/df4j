@@ -1,5 +1,7 @@
 package org.df4j.protocol;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * A one-shot signal with completion exceptions
  */
@@ -7,45 +9,81 @@ public class Completable {
     private Completable() {}
 
     /**
-     * consumable via an {@link Observer}.
+     * Synchronous interface.
      */
-    public interface Source<S extends Observer> {
+    public interface Source {
+
+        /**
+         * @return true if this {@link Completable} was completed normally or exceptionally;
+         * false otherwise
+         */
+        boolean isCompleted();
+
+        /**
+         * @return completion Exception, if this {@link Completable} was completed exceptionally;
+         * null otherwise
+         */
+        Throwable getCompletionException();
+
+        /**
+         * @return true if this {@link Completable} was completed normally or exceptionally;
+         * false otherwise
+         */
+        default boolean isCompletedExceptionally() {
+            return getCompletionException() != null;
+        }
+
+        /**
+         * waits this {@link Completable} to complete indefinetely
+         */
+        void await() throws InterruptedException;
+
+        /**
+         * waits this {@link Completable} to complete until timeout
+         * @param timeoutMillis timeout in milliseconds
+         * @return true if completed;
+         *         false if timout reached
+         */
+        boolean await(long timeoutMillis) throws InterruptedException;
+
+        /**
+         * waits this {@link Completable} to complete until timeout
+         * @param timeout timeout in units
+         * @param unit time unit
+         * @return true if completed;
+         *         false if timout reached
+         */
+        boolean await(long timeout, TimeUnit unit) throws InterruptedException;
+    }
+
+    /**
+     * Asynchronous interface
+     */
+    public interface Publisher {
+
+        void subscribe(Subscriber subscriber);
 
         boolean isCompleted();
 
         /**
-         * Subscribes the given CompletableObserver to this CompletableSource instance.
-         * @param co the CompletableObserver, not null
-         * @throws NullPointerException if {@code co} is null
+         * @return completion Exception, if this {@link Completable} was completed exceptionally;
+         * null otherwise
          */
-        void subscribe(S co);
+        Throwable getCompletionException();
+
+        /**
+         * @return true if this {@link Completable} was completed normally or exceptionally;
+         * false otherwise
+         */
+        default boolean isCompletedExceptionally() {
+            return getCompletionException() != null;
+        }
     }
 
     /**
-     * Provides a mechanism for receiving push-based notification of a valueless completion or an error.
-     * <p>
-     * A well-behaved {@code CompletableSource} will call a {@code CompletableObserver}'s {@link #onError(Throwable)}
-     * or {@link #onComplete()} method exactly once as they are considered mutually exclusive <strong>terminal signals</strong>.
-     * <p>
-     * Calling the {@code CompletableObserver}'s method must happen in a serialized fashion, that is, they must not
-     * be invoked concurrently by multiple threads in an overlapping fashion and the invocation pattern must
-     * adhere to the following protocol:
-     * <pre><code>    onSubscribe (onError | onComplete)?</code></pre>
-     * <p>
-     * Subscribing a {@code CompletableObserver} to multiple {@code CompletableSource}s is not recommended. If such reuse
-     * happens, it is the duty of the {@code CompletableObserver} implementation to be ready to receive multiple calls to
-     * its methods and ensure proper concurrent behavior of its business logic.
-     * <p>
-     * The implementations of the {@code onXXX} methods should avoid throwing runtime exceptions other than the following cases:
-     * <ul>
-     * <li>If the argument is {@code null}, the methods can throw a {@code NullPointerException}.
-     * Note though that RxJava prevents {@code null}s to enter into the flow and thus there is generally no
-     * need to check for nulls in flows assembled from standard sources and intermediate operators.
-     * </li>
-     * <li>If there is a fatal error (such as {@code VirtualMachineError}).</li>
-     * </ul>
+     * Asynchronous interface
      */
-    public interface Observer {
+    public interface Subscriber {
 
         void onSubscribe(SimpleSubscription subscription);
 
@@ -54,7 +92,7 @@ public class Completable {
          * @param e the exception, not null.
          */
         void onError(Throwable e);
-        
+
         /**
          * Called once the deferred computation completes normally.
          */

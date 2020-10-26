@@ -7,7 +7,7 @@ import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletionException;
 
-public class InpChars extends CompletablePort implements CharFlow.CharSubscriber {
+public class InpChars extends CompletablePort implements CharFlow.Subscriber {
 
     private CharBuffer charBuffer;
     protected Subscription subscription;

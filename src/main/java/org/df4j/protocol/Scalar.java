@@ -12,42 +12,51 @@ public class Scalar {
     private Scalar() {}
 
     /**
-     * A {@link Source} is a provider of a single element, publishing it to a {@link Observer}(s).
-     * <p>
-     * A {@link Source} can serve multiple {@link Observer}s subscribed dynamically
-     * at various points in time.
-     *
+     * Synchronous interface
      * @param <T> the type of element signaled.
      */
     public interface Source<T> {
 
+        boolean isCompleted();
+
+        T get();
+    }
+
+    /**
+     * Asynchronous interface
+     * @param <T> the type of element signaled.
+     */
+    public interface Publisher<T> {
+
+        boolean isCompleted();
+
         /**
-         * Request {@link Source} to start scalar data.
+         * Request {@link Publisher} to start scalar data.
          * <p>
          * This is a "factory method" and can be called multiple times.
          * <p>
-         * A {@link Observer} should only subscribe once to a single {@link Source}.
+         * A {@link Subscriber} should only subscribe once to a single {@link Publisher}.
          * <p>
-         * If the {@link Source} rejects the subscription attempt or otherwise fails it will
-         * signal the error via {@link Observer#onError}.
+         * If the {@link Publisher} rejects the subscription attempt or otherwise fails it will
+         * signal the error via {@link Subscriber#onError}.
          *
-         * @param s the {@link Observer} that will consume signals from this {@link Source}
+         * @param s the {@link Subscriber} that will consume signals from this {@link Publisher}
          */
-        void subscribe(Observer<? super T> s);
+        void subscribe(Subscriber<? super T> s);
     }
 
     /**
      * Supposed to receive single message per subscription.
      * To receive more messages, another subscription is required.
-     * Subscription to the same {@link Scalar.Source} is useless - the same result woould be received.
+     * Subscription to the same {@link Publisher} is useless - the same result woould be received.
      *
      * @param <T>  type of tokens
      */
-    public interface Observer<T> extends Completable.Observer, BiConsumer<T, Throwable> {
+    public interface Subscriber<T> extends Completable.Subscriber, BiConsumer<T, Throwable> {
         void onSubscribe(SimpleSubscription subscription);
 
         /**
-         * Data notification sent by the {@link Source}
+         * Data notification sent by the {@link Publisher}
          *
          * @param t the element signaled
          */

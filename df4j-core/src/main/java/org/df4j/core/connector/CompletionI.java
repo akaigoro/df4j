@@ -11,14 +11,9 @@ import java.util.concurrent.TimeUnit;
  * Completes successfully or with failure, without emitting any value.
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
-public interface CompletionI extends Completable.Source<Completable.Observer> {
+public interface CompletionI extends Completable.Source {
     LinkedList<CompletionSubscription> getSubscriptions();
 
-    /**
-     * @return completion Exception, if this {@link Completable} was completed exceptionally;
-     * null otherwise
-     */
-    Throwable getCompletionException();
 
     /**
      * sets the state to completed
@@ -37,34 +32,4 @@ public interface CompletionI extends Completable.Source<Completable.Observer> {
      * false otherwise
      */
     boolean isCompleted();
-
-    /**
-     * @return true if this {@link Completable} was completed normally or exceptionally;
-     * false otherwise
-     */
-    default boolean isCompletedExceptionally() {
-        return getCompletionException() != null;
-    }
-
-    /**
-     * waits this {@link Completable} to complete indefinetely
-     */
-    void await();
-
-    /**
-     * waits this {@link Completable} to complete until timeout
-     * @param timeoutMillis timeout in milliseconds
-     * @return true if completed;
-     *         false if timout reached
-     */
-    boolean await(long timeoutMillis);
-
-    /**
-     * waits this {@link Completable} to complete until timeout
-     * @param timeout timeout in units
-     * @param unit time unit
-     * @return true if completed;
-     *         false if timout reached
-     */
-    boolean await(long timeout, TimeUnit unit);
 }

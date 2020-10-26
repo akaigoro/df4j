@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * {@link ScalarResult} can be considered as a one-shot multicast {@link AsyncArrayBlockingQueue}:
- *   once set, it always satisfies {@link ScalarResult#subscribe(Scalar.Observer)}
+ *   once set, it always satisfies {@link ScalarResult#subscribe(Scalar.Subscriber)}
  * <p>
  * Universal standalone connector for scalar values.
  * Has synchronous (Future), and asynchronous (both for scalar and stream kinds of subscribers)

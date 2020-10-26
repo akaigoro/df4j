@@ -12,7 +12,7 @@ public class AsyncCountdownLatchTest {
     @Test
     public void test0() {
         AsyncCountDownLatch latch = new AsyncCountDownLatch(0);
-        MyObserver subscriber = new MyObserver();
+        MySubscriber subscriber = new MySubscriber();
         latch.subscribe(subscriber);
         Assert.assertFalse(subscriber.onSubscribeSeen.get());
         Assert.assertTrue(subscriber.onCompleteSeen.get());
@@ -21,7 +21,7 @@ public class AsyncCountdownLatchTest {
     @Test
     public void test1() {
         AsyncCountDownLatch latch = new AsyncCountDownLatch(1);
-        MyObserver subscriber = new MyObserver();
+        MySubscriber subscriber = new MySubscriber();
         latch.subscribe(subscriber);
         Assert.assertTrue(subscriber.onSubscribeSeen.get());
         Assert.assertFalse(subscriber.onCompleteSeen.get());
@@ -29,7 +29,7 @@ public class AsyncCountdownLatchTest {
         Assert.assertTrue(subscriber.onCompleteSeen.get());
     }
 
-    private static class MyObserver implements Completable.Observer {
+    private static class MySubscriber implements Completable.Subscriber {
         AtomicBoolean onSubscribeSeen = new AtomicBoolean(false);
         AtomicBoolean onCompleteSeen = new AtomicBoolean(false);
 
