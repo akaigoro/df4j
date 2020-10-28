@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * Completes successfully or with failure, without emitting any value.
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
-public class Completion implements CompletionI {
+public class Completion {
     protected Throwable completionException;
     protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
     protected boolean completed;
@@ -43,6 +43,10 @@ public class Completion implements CompletionI {
      */
     public synchronized boolean isCompleted() {
         return completed;
+    }
+
+    public boolean isCompletedExceptionally() {
+        return completed && completionException != null;
     }
 
     public void subscribe(Completable.Subscriber co) {
