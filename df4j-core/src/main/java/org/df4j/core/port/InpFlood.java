@@ -46,7 +46,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T>, F
                 return null;
             }
             T res = tokens.poll();
-            if (!isCompleted()) {
+            if (!completed && tokens.isEmpty()) {
                 block();
             }
             return res;
@@ -95,5 +95,25 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T>, F
             subscription = null;
         }
         sub.cancel();
+    }
+
+    @Override
+    public void block() {
+        super.block();
+    }
+
+    @Override
+    public void unblock() {
+        super.unblock();
+    }
+
+    @Override
+    public void onComplete() {
+        super.onComplete();
+    }
+
+    @Override
+    public void onError(Throwable cause) {
+        super.onError(cause);
     }
 }

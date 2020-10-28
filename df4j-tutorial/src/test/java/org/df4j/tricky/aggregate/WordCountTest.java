@@ -34,7 +34,19 @@ public final class WordCountTest {
     ReduceByKey<String, Integer> reduce = new ReduceByKey<>((Integer x, Integer y) -> x + y);
     reduce.reduceByKey("word", 1);
     reduce.onComplete();
-    for (ReduceByKey.ReducingActor a: reduce.actors.values()) {
+    for (ReducingActor a: reduce.values()) {
+      Pair<String, Integer> x = a.get(100, TimeUnit.SECONDS);
+      System.out.println(x);
+    }
+  }
+
+  @Test
+  public void test2() throws Exception {
+    ReduceByKey<String, Integer> reduce = new ReduceByKey<>((Integer x, Integer y) -> x + y);
+    reduce.reduceByKey("word", 1);
+    reduce.reduceByKey("word", 1);
+    reduce.onComplete();
+    for (ReducingActor a: reduce.values()) {
       Pair<String, Integer> x = a.get(100, TimeUnit.SECONDS);
       System.out.println(x);
     }
@@ -50,8 +62,8 @@ public final class WordCountTest {
               .forEach((word) -> reduce.reduceByKey(word, 1));
     }
     reduce.onComplete();
-    for (ReduceByKey.ReducingActor a: reduce.actors.values()) {
-      Pair<String, Integer> x = a.get(1, TimeUnit.SECONDS);
+    for (ReducingActor a: reduce.values()) {
+      Pair<String, Integer> x = a.get(10, TimeUnit.SECONDS);
       System.out.println(x);
       wordcount++;
     }

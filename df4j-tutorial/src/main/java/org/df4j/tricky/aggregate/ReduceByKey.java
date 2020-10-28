@@ -16,22 +16,17 @@ package org.df4j.tricky.aggregate;
  * limitations under the License.
  */
 
-import org.df4j.core.actor.ClassicActor;
 import org.df4j.core.util.Pair;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
 /**
  * a class to make reduce operation similar to Spark's RDD::reduceByKey
  * @param <K>
  */
-public final class ReduceByKey<K, V> {
+public final class ReduceByKey<K, V> extends ConcurrentHashMap<K, ReducingActor> {
   final BiFunction<V,V,V> reducer;
-  protected final ConcurrentHashMap<K,ReducingActor> actors = new ConcurrentHashMap<>();
 
   public ReduceByKey(BiFunction<V,V,V> reducer) {
     this.reducer = reducer;
@@ -39,48 +34,15 @@ public final class ReduceByKey<K, V> {
 
   public void reduceByKey(K key, V value) {
     Pair<K, V> msg = new Pair<>(key, value);
-    ReducingActor actor = actors.computeIfAbsent(key,
-            (key1) -> new ReducingActor(key1));
+    ReducingActor actor = computeIfAbsent(key,
+            (key1) -> new ReducingActor(key1, reducer));
     actor.onNext(msg);
   }
 
   public void onComplete() {
-    for (ReducingActor actor: actors.values()) {
+    for (ReducingActor actor: values()) {
       actor.onComplete();
     }
   }
 
-  class ReducingActor extends ClassicActor<Pair<K, V>> {
-    private V state;
-    private Pair<K, V> result;
-    private final K key;
-
-    ReducingActor(K key) {
-      this.key = key;
-      start();
-    }
-
-    @Override
-    protected void runAction(Pair<K, V> msg) {
-      state = msg.getValue();
-      nextMessageAction(this::reduce);
-    }
-
-    public void reduce(Pair<K, V> msg) {
-      state = reducer.apply(state, msg.getValue());
-    }
-
-    @Override
-    public synchronized void whenComplete() {
-      this.result = new Pair<>(key, state);
-    }
-
-    public Pair<K, V> get(long timeout, @NotNull TimeUnit unit) throws TimeoutException, InterruptedException {
-      boolean ok = await(timeout, unit);
-      if (!ok) {
-        throw new TimeoutException();
-      }
-      return result;
-    }
-  }
 }
