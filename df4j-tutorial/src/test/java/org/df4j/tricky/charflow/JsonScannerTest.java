@@ -26,12 +26,12 @@ public class JsonScannerTest {
 
         @Override
         public void onError(Throwable t) {
-            _complete(t);
+            complete(t);
         }
 
         @Override
         public void onComplete() {
-            _complete(null);
+            complete();
         }
 
         @Override

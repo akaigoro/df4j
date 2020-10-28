@@ -33,17 +33,22 @@ public class EchoServer extends Actor {
         connProducer.start();
     }
 
-    public void whenComplete() {
-        connProducer.complete();
+    @Override
+    protected void whenComplete(Throwable ex) {
+        connProducer.onComplete(ex);
         for (EchoProcessor processor: echoProcessors) {
-            processor.complete();
+            processor.onComplete(ex);
         }
+    }
+
+    public void onComplete(Throwable ex) {
+        complete(ex);
     }
 
     @Override
     protected void runAction() throws Throwable {
         if (inp.isCompletedExceptionally()) {
-            completeExceptionally(inp.getCompletionException());
+            complete(inp.getCompletionException());
             return;
         } else if (inp.isCompleted()) {
             complete();

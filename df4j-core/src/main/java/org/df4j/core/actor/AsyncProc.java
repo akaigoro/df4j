@@ -10,7 +10,6 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.connector.Completion;
-import org.df4j.core.connector.ScalarResult;
 
 import java.util.ArrayList;
 
@@ -61,7 +60,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             return;
         }
         this.daemon = daemon;
-        leaveParent();
+        leaveParent(null);
     }
 
     public synchronized boolean isDaemon() {
@@ -88,41 +87,23 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         _controlportUnblock();
     }
 
-    protected void whenComplete() {
-    }
-
-    protected void whenError(Throwable e) {
-        whenComplete();
-    }
-
-    /**
-     * finishes parent activity normally.
-     */
-    public void complete() {
-        synchronized(this) {
-            if (state == ActorState.Completed) {
-                return;
-            }
-            state = ActorState.Completed;
-        }
-        whenComplete();
-        super.complete();
+    protected void whenComplete(Throwable e) {
     }
 
     /**
      * finishes parent activity exceptionally.
      * @param ex the exception
      */
-    public void completeExceptionally(Throwable ex) {
+    protected void complete(Throwable ex) {
         synchronized(this) {
-            if (completion.isCompleted()) {
+            if (state == ActorState.Completed) {
                 return;
             }
             state = ActorState.Completed;
         }
-        whenError(ex);
-        completion.completeExceptionally(ex);
-        leaveParentExceptionally(ex);
+        whenComplete(ex);
+        completion.complete(ex);
+        leaveParent(ex);
     }
 
     public Throwable getCompletionException() {
@@ -160,7 +141,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             runAction();
             complete();
         } catch (Throwable e) {
-            completeExceptionally(e);
+            complete(e);
         }
     }
 

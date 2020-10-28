@@ -37,17 +37,12 @@ class EchoProcessor extends Actor {
         echoServer.LOG.info(name + " started");
     }
 
-    @Override
-    public void whenComplete() {
-        try {
-            conn.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void onComplete(Throwable ex) {
+        complete(ex);
     }
 
     @Override
-    public void whenError(Throwable ex) {
+    public void whenComplete(Throwable ex) {
         try {
             conn.close();
         } catch (IOException e) {
@@ -67,7 +62,7 @@ class EchoProcessor extends Actor {
                 complete();
                 echoServer.LOG.info(name + "completed");
             } catch (IOException e) {
-                completeExceptionally(e);
+                complete(e);
                 echoServer.LOG.info(name + "completed with error " + e);
             }
         }

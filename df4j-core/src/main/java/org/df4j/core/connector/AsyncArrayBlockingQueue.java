@@ -131,13 +131,11 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         return out.take();
     }
 
-    @Override
-    public void complete() {
+    public void onComplete() {
         inp.onComplete();
     }
 
-    @Override
-    public void completeExceptionally(Throwable ex) {
+    public void onError(Throwable ex) {
         inp.onError(ex);
     }
 

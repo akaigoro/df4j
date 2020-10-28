@@ -26,7 +26,7 @@ public class JsonParser extends Actor {
                 nextAction(this::parseObject);
                 break;
             default:
-                completeExceptionally(new SyntaxError("bad token:"+t));
+                complete(new SyntaxError("bad token:"+t));
         }
 
     }
@@ -43,7 +43,7 @@ public class JsonParser extends Actor {
                 nextAction(this::parseObject);
                 break;
             default:
-                completeExceptionally(new SyntaxError("bad token:"+t));
+                complete(new SyntaxError("bad token:"+t));
         }
     }
 

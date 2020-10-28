@@ -25,7 +25,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         }
         Assert.assertEquals(cnt, queue.size());
         Assert.assertFalse(queue.isCompleted());
-        queue.complete();
+        queue.onComplete();
         Assert.assertEquals(queue.size()==0, queue.isCompleted());
         for (long k=0; k<cnt; k++) {
             Long value = queue.remove();
@@ -57,7 +57,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         for (long k=0; k<cnt; k++) {
             queue.add(k);
         }
-        queue.complete();
+        queue.onComplete();
         Assert.assertTrue(queue.isCompleted());
         Assert.assertEquals(cnt, sub.cnt);
         Assert.assertTrue(sub.isCompleted());
@@ -90,7 +90,7 @@ public class AsyncArrayBlockingQueueSimpleTest {
         Assert.assertFalse(sub.isCompleted());
         Assert.assertNull(sub.getCompletionException());
         sub.subscription.cancel();
-        queue.complete();
+        queue.onComplete();
         for (long k=0; ; k++) {
             if (!queue.offer(k)) {
                 break;

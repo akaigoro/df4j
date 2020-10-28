@@ -89,7 +89,7 @@ class EchoClient extends Actor {
                 LOG.info(clientName+" finished successfully");
             } catch (IOException e) {
                 LOG.info(clientName+" finished exceptionally ("+e+")");
-                completeExceptionally(e);
+                complete(e);
             }
         }
     }

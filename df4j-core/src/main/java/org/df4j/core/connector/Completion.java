@@ -76,7 +76,14 @@ public class Completion {
         }
     }
 
-    protected void _complete(Throwable e) {
+    /**
+     * If not already completed, causes invocations of get() and related methods
+     * to throw {@link CompletionException}
+     * with the given exception as the cause.
+     * @param e exception to throw,
+     *          or null if normal completion
+     */
+    public void complete(Throwable e) {
         LinkedList<CompletionSubscription> subs;
         synchronized(this) {
             if (completed) {
@@ -94,24 +101,8 @@ public class Completion {
         completeSubscriptions(subs);
     }
 
-    /**
-     * completes this {@link Completable} normally
-     */
     public void complete() {
-        _complete(null);
-    }
-
-    /**
-     * If not already completed, causes invocations of get() and related methods
-     * to throw {@link CompletionException}
-     * with the given exception as the cause.
-     * @param e exception to throw
-     */
-    public void completeExceptionally(Throwable e) {
-        if (e == null) {
-            throw new IllegalArgumentException();
-        }
-        _complete(e);
+        complete(null);
     }
 
     /**

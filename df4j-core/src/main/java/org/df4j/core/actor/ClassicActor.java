@@ -3,8 +3,6 @@ package org.df4j.core.actor;
 import org.df4j.core.port.InpFlood;
 import org.df4j.protocol.OutMessagePort;
 
-import java.util.concurrent.CompletionException;
-
 /**
  * Actor according to Carl Hewitt
  * Has a predefined input port.
@@ -34,7 +32,7 @@ public abstract class ClassicActor<T> extends Actor implements OutMessagePort<T>
             if (cause == null) {
                 complete();
             } else {
-                completeExceptionally(cause);
+                complete(cause);
             }
             return;
         }

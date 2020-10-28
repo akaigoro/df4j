@@ -124,7 +124,7 @@ public abstract class Actor extends AsyncProc {
                 }
             }
         } catch (Throwable e) {
-            super.completeExceptionally(e);
+            super.complete(e);
         }
     }
 

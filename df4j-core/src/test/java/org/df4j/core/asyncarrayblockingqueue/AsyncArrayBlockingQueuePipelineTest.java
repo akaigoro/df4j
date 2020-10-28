@@ -144,9 +144,9 @@ public class AsyncArrayBlockingQueuePipelineTest {
                 }
             }
             if (cause == null) {
-                out.complete();
+                out.onComplete();
             } else {
-                out.completeExceptionally(cause);
+                out.onError(cause);
             }
         }
     }
@@ -176,7 +176,7 @@ public class AsyncArrayBlockingQueuePipelineTest {
                 cause = e.getCause();
             }
             out.onError(cause);
-            completeExceptionally(cause);
+            complete(cause);
         }
     }
 }

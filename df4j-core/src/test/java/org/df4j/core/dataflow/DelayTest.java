@@ -38,7 +38,7 @@ public class DelayTest {
         @Override
         public void onError(Throwable t) {
             System.out.println("got "+t);
-            completeExceptionally(t);
+            complete(t);
         }
 
         @Override

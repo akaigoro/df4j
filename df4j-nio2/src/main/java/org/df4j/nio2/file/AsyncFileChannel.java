@@ -83,7 +83,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
                 complete();
             } catch (IOException e) {
                 output.onError(e);
-                completeExceptionally(e);
+                complete(e);
             }
             return;
         }

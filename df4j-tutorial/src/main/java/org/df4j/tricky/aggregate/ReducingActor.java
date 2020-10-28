@@ -31,7 +31,7 @@ class ReducingActor<K, V> extends ClassicActor<Pair<K, V>> {
     }
 
     @Override
-    public synchronized void whenComplete() {
+    public synchronized void whenComplete(Throwable ex) {
         this.result = new Pair<>(key, state);
     }
 

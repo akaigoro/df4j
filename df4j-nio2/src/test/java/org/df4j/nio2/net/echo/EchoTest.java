@@ -30,7 +30,9 @@ public  class EchoTest {
 
     @After
     public synchronized void deinit() throws InterruptedException, IOException {
-        echoServer.complete();
+        if (echoServer != null) {
+            echoServer.onComplete(null);
+        }
     }
 
     public void ClientTest_1(int nc, int total) throws IOException, InterruptedException {

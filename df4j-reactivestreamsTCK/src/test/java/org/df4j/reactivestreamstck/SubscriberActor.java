@@ -31,7 +31,7 @@ public class SubscriberActor extends Actor {
             if (completionException == null) {
                 complete();
             } else {
-                completeExceptionally(completionException);
+                complete(completionException);
             }
             return;
         }

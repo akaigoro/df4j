@@ -6,8 +6,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 
-import java.util.logging.Level;
-
 public class LoggingSubscriber extends Completion implements Subscriber<Long> {
     public final Logger logger = LoggerFactory.getLogger(this);
     public int cnt = 0;
@@ -30,7 +28,7 @@ public class LoggingSubscriber extends Completion implements Subscriber<Long> {
     @Override
     public void onError(Throwable e) {
         logger.info(" completed with: " + e);
-        super.completeExceptionally(e);
+        super.complete(e);
     }
 
     @Override

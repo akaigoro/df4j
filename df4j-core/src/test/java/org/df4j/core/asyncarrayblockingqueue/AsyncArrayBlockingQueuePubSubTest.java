@@ -50,7 +50,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
     public void testAsyncQueueCompleted() {
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<Long>(1);
         queue.add(1l);
-        queue.complete();
+        queue.onComplete();
         Assert.assertFalse(queue.isCompleted());
         queue.remove();
         Assert.assertTrue(queue.isCompleted());
@@ -67,7 +67,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         queue.subscribe(subscriber.inp);
         subscriber.start();
         Thread.sleep(400);
-        queue.complete();
+        queue.onComplete();
         Thread.sleep(400);
         subscriber.getActorGroup().await(400);
         boolean qIsCompleted = queue.isCompleted();

@@ -1,8 +1,5 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.connector.Completion;
-import org.jetbrains.annotations.NotNull;
-
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
@@ -49,16 +46,15 @@ public class ActorGroup extends Node<ActorGroup> {
      * and leaves the pareng graph, if any.
      * @param node the node which leaves the group
      */
-    public synchronized void leave(Node node) {
+    public synchronized void leave(Node node, Throwable ex) {
         children.remove(node);
-        if (children.size() == 0) {
-            super.complete();
+        if ((children.size() == 0) || (ex != null)) {
+            super.complete(ex);
         }
     }
 
-    public synchronized void leaveExceptionally(Node node, Throwable ex) {
-        children.remove(node);
-        super.completeExceptionally(ex);
+    public void leave(Node node) {
+        leave(node, null);
     }
 
     @Override

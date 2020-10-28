@@ -32,7 +32,7 @@ public class ProducerThread extends ActivityThread {
             }
         }
         logger.info("queue.onComplete()");
-        queue.complete();
+        queue.onComplete();
         logger.info("Producer completed");
     }
 }

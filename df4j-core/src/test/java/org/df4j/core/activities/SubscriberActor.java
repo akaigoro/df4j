@@ -8,7 +8,6 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 
 import java.util.concurrent.CompletionException;
-import java.util.logging.Level;
 
 public class SubscriberActor extends Actor {
     protected final Logger logger = LoggerFactory.getLogger(this);
@@ -41,7 +40,7 @@ public class SubscriberActor extends Actor {
             if (completionException == null) {
                 complete();
             } else {
-                completeExceptionally(completionException);
+                complete(completionException);
             }
             return;
         }

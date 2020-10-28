@@ -54,20 +54,19 @@ public class AsyncServerSocketChannel extends Actor
         allowedConnections.release(count);
     }
 
-    public synchronized void complete() {
-        synchronized(this) {
-            if (isCompleted()) {
-                return;
-            }
-            AsynchronousServerSocketChannel asscLock = assc;
-            assc = null;
-            try {
-                asscLock.close();
-                super.complete();
-            } catch (IOException e) {
-                super.completeExceptionally(e);
-            }
+    protected synchronized void whenComplete(Throwable ex) {
+        AsynchronousServerSocketChannel asscLock = assc;
+        assc = null;
+        try {
+            asscLock.close();
+            super.complete(ex);
+        } catch (IOException e) {
+            super.complete(e);
         }
+    }
+
+    public void onComplete(Throwable ex) {
+        complete(ex);
     }
 
     @Override
@@ -91,7 +90,7 @@ public class AsyncServerSocketChannel extends Actor
                 asc.close();
             } catch (IOException e) {
             }
-            completeExceptionally(t);
+            complete(t);
         }
     }
 
@@ -105,7 +104,7 @@ public class AsyncServerSocketChannel extends Actor
         if (exc instanceof AsynchronousCloseException) {
             complete();
         } else {
-            completeExceptionally(exc);
+            complete(exc);
         }
     }
 }

@@ -41,29 +41,22 @@ public abstract class Node<T extends Node<T>> implements Activity {
         return completion.getCompletionException();
     }
 
-    protected void complete() {
-        completion.complete();
-        leaveParent();
+    protected void complete(Throwable ex) {
+        completion.complete(ex);
+        leaveParent(ex);
     }
 
-    protected void completeExceptionally(Throwable ex) {
-        completion.completeExceptionally(ex);
-        leaveParentExceptionally(ex);
+    protected void complete() {
+        complete(null);
     }
 
     public ActorGroup getActorGroup() {
         return actorGroup;
     }
 
-    protected void leaveParent() {
+    protected void leaveParent(Throwable ex) {
         if (actorGroup != null) {
-            actorGroup.leave(this);
-        }
-    }
-
-    protected void leaveParentExceptionally(Throwable ex) {
-        if (actorGroup != null) {
-            actorGroup.leaveExceptionally(this, ex);
+            actorGroup.leave(this, ex);
         }
     }
 
