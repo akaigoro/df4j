@@ -39,6 +39,17 @@ public class SumSquareTest {
         }
     }
 
+    @Test
+    public void testCompletion() throws TimeoutException, InterruptedException {
+        Square sqX = new Square();
+        sqX.param.onSuccess(3);
+        sqX.start();
+        boolean fin = sqX.await(1, TimeUnit.SECONDS);
+        Assert.assertTrue(fin);
+        int res = sqX.get();
+        Assert.assertEquals(9, res);
+    }
+
     /*
      * computes arithmetic expression sum = 3*3 + 4*4 using {@link AsyncProc}edures
      * each node of dataflow graph is declared and created explicitely

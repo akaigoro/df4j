@@ -12,7 +12,7 @@ import static org.junit.Assert.assertTrue;
 public class DelayTest {
 
     @Test
-    public void delayTest() {
+    public void delayTest() throws InterruptedException {
         DelayActor actor = new DelayActor();
         DelaySubscriber subscriber = new DelaySubscriber();
         actor.out.subscribe(subscriber);

@@ -1,6 +1,10 @@
 package org.df4j.protocol;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
 /**
@@ -19,7 +23,9 @@ public class Scalar {
 
         boolean isCompleted();
 
-        T get();
+        T get() throws InterruptedException;
+
+        T get(long timeout, @NotNull TimeUnit unit) throws TimeoutException, InterruptedException;
     }
 
     /**
@@ -42,7 +48,7 @@ public class Scalar {
          *
          * @param s the {@link Subscriber} that will consume signals from this {@link Publisher}
          */
-        void subscribe(Subscriber<? super T> s);
+        void subscribe(Subscriber<? super T> s) throws InterruptedException;
     }
 
     /**

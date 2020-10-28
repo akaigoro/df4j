@@ -31,10 +31,10 @@ public final class WordCountTest {
 
   @Test
   public void test1() throws Exception {
-    ReduceByKey<String, Integer> reduce = new ReduceByKey<>((x, y) -> (int) x + (int) y);
-    reduce.reduceByKey(new Pair<>("word", 1));
-    for (ReduceByKey<String, Integer>.ReducingActor a: reduce.actors.values()) {
-      a.onComplete();
+    ReduceByKey<String, Integer> reduce = new ReduceByKey<>((Integer x, Integer y) -> x + y);
+    reduce.reduceByKey("word", 1);
+    reduce.onComplete();
+    for (ReduceByKey.ReducingActor a: reduce.actors.values()) {
       Pair<String, Integer> x = a.get(100, TimeUnit.SECONDS);
       System.out.println(x);
     }
@@ -47,11 +47,10 @@ public final class WordCountTest {
     try (Stream<String> stream = Files.lines(path)) {
       stream.map(line -> line.split(" "))
               .flatMap(Arrays::stream)
-              .forEach((word) -> reduce.reduceByKey(new Pair<>(word, 1)));
+              .forEach((word) -> reduce.reduceByKey(word, 1));
     }
-//    reduce.onComplete(); // complete all actors
-    for (ReduceByKey<String, Integer>.ReducingActor a: reduce.actors.values()) {
-      a.onComplete();
+    reduce.onComplete();
+    for (ReduceByKey.ReducingActor a: reduce.actors.values()) {
       Pair<String, Integer> x = a.get(1, TimeUnit.SECONDS);
       System.out.println(x);
       wordcount++;

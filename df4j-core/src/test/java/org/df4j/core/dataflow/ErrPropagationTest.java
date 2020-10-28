@@ -11,7 +11,6 @@ public class ErrPropagationTest {
     static class StringToInt extends AsyncFunc<Integer> {
         String argumnet;
 
-        // in constructor, link this async function to a dataflow
         public StringToInt(ActorGroup df, String argumnet) {
             super(df);
             this.argumnet = argumnet;
@@ -20,7 +19,6 @@ public class ErrPropagationTest {
         @Override
         protected Integer callAction() {
             Integer res = Integer.valueOf(argumnet);  // can throw NumberFormatException
-    //        System.out.println(portsToString());
             return res;
         }
     }
@@ -34,7 +32,7 @@ public class ErrPropagationTest {
         nodeBad.start();
         nodeOK.start();
         try {
-            upper.await(100);
+            boolean res = upper.await(40000);
             Assert.fail("exception expected");
         } catch (CompletionException e) {
             System.err.println(e);

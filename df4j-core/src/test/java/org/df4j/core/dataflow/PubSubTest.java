@@ -8,14 +8,14 @@ import org.junit.Test;
 
 public class PubSubTest {
 
-    public void pubSubTest(int cnt, int delay1, int delay2) {
+    public void pubSubTest(int cnt, int delay1, int delay2) throws InterruptedException {
         ActorGroup df = new ActorGroup();
         PublisherActor pub = new PublisherActor(df, cnt, delay1);
         SubscriberActor sub = new SubscriberActor(df, delay2);
         pub.out.subscribe(sub.inp);
         pub.start();
         sub.start();
-        boolean res = df.await(100000);
+        boolean res = df.await(1000);
         Assert.assertTrue(res);
     }
 

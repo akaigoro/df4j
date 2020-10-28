@@ -12,8 +12,6 @@ import java.util.concurrent.TimeUnit;
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
 public interface CompletionI extends Completable.Source {
-    LinkedList<CompletionSubscription> getSubscriptions();
-
 
     /**
      * sets the state to completed

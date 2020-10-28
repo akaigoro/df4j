@@ -32,7 +32,7 @@ public class Introduction<out> {
      *
      * @param activity
      */
-    public static void blockingAwait(Activity activity) {
+    public static void blockingAwait(Activity activity) throws InterruptedException {
         boolean fin = activity.await(400);
         Assert.assertTrue(fin);
     }
@@ -47,7 +47,7 @@ public class Introduction<out> {
         try {
             activity.await(400);
             fail(" exception "+exceptionClass.getSimpleName()+" expected");
-        } catch (CompletionException e) {
+        } catch (CompletionException | InterruptedException e) {
             e.printStackTrace();
             Throwable cause = e.getCause();
             Assert.assertTrue(exceptionClass.isAssignableFrom(cause.getClass()));
@@ -67,7 +67,7 @@ public class Introduction<out> {
     }
 
     @Test
-    public void test1() {
+    public void test1() throws InterruptedException {
         HelloWorld helloWorld = new HelloWorld();
         helloWorld.start();
         // suspend the test method, otherwise the test can stop prematurely
@@ -93,7 +93,7 @@ public class Introduction<out> {
     }
 
     @Test
-    public void test2() {
+    public void test2() throws InterruptedException {
         HelloWorldActor helloWorld = new HelloWorldActor();
         helloWorld.start();
         // suspent the test method, otherwise the test can stop prematurely
@@ -160,7 +160,7 @@ public class Introduction<out> {
      * HelloWorldSource --> Printer
      */
     @Test
-    public void test4() {
+    public void test4() throws InterruptedException {
         // recommended scenario to work with graphs consists of 4 steps:
         // 1. create nodes
         HelloWorldPublisher helloWorld = new HelloWorldPublisher();
@@ -181,7 +181,7 @@ public class Introduction<out> {
      * HelloWorldSource --> Printer
      */
     @Test
-    public void test5() {
+    public void test5() throws InterruptedException {
         ActorGroup df = new ActorGroup();
         HelloWorldPublisher helloWorld = new HelloWorldPublisher(df);
         Printer printer = new Printer(df);

@@ -46,7 +46,7 @@ public class InpFlood<T> extends CompletablePort implements InpMessagePort<T>, F
                 return null;
             }
             T res = tokens.poll();
-            if (tokens.isEmpty()) {
+            if (!isCompleted()) {
                 block();
             }
             return res;

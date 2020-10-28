@@ -10,7 +10,7 @@ import org.junit.Test;
 
 public class AsyncArrayBlockingQueuePubSubTest {
 
-    public void testAsyncQueue(int cnt, int delay1, int delay2) {
+    public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
         ActorGroup graph = new ActorGroup();
         ProducerActor producer = new ProducerActor(graph, cnt, delay1);
         PublisherActor publisher = new PublisherActor(graph, cnt, delay1);
@@ -27,22 +27,22 @@ public class AsyncArrayBlockingQueuePubSubTest {
     }
 
     @Test
-    public void testAsyncQueueProdSubComplete() {
+    public void testAsyncQueueProdSubComplete() throws InterruptedException {
         testAsyncQueue(0,0, 0);
     }
 
     @Test
-    public void testAsyncQueueSlowProd() {
+    public void testAsyncQueueSlowProd() throws InterruptedException {
         testAsyncQueue(5,100, 0);
     }
 
     @Test
-    public void testAsyncQueueSlowConsComplete() {
+    public void testAsyncQueueSlowConsComplete() throws InterruptedException {
         testAsyncQueue(0,0, 100);
     }
 
     @Test
-    public void testAsyncQueueSlowCons() {
+    public void testAsyncQueueSlowCons() throws InterruptedException {
         testAsyncQueue(3,0, 100);
     }
 

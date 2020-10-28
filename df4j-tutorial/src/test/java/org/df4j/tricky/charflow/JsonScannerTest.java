@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import static org.df4j.tricky.charflow.jsontokens.TokenType.*;
 
 public class JsonScannerTest {
-    static class TokenSinkArray extends Completion implements org.reactivestreams.Subscriber {
+    static class TokenSinkArray extends Completion implements org.reactivestreams.Subscriber<Token> {
         ArrayList<Token> tokens  = new ArrayList<>();
         Subscription sub;
 
@@ -108,7 +108,7 @@ public class JsonScannerTest {
         }
     }
 
-    private TokenSinkArray toScanner(String s) {
+    private TokenSinkArray toScanner(String s) throws InterruptedException {
         PublisherImpl pub = new PublisherImpl(s);
         JsonScanner scanner = new JsonScanner();
         TokenSinkArray sink = new TokenSinkArray();
@@ -123,21 +123,21 @@ public class JsonScannerTest {
     }
 
     @Test
-    public void emptyArrayTest() {
+    public void emptyArrayTest() throws InterruptedException {
         TokenSinkArray sink = toScanner("[]");
         boolean condition = sink.equals(Token.of(LeftBracket), Token.of(RightBracket));
         Assert.assertTrue(condition);
     }
 
     @Test
-    public void arrayTest1() {
+    public void arrayTest1() throws InterruptedException {
         TokenSinkArray sink = toScanner("[null]");
         boolean condition = sink.equals(Token.of(LeftBracket), Token.of(Null), Token.of(RightBracket));
         Assert.assertTrue(condition);
     }
 
     @Test
-    public void arrayTest() {
+    public void arrayTest() throws InterruptedException {
         TokenSinkArray sink = toScanner("[ \"abc\":true,false, 123,]");
         boolean condition = sink.equals(Token.of(LeftBracket), StringToken.of("abc"), Token.of(Semicolon), Token.of(True), Token.of(Comma), Token.of(False)
                 ,Token.of(Comma), NumberToken.of(123),Token.of(Comma), Token.of(RightBracket));

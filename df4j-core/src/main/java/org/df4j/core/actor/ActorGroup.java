@@ -1,5 +1,8 @@
 package org.df4j.core.actor;
 
+import org.df4j.core.connector.Completion;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
@@ -10,7 +13,7 @@ import java.util.Set;
  * Component {@link AsyncProc}s plays the same role as basic blocks in a flow chart.
  */
 public class ActorGroup extends Node<ActorGroup> {
-    protected Set<Node> children = Collections.newSetFromMap( new IdentityHashMap<>());
+    protected final Set<Node> children = Collections.newSetFromMap( new IdentityHashMap<>());
     protected long totalChildCount = 0;
 
     /**
@@ -46,13 +49,16 @@ public class ActorGroup extends Node<ActorGroup> {
      * and leaves the pareng graph, if any.
      * @param node the node which leaves the group
      */
-    public void leave(Node node) {
-        synchronized(this) {
-            children.remove(node);
-            if (children.size() == 0) {
-                super.complete();
-            }
+    public synchronized void leave(Node node) {
+        children.remove(node);
+        if (children.size() == 0) {
+            super.complete();
         }
+    }
+
+    public synchronized void leaveExceptionally(Node node, Throwable ex) {
+        children.remove(node);
+        super.completeExceptionally(ex);
     }
 
     @Override
@@ -62,7 +68,7 @@ public class ActorGroup extends Node<ActorGroup> {
 
     @Override
     public boolean isAlive() {
-        return !super.isCompleted();
+        return !completion.isCompleted();
     }
 
     @Override
@@ -70,11 +76,11 @@ public class ActorGroup extends Node<ActorGroup> {
         StringBuilder sb = new StringBuilder();
         if (!isCompleted()) {
             sb.append("not completed");
-        } else if (this.completionException == null) {
+        } else if (completion.getCompletionException() == null) {
             sb.append("completed successfully");
         } else {
             sb.append("completed with exception: ");
-            sb.append(this.completionException.toString());
+            sb.append(completion.getCompletionException().toString());
         }
         sb.append("; child node count: "+children.size());
         return sb.toString();

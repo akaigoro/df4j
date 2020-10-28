@@ -19,6 +19,8 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 
 
 /**
@@ -29,6 +31,7 @@ import java.nio.channels.*;
 public class AsyncServerSocketChannel extends Actor
         implements CompletionHandler<AsynchronousSocketChannel, Long>
 {
+    private static final ExecutorService execService = ForkJoinPool.commonPool();
     private final Logger LOG = LoggerFactory. getLogger(this);
     private volatile AsynchronousServerSocketChannel assc;
     /** limits the number of simultaneously existing connections */
@@ -41,7 +44,7 @@ public class AsyncServerSocketChannel extends Actor
         if (addr == null) {
             throw new NullPointerException();
         }
-        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(dataflow.getExecutorService());
+        AsynchronousChannelGroup group = AsynchronousChannelGroup.withThreadPool(execService);
         assc = AsynchronousServerSocketChannel.open(group);
         assc.bind(addr);
         LOG.info("AsyncServerSocketChannel("+addr+") created");

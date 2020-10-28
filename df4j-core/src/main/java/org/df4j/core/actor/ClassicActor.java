@@ -29,17 +29,17 @@ public abstract class ClassicActor<T> extends Actor implements OutMessagePort<T>
 
     @Override
     protected void runAction() throws Throwable {
-        try {
-            T token = inp.remove();
-            this.nextMessageAction.runAction(token);
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
+        if (inp.isCompleted()) {
+            Throwable cause = inp.getCompletionException();
             if (cause == null) {
                 complete();
             } else {
                 completeExceptionally(cause);
             }
+            return;
         }
+        T token = inp.remove();
+        this.nextMessageAction.runAction(token);
     }
 
     protected void nextMessageAction(MessageAction<T> messageAction) {

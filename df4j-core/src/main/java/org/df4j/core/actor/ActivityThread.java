@@ -17,6 +17,16 @@ public class ActivityThread extends Thread implements Activity {
     }
 
     @Override
+    public boolean isCompleted() {
+        return !isAlive();
+    }
+
+    @Override
+    public Throwable getCompletionException() {
+        return null;
+    }
+
+    @Override
     public boolean await(long timeout){
         try {
             join(timeout);

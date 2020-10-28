@@ -1,9 +1,14 @@
 package org.df4j.core.actor;
 
-import org.df4j.core.connector.ScalarResultTrait;
+import org.df4j.core.connector.Completion;
+import org.df4j.core.connector.ScalarResult;
+import org.df4j.protocol.Scalar;
+import org.jetbrains.annotations.NotNull;
 
-public abstract class AsyncFunc<R> extends AsyncProc implements ScalarResultTrait<R> {
-    private R result;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public abstract class AsyncFunc<R> extends AsyncProc implements Scalar.Source<R>, Scalar.Publisher<R> {
 
     public AsyncFunc(ActorGroup parent) {
         super(parent);
@@ -14,19 +19,33 @@ public abstract class AsyncFunc<R> extends AsyncProc implements ScalarResultTrai
     }
 
     @Override
-    public R getResult() {
-        return result;
+    protected @NotNull Completion createCompletion() {
+        return new ScalarResult<R>();
+    }
+
+    protected ScalarResult<R> getResult() {
+        return (ScalarResult<R>) completion;
     }
 
     @Override
-    public void setResult(R result) {
-        this.result = result;
+    public R get() throws InterruptedException {
+        return getResult().get();
+    }
+
+    public R get(long timeout, TimeUnit unit) throws TimeoutException, InterruptedException {
+        return getResult().get(timeout, unit);
+    }
+
+    @Override
+    public void subscribe(Scalar.Subscriber<? super R> s) {
+        getResult().subscribe(s);
     }
 
     protected abstract R callAction() throws Throwable;
 
     @Override
     protected void runAction() throws Throwable {
-        result = callAction();
+        R result = callAction();
+        getResult().setResult(result);
     }
 }

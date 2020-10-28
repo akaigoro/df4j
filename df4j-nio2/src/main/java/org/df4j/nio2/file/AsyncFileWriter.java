@@ -22,11 +22,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Sequential file writer.
  */
 public class AsyncFileWriter extends AsyncFileChannel {
+
+    private static final ExecutorService execService = ForkJoinPool.commonPool();
 
     public AsyncFileWriter(ActorGroup actorGroup, AsynchronousFileChannel channel, int capacity) {
         super(actorGroup, channel, capacity);
@@ -38,7 +42,7 @@ public class AsyncFileWriter extends AsyncFileChannel {
 
     public AsyncFileWriter(ActorGroup actorGroup, Path path, int capacity) throws IOException {
         this(actorGroup,
-                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), actorGroup.getExecutorService()),
+                AsynchronousFileChannel.open(path, new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.WRITE)), execService),
                 capacity);
     }
 

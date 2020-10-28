@@ -12,16 +12,14 @@ package org.df4j.core.actor;
 import org.df4j.core.connector.Completion;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.*;
 
-public abstract class Node<T extends Node<T>> extends Completion implements Activity {
+public abstract class Node<T extends Node<T>> implements Activity {
     public final long seqNum;
-    protected final ActorGroup actorGroup;
     private Executor executor;
-    private ExecutorService executorService;
-    private Timer timer;
+    protected final ActorGroup actorGroup;
+    protected Completion completion = createCompletion();
 
     protected Node() {
         this.actorGroup = null;
@@ -31,6 +29,26 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     protected Node(ActorGroup actorGroup) {
         this.actorGroup = actorGroup;
         seqNum = actorGroup.enter(this);
+    }
+
+    @NotNull
+    protected Completion createCompletion() {
+        return new Completion();
+    }
+
+    @Override
+    public Throwable getCompletionException() {
+        return completion.getCompletionException();
+    }
+
+    protected void complete() {
+        completion.complete();
+        leaveParent();
+    }
+
+    protected void completeExceptionally(Throwable ex) {
+        completion.completeExceptionally(ex);
+        leaveParentExceptionally(ex);
     }
 
     public ActorGroup getActorGroup() {
@@ -43,47 +61,14 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         }
     }
 
+    protected void leaveParentExceptionally(Throwable ex) {
+        if (actorGroup != null) {
+            actorGroup.leaveExceptionally(this, ex);
+        }
+    }
+
     public synchronized void setExecutor(Executor executor) {
         this.executor = executor;
-    }
-
-    public synchronized void setExecutorService(ExecutorService executorService) {
-        this.executorService = executorService;
-    }
-
-    public synchronized void setExecutorService(Executor executor) {
-        ExecutorService service = new AbstractExecutorService(){
-            @Override
-            public void execute(@NotNull Runnable command) {
-                executor.execute(command);
-            }
-
-            @Override
-            public void shutdown() {
-
-            }
-
-            @Override
-            public List<Runnable> shutdownNow() {
-                return null;
-            }
-
-            @Override
-            public boolean isShutdown() {
-                return false;
-            }
-
-            @Override
-            public boolean isTerminated() {
-                return false;
-            }
-
-            @Override
-            public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) {
-                return false;
-            }
-        };
-        setExecutor(service);
     }
 
     public synchronized Executor getExecutor() {
@@ -102,83 +87,10 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
         return executor;
     }
 
-    public synchronized ExecutorService getExecutorService() {
-        if (executorService == null) {
-            Executor executor = getExecutor();
-            if (executor instanceof ExecutorService) {
-                executorService = (ExecutorService)executor;
-                return executorService;
-            }
-            executorService = new AbstractExecutorService(){
-                @Override
-                public void execute(@NotNull Runnable command) {
-                    executor.execute(command);
-                }
-
-                @Override
-                public void shutdown() {}
-
-                @Override
-                public List<Runnable> shutdownNow() {
-                    return null;
-                }
-
-                @Override
-                public boolean isShutdown() {
-                    return false;
-                }
-
-                @Override
-                public boolean isTerminated() {
-                    return false;
-                }
-
-                @Override
-                public boolean awaitTermination(long timeout, @NotNull TimeUnit unit) {
-                    return false;
-                }
-            };
-        }
-        return executorService;
-    }
-
-    public void setTimer(Timer timer) {
-        synchronized(this) {
-            this.timer = timer;
-        }
-    }
-
-    public Timer getTimer() {
-        synchronized(this) {
-            if (timer != null) {
-                return timer;
-            } else if (actorGroup != null) {
-                return timer = actorGroup.getTimer();
-            } else {
-                return timer = getSingletonTimer();
-            }
-        }
-    }
-
-    @Override
-    public void complete() {
-        super.complete();
-        if (actorGroup != null) {
-            actorGroup.leave(this);
-        }
-    }
-
-    public void completeExceptionally(Throwable t) {
-        super.completeExceptionally(t);
-        if (actorGroup != null) {
-            actorGroup.completeExceptionally(t);
-        }
-    }
-
     private static Timer singletonTimer;
 
     @NotNull
-    public static Timer getSingletonTimer() {
+    public static Timer getTimer() {
         Timer res = singletonTimer;
         if (res == null) {
             synchronized (ActorGroup.class) {
@@ -194,5 +106,27 @@ public abstract class Node<T extends Node<T>> extends Completion implements Acti
     @Override
     public String toString() {
         return "(#"+seqNum+')'+super.toString();
+    }
+
+    public boolean isCompleted() {
+        return completion.isCompleted();
+    }
+
+    public boolean isCompletedExceptionally() {
+        return completion.isCompletedExceptionally();
+    }
+
+    @Override
+    public boolean isAlive() {
+        return !completion.isCompleted();
+    }
+    @Override
+    public void await() throws InterruptedException {
+        completion.await();
+    }
+
+    @Override
+    public boolean await(long timeout) throws InterruptedException {
+        return completion.await(timeout);
     }
 }

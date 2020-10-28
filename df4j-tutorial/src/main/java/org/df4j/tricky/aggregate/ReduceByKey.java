@@ -16,11 +16,13 @@ package org.df4j.tricky.aggregate;
  * limitations under the License.
  */
 
-import org.df4j.core.connector.ScalarResultTrait;
 import org.df4j.core.actor.ClassicActor;
 import org.df4j.core.util.Pair;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
 /**
@@ -28,15 +30,17 @@ import java.util.function.BiFunction;
  * @param <K>
  */
 public final class ReduceByKey<K, V> {
-  private final BiFunction<V,V,V> reducer;
+  final BiFunction<V,V,V> reducer;
   protected final ConcurrentHashMap<K,ReducingActor> actors = new ConcurrentHashMap<>();
 
   public ReduceByKey(BiFunction<V,V,V> reducer) {
     this.reducer = reducer;
   }
 
-  public void reduceByKey(Pair<K,V> msg) {
-    ReducingActor actor = actors.computeIfAbsent(msg.getKey(), (key) -> {ReducingActor res = new ReducingActor(key); res.start(); return res;});
+  public void reduceByKey(K key, V value) {
+    Pair<K, V> msg = new Pair<>(key, value);
+    ReducingActor actor = actors.computeIfAbsent(key,
+            (key1) -> new ReducingActor(key1));
     actor.onNext(msg);
   }
 
@@ -46,23 +50,14 @@ public final class ReduceByKey<K, V> {
     }
   }
 
-  class ReducingActor extends ClassicActor<Pair<K,V>> implements ScalarResultTrait<Pair<K,V>> {
+  class ReducingActor extends ClassicActor<Pair<K, V>> {
     private V state;
-    private Pair<K,V> result;
+    private Pair<K, V> result;
     private final K key;
 
     ReducingActor(K key) {
       this.key = key;
-    }
-
-    @Override
-    public void setResult(Pair<K, V> result) {
-      this.result = result;
-    }
-
-    @Override
-    public Pair<K, V> getResult() {
-      return result;
+      start();
     }
 
     @Override
@@ -76,12 +71,16 @@ public final class ReduceByKey<K, V> {
     }
 
     @Override
-    public synchronized void complete() {
-      if (isCompleted()) {
-        return;
+    public synchronized void whenComplete() {
+      this.result = new Pair<>(key, state);
+    }
+
+    public Pair<K, V> get(long timeout, @NotNull TimeUnit unit) throws TimeoutException, InterruptedException {
+      boolean ok = await(timeout, unit);
+      if (!ok) {
+        throw new TimeoutException();
       }
-      setResult(new Pair<>(key, state));
-      super.complete();
+      return result;
     }
   }
 }

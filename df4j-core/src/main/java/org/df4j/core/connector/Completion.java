@@ -1,6 +1,7 @@
 package org.df4j.core.connector;
 
 import org.df4j.protocol.Completable;
+import org.df4j.protocol.SimpleSubscription;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -28,7 +29,7 @@ public class Completion implements CompletionI {
         return completionException;
     }
 
-    public LinkedList<CompletionSubscription> getSubscriptions() {
+    protected LinkedList<CompletionSubscription> getSubscriptions() {
         return subscriptions;
     }
 
@@ -93,15 +94,7 @@ public class Completion implements CompletionI {
      * completes this {@link Completable} normally
      */
     public void complete() {
-        whenComplete();
         _complete(null);
-    }
-
-    protected void whenComplete() {
-    }
-
-    protected void whenError(Throwable e) {
-        whenComplete();
     }
 
     /**
@@ -114,23 +107,18 @@ public class Completion implements CompletionI {
         if (e == null) {
             throw new IllegalArgumentException();
         }
-        whenError(e);
         _complete(e);
     }
 
     /**
      * waits this {@link Completable} to complete
      */
-    public synchronized void await() {
-        try {
-            while (!completed) {
-                wait();
-            }
-            if (completionException != null) {
-                throw new CompletionException(completionException);
-            }
-        } catch (InterruptedException ie) {
-            throw new CompletionException(ie);
+    public synchronized void await() throws InterruptedException {
+        while (!completed) {
+            wait();
+        }
+        if (completionException != null) {
+            throw new CompletionException(completionException);
         }
     }
 
@@ -140,29 +128,25 @@ public class Completion implements CompletionI {
      * @return true if completed;
      *         false if timout reached
      */
-    public synchronized boolean await(long timeoutMillis) {
+    public synchronized boolean await(long timeoutMillis) throws InterruptedException {
         long targetTime = System.currentTimeMillis()+timeoutMillis;
-        try {
-            for (;;) {
-                if (completed) {
-                    if (completionException == null) {
-                        return true;
-                    } else {
-                        throw new CompletionException(completionException);
-                    }
+        for (;;) {
+            if (completed) {
+                if (completionException == null) {
+                    return true;
+                } else {
+                    throw new CompletionException(completionException);
                 }
-                if (timeoutMillis <= 0) {
-                    return false;
-                }
-                wait(timeoutMillis);
-                timeoutMillis = targetTime - System.currentTimeMillis();
             }
-        } catch (InterruptedException e) {
-            throw new CompletionException(e);
+            if (timeoutMillis <= 0) {
+                return false;
+            }
+            wait(timeoutMillis);
+            timeoutMillis = targetTime - System.currentTimeMillis();
         }
     }
 
-    public synchronized boolean await(long timeout, TimeUnit unit) {
+    public synchronized boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         long timeoutMillis = unit.toMillis(timeout);
         return await(timeoutMillis);
     }
@@ -188,4 +172,44 @@ public class Completion implements CompletionI {
         return sb.toString();
     }
 
+    static class CompletionSubscription implements SimpleSubscription {
+        private final Completion completion;
+        Completable.Subscriber subscriber;
+        private boolean cancelled;
+
+        protected CompletionSubscription(Completion completion, Completable.Subscriber subscriber) {
+            this.completion = completion;
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void cancel() {
+            synchronized (completion) {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
+                LinkedList<CompletionSubscription> subscriptions = completion.getSubscriptions();
+                if (subscriptions != null) {
+                    subscriptions.remove(this);
+                }
+            }
+        }
+
+        @Override
+        public boolean isCancelled() {
+            synchronized (completion) {
+                return cancelled;
+            }
+        }
+
+        void onComplete() {
+            Throwable completionException = completion.getCompletionException();
+            if (completionException == null) {
+                subscriber.onComplete();
+            } else {
+                subscriber.onError(completionException);
+            }
+        }
+    }
 }

@@ -9,7 +9,7 @@ import org.junit.Test;
 public class PortGroupTest {
 
     @Test
-    public void mergeTest1() {
+    public void mergeTest1() throws InterruptedException {
         PublisherActor prod1 = new PublisherActor(3,40);
         PublisherActor prod2 = new PublisherActor(5,40);
         MergeActor1 merger = new MergeActor1();
@@ -26,7 +26,7 @@ public class PortGroupTest {
     }
 
     @Test
-    public void mergeTest2() {
+    public void mergeTest2() throws InterruptedException {
         PublisherActor prod1 = new PublisherActor(3,40);
         PublisherActor prod2 = new PublisherActor(5,40);
         MergeActor2 merger = new MergeActor2();

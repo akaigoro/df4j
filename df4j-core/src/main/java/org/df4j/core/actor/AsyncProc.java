@@ -10,6 +10,7 @@
 package org.df4j.core.actor;
 
 import org.df4j.core.connector.Completion;
+import org.df4j.core.connector.ScalarResult;
 
 import java.util.ArrayList;
 
@@ -87,16 +88,24 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         _controlportUnblock();
     }
 
+    protected void whenComplete() {
+    }
+
+    protected void whenError(Throwable e) {
+        whenComplete();
+    }
+
     /**
      * finishes parent activity normally.
      */
     public void complete() {
         synchronized(this) {
-            if (isCompleted()) {
+            if (state == ActorState.Completed) {
                 return;
             }
             state = ActorState.Completed;
         }
+        whenComplete();
         super.complete();
     }
 
@@ -106,12 +115,18 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
      */
     public void completeExceptionally(Throwable ex) {
         synchronized(this) {
-            if (isCompleted()) {
+            if (completion.isCompleted()) {
                 return;
             }
             state = ActorState.Completed;
         }
-        super.completeExceptionally(ex);
+        whenError(ex);
+        completion.completeExceptionally(ex);
+        leaveParentExceptionally(ex);
+    }
+
+    public Throwable getCompletionException() {
+        return completion.getCompletionException();
     }
 
     /**
@@ -124,11 +139,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
     protected void fire() {
         _controlportBlock();
         getExecutor().execute(this::run);
-    }
-
-    @Override
-    public boolean isAlive() {
-        return !isCompleted();
     }
 
     protected void _controlportUnblock() {
@@ -274,7 +284,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
                 return;
             }
             port.ready = true;
-            if (isCompleted()) {
+            if (completion.isCompleted()) {
                 return;
             }
             setUnBlocked(port.portNum);
