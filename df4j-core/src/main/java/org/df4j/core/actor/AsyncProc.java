@@ -36,11 +36,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
     /** is not encountered as a parent's child */
     private boolean daemon;
     private final Transition transition = createTransition();
-
-    protected TransitionAll createTransition() {
-        return new TransitionAll();
-    }
-
     private ControlPort controlport = new ControlPort(this);
 
     protected AsyncProc(ActorGroup actorGroup) {
@@ -49,6 +44,10 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
 
     public AsyncProc() {
         this(new ActorGroup());
+    }
+
+    protected TransitionAll createTransition() {
+        return new TransitionAll();
     }
 
     public ActorState getState() {
@@ -216,6 +215,9 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         }
     }
 
+    /**
+     * fires when all ports are ready
+     */
     class TransitionAll implements Transition {
         private ArrayList<Port> ports = new ArrayList<>(4);
         protected int blockedPortsScale = 0;
@@ -309,6 +311,10 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             return transition;
         }
 
+        /**
+         * fires when any port is ready.
+         * Firing means enclosing port is unblocked.
+         */
         class TransitionAny extends TransitionAll {
             int allPortsScale = 0;
 

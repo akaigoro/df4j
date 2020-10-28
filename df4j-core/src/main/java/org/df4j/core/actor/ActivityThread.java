@@ -27,12 +27,8 @@ public class ActivityThread extends Thread implements Activity {
     }
 
     @Override
-    public boolean await(long timeout){
-        try {
-            join(timeout);
-        } catch (InterruptedException e) {
-            throw new CompletionException(e);
-        }
-        return !isAlive();
+    public boolean await(long timeout) throws InterruptedException {
+        join(timeout);
+        return isCompleted();
     }
 }

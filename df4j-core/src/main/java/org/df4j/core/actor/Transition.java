@@ -11,10 +11,6 @@ public interface Transition {
 
     AsyncProc getParentActor();
 
-    default ActorGroup getActorGroup() {
-        return getParentActor().getActorGroup();
-    }
-
     int registerPort(AsyncProc.Port port);
 
     void block(AsyncProc.Port port);

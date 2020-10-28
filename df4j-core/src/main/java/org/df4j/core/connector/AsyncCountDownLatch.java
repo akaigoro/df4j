@@ -21,9 +21,6 @@ public class AsyncCountDownLatch extends CountDownLatch
     }
 
     public void countDown() {
-        if (getCount() == 0) {
-            return;
-        }
         synchronized(this) {
             super.countDown();
             if (getCount() > 0) {

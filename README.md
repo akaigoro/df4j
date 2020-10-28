@@ -125,6 +125,12 @@ This module can be used independently of others. To use it, add maven dependency
  
  Version history
 -----------------
+2020/10/31
+version 8.4.
+universal method whenComplete(exception) introduced.
+class PortGroup is a port with child ports, unblocks when any child is unblocks.
+Package dataflow renaed to actor.
+
 2020/02/18
 version 8.3.
 Synchronization with ReentrantLocks of different levels replaced with plain synchronized(parentActor).

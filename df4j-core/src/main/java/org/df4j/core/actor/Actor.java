@@ -12,6 +12,7 @@ import java.util.TimerTask;
 public abstract class Actor extends AsyncProc {
     public static final int PORTS_ALL  = 0xFFFFFFFF;
     public static final int PORTS_NONE = 0x00000001;
+
     private int activePortsScale = PORTS_ALL;
     private volatile ThrowingRunnable nextAction;
     private TimerTask task;
@@ -97,17 +98,15 @@ public abstract class Actor extends AsyncProc {
      * Moves this actor from {@link ActorState#Suspended} state to {@link ActorState#Blocked} or {@link ActorState#Running}.
      * Ignored if current state is not {@link ActorState#Suspended}.
      */
-    public  void resume() {
-        synchronized(this) {
-            if (state != ActorState.Suspended) {
-                return;
-            }
-            if (this.task != null) {
-                this.task.cancel();
-                this.task = null;
-            }
-            _controlportUnblock();
+    public synchronized void resume() {
+        if (state != ActorState.Suspended) {
+            return;
         }
+        if (this.task != null) {
+            this.task.cancel();
+            this.task = null;
+        }
+        _controlportUnblock();
     }
 
     @Override
@@ -135,6 +134,9 @@ public abstract class Actor extends AsyncProc {
         }
     }
 
+    /**
+     * fires when all active ports are ready
+     */
     class TransitionSome extends TransitionAll {
 
         @Override
