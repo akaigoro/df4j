@@ -1,8 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.AsyncProc;
-import org.df4j.core.util.linked.LinkImpl;
-import org.df4j.core.util.linked.LinkedQueue;
+import org.df4j.core.util.LinkedQueue;
 import org.df4j.protocol.Flood;
 import org.df4j.protocol.OutMessagePort;
 import org.df4j.protocol.SimpleSubscription;
@@ -188,7 +187,7 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
         return tokens.size();
     }
 
-    protected class SubscriptionImpl extends LinkImpl implements SimpleSubscription {
+    protected class SubscriptionImpl implements SimpleSubscription {
         protected final Flood.Subscriber subscriber;
         private boolean cancelled = false;
 

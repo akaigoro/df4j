@@ -3,20 +3,18 @@ package org.df4j.core.port;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.actor.AsyncProc;
-import org.df4j.core.util.linked.LinkImpl;
-import org.df4j.core.util.linked.LinkedQueue;
+import org.df4j.core.util.LinkedQueue;
 import org.df4j.protocol.ReverseFlow;
 import org.reactivestreams.Publisher;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A passive input parameter.
  * Has room for single value.
  */
-public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consumer<T>, InpMessagePort<T> {
+public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consumer<T>{//}, InpMessagePort<T> {
     protected int capacity;
     private LinkedQueue<ProducerSubscription> activeSubscriptions = new LinkedQueue<>();
     private LinkedQueue<ProducerSubscription> passiveSubscriptions = new LinkedQueue<>();
@@ -88,45 +86,6 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         super.block();
     }
 
-    /**
-     * removes and returns incoming value if it is present
-     * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
-     */
-    public synchronized T poll() {
-        T res;
-        if (tokens.isEmpty()) {
-            return null;
-        }
-        res = tokens.poll();
-        notifyAll();
-
-        ProducerSubscription client = activeSubscriptions.peek();
-        if (client == null) {
-            if (tokens.isEmpty() && !completed) {
-                block();
-            }
-            return res;
-        }
-        ReverseFlow.Producer<T> subscriber = client.producer;
-        if (!subscriber.isCompleted()) {
-            T token = subscriber.remove();
-            if (token == null) {
-                subscriber.onError(new IllegalArgumentException());
-            }
-            tokens.add(token);
-            client.remainedRequests--;
-            if (client.remainedRequests == 0) {
-                activeSubscriptions.remove(client);
-                passiveSubscriptions.add(client);
-            }
-        } else {
-            completed = true;
-            completionException = subscriber.getCompletionException();
-        }
-        unblock();
-        return res;
-    }
-
     public void add(T token) {
         if (token == null) {
             throw new IllegalArgumentException();
@@ -163,14 +122,41 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
                 throw new IllegalStateException();
             }
         }
-        return poll();
+        T res = tokens.poll();
+        notifyAll();
+        ProducerSubscription client = activeSubscriptions.poll();
+        if (client == null) {
+            if (tokens.isEmpty() && !completed) {
+                block();
+            }
+            return res;
+        }
+        ReverseFlow.Producer<T> subscriber = client.producer;
+        if (!subscriber.isCompleted()) {
+            T token = subscriber.remove();
+            if (token == null) {
+                subscriber.onError(new IllegalArgumentException());
+            }
+            tokens.add(token);
+            client.remainedRequests--;
+            if (client.remainedRequests == 0) {
+                passiveSubscriptions.add(client);
+            } else {
+                activeSubscriptions.add(client);
+            }
+        } else {
+            completed = true;
+            completionException = subscriber.getCompletionException();
+        }
+        unblock();
+        return res;
     }
 
     public int size() {
         return tokens.size();
     }
 
-    protected class ProducerSubscription extends LinkImpl implements ReverseFlow.ReverseFlowSubscription<T> {
+    protected class ProducerSubscription implements ReverseFlow.ReverseFlowSubscription<T> {
         protected final ReverseFlow.Producer<T> producer;
         private long remainedRequests = 0;
         private boolean cancelled = false;

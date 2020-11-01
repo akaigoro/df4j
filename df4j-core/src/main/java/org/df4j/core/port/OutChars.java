@@ -2,8 +2,7 @@ package org.df4j.core.port;
 
 import org.df4j.core.actor.AsyncProc;
 import org.df4j.core.util.CharBuffer;
-import org.df4j.core.util.linked.LinkImpl;
-import org.df4j.core.util.linked.LinkedQueue;
+import org.df4j.core.util.LinkedQueue;
 import org.df4j.protocol.CharFlow;
 import org.reactivestreams.Subscription;
 
@@ -135,7 +134,7 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
         }
     }
 
-    protected class SubscriptionImpl extends LinkImpl implements Subscription {
+    protected class SubscriptionImpl implements Subscription {
         protected final CharFlow.Subscriber subscriber;
         private long remainedRequests = 0;
         private boolean cancelled = false;

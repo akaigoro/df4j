@@ -1,8 +1,7 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.AsyncProc;
-import org.df4j.core.util.linked.LinkImpl;
-import org.df4j.core.util.linked.LinkedQueue;
+import org.df4j.core.util.LinkedQueue;
 import org.df4j.protocol.Flow;
 import org.df4j.protocol.OutMessagePort;
 import org.reactivestreams.Subscription;
@@ -207,7 +206,7 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     }
 
     protected class
-    SubscriptionImpl extends LinkImpl implements Subscription {
+    SubscriptionImpl implements Subscription {
         protected final Subscriber subscriber;
         private AtomicLong remainedRequests = new AtomicLong(0);
         private boolean cancelled = false;

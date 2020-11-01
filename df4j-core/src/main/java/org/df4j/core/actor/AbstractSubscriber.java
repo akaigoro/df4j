@@ -4,10 +4,8 @@ import org.df4j.core.port.InpFlow;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-
 /**
- * Actor according to Carl Hewitt
- * Has a predefined input port.
+ * Actor according to Carl Hewitt: has single predefined input port.
  * Additional ports can be added, though.
  * @param <T> Type of input messages
  */

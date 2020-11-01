@@ -1,5 +1,6 @@
 package org.df4j.core.util.linked;
 
+import org.df4j.core.util.LinkedQueue;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,11 +12,11 @@ public class LinkedIteratorTest {
         Assert.assertEquals("[]", queue.toString());
         Assert.assertEquals(0, queue.size());
         MyItem item22 = new MyItem(22);
-        queue.offer(item22);
+        queue.add(item22);
         Assert.assertEquals(1, queue.size());
         Assert.assertEquals("[22]", queue.toString());
         MyItem item33 = new MyItem(33);
-        queue.offer(item33);
+        queue.add(item33);
         Assert.assertEquals(2, queue.size());
         Assert.assertEquals("[22, 33]", queue.toString());
         queue.remove(item22);
@@ -26,7 +27,7 @@ public class LinkedIteratorTest {
         Assert.assertEquals(0, queue.size());
     }
 
-    static class MyItem extends LinkImpl {
+    static class MyItem {
         final int value;
 
         MyItem(int value) {
