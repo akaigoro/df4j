@@ -110,7 +110,13 @@ public class AsyncArrayBlockingQueuePipelineTest {
     public void testMix() throws InterruptedException {
         test1steps((int k, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) ->
 //                k % 2 == 0 ? new ThreadProcessor(inp, out) : new AsyncProcessor(k, inp, out));
-        k >= n1 ? new ThreadProcessor(inp, out) : new AsyncProcessor(k, inp, out));
+                k >= n1 ? new ThreadProcessor(inp, out) : new AsyncProcessor(k, inp, out));
+    }
+
+    @Test
+    public void testMix2() throws InterruptedException {
+        test2steps((int k, AsyncArrayBlockingQueue<Integer> inp, AsyncArrayBlockingQueue<Integer> out) ->
+                k % 2 == 0 ? new ThreadProcessor(inp, out) : new AsyncProcessor(k, inp, out));
     }
 
     @FunctionalInterface

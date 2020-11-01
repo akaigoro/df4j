@@ -37,24 +37,20 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
     }
 
     @Override
-    public boolean isCompleted() {
-        synchronized(transition) {
-            return completed && value == null;
-        }
+    public synchronized boolean isCompleted() {
+        return completed && value == null;
     }
 
     @Override
-    public Throwable getCompletionException() {
-        synchronized(transition) {
-            return completionException;
-        }
+    public synchronized Throwable getCompletionException() {
+        return completionException;
     }
 
     public void onNext(T message) {
         if (message == null) {
             throw new IllegalArgumentException();
         }
-        synchronized(transition) {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
@@ -70,9 +66,9 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
         subscription.request(1);
     }
 
-    public void _onComplete(Throwable throwable) {
+    public synchronized void _onComplete(Throwable throwable) {
         ReverseFlow.ReverseFlowSubscription sub;
-        synchronized(transition) {
+        synchronized(this) {
             if (isCompleted()) {
                 return;
             }
@@ -89,13 +85,11 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
     }
 
     @Override
-    public T remove() {
-        synchronized(transition) {
-            T res = value;
-            value = null;
-            unblock();
-            return res;
-        }
+    public synchronized T remove() {
+        T res = value;
+        value = null;
+        unblock();
+        return res;
     }
 
 
@@ -103,14 +97,12 @@ public class OutChannel<T> extends CompletablePort implements OutMessagePort<T>,
      * called by {@link ReverseFlow.Consumer} when it is completed and asks to not disturb.
      *
      */
-    public void cancel() {
-        synchronized(transition) {
-            if (subscription == null) {
-                return;
-            }
-            subscription.cancel();
-            this.subscription = null;
-            unblock();
+    public synchronized void cancel() {
+        if (subscription == null) {
+            return;
         }
+        subscription.cancel();
+        this.subscription = null;
+        unblock();
     }
 }

@@ -1,4 +1,4 @@
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
 import org.df4j.core.activities.ConsumerActor;
 import org.df4j.core.activities.ProducerActor;

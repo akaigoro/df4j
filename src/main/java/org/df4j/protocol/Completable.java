@@ -44,7 +44,9 @@ public class Completable {
          * @return true if completed;
          *         false if timout reached
          */
-        boolean await(long timeoutMillis) throws InterruptedException;
+        default boolean await(long timeout) throws InterruptedException {
+            return await(timeout, TimeUnit.MILLISECONDS);
+        }
 
         /**
          * waits this {@link Completable} to complete until timeout

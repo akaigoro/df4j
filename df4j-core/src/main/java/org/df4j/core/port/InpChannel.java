@@ -41,18 +41,14 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
     }
 
     public boolean isCompleted() {
-        synchronized(transition) {
-            return completed && tokens.size() == 0;
-        }
+        return completed && tokens.size() == 0;
     }
 
     public Throwable getCompletionException() {
-        synchronized(transition) {
-            if (isCompleted()) {
-                return completionException;
-            } else {
-                return null;
-            }
+        if (isCompleted()) {
+            return completionException;
+        } else {
+            return null;
         }
     }
 
@@ -65,118 +61,70 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         new ProducerSubscription(publisher);
     }
 
-    public boolean offer(T token) {
-        synchronized(transition) {
-            if (completed) {
-                return false;
-            }
-            if (_tokensFull()) {
-                return false;
-            }
-            tokens.add(token);
-            unblock();
-            return true;
+    public synchronized boolean offer(T token) {
+        if (completed) {
+            return false;
         }
+        if (_tokensFull()) {
+            return false;
+        }
+        tokens.add(token);
+        unblock();
+        return true;
     }
 
     /**
      * @return the value received from a subscriber, or null if no value was received yet or that value has been removed.
      */
-    public T current() {
-        synchronized(transition) {
-            return tokens.peek();
-        }
+    public synchronized T current() {
+        return tokens.peek();
     }
 
     @Override
-    public void block() {
-        synchronized(transition) {
-            if (completed) {
-                return;
-            }
-            super.block();
+    public synchronized void block() {
+        if (completed) {
+            return;
         }
+        super.block();
     }
 
     /**
      * removes and returns incoming value if it is present
      * @return the value received from a subscriber, or null if no value has been received yet or that value has been removed.
      */
-    public T poll() {
-        synchronized(transition) {
-            T res;
-            if (tokens.isEmpty()) {
-                return null;
-            }
-            res = tokens.poll();
-            transition.notifyAll();
+    public synchronized T poll() {
+        T res;
+        if (tokens.isEmpty()) {
+            return null;
+        }
+        res = tokens.poll();
+        notifyAll();
 
-            ProducerSubscription client = activeSubscriptions.peek();
-            if (client == null) {
-                if (tokens.isEmpty() && !completed) {
-                    block();
-                }
-                return res;
+        ProducerSubscription client = activeSubscriptions.peek();
+        if (client == null) {
+            if (tokens.isEmpty() && !completed) {
+                block();
             }
-            ReverseFlow.Producer<T> subscriber = client.producer;
-            if (!subscriber.isCompleted()) {
-                T token = subscriber.remove();
-                if (token == null) {
-                    subscriber.onError(new IllegalArgumentException());
-                }
-                tokens.add(token);
-                client.remainedRequests--;
-                if (client.remainedRequests == 0) {
-                    activeSubscriptions.remove(client);
-                    passiveSubscriptions.add(client);
-                }
-            } else {
-                completed = true;
-                completionException = subscriber.getCompletionException();
-            }
-            unblock();
             return res;
         }
-    }
-
-    /**
-     *  If there are subscribers waiting for tokens,
-     *  then the first subscriber is removed from the subscribers queue and is fed with the token,
-     *  otherwise, the token is inserted into this queue, waiting up to the
-     *  specified wait time if necessary for space to become available.
-     *
-     * @param token the element to add
-     * @param timeout how long to wait before giving up, in units of
-     *        {@code unit}
-     * @param unit a {@code TimeUnit} determining how to interpret the
-     *        {@code timeout} parameter
-     * @return {@code true} if successful, or {@code false} if
-     *         the specified waiting time elapses before space is available
-     * @throws InterruptedException if interrupted while waiting
-     */
-    public boolean offer(T token, long timeout, TimeUnit unit) throws InterruptedException {
-        if (token == null) {
-            throw new NullPointerException();
-        }
-        long millis = unit.toMillis(timeout);
-        synchronized(transition) {
-            for (;;) {
-                if (completed) {
-                    return false;
-                }
-                if (offer(token)) {
-                    return true;
-                }
-                if (millis <= 0) {
-                    return false;
-                }
-                long targetTime = System.currentTimeMillis() + millis;
-                if (millis > 0) {
-                    wait(millis);
-                    millis = targetTime - System.currentTimeMillis();
-                }
+        ReverseFlow.Producer<T> subscriber = client.producer;
+        if (!subscriber.isCompleted()) {
+            T token = subscriber.remove();
+            if (token == null) {
+                subscriber.onError(new IllegalArgumentException());
             }
+            tokens.add(token);
+            client.remainedRequests--;
+            if (client.remainedRequests == 0) {
+                activeSubscriptions.remove(client);
+                passiveSubscriptions.add(client);
+            }
+        } else {
+            completed = true;
+            completionException = subscriber.getCompletionException();
         }
+        unblock();
+        return res;
     }
 
     public void add(T token) {
@@ -188,20 +136,18 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         }
     }
 
-    public void put(T token) throws InterruptedException {
+    public synchronized void put(T token) throws InterruptedException {
         if (token == null) {
             throw new NullPointerException();
         }
-        synchronized(transition) {
-            for (;;) {
-                if (completed) {
-                    throw new IllegalStateException();
-                }
-                if (offer(token)) {
-                    return;
-                }
-                transition.wait();
+        for (;;) {
+            if (completed) {
+                throw new IllegalStateException();
             }
+            if (offer(token)) {
+                return;
+            }
+            wait();
         }
     }
 
@@ -209,17 +155,15 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
      * @return the value received from a subscriber
      * @throws IllegalStateException if no value has been received yet or that value has been removed.
      */
-    public T remove() throws CompletionException {
-        synchronized(transition) {
-            if (tokens.isEmpty()) {
-                if (completed) {
-                    throw new CompletionException("Port already completed", completionException);
-                } else {
-                    throw new IllegalStateException();
-                }
+    public synchronized T remove() throws CompletionException {
+        if (tokens.isEmpty()) {
+            if (completed) {
+                throw new CompletionException("Port already completed", completionException);
+            } else {
+                throw new IllegalStateException();
             }
-            return poll();
         }
+        return poll();
     }
 
     public int size() {
@@ -233,7 +177,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
 
         ProducerSubscription(ReverseFlow.Producer<T> producer) {
             this.producer = producer;
-            synchronized(transition) {
+            synchronized(this) {
                 passiveSubscriptions.add(this);
             }
             producer.onSubscribe(this);
@@ -243,7 +187,7 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             PortAdapter<T> adapter = new PortAdapter<T>(getParentActor().getActorGroup());
             publisher.subscribe(adapter.inp);
             this.producer = adapter.out;
-            synchronized(transition) {
+            synchronized(this) {
                 passiveSubscriptions.add(this);
             }
             adapter.out.onSubscribe(this);
@@ -254,30 +198,28 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
          * @param n the increment of demand
          */
         @Override
-        public void request(long n) {
+        public synchronized void request(long n) {
             if (n <= 0) {
                 producer.onError(new IllegalArgumentException());
                 return;
             }
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
-                }
-                if (completed) {
-                    return;
-                }
-                boolean wasActive = remainedRequests > 0;
-                remainedRequests += n;
-                if (wasActive) {
-                    return; //  is active already
-                }
-                if (transfer()) return;
-                if (remainedRequests > 0) {
-                    passiveSubscriptions.remove(this);
-                    activeSubscriptions.add(this);
-                }
-                unblock();
+            if (cancelled) {
+                return;
             }
+            if (completed) {
+                return;
+            }
+            boolean wasActive = remainedRequests > 0;
+            remainedRequests += n;
+            if (wasActive) {
+                return; //  is active already
+            }
+            if (transfer()) return;
+            if (remainedRequests > 0) {
+                passiveSubscriptions.remove(this);
+                activeSubscriptions.add(this);
+            }
+            unblock();
         }
 
         private boolean transfer() {
@@ -304,14 +246,12 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
             return InpChannel.this.offer(token);
         }
 
-        private void _onComplete(Throwable throwable) {
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
-                }
-                cancelled = true;
-                InpChannel.this._onComplete(throwable);
+        private synchronized void _onComplete(Throwable throwable) {
+            if (cancelled) {
+                return;
             }
+            cancelled = true;
+            InpChannel.this._onComplete(throwable);
         }
 
         @Override
@@ -325,10 +265,8 @@ public class InpChannel<T> extends CompletablePort implements ReverseFlow.Consum
         }
 
         @Override
-        public void cancel() {
-            synchronized(transition) {
-                _cancel();
-            }
+        public synchronized void cancel() {
+            _cancel();
         }
 
         private boolean _cancel() {

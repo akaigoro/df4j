@@ -1,6 +1,6 @@
 package org.df4j.tricky.aggregate;
 
-import org.df4j.core.actor.ClassicActor;
+import org.df4j.core.actor.AbstractSubscriber;
 import org.df4j.core.util.Pair;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
-class ReducingActor<K, V> extends ClassicActor<Pair<K, V>> {
+class ReducingActor<K, V> extends AbstractSubscriber<Pair<K, V>> {
     private final K key;
     private final BiFunction<V, V, V> reducer;
     private V state;
@@ -21,7 +21,7 @@ class ReducingActor<K, V> extends ClassicActor<Pair<K, V>> {
     }
 
     @Override
-    protected void runAction(Pair<K, V> msg) {
+    protected void whenNext(Pair<K, V> msg) {
         state = msg.getValue();
         nextMessageAction(this::reduce);
     }

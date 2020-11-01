@@ -1,8 +1,7 @@
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;
-import org.df4j.core.actor.ActorGroup;
 import org.junit.Test;
 
 public class ActorGroupChildrenTest {

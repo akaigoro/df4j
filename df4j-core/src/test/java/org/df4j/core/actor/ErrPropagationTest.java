@@ -1,7 +1,5 @@
-package org.df4j.core.dataflow;
+package org.df4j.core.actor;
 
-import org.df4j.core.actor.AsyncFunc;
-import org.df4j.core.actor.ActorGroup;
 import org.junit.Assert;
 import org.junit.Test;
 

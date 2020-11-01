@@ -19,25 +19,21 @@ public class CompletablePort extends AsyncProc.Port {
         super(parent, false);
     }
 
-    public boolean isCompleted() {
-        synchronized(transition) {
-            return completed;
-        }
+    public synchronized boolean isCompleted() {
+        return completed;
     }
 
     public Throwable getCompletionException() {
         return completionException;
     }
 
-    protected  void _onComplete(Throwable throwable) {
-        synchronized(transition) {
-            if (completed) {
-                return;
-            }
-            this.completed = true;
-            this.completionException = throwable;
-            unblock();
+    protected synchronized void _onComplete(Throwable throwable) {
+        if (completed) {
+            return;
         }
+        this.completed = true;
+        this.completionException = throwable;
+        unblock();
     }
 
     public void onComplete() {

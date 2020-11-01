@@ -9,9 +9,9 @@ import java.util.concurrent.TimeUnit;
  *  A {@link CountDownLatch} extended with asynchronous interface to publish the completion signal.
  */
 public class AsyncCountDownLatch extends CountDownLatch
-        implements Completable.Source,
-        Completable.Publisher {
-    protected Completion completionSignal = new Completion();
+        implements Completable.Source, Completable.Publisher
+{
+    private Completion completionSignal = new Completion();
 
     public AsyncCountDownLatch(int count) {
         super(count);
@@ -31,7 +31,7 @@ public class AsyncCountDownLatch extends CountDownLatch
     }
 
     public boolean isCompleted() {
-        return getCount()==0;
+        return completionSignal.isCompleted();
     }
 
     @Override
@@ -46,16 +46,6 @@ public class AsyncCountDownLatch extends CountDownLatch
 
     @Override
     public boolean isCompletedExceptionally() {
-        return false;
-    }
-
-    @Override
-    public boolean await(long timeoutMillis) {
-        return false;
-    }
-
-    @Override
-    public boolean await(long timeout, TimeUnit unit) {
         return false;
     }
 }

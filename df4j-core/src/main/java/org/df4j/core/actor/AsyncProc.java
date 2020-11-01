@@ -46,8 +46,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         this(new ActorGroup());
     }
 
-    protected TransitionAll createTransition() {
-        return new TransitionAll();
+    protected Transition createTransition() {
+        return new Transition();
     }
 
     public ActorState getState() {
@@ -86,9 +86,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
         _controlportUnblock();
     }
 
-    protected void whenComplete(Throwable e) {
-    }
-
     /**
      * finishes parent activity exceptionally.
      * @param ex the exception
@@ -100,9 +97,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             }
             state = ActorState.Completed;
         }
-        whenComplete(ex);
-        completion.complete(ex);
-        leaveParent(ex);
+        super.complete(ex);
     }
 
     public Throwable getCompletionException() {
@@ -182,10 +177,8 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             this(transition, false);
         }
 
-        public boolean isReady() {
-            synchronized(transition) {
-                return ready;
-            }
+        public synchronized boolean isReady() {
+            return ready;
         }
 
         /**
@@ -216,9 +209,12 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
     }
 
     /**
+     * Analogue of Petri Net's transition.
+     * Ports are like places, but can belong to only one transition.
+     * Tokens are tokens :).
      * fires when all ports are ready
      */
-    class TransitionAll implements Transition {
+    class Transition {
         private ArrayList<Port> ports = new ArrayList<>(4);
         protected int blockedPortsScale = 0;
 
@@ -230,7 +226,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             return blockedPortsScale &= ~(1<<portNum);
         }
 
-        @Override
         public synchronized int registerPort(Port port) {
             final int portNum = ports.size();
             if (portNum > MAX_PORT_NUM) {
@@ -243,7 +238,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             return portNum;
         }
 
-        @Override
         public AsyncProc getParentActor() {
             return AsyncProc.this;
         }
@@ -261,17 +255,20 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
          * If all ports become unblocked,
          * this block is submitted to the executor.
          */
-        @Override
-        public synchronized void unblock(Port port) {
-            if (port.ready) {
-                return;
+        public void unblock(Port port) {
+            boolean canFire;
+            synchronized (this) {
+                if (port.ready) {
+                    return;
+                }
+                port.ready = true;
+                if (completion.isCompleted()) {
+                    return;
+                }
+                setUnBlocked(port.portNum);
+                canFire = canFire();
             }
-            port.ready = true;
-            if (completion.isCompleted()) {
-                return;
-            }
-            setUnBlocked(port.portNum);
-            if (canFire()) {
+            if (canFire) {
                 callFire();
             }
         }
@@ -280,7 +277,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
             fire();
         }
 
-        @Override
         public synchronized void block(Port port) {
             if (!port.ready) {
                 return;
@@ -315,7 +311,7 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
          * fires when any port is ready.
          * Firing means enclosing port is unblocked.
          */
-        class TransitionAny extends TransitionAll {
+        class TransitionAny extends Transition {
             int allPortsScale = 0;
 
             @Override
@@ -343,5 +339,36 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
                 }
             }
         }
+    }
+
+    /**
+     * applicable to {@link AsyncProc} also.
+     */
+    public enum ActorState {
+        /**
+         * created but not yet started
+         */
+        Created,
+
+        /**
+         *  started but some ports are blocked
+         */
+        Blocked,
+
+        /**
+         * started and all port are ready
+         */
+        Running,
+
+        /**
+         * suspended by call to {@link Actor#delay(long)} or  {@link Actor#suspend()}
+         */
+        Suspended,
+
+        /**
+         * completed normally or exceptionally.
+         * Will never run again.
+         */
+        Completed,
     }
 }

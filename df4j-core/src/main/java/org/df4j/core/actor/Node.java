@@ -15,20 +15,23 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Timer;
 import java.util.concurrent.*;
 
+/**
+ * A node in dataflow graph.
+ * This is a basic class for both AsyncProc and ActorGroup
+ * @param <T>
+ */
 public abstract class Node<T extends Node<T>> implements Activity {
-    public final long seqNum;
-    private Executor executor;
-    protected final ActorGroup actorGroup;
     protected Completion completion = createCompletion();
+    protected final ActorGroup actorGroup; // parent node
+    private Executor executor;
 
     protected Node() {
         this.actorGroup = null;
-        seqNum = -1;
     }
 
     protected Node(ActorGroup actorGroup) {
         this.actorGroup = actorGroup;
-        seqNum = actorGroup.enter(this);
+        actorGroup.enter(this);
     }
 
     @NotNull
@@ -42,12 +45,16 @@ public abstract class Node<T extends Node<T>> implements Activity {
     }
 
     protected void complete(Throwable ex) {
+        whenComplete(ex);
         completion.complete(ex);
         leaveParent(ex);
     }
 
     protected void complete() {
         complete(null);
+    }
+
+    protected void whenComplete(Throwable e) {
     }
 
     public ActorGroup getActorGroup() {
@@ -96,11 +103,6 @@ public abstract class Node<T extends Node<T>> implements Activity {
         return res;
     }
 
-    @Override
-    public String toString() {
-        return "(#"+seqNum+')'+super.toString();
-    }
-
     public boolean isCompleted() {
         return completion.isCompleted();
     }
@@ -119,7 +121,7 @@ public abstract class Node<T extends Node<T>> implements Activity {
     }
 
     @Override
-    public boolean await(long timeout) throws InterruptedException {
-        return completion.await(timeout);
+    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+        return completion.await(timeout, unit);
     }
 }

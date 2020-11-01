@@ -29,7 +29,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         if (completed) {
             subscription.onComplete(completionException);
         } else {
-            synchronized(transition) {
+            synchronized(this) {
                 subscriptions.add(subscription);
                 unblock();
             }
@@ -38,7 +38,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
     public void onNext(T message) {
         ScalarSubscription subscription;
-        synchronized(transition) {
+        synchronized(this) {
             subscription = subscriptions.remove();
             if (subscriptions.size() == 0) {
                 block();
@@ -49,7 +49,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
     protected void _onComplete(Throwable t) {
         Queue<ScalarSubscription> subscriptions;
-        synchronized(transition) {
+        synchronized(this) {
             if (completed) {
                 return;
             }
@@ -76,15 +76,13 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
         }
 
         @Override
-        public void cancel() {
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
-                }
-                cancelled = true;
-                subscriber = null;
-                subscriptions.remove(this);
+        public synchronized void cancel() {
+            if (cancelled) {
+                return;
             }
+            cancelled = true;
+            subscriber = null;
+            subscriptions.remove(this);
         }
 
         @Override
@@ -94,7 +92,7 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
 
         public void onNext(T message) {
             Scalar.Subscriber<? super T> subs;
-            synchronized(transition) {
+            synchronized(this) {
                 if (cancelled) {
                     return;
                 }
@@ -105,16 +103,13 @@ public class OutScalars<T> extends CompletablePort implements OutMessagePort<T>,
             subs.onSuccess(message);
         }
 
-        private Scalar.Subscriber<? super T> removeSubscriber() {
-            Scalar.Subscriber<? super T> subs;
-            synchronized(transition) {
-                if (cancelled) {
-                    return null;
-                }
-                cancelled = true;
-                subs = subscriber;
-                subscriber = null;
+        private synchronized Scalar.Subscriber<? super T> removeSubscriber() {
+            if (cancelled) {
+                return null;
             }
+            cancelled = true;
+            Scalar.Subscriber<? super T> subs = subscriber;
+            subscriber = null;
             return subs;
         }
 

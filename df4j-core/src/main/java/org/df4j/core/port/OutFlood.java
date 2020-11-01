@@ -40,13 +40,13 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
     @Override
     public void subscribe(Flood.Subscriber<? super T> subscriber) {
         SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
-        synchronized(transition) {
+        synchronized(this) {
             if (activeSubscribtions != null) {
                 activeSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
-        synchronized(transition) {
+        synchronized(this) {
             if (isCompleted()) {
                 subscription.onComplete();
             }
@@ -72,10 +72,8 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
         }
     }
 
-    public boolean isCompleted() {
-        synchronized(transition) {
-            return completed && tokens.size() == 0;
-        }
+    public synchronized boolean isCompleted() {
+        return completed && tokens.size() == 0;
     }
 
     /**
@@ -88,7 +86,7 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
             throw new NullPointerException();
         }
         SubscriptionImpl sub;
-        synchronized(transition) {
+        synchronized(this) {
             if (completed) {
                 return false;
             }
@@ -98,7 +96,7 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
                     return false;
                 }
                 tokens.add(token);
-                hasItemsEvent();
+                notifyAll();
                 if (_remainingCapacity() == 0) {
                     block();
                 }
@@ -115,10 +113,6 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
         }
     }
 
-    public void hasItemsEvent() {
-        transition.notifyAll();
-    }
-
     private void completAllSubscriptions() {
         for (;;) {
             SubscriptionImpl sub = activeSubscribtions.poll();
@@ -129,72 +123,64 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
         }
     }
 
-    public void _onComplete(Throwable cause) {
-        synchronized(transition) {
+    public synchronized void _onComplete(Throwable cause) {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        completionException = cause;
+        notifyAll();
+        if (tokens.size() > 0) {
+            return;
+        }
+        completAllSubscriptions();
+    }
+
+    public synchronized T poll() {
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                unblock();
+                return res;
+            }
             if (completed) {
-                return;
+                throw new CompletionException(completionException);
             }
-            completed = true;
-            completionException = cause;
-            hasItemsEvent();
-            if (tokens.size() > 0) {
-                return;
-            }
-            completAllSubscriptions();
+            return null;
         }
     }
 
-    public T poll() {
-        synchronized(transition) {
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
+    public synchronized T poll(long timeout, TimeUnit unit) throws InterruptedException {
+        long millis = unit.toMillis(timeout);
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                unblock();
+                return res;
+            }
+            if (completed) {
+                throw new CompletionException(completionException);
+            }
+            if (millis <= 0) {
                 return null;
             }
+            long targetTime = System.currentTimeMillis() + millis;
+            wait(millis);
+            millis = targetTime - System.currentTimeMillis();
         }
     }
 
-    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        synchronized(transition) {
-            long millis = unit.toMillis(timeout);
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                if (millis <= 0) {
-                    return null;
-                }
-                long targetTime = System.currentTimeMillis() + millis;
-                transition.wait(millis);
-                millis = targetTime - System.currentTimeMillis();
+    public synchronized T take() throws InterruptedException {
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                unblock();
+                return res;
             }
-        }
-    }
-
-    public T take() throws InterruptedException {
-        synchronized(transition) {
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                transition.wait();
+            if (completed) {
+                throw new CompletionException(completionException);
             }
+            wait();
         }
     }
 
@@ -210,22 +196,18 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
             this.subscriber = subscriber;
         }
 
-        public boolean isCancelled() {
-            synchronized(transition) {
-                return cancelled;
-            }
+        public synchronized boolean isCancelled() {
+            return cancelled;
         }
 
         @Override
-        public void cancel() {
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
-                }
-                cancelled = true;
-                if (activeSubscribtions != null) {
-                    activeSubscribtions.remove(this);
-                }
+        public synchronized void cancel() {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            if (activeSubscribtions != null) {
+                activeSubscribtions.remove(this);
             }
         }
 
@@ -241,7 +223,7 @@ public class OutFlood<T> extends CompletablePort implements OutMessagePort<T>, F
          * must be unlinked
          */
         private void onComplete() {
-            synchronized(transition) {
+            synchronized(this) {
                 if (cancelled) {
                     return;
                 }

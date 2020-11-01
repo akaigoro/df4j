@@ -21,31 +21,4 @@ public interface Activity extends Completable.Source {
      *          {@code false} otherwise.
      */
     boolean isAlive();
-
-    /**
-     *  Awaits the termination of this Completable instance in a blocking manner
-     *  and rethrows any exception, if any.
-     */
-    void await() throws InterruptedException;
-
-    /**
-     *  Awaits the termination of this Completable instance in a blocking manner with a specific timeout
-     *  and rethrows any exception emitted within the timeout window.
-     *
-     * @param timeout timeout in milliseconds
-     * @return true if this activity has ended.
-     */
-    boolean await(long timeout) throws InterruptedException;
-
-    /**
-     *  Awaits the termination of this Completable instance in a blocking manner with a specific timeout
-     *  and rethrows any exception emitted within the timeout window.
-     *
-     * @param timeout timeout in time units
-     * @param unit TimeUnit
-     * @return true if this activity has ended.
-     */
-    default boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-        return await(unit.toMillis(timeout));
-    }
 }

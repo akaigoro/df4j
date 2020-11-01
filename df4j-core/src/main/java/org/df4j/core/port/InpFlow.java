@@ -63,33 +63,27 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
         return res;
     }
 
-    public boolean isCompleted() {
-        synchronized(transition) {
-            return completed && tokens.isEmpty();
-        }
+    public synchronized boolean isCompleted() {
+        return completed && tokens.isEmpty();
     }
 
-    public T current() {
-        synchronized(transition) {
-            return tokens.peek();
-        }
+    public synchronized T current() {
+        return tokens.peek();
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
-        synchronized(transition) {
-            if (this.subscription != null) {
-                subscription.cancel(); // this is dictated by the spec.
-                return;
-            }
-            this.subscription = subscription;
-            if (tokens.isEmpty()) {
-                block();
-            }
-            requestedCount = remainingCapacity();
-            if (requestedCount == 0) {
-                return;
-            }
+    public synchronized void onSubscribe(Subscription subscription) {
+        if (this.subscription != null) {
+            subscription.cancel(); // this is dictated by the spec.
+            return;
+        }
+        this.subscription = subscription;
+        if (tokens.isEmpty()) {
+            block();
+        }
+        requestedCount = remainingCapacity();
+        if (requestedCount == 0) {
+            return;
         }
         subscription.request(requestedCount);
     }
@@ -102,29 +96,27 @@ public class InpFlow<T> extends CompletablePort implements InpMessagePort<T>, Su
      * @param message token to store
      */
     @Override
-    public void onNext(T message) {
-        synchronized(transition) {
-            if (message == null) {
-                throw new NullPointerException();
-            }
-            if (completed) {
-                return;
-            }
-            if (subscription != null) {
-                requestedCount--;
-            }
-            if (tokens.size() == bufferCapacity) {
-                throw new BufferOverflowException();
-            }
-            tokens.add(message);
-            unblock();
+    public synchronized void onNext(T message) {
+        if (message == null) {
+            throw new NullPointerException();
         }
+        if (completed) {
+            return;
+        }
+        if (subscription != null) {
+            requestedCount--;
+        }
+        if (tokens.size() == bufferCapacity) {
+            throw new BufferOverflowException();
+        }
+        tokens.add(message);
+        unblock();
     }
 
     public T poll() {
         long n;
         T res;
-        synchronized(transition) {
+        synchronized(this) {
             if (!isReady()) {
                 throw new IllegalStateException();
             }

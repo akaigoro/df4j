@@ -11,6 +11,7 @@ import org.reactivestreams.Subscriber;
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A passive source of messages (like a server).
@@ -43,13 +44,13 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
-        synchronized(transition) {
+        synchronized(this) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
-        synchronized(transition) {
+        synchronized(this) {
             if (isCompleted()) {
                 subscription.onComplete();
             }
@@ -75,10 +76,8 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         }
     }
 
-    public boolean isCompleted() {
-        synchronized(transition) {
-            return completed && tokens.size() == 0;
-        }
+    public synchronized boolean isCompleted() {
+        return completed && tokens.size() == 0;
     }
 
     /**
@@ -86,12 +85,12 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
      * @param token token to insert
      * @return true if token inserted
      */
-    public boolean offer(T token) {
+    public synchronized boolean offer(T token) {
         if (token == null) {
             throw new NullPointerException();
         }
         SubscriptionImpl sub;
-        synchronized(transition) {
+        synchronized (this) {
             if (completed) {
                 return false;
             }
@@ -101,29 +100,28 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
                     return false;
                 }
                 tokens.add(token);
-                hasItemsEvent();
+                this.notifyAll();
                 if (_remainingCapacity() == 0) {
                     block();
                 }
-            } else {
-                boolean subIsActive = sub.onNext(token);
-                if (!sub.isCancelled()) {
-                    if (subIsActive) {
-                        activeSubscribtions.add(sub);
-                    } else {
-                        passiveSubscribtions.add(sub);
-                    }
-                }
-                if (_remainingCapacity() == 0 && activeSubscribtions.isEmpty()) {
-                    block();
+                return true;
+            }
+        }
+        boolean subIsActive = sub.onNext(token);
+        boolean alive = !sub.isCancelled();
+        synchronized (this) {
+            if (alive) {
+                if (subIsActive) {
+                    activeSubscribtions.add(sub);
+                } else {
+                    passiveSubscribtions.add(sub);
                 }
             }
-            return true;
+            if (_remainingCapacity() == 0 && activeSubscribtions.isEmpty()) {
+                block();
+            }
         }
-    }
-
-    public void hasItemsEvent() {
-        transition.notifyAll();
+        return true;
     }
 
     private void completAllSubscriptions() {
@@ -143,72 +141,64 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
         }
     }
 
-    public void _onComplete(Throwable cause) {
-        synchronized(transition) {
+    public synchronized void _onComplete(Throwable cause) {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        completionException = cause;
+        notifyAll();
+        if (tokens.size() > 0) {
+            return;
+        }
+        completAllSubscriptions();
+    }
+
+    public synchronized T poll() {
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                unblock();
+                return res;
+            }
             if (completed) {
-                return;
+                throw new CompletionException(completionException);
             }
-            completed = true;
-            completionException = cause;
-            hasItemsEvent();
-            if (tokens.size() > 0) {
-                return;
-            }
-            completAllSubscriptions();
+            return null;
         }
     }
 
-    public T poll() {
-        synchronized(transition) {
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
+    public synchronized T poll(long timeout, TimeUnit unit) throws InterruptedException {
+        long millis = unit.toMillis(timeout);
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                unblock();
+                return res;
+            }
+            if (completed) {
+                throw new CompletionException(completionException);
+            }
+            if (millis <= 0) {
                 return null;
             }
+            long targetTime = System.currentTimeMillis() + millis;
+            wait(millis);
+            millis = targetTime - System.currentTimeMillis();
         }
     }
 
-    public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-        synchronized(transition) {
-            long millis = unit.toMillis(timeout);
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                if (millis <= 0) {
-                    return null;
-                }
-                long targetTime = System.currentTimeMillis() + millis;
-                transition.wait(millis);
-                millis = targetTime - System.currentTimeMillis();
+    public synchronized T take() throws InterruptedException {
+        for (;;) {
+            T res = tokens.poll();
+            if (res != null) {
+                unblock();
+                return res;
             }
-        }
-    }
-
-    public T take() throws InterruptedException {
-        synchronized(transition) {
-            for (;;) {
-                T res = tokens.poll();
-                if (res != null) {
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
-                transition.wait();
+            if (completed) {
+                throw new CompletionException(completionException);
             }
+            wait();
         }
     }
 
@@ -219,17 +209,15 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
     protected class
     SubscriptionImpl extends LinkImpl implements Subscription {
         protected final Subscriber subscriber;
-        private long remainedRequests = 0;
+        private AtomicLong remainedRequests = new AtomicLong(0);
         private boolean cancelled = false;
 
         SubscriptionImpl(Subscriber subscriber) {
             this.subscriber = subscriber;
         }
 
-        public boolean isCancelled() {
-            synchronized(transition) {
-                return cancelled;
-            }
+        public synchronized boolean isCancelled() {
+            return cancelled;
         }
 
         /**
@@ -237,64 +225,59 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
          * @param n the increment of demand
          */
         @Override
-        public void request(long n) {
+        public synchronized void request(long n) {
             if (n <= 0) {
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
             T token;
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
+            if (cancelled) {
+                return;
+            }
+            if (remainedRequests.addAndGet(n) > n) {
+                return;
+            }
+            if (isCompleted()) {
+                this.onComplete();
+                return;
+            }
+            // remainedRequests was 0, so this subscription was passive
+            passiveSubscribtions.remove(this);
+            for (;;) {
+                token = OutFlow.this.poll();
+                if (token == null) {
+                    activeSubscribtions.add(this);
+                    unblock();
+                    break;
                 }
-                remainedRequests += n;
-                if (remainedRequests > n) {
-                    return;
+                boolean subIsActive = this.onNext(token);
+                if (!subIsActive) {
+                    passiveSubscribtions.add(this);
+                    break;
                 }
                 if (isCompleted()) {
                     this.onComplete();
-                    return;
+                    break;
                 }
-                // remainedRequests was 0, so this subscription was passive
-                passiveSubscribtions.remove(this);
-                for (;;) {
-                    token = OutFlow.this.poll();
-                    if (token == null) {
-                        activeSubscribtions.add(this);
-                        unblock();
-                        break;
-                    }
-                    boolean subIsActive = this.onNext(token);
-                    if (!subIsActive) {
-                        passiveSubscribtions.add(this);
-                        break;
-                    }
-                    if (isCompleted()) {
-                        this.onComplete();
-                        break;
-                    }
-                }
-                if (isCompleted()) {
-                    completAllSubscriptions();
-                }
+            }
+            if (isCompleted()) {
+                completAllSubscriptions();
             }
         }
 
         @Override
-        public void cancel() {
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
+        public synchronized void cancel() {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            if (remainedRequests.get() > 0) {
+                if (activeSubscribtions != null) {
+                    activeSubscribtions.remove(this);
                 }
-                cancelled = true;
-                if (remainedRequests > 0) {
-                    if (activeSubscribtions != null) {
-                        activeSubscribtions.remove(this);
-                    }
-                } else {
-                    if (passiveSubscribtions != null) {
-                        passiveSubscribtions.remove(this);
-                    }
+            } else {
+                if (passiveSubscribtions != null) {
+                    passiveSubscribtions.remove(this);
                 }
             }
         }
@@ -306,22 +289,20 @@ public class OutFlow<T> extends CompletablePort implements OutMessagePort<T>, Fl
          */
         private boolean onNext(T token) {
             subscriber.onNext(token);
-            synchronized(transition) {
-                remainedRequests--;
-                return remainedRequests > 0;
-            }
+            return remainedRequests.decrementAndGet() > 0;
         }
 
         /**
          * must be unlinked
-         * @param cause error
          */
-        private void onComplete() {
-            synchronized(transition) {
+        private  void onComplete() {
+            Throwable completionException;
+            synchronized(this) {
                 if (cancelled) {
                     return;
                 }
                 cancelled = true;
+                completionException = OutFlow.this.completionException;
             }
             if (completionException == null) {
                 subscriber.onComplete();

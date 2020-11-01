@@ -7,7 +7,7 @@ import java.util.TimerTask;
  * if its input ports receives more input arguments.
  * In other words, Actor is a repeatable asynchronous procedure.
  *  `Actors` here are <a href="https://pdfs.semanticscholar.org/2dfa/fb6ea86ac739b17641d4c4e51cc17d31a56f.pdf"><i>dataflow actors whith arbitrary number of parameters.</i></a>
- *  An Actor as designed by Carl Hewitt is just an {@link Actor} with single input port, and is implemented as {@link ClassicActor}.
+ *  An Actor as designed by Carl Hewitt is just an {@link Actor} with single input port, and is implemented as {@link AbstractSubscriber}.
  */
 public abstract class Actor extends AsyncProc {
     public static final int PORTS_ALL  = 0xFFFFFFFF;
@@ -27,7 +27,7 @@ public abstract class Actor extends AsyncProc {
     }
 
     @Override
-    protected TransitionAll createTransition() {
+    protected Transition createTransition() {
         return new TransitionSome();
     }
 
@@ -137,7 +137,7 @@ public abstract class Actor extends AsyncProc {
     /**
      * fires when all active ports are ready
      */
-    class TransitionSome extends TransitionAll {
+    class TransitionSome extends Transition {
 
         @Override
         public boolean canFire() {

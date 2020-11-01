@@ -30,20 +30,16 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
-        synchronized(transition) {
-            this.subscription = subscription;
-        }
+    public synchronized void onSubscribe(Subscription subscription) {
+        this.subscription = subscription;
     }
 
     @Override
-    public  void release(long n) {
-        synchronized(transition) {
-            boolean wasBlocked = !isReady();
-            permits += n;
-            if (wasBlocked && permits > 0) {
-                unblock();
-            }
+    public synchronized void release(long n) {
+        boolean wasBlocked = !isReady();
+        permits += n;
+        if (wasBlocked && permits > 0) {
+            unblock();
         }
     }
 
@@ -51,16 +47,14 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
      * Reduces the number of permits.
      * Analogue of {@link InpFlow#remove()} and {@link java.util.concurrent.Semaphore#acquire(int)}
      */
-    public void remove() {
-        synchronized(transition) {
-            if (permits <= 0) {
-                throw new IllegalStateException("no avalable permits");
-            }
-            boolean wasReady = isReady();
-            permits--;
-            if (wasReady && permits == 0) {
-                block();
-            }
+    public synchronized void remove() {
+        if (permits <= 0) {
+            throw new IllegalStateException("no avalable permits");
+        }
+        boolean wasReady = isReady();
+        permits--;
+        if (wasReady && permits == 0) {
+            block();
         }
     }
 }

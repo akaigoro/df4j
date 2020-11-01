@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * Completes successfully or with failure, without emitting any value.
  * Similar to {@link CompletableFuture}&lt;Void&gt;
  */
-public class Completion {
+public class Completion implements Completable.Source {
     protected Throwable completionException;
     protected LinkedList<CompletionSubscription> subscriptions = new LinkedList<>();
     protected boolean completed;
@@ -123,7 +123,8 @@ public class Completion {
      * @return true if completed;
      *         false if timout reached
      */
-    public synchronized boolean await(long timeoutMillis) throws InterruptedException {
+    public synchronized boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+        long timeoutMillis = unit.toMillis(timeout);
         long targetTime = System.currentTimeMillis()+timeoutMillis;
         for (;;) {
             if (completed) {
@@ -136,14 +137,10 @@ public class Completion {
             if (timeoutMillis <= 0) {
                 return false;
             }
+            int h;
             wait(timeoutMillis);
             timeoutMillis = targetTime - System.currentTimeMillis();
         }
-    }
-
-    public synchronized boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-        long timeoutMillis = unit.toMillis(timeout);
-        return await(timeoutMillis);
     }
 
     @Override

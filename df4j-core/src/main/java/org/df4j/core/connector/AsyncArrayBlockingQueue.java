@@ -67,10 +67,6 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         return inp.offer(token);
     }
 
-    public boolean offer(T token, int timeout, TimeUnit unit) throws InterruptedException {
-        return inp.offer(token, timeout, unit);
-    }
-
     /**
      * Inserts next token
      * @param token token to insert
@@ -144,11 +140,14 @@ public class AsyncArrayBlockingQueue<T> extends Actor implements
         run();
     }
 
+    protected void whenComplete(Throwable completionException) {
+        out._onComplete(completionException);
+    }
+
     @Override
     protected void runAction() throws Throwable {
         if (inp.isCompleted()) {
-            out._onComplete(inp.getCompletionException());
-            super.complete();
+            complete(inp.getCompletionException());
         } else {
             T token = inp.remove();
             out.onNext(token);

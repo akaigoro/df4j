@@ -46,7 +46,7 @@ public class InpScalar<T> extends CompletablePort
 
     public void unsubscribe() {
         SimpleSubscription sub;
-        synchronized(transition) {
+        synchronized(this) {
             if (subscription == null) {
                 return;
             }
@@ -56,16 +56,14 @@ public class InpScalar<T> extends CompletablePort
         sub.cancel();
     }
 
-    public T current() {
-        synchronized(transition) {
-            if (!completed) {
-                throw new IllegalStateException();
-            }
-            if (isCompletedExceptionally()) {
-                throw new CompletionException(getCompletionException());
-            }
-            return value;
+    public synchronized T current() {
+        if (!completed) {
+            throw new IllegalStateException();
         }
+        if (isCompletedExceptionally()) {
+            throw new CompletionException(getCompletionException());
+        }
+        return value;
     }
 
     @Override
@@ -84,27 +82,23 @@ public class InpScalar<T> extends CompletablePort
      * To unblock, make another subscription
      * @return current message
      */
-    public T remove() {
-        synchronized(transition) {
-            if (!isReady()) {
-                throw new IllegalStateException();
-            }
-            T value = this.value;
-            this.value = null;
-            this.completed = false;
-            block();
-            return value;
+    public synchronized T remove() {
+        if (!isReady()) {
+            throw new IllegalStateException();
         }
+        T value = this.value;
+        this.value = null;
+        this.completed = false;
+        block();
+        return value;
     }
 
     @Override
-    public  void onSuccess(T message) {
-        synchronized(transition) {
-            if (completed) {
-                return;
-            }
-            this.value = message;
-            super.onComplete();
+    public synchronized void onSuccess(T message) {
+        if (completed) {
+            return;
         }
+        this.value = message;
+        super.onComplete();
     }
 }

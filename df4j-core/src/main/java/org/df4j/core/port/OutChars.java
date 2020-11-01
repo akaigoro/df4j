@@ -34,13 +34,13 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
     @Override
     public void subscribe(CharFlow.Subscriber subscriber) {
         SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
-        synchronized(transition) {
+        synchronized(this) {
             if (passiveSubscribtions != null) {
                 passiveSubscribtions.add(subscription);
             }
         }
         subscriber.onSubscribe(subscription);
-        synchronized(transition) {
+        synchronized(this) {
             if (isCompleted()) {
                 subscription.onComplete();
             }
@@ -57,10 +57,8 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
         }
     }
 
-    public boolean isCompleted() {
-        synchronized(transition) {
-            return completed && charBuffer.isEmpty();
-        }
+    public synchronized boolean isCompleted() {
+        return completed && charBuffer.isEmpty();
     }
 
     /**
@@ -68,36 +66,30 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
      * @param ch character to insert
      * @return true if the character inserted
      */
-    public boolean offer(char ch) {
+    public synchronized boolean offer(char ch) {
         SubscriptionImpl sub;
-        synchronized(transition) {
-            if (completed) {
+        if (completed) {
+            return false;
+        }
+        sub = activeSubscribtions.poll();
+        if (sub == null) {
+            if (charBuffer.remainingCapacity() == 0) {
                 return false;
             }
-            sub = activeSubscribtions.poll();
-            if (sub == null) {
-                if (charBuffer.remainingCapacity() == 0) {
-                    return false;
-                }
-                charBuffer.add(ch);
-                hasItemsEvent();
-                if (charBuffer.remainingCapacity() == 0) {
-                    block();
-                }
-            } else {
-                boolean subIsActive = sub.onNext(ch);
-                if (subIsActive) {
-                    activeSubscribtions.add(sub);
-                } else {
-                    passiveSubscribtions.add(sub);
-                }
+            charBuffer.add(ch);
+            notifyAll();
+            if (charBuffer.remainingCapacity() == 0) {
+                block();
             }
-            return true;
+        } else {
+            boolean subIsActive = sub.onNext(ch);
+            if (subIsActive) {
+                activeSubscribtions.add(sub);
+            } else {
+                passiveSubscribtions.add(sub);
+            }
         }
-    }
-
-    public void hasItemsEvent() {
-        transition.notifyAll();
+        return true;
     }
 
     private void completAllSubscriptions() {
@@ -118,31 +110,27 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
     }
 
     public void _onComplete(Throwable cause) {
-        synchronized(transition) {
-            if (completed) {
-                return;
-            }
-            completed = true;
-            completionException = cause;
-            hasItemsEvent();
-            if (!charBuffer.isEmpty()) {
-                return;
-            }
-            completAllSubscriptions();
+        if (completed) {
+            return;
         }
+        completed = true;
+        completionException = cause;
+        notifyAll();
+        if (!charBuffer.isEmpty()) {
+            return;
+        }
+        completAllSubscriptions();
     }
 
-    public char poll() {
-        synchronized(transition) {
-            for (;;) {
-                if (!charBuffer.isEmpty()) {
-                    char res = charBuffer.remove();
-                    unblock();
-                    return res;
-                }
-                if (completed) {
-                    throw new CompletionException(completionException);
-                }
+    public synchronized char poll() {
+        for (;;) {
+            if (!charBuffer.isEmpty()) {
+                char res = charBuffer.remove();
+                unblock();
+                return res;
+            }
+            if (completed) {
+                throw new CompletionException(completionException);
             }
         }
     }
@@ -161,58 +149,54 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
          * @param n the increment of demand
          */
         @Override
-        public void request(long n) {
+        public synchronized void request(long n) {
             if (n <= 0) {
                 subscriber.onError(new IllegalArgumentException());
                 return;
             }
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
+            if (cancelled) {
+                return;
+            }
+            remainedRequests += n;
+            if (remainedRequests > n) {
+                return;
+            }
+            if (isCompleted()) {
+                this.onComplete();
+                return;
+            }
+            // remainedRequests was 0, so this subscription was passive
+            passiveSubscribtions.remove(this);
+            for (;;) {
+                if (charBuffer.isEmpty()) {
+                    activeSubscribtions.add(this);
+                    break;
                 }
-                remainedRequests += n;
-                if (remainedRequests > n) {
-                    return;
+                char ch = charBuffer.remove();
+                boolean subIsActive = this.onNext(ch);
+                if (!subIsActive) {
+                    passiveSubscribtions.add(this);
+                    break;
                 }
-                if (isCompleted()) {
-                    this.onComplete();
-                    return;
-                }
-                // remainedRequests was 0, so this subscription was passive
-                passiveSubscribtions.remove(this);
-                for (;;) {
-                    if (charBuffer.isEmpty()) {
-                        activeSubscribtions.add(this);
-                        break;
-                    }
-                    char ch = charBuffer.remove();
-                    boolean subIsActive = this.onNext(ch);
-                    if (!subIsActive) {
-                        passiveSubscribtions.add(this);
-                        break;
-                    }
-                }
-                if (isCompleted()) {
-                    completAllSubscriptions();
-                }
+            }
+            if (isCompleted()) {
+                completAllSubscriptions();
             }
         }
 
         @Override
-        public void cancel() {
-            synchronized(transition) {
-                if (cancelled) {
-                    return;
+        public synchronized void cancel() {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            if (remainedRequests > 0) {
+                if (activeSubscribtions != null) {
+                    activeSubscribtions.remove(this);
                 }
-                cancelled = true;
-                if (remainedRequests > 0) {
-                    if (activeSubscribtions != null) {
-                        activeSubscribtions.remove(this);
-                    }
-                } else {
-                    if (passiveSubscribtions != null) {
-                        passiveSubscribtions.remove(this);
-                    }
+            } else {
+                if (passiveSubscribtions != null) {
+                    passiveSubscribtions.remove(this);
                 }
             }
         }
@@ -224,7 +208,7 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
          */
         private boolean onNext(char ch) {
             subscriber.onNext(ch);
-            synchronized(transition) {
+            synchronized(this) {
                 remainedRequests--;
                 return remainedRequests > 0;
             }
@@ -234,8 +218,8 @@ public class OutChars extends CompletablePort implements CharFlow.Publisher {
          * must be unlinked
          * @param cause error
          */
-        private void onComplete() {
-            synchronized(transition) {
+        private synchronized void onComplete() {
+            synchronized(this) {
                 if (cancelled) {
                     return;
                 }
