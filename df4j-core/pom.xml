@@ -15,7 +15,7 @@
     <dependencies>
         <dependency>
             <groupId>org.df4j</groupId>
-            <artifactId>df4j</artifactId>
+            <artifactId>df4j-protocols</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

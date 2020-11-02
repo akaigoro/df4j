@@ -3,7 +3,6 @@ package org.df4j.core.connector;
 import org.df4j.protocol.Completable;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  *  A {@link CountDownLatch} extended with asynchronous interface to publish the completion signal.

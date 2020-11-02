@@ -1,16 +1,15 @@
 package org.df4j.core.activities;
 
-import lombok.Getter;
 import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.OutFlow;
 
 public class RangeActor extends Actor {
-    int to;
-    int cnt;
-    @Getter
-    private OutFlow<Integer> out = new OutFlow<>(this);
+    long to;
+    long cnt;
+    public OutFlow<Long> out = new OutFlow<>(this);
 
-    public RangeActor(int from, int to) {
+    public RangeActor(ActorGroup parent, int from, int to) {
         this.cnt = from;
         this.to = to;
         start();
@@ -38,5 +37,4 @@ public class RangeActor extends Actor {
         out.onNext(cnt);
         cnt++;
     }
-
 }

@@ -2,8 +2,6 @@ package org.df4j.core.actor;
 
 import org.df4j.protocol.Completable;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * methods common to all {@link Node}s and {@link Thread}.
  */
