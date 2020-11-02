@@ -11,7 +11,7 @@ public class PubSubTest {
         ActorGroup df = new ActorGroup();
         PublisherActor pub = new PublisherActor(df, cnt, delay1);
         SubscriberActor sub = new SubscriberActor(df, delay2);
-        pub.out.subscribe(sub.inp);
+        pub.subscribe(sub.inp);
         pub.start();
         sub.start();
         boolean res = df.await(1000);

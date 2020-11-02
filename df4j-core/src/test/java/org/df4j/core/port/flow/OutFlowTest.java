@@ -54,7 +54,7 @@ public class OutFlowTest {
         int cnt = 3;
         PublisherActor pub = new PublisherActor(cnt, 0);
         LoggingSubscriber sub = new LoggingSubscriber();
-        pub.out.subscribe(sub);
+        pub.subscribe(sub);
         pub.start();
         boolean success = pub.await(400);
         Assert.assertTrue(success);
@@ -68,7 +68,7 @@ public class OutFlowTest {
         int cnt = 3;
         PublisherActor pub = new PublisherActor(new ActorGroup(), cnt, 0, 0);
         LoggingSubscriber sub = new LoggingSubscriber();
-        pub.out.subscribe(sub);
+        pub.subscribe(sub);
         pub.start();
         boolean success = pub.await(400);
         Assert.assertTrue(success);

@@ -2,9 +2,12 @@ package org.df4j.core.port;
 
 import org.df4j.core.activities.LoggingSubscriber;
 import org.df4j.core.activities.PublisherActor;
+import org.df4j.core.actor.AbstractPublisher;
 import org.df4j.core.actor.Actor;
+import org.df4j.protocol.Flow;
 import org.junit.Assert;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
 
 public class PortGroupTest {
 
@@ -12,14 +15,14 @@ public class PortGroupTest {
     public void mergeTest1() throws InterruptedException {
         PublisherActor prod1 = new PublisherActor(3,40);
         PublisherActor prod2 = new PublisherActor(5,40);
-        MergeActor1 merger = new MergeActor1();
+        MergeActor1 merger1 = new MergeActor1();
         LoggingSubscriber subscriber = new LoggingSubscriber();
-        prod1.out.subscribe(merger.inp1);
-        prod2.out.subscribe(merger.inp2);
-        merger.out.subscribe(subscriber);
+        prod1.subscribe(merger1.inp1);
+        prod2.subscribe(merger1.inp2);
+        merger1.subscribe(subscriber);
         prod1.start();
         prod2.start();
-        merger.start();
+        merger1.start();
         //  subscriber.start();
         boolean ok = subscriber.await(1000);
         Assert.assertTrue(ok);
@@ -29,59 +32,85 @@ public class PortGroupTest {
     public void mergeTest2() throws InterruptedException {
         PublisherActor prod1 = new PublisherActor(3,40);
         PublisherActor prod2 = new PublisherActor(5,40);
-        MergeActor2 merger = new MergeActor2();
+        MergeActor2 merger2 = new MergeActor2();
         LoggingSubscriber subscriber = new LoggingSubscriber();
-        prod1.out.subscribe(merger.inp1);
-        prod2.out.subscribe(merger.inp2);
-        merger.out.subscribe(subscriber);
+        prod1.subscribe(merger2.inp1);
+        prod2.subscribe(merger2.inp2);
+        merger2.subscribe(subscriber);
         prod1.start();
         prod2.start();
-        merger.start();
+        merger2.start();
         //  subscriber.start();
         boolean ok = subscriber.await(1000);
         Assert.assertTrue(ok);
     }
     /**
      * completes eagerly
-     *
-     * @param <T>
      */
-    static class MergeActor1<T> extends Actor {
+    static class MergeActor1 extends AbstractPublisher<Long> {
         PortGroup mport = new PortGroup(this);
-        InpFlow<T> inp1 = new InpFlow<>(mport);
-        InpFlow<T> inp2 = new InpFlow<>(mport);
-        OutFlow<T> out = new OutFlow<>(this);
+        InpFlow<Long> inp1 = new InpFlow<>(mport);
+        InpFlow<Long> inp2 = new InpFlow<>(mport);
 
         @Override
-        protected void runAction() throws Throwable {
+        protected Long whenNext() throws Throwable {
             if (inp1.isCompleted() || inp2.isCompleted()) {
-                complete();
-                out.onComplete();
-                return;
+                return null;
             }
             if (inp1.isReady()) {
-                out.onNext(inp1.remove());
+                return inp1.remove();
             }
             if (inp2.isReady()) {
-                out.onNext(inp2.remove());
+                return inp2.remove();
             }
+            throw new IllegalStateException();
         }
     }
 
-    static class MergeActor2<T> extends MergeActor1 {
+    /**
+     * completes when both inputs complete
+     * @param <T>
+     */
+    static class MergeActor2<T> extends Actor implements Flow.Publisher<Long> {
+        protected OutFlow<Long> outPort = new OutFlow<>(this, 8);
+        PortGroup mport = new PortGroup(this);
+        InpFlow<Long> inp1 = new InpFlow<>(mport);
+        InpFlow<Long> inp2 = new InpFlow<>(mport);
 
+        @Override
+        public void subscribe(Subscriber<? super Long> subscriber) {
+            outPort.subscribe(subscriber);
+        }
+
+        protected synchronized void whenComplete() {
+            outPort.onComplete();
+        }
+
+        protected synchronized void whenComplete(Throwable throwable) {
+            if (throwable == null) {
+                outPort.onComplete();
+            } else {
+                outPort.onError(throwable);
+            }
+        }
+
+        /** generates one data item
+         */
         @Override
         protected void runAction() throws Throwable {
             if (inp1.isCompleted() && inp2.isCompleted()) {
-                complete();
-                out.onComplete();
+                complete(null);
                 return;
             }
-            if (inp1.isReady() && !inp1.isCompleted()) {
-                out.onNext(inp1.remove());
+            if (inp1.isCompleted()) {
+                inp1.block();
+            } else if (inp1.isReady()) {
+                outPort.onNext(inp1.remove());
             }
-            if (inp2.isReady() && !inp2.isCompleted()) {
-                out.onNext(inp2.remove());
+            if (inp2.isCompleted()) {
+                inp2.block();
+            } else if (inp2.isReady()) {
+                outPort.onNext(inp2.remove());
             }
         }
     }

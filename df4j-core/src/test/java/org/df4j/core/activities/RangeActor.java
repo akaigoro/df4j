@@ -1,14 +1,14 @@
 package org.df4j.core.activities;
 
-
+import lombok.Getter;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.port.OutFlow;
 
 public class RangeActor extends Actor {
-
     int to;
     int cnt;
-    OutFlow<Integer> out = new OutFlow<Integer>(this);
+    @Getter
+    private OutFlow<Integer> out = new OutFlow<>(this);
 
     public RangeActor(int from, int to) {
         this.cnt = from;
@@ -17,19 +17,22 @@ public class RangeActor extends Actor {
     }
 
     @Override
-    protected void runAction() throws Throwable {
+    protected void whenComplete(Throwable e) {
+        if (e == null) {
+            out.onComplete();
+        } else {
+            out.onError(e);
+        }
+    }
+
+    @Override
+    protected void runAction() {
         if (isCompleted()) {
-            Throwable completionException1 = getCompletionException();
-            if (completionException1 == null) {
-                out.onComplete();
-            } else {
-                out.onError(completionException1);
-            }
+            complete(getCompletionException());
             return;
         }
         if (cnt == to) {
             complete();
-            out.onComplete();
             return;
         }
         out.onNext(cnt);

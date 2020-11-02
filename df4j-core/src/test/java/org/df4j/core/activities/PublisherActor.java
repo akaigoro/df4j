@@ -1,50 +1,40 @@
 package org.df4j.core.activities;
 
-import org.df4j.core.actor.Actor;
+import org.df4j.core.actor.AbstractPublisher;
 import org.df4j.core.actor.ActorGroup;
-import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.LoggerFactory;
 import org.slf4j.Logger;
 
-import java.util.logging.Level;
-
-public class PublisherActor extends Actor {
-    protected final Logger logger = LoggerFactory.getLogger(this);
-    public OutFlow<Long> out;
-    public long cnt;
+public class PublisherActor extends AbstractPublisher<Long> {
+    Logger logger = LoggerFactory.getLogger(this);
     final int delay;
+    public long cnt;
 
     public PublisherActor(ActorGroup parent, long cnt, int delay, int capacity) {
-        super(parent);
-        out = new OutFlow<>(this, capacity);
+        super(parent, capacity);
         this.cnt = cnt;
         this.delay = delay;
-        logger.info("PublisherActor: cnt = " + cnt);
     }
 
-    public PublisherActor(ActorGroup parent, long cnt, int delay) {
-        this(parent, cnt, delay, OutFlow.DEFAULT_CAPACITY);
+    public PublisherActor(ActorGroup graph, long cnt, int delay) {
+        this(new ActorGroup(), cnt, delay, 8);
     }
 
     public PublisherActor(long cnt, int delay) {
         this(new ActorGroup(), cnt, delay);
     }
 
-    public PublisherActor(long cnt) {
-        this(cnt, 0);
-    }
-
     @Override
-    protected void runAction() throws Throwable {
-        if (cnt > 0) {
-            logger.info("PublisherActor.onNext(" + cnt+")");
-            out.onNext(cnt);
-            cnt--;
-            Thread.sleep(delay);
+    protected Long whenNext() throws Throwable {
+        Thread.sleep(delay);
+        if (cnt == 0) {
+            logger.info("sent: completed");
+            return null;
         } else {
-            logger.info("PublisherActor.onComplete");
-            out.onComplete();
-            complete();
+            if (Math.abs(cnt) < 100 || cnt%10 == 0) {
+                logger.info("sent:" + cnt);
+            }
+            return cnt--;
         }
     }
 }

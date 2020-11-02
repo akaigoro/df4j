@@ -16,7 +16,7 @@ public class AsyncArrayBlockingQueuePubSubTest {
         PublisherActor publisher = new PublisherActor(graph, cnt, delay1);
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
         queue.feedFrom(producer.out);
-        queue.feedFrom(publisher.out);
+        queue.feedFrom(publisher);
         SubscriberActor subscriber = new SubscriberActor(graph, delay2);
         queue.subscribe(subscriber.inp);
         producer.start();

@@ -28,7 +28,7 @@ public class ScalarSubscriberActor extends Actor {
     }
 
     public void nextSubscribe() {
-        pubs[pubIndex].out.subscribe(inp);
+        pubs[pubIndex].subscribe(inp);
         pubIndex = (pubIndex+1)%pubs.length;
     }
 
@@ -36,6 +36,7 @@ public class ScalarSubscriberActor extends Actor {
     protected void runAction() throws Throwable {
         Thread.sleep(delay);
         Long in = inp.remove();
+        logger.info("cnt="+cnt+"; received:" + in);
         if (cnt > 0) {
             cnt--;
             nextSubscribe();
