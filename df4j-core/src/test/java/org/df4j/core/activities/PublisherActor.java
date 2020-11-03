@@ -16,8 +16,8 @@ public class PublisherActor extends AbstractPublisher<Long> {
         this.delay = delay;
     }
 
-    public PublisherActor(ActorGroup graph, long cnt, int delay) {
-        this(new ActorGroup(), cnt, delay, 8);
+    public PublisherActor(ActorGroup parent, long cnt, int delay) {
+        this(parent, cnt, delay, 8);
     }
 
     public PublisherActor(long cnt, int delay) {
