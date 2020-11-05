@@ -72,7 +72,7 @@ public class PortGroupTest {
      * @param <T>
      */
     static class MergeActor2<T> extends Actor implements Flow.Publisher<Long> {
-        protected OutFlow<Long> outPort = new OutFlow<>(this, 8);
+        protected OutFlow<Long> outPort = new OutFlow<>(this);
         PortGroup mport = new PortGroup(this);
         InpFlow<Long> inp1 = new InpFlow<>(mport);
         InpFlow<Long> inp2 = new InpFlow<>(mport);

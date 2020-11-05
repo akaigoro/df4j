@@ -12,7 +12,7 @@ package org.df4j.nio2.net;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
 import org.df4j.core.port.InpSignal;
-import org.df4j.core.port.OutFlood;
+import org.df4j.core.port.OutFlow;
 import org.df4j.core.util.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -36,7 +36,7 @@ public class AsyncServerSocketChannel extends Actor
     private volatile AsynchronousServerSocketChannel assc;
     /** limits the number of simultaneously existing connections */
     private InpSignal allowedConnections = new InpSignal(this);
-    public final OutFlood<Connection> out = new OutFlood<>(this);
+    public final OutFlow<Connection> out = new OutFlow<>(this);
     protected long connSerialNum = 0;
 
     public AsyncServerSocketChannel(ActorGroup dataflow, SocketAddress addr) throws IOException {

@@ -1,6 +1,5 @@
 package org.df4j.core.asyncarrayblockingqueue;
 
-import org.df4j.core.activities.ProducerActor;
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;
 import org.df4j.core.actor.ActorGroup;
@@ -12,11 +11,11 @@ public class AsyncArrayBlockingQueuePubSubTest {
 
     public void testAsyncQueue(int cnt, int delay1, int delay2) throws InterruptedException {
         ActorGroup graph = new ActorGroup();
-        ProducerActor producer = new ProducerActor(graph, cnt, delay1);
+        PublisherActor producer = new PublisherActor(graph, cnt, delay1);
         PublisherActor publisher = new PublisherActor(graph, cnt, delay1);
         AsyncArrayBlockingQueue<Long> queue = new AsyncArrayBlockingQueue<>(3);
-        queue.feedFrom(producer.out);
-        queue.feedFrom(publisher);
+        queue.subscribeTo(producer);
+        queue.subscribeTo(publisher);
         SubscriberActor subscriber = new SubscriberActor(graph, delay2);
         queue.subscribe(subscriber.inp);
         producer.start();
@@ -53,7 +52,8 @@ public class AsyncArrayBlockingQueuePubSubTest {
         queue.onComplete();
         Assert.assertFalse(queue.isCompleted());
         queue.remove();
-        Assert.assertTrue(queue.isCompleted());
+        boolean completed = queue.isCompleted();
+        Assert.assertTrue(completed);
     }
 
     @Test

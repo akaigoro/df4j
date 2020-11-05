@@ -76,7 +76,7 @@ public class AsyncFileChannelTest {
             super(actorGroup);
             this.byteNumber = byteNumber;
             emptyBuffers = new InpFlow<>(this, capacity);
-            filledBuffers = new OutFlow<>(this, capacity);
+            filledBuffers = new OutFlow<>(this);
             for (int k = 0; k< capacity; k++) {
                 emptyBuffers.onNext(ByteBuffer.allocate(1024));
             }
@@ -114,7 +114,7 @@ public class AsyncFileChannelTest {
         public DataConsumer(ActorGroup actorGroup, int capacity) {
             super(actorGroup);
             filledBuffers = new InpFlow<>(this, capacity);
-            emptyBuffers = new OutFlow<>(this, capacity);
+            emptyBuffers = new OutFlow<>(this);
         }
 
         byte nextByte() {

@@ -40,7 +40,7 @@ public class Completable {
 
         /**
          * waits this {@link Completable} to complete until timeout
-         * @param timeoutMillis timeout in milliseconds
+         * @param timeout timeout in milliseconds
          * @return true if completed;
          *         false if timout reached
          */

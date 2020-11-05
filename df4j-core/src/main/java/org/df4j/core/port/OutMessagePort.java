@@ -1,4 +1,4 @@
-package org.df4j.protocol;
+package org.df4j.core.port;
 
 public interface OutMessagePort<T> {
     void onNext(T message);

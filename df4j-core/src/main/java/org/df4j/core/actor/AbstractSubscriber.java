@@ -13,6 +13,12 @@ public abstract class AbstractSubscriber<T> extends Actor implements Subscriber<
     public InpFlow<T> inp = new InpFlow<>(this);
     private volatile MessageAction<T> nextMessageAction = this::whenNext;
 
+    public AbstractSubscriber(ActorGroup parent) {
+        super(parent);
+    }
+
+    public AbstractSubscriber() { }
+
     public InpFlow<T> getInPort() {
         return inp;
     }

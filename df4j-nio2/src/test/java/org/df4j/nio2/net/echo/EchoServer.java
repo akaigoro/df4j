@@ -3,7 +3,7 @@ package org.df4j.nio2.net.echo;
 import ch.qos.logback.classic.Level;
 import org.df4j.core.actor.Actor;
 import org.df4j.core.actor.ActorGroup;
-import org.df4j.core.port.InpFlood;
+import org.df4j.core.port.InpFlow;
 import org.df4j.core.util.LoggerFactory;
 import org.df4j.nio2.net.AsyncServerSocketChannel;
 import org.df4j.nio2.net.Connection;
@@ -21,7 +21,7 @@ import java.util.Set;
 public class EchoServer extends Actor {
     public static final int BUF_SIZE = 128;
     protected final Logger LOG = LoggerFactory.getLogger(this, Level.INFO);
-    InpFlood<Connection> inp = new InpFlood<>(this);
+    InpFlow<Connection> inp = new InpFlow<>(this);
     AsyncServerSocketChannel connProducer;
     Set<EchoProcessor> echoProcessors = new HashSet<>();
 

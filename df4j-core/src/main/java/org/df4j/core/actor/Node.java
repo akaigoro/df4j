@@ -103,7 +103,7 @@ public abstract class Node<T extends Node<T>> implements Activity {
         return res;
     }
 
-    public boolean isCompleted() {
+    public synchronized boolean isCompleted() {
         return completion.isCompleted();
     }
 

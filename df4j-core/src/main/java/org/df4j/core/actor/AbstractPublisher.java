@@ -2,6 +2,7 @@ package org.df4j.core.actor;
 
 import org.df4j.core.port.OutFlow;
 import org.df4j.protocol.Flow;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 /**
@@ -14,11 +15,15 @@ public abstract class AbstractPublisher<T> extends Actor implements Flow.Publish
 
     public AbstractPublisher(ActorGroup parent, int capacity) {
         super(parent);
-        outPort = new OutFlow<>(this, capacity);
+        outPort = new OutFlow<>(this);
     }
 
     public AbstractPublisher() {
         this(new ActorGroup(), 8);
+    }
+
+    public AbstractPublisher(ActorGroup parent) {
+        this(parent, 8);
     }
 
     public OutFlow<T> getOutPort() {

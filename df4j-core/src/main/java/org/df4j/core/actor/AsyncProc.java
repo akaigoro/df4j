@@ -262,9 +262,6 @@ public abstract class AsyncProc extends Node<AsyncProc> implements TransitionHol
                     return;
                 }
                 port.ready = true;
-                if (completion.isCompleted()) {
-                    return;
-                }
                 setUnBlocked(port.portNum);
                 canFire = canFire();
             }

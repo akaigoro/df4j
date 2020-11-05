@@ -9,8 +9,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.TestEnvironment;
 import org.slf4j.Logger;
-
-import java.util.logging.Level;
+import org.testng.annotations.Ignore;
 
 public class SubscriberVerificationTest extends org.reactivestreams.tck.PublisherVerification<Long> {
     static final long defaultTimeout = 400;
@@ -34,6 +33,7 @@ public class SubscriberVerificationTest extends org.reactivestreams.tck.Publishe
     }
 
     // todo remove
+    @Ignore
     public void stochastic_spec103_mustSignalOnMethodsSequentially() throws Throwable {
         super.stochastic_spec103_mustSignalOnMethodsSequentially();
     }
@@ -58,7 +58,7 @@ public class SubscriberVerificationTest extends org.reactivestreams.tck.Publishe
 
         public LoggingPublisherActor(ActorGroup parent, long cnt, int delay, int capacity) {
             super(parent);
-            out = new OutFlow<>(this, capacity);
+            out = new OutFlow<>(this);
             this.cnt = cnt;
             this.delay = delay;
             logger.info("PublisherActor: cnt = " + cnt);

@@ -16,7 +16,7 @@ public class LinkedQueue<S> extends LinkedHashSet<S> {
         return it.next();
     }
 
-    public S poll() {
+    public synchronized S poll() {
         Iterator<S> it = iterator();
         if (it.hasNext()) {
             S res = it.next();

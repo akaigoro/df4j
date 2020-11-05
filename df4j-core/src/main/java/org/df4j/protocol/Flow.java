@@ -11,6 +11,9 @@ package org.df4j.protocol;
  * work. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.*
  ************************************************************************/
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 /**
  * Flow of messages with back-pressure
  * <p>
@@ -21,6 +24,14 @@ package org.df4j.protocol;
 public final class Flow {
 
     private Flow() {} // uninstantiable
+
+    public interface Source<T> {
+        T poll() ;
+        T poll(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException;
+        T remove();
+        T take() throws InterruptedException;
+    }
+
 
     public interface Publisher<T> extends org.reactivestreams.Publisher<T>, Scalar.Publisher<T> {
         @Override

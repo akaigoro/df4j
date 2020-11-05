@@ -43,7 +43,7 @@ public abstract class AsyncFileChannel extends Actor implements CompletionHandle
         super(actorGroup);
         this.channel=channel;
         input = new InpFlow<>(this, capacity);
-        output = new OutFlow<>(this, capacity);
+        output = new OutFlow<>(this);
     }
 
     /** disallows subsequent posts of requests; already posted requests
