@@ -1,14 +1,15 @@
 package org.df4j.core.port;
 
 import org.df4j.core.actor.AsyncProc;
+import org.df4j.core.util.LinkedQueue;
 import org.df4j.protocol.SimpleSubscription;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.ArrayDeque;
-import java.util.LinkedList;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * An input port capable to subscribe to multiple Publishers
@@ -16,7 +17,9 @@ import java.util.concurrent.CompletionException;
 public class InpMultiFlow<T> extends CompletablePort {//}, InpMessagePort<T> {
     protected int capacity;
     protected ArrayDeque<T> tokens;
-    private LinkedList<Receiver> pendingReceivers = new LinkedList<>();
+    /** receivers with value but buffer is full */
+    private AtomicInteger receiverCounter= new AtomicInteger(0);
+    private LinkedQueue<Receiver> pendingReceivers = new LinkedQueue<>();
 
     /**
      * @param parent {@link AsyncProc} to which this port belongs
@@ -152,7 +155,8 @@ public class InpMultiFlow<T> extends CompletablePort {//}, InpMessagePort<T> {
         boolean completed;
         private Throwable completionException;
         private boolean cancelled;
-
+        {        receiverCounter.addAndGet(1);
+        }
         @Override
         public void onSubscribe(Subscription s) {
             subscription = s;
@@ -179,22 +183,21 @@ public class InpMultiFlow<T> extends CompletablePort {//}, InpMessagePort<T> {
             if (token == null) {
                 InpMultiFlow.this.onError(t);
             } else {
-                completed = true;
                 completionException = t;
+                onComplete();
             }
         }
 
         @Override
         public synchronized void onComplete() {
             subscription = null;
-            if (token == null) {
+            completed = true;
+            if (receiverCounter.decrementAndGet() == 0) {
                 InpMultiFlow.this.onComplete();
-            } else {
-                completed = true;
             }
         }
 
-        public synchronized void unLoad() {
+        private synchronized void unLoad() {
             if (token != null) {
                 if (!InpMultiFlow.this.offer(token)) {
                     return;
@@ -217,7 +220,7 @@ public class InpMultiFlow<T> extends CompletablePort {//}, InpMessagePort<T> {
                 subscription.cancel();
                 subscription = null;
             }
-            cancelled = true;
+            onComplete();
         }
 
         @Override

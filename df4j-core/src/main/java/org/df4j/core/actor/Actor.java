@@ -13,7 +13,6 @@ public abstract class Actor extends AsyncProc {
     public static final int PORTS_ALL  = 0xFFFFFFFF;
     public static final int PORTS_NONE = 0x00000001;
 
-    private int activePortsScale = PORTS_ALL;
     private volatile ThrowingRunnable nextAction;
     private TimerTask task;
 
@@ -31,6 +30,11 @@ public abstract class Actor extends AsyncProc {
         return new TransitionSome();
     }
 
+    @Override
+    public TransitionSome getTransition() {
+        return (TransitionSome) super.getTransition();
+    }
+
     public static int makePortScale(Port... ports) {
         int scale = 0;
         for (Port port: ports) {
@@ -39,21 +43,13 @@ public abstract class Actor extends AsyncProc {
         return scale;
     }
 
-    protected void setActivePorts(int scale) {
-        activePortsScale = PORTS_NONE | scale;
-    }
-
-    protected void setActivePorts(Port... ports) {
-        setActivePorts(makePortScale(ports));
-    }
-
     public ThrowingRunnable getNextAction() {
         return nextAction;
     }
 
     protected void nextAction(ThrowingRunnable tRunnable, int portScale) {
         this.nextAction = tRunnable;
-        setActivePorts(portScale);
+        getTransition().setActivePorts(portScale);
     }
 
     protected void nextAction(ThrowingRunnable tRunnable, Port... ports) {
@@ -138,6 +134,15 @@ public abstract class Actor extends AsyncProc {
      * fires when all active ports are ready
      */
     class TransitionSome extends Transition {
+        private int activePortsScale = PORTS_ALL;
+
+        protected void setActivePorts(int scale) {
+            activePortsScale = PORTS_NONE | scale;
+        }
+
+        protected void setActivePorts(Port... ports) {
+            setActivePorts(makePortScale(ports));
+        }
 
         @Override
         public boolean canFire() {

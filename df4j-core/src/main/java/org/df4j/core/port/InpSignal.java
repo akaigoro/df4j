@@ -35,6 +35,16 @@ public class InpSignal extends AsyncProc.Port implements SignalFlow.Subscriber {
     }
 
     @Override
+    public synchronized void acquire(long n) {
+        boolean wasUnBlocked = isReady();
+        permits -= n;
+        if (wasUnBlocked && permits <= 0) {
+            block();
+        }
+
+    }
+
+    @Override
     public synchronized void release(long n) {
         boolean wasBlocked = !isReady();
         permits += n;

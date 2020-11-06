@@ -1,4 +1,4 @@
-package org.df4j.core.asyncarrayblockingqueue;
+package org.df4j.core.connector;
 
 import org.df4j.core.activities.PublisherActor;
 import org.df4j.core.activities.SubscriberActor;

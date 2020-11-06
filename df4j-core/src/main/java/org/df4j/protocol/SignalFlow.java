@@ -29,7 +29,32 @@ public class SignalFlow {
      *
      */
     public interface Subscriber {
+
         void onSubscribe(Subscription subscription);
+
+        /** Decreases the number of permits.
+         * Analogue of {@link Flow.Subscriber#onNext(Object)} ()} and {@link java.util.concurrent.Semaphore#acquire(int)}.
+         * If nomber of permits become non-positive, the call int thread is not blocked or gets an exception.
+         * The effect is deferred: correspondig port is blocked and the enclosing actor won't execute.
+         *
+         * @param n the number of additional permits.
+         */
+        void acquire(long n);
+
+        /** Decreases the number of permits by 1.
+         * Analogue of {@link java.util.concurrent.Semaphore#acquire}.
+         */
+        default void acquire() {
+            acquire(1);
+        }
+
+        /** Increases the number of permits.
+         * Analogue of {@link Flow.Subscriber#onNext(Object)} ()} and {@link java.util.concurrent.Semaphore#release(int)}.
+         * If total number of permits become positive, correspondig port is unblocked.
+         *
+         * @param n the number of additional permits.
+         */
+        void release(long n);
 
         /** Increases the number of permits by 1.
          * Analogue of {@link Flow.Subscriber#onNext(Object)} ()} and {@link java.util.concurrent.Semaphore#release()}.
@@ -37,13 +62,6 @@ public class SignalFlow {
         default void release() {
             release(1);
         }
-
-        /** Increases the number of permits.
-         * Analogue of {@link Flow.Subscriber#onNext(Object)} ()} and {@link java.util.concurrent.Semaphore#release(int)}.
-         *
-         * @param n the number of additional permits.
-         */
-        void release(long n);
     }
 
 }
